@@ -349,35 +349,35 @@ plot(sort(hill(y,option="alpha", reverse = TRUE)$y))
 hill(y, option = "alpha", reverse = TRUE)
 hill(sort(Y)[13865:14609], option="alpha", reverse = TRUE)$y
 
-data.scenario <- data.frame("x" = c(1:n),
-                            "constant" = seq(0,1,length.out = n),
-                            "mapAlp" = sort(newalpha),
-                            "newAlp" = sort(alpha.new),
-                            "hill.est" = sort(hill(sort(Y)[13865:14609], option="alpha", reverse = TRUE)$y),
-                            "fakehill" = sort(1/Hill(sort(Y)[13878:14609])$gamma))
+# data.scenario <- data.frame("x" = c(1:n),
+#                             "constant" = seq(0,1,length.out = n),
+#                             "mapAlp" = sort(newalpha),
+#                             "newAlp" = sort(alpha.new),
+#                             "hill.est" = sort(hill(sort(Y)[13865:14609], option="alpha", reverse = TRUE)$y),
+#                             "fakehill" = sort(1/Hill(sort(Y)[13878:14609])$gamma))
 
-plt.samp <- ggplot(data = data.scenario, aes(x = constant)) + ylab(expression(alpha(x))) + xlab(expression(x[(i)]))
+# plt.samp <- ggplot(data = data.scenario, aes(x = constant)) + ylab(expression(alpha(x))) + xlab(expression(x[(i)]))
 
-print(plt.samp + 
-      # geom_line(aes(y = trueAlp, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
-      geom_line(aes(y = hill.est, col = "Hill's Estimator:"), linewidth = 2.5) +
-      labs(col = "") +
-      geom_line(aes(y = mapAlp, col = paste0("MAP:",lambda.1,"/",lambda.3)), linewidth = 2.5) +
-      scale_color_manual(values = c("red","#e0b430"))+ 
-      theme(axis.title.y = element_text(size = rel(1.8), angle = 90)) +
-      theme(axis.title.x = element_text(size = rel(1.8), angle = 00)) +
-      theme(text = element_text(size = 15),
-        legend.position="bottom", legend.key.size = unit(1, 'cm'),
-        axis.text = element_text(size = 20),))
-      # theme(legend.position="bottom", legend.key.size = unit(1, 'cm')))
-ggsave("./Laboratory/Application/figures/map_alpha.pdf", width=10)
-print(plt.samp + 
-      # geom_line(aes(y = trueAlp, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
-      geom_line(aes(y = newAlp, col = paste0("MAP Alpha:",lambda.1,"/",lambda.3)), linewidth = 2.5) +
-      labs(col = "") +
-      scale_color_manual(values = c("red"))+
-      theme(text = element_text(size = 30)) + 
-      theme(legend.position="bottom", legend.key.size = unit(1, 'cm')))
+# print(plt.samp + 
+#       # geom_line(aes(y = trueAlp, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
+#       geom_line(aes(y = hill.est, col = "Hill's Estimator:"), linewidth = 2.5) +
+#       labs(col = "") +
+#       geom_line(aes(y = mapAlp, col = paste0("MAP:",lambda.1,"/",lambda.3)), linewidth = 2.5) +
+#       scale_color_manual(values = c("red","#e0b430"))+ 
+#       theme(axis.title.y = element_text(size = rel(1.8), angle = 90)) +
+#       theme(axis.title.x = element_text(size = rel(1.8), angle = 00)) +
+#       theme(text = element_text(size = 15),
+#         legend.position="bottom", legend.key.size = unit(1, 'cm'),
+#         axis.text = element_text(size = 20),))
+#       # theme(legend.position="bottom", legend.key.size = unit(1, 'cm')))
+# ggsave("./Laboratory/Application/figures/map_alpha.pdf", width=10)
+# print(plt.samp + 
+#       # geom_line(aes(y = trueAlp, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
+#       geom_line(aes(y = newAlp, col = paste0("MAP Alpha:",lambda.1,"/",lambda.3)), linewidth = 2.5) +
+#       labs(col = "") +
+#       scale_color_manual(values = c("red"))+
+#       theme(text = element_text(size = 30)) + 
+#       theme(legend.position="bottom", legend.key.size = unit(1, 'cm')))
 
 
 func.linear.new <- func.nonlinear.new <- func.new <- matrix(, nrow=n, ncol=0)
