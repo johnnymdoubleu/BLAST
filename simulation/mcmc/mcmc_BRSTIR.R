@@ -223,7 +223,7 @@ model.penalisation <- nimbleCode({
     log(newalpha[i]) <- sum(new.f[i, 1:p])
   }
   # newalpha[1:n] <- nimRowSums(new.f.sum[1:n,1:(p-1)])
-c
+
   for(i in 1:n){
     y[i] ~ dpareto(1, u, alpha[i])
     # spy[i] <- (alpha[i]*(y[i]/u)^(-1*alpha[i])*y[i]^(-1)) / C
