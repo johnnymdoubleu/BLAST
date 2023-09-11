@@ -268,8 +268,10 @@ model.penalisation <- nimbleCode({
 
 
 constant <- list(psi = psi, n = n, p = p)
-init.alpha <- function() list(list(gamma = matrix(0.5, nrow = psi, ncol=p)),
-                              list(gamma = matrix(0, nrow = psi, ncol=p)))
+init.alpha <- function() list(list(gamma = matrix(0.5, nrow = psi, ncol=p), 
+                                    theta = matrix(1, nrow = 2, ncol = p)),
+                              list(gamma = matrix(0, nrow = psi, ncol=p),
+                                    theta = matrix(0, nrow = 2, ncol = p)))
                             #   list(gamma = matrix(1, nrow = psi, ncol=p)))
                               # y = as.vector(y),
 monitor.pred <- c("theta", "gamma", "alpha")
@@ -278,7 +280,7 @@ data <- list(y = as.vector(y.origin), bs.linear = bs.linear,
               zero.vec = as.matrix(rep(0, psi)), sigma = 1,
             #    new.x = xholder, new.bs.x = new.bs.x,
               u = u, #C = 1000,  ones = as.vector(rep(1, n)),
-              shape = 0.1, scale = 0.1)
+              shape = 0.001, scale = 0.001)
 
 fit.v2 <- nimbleMCMC(code = model.penalisation,
                   constants = constant,
@@ -301,7 +303,7 @@ alpha.summary <- fit.v2$summary$all.chains
 
 MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2,
             HPD = TRUE, xlab="beta", offset = 0.05, exact = TRUE,
-            horiz = FALSE, params = c("beta"))
+            horiz = FALSE, params = c("theta"))
 MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2,
             HPD = TRUE, xlab="gamma", offset = 0.5,
             horiz = FALSE, params = c("gamma"))
