@@ -27,7 +27,7 @@ suppressMessages(library(tidyverse))
 set.seed(10)
 n <- 5000
 psi <- 20
-
+threshold <- 0.90
 p <- 10
 no.theta <- 2
 simul.no <- 50
@@ -38,8 +38,6 @@ gamma.container <- as.data.frame(matrix(, nrow = (psi * p), ncol = simul.no))
 # linear.container <- nonlinear.container <- f.container <- lapply(1:simul.no, matrix, data= NA, nrow=(n*(1-threshold)), ncol=p)
 linear.container <- nonlinear.container <- f.container <- lapply(1:simul.no, data.frame)
 alpha.container <- as.data.frame(matrix(, nrow=n, ncol = simul.no))
-#Scenario 1
-n <- 5000
 
 xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
 x.origin <- cbind(replicate(p, runif(n, 0, 1)))
@@ -82,65 +80,59 @@ for(j in 1:p){
     }
 }
 
-
-n <- 1000
-xholder <- bs.x <- matrix(,nrow=n, ncol=0)
-psi <- 20
-p <- 10
-gamma.origin <- matrix(, nrow= psi, ncol=p)
-x.origin <- cbind(replicate(p, runif(n, 0, 1)))
-# x.origin <- scale(x.origin)
-newx <- seq(0, 1, length.out=n)
-
-
-
-for(i in 1:p){
-  # splines <- bbase(x.origin[, i], min(x.origin[,i]), max(x.origin[,i]), nseg = (psi-3), bdeg = 3)
-#   splines <- bbase(x.scale[, i], min(x.scale[, i]), max(x.scale[, i]), nseg = (psi-3), bdeg = 3)
-  test.knot <- seq(0, 1, length.out = (psi-1))
-  splines <- basis.tps(newx, test.knot, m=2, rk=FALSE)
-  xholder <- cbind(xholder, splines)
-  knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = (psi-1))
-  tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE)
-  # tps <- mSpline(x.origin[,i], df=psi, Boundary.knots = range(x.origin[,i]), degree = 3, intercept=TRUE)
-  bs.x <- cbind(bs.x, tps)
-}
-
-gamma.origin <- matrix(, nrow = psi, ncol = p)
+f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
-    for (ps in 1:psi){
-        # gamma.origin[ps, j] <- 1
-        if(j %in% c(2,4,5,6,9,10)){
-            gamma.origin[ps, j] <- 0
-        }
-        else if(j==7){
-            if(ps <= (psi/2)){
-                gamma.origin[ps, j] <- 1
-            }
-            else{
-                gamma.origin[ps, j] <- 1
-            }
-        }
-        else {
-            if(ps <= (psi/2)){
-                gamma.origin[ps, j] <- 1
-            }
-            else{
-                gamma.origin[ps, j] <- 1
-            }
-        }
-    }
-}
-f.origin <- matrix(, nrow = n, ncol = p)
-for(j in 1:p){
-    f.origin[, j] <- bs.x[1:n,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
+    f.origin[, j] <- as.matrix(bs.linear[1:n, (((j-1)*no.theta)+1):(((j-1)*no.theta)+no.theta)]) %*% theta.origin[,j] + (bs.nonlinear[1:n,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j])
+    f.linear.origin[,j] <- as.matrix(bs.linear[1:n, (((j-1)*no.theta)+1):(((j-1)*no.theta)+no.theta)]) %*% theta.origin[,j]
+    f.nonlinear.origin[,j] <- (bs.nonlinear[1:n,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j])
 }
 
 alp.origin <- y.origin <- NULL
 for(i in 1:n){
-  alp.origin[i] <- exp(sum(f.origin[i,]))
-  y.origin[i] <- rPareto(1, 1, alpha = alp.origin[i])
+    alp.origin[i] <- exp(sum(f.origin[i,]))
+    y.origin[i] <- rPareto(1, 1, alpha = alp.origin[i])
 }
+
+u <- quantile(y.origin, threshold)
+x.origin <- x.origin[which(y.origin>u),]
+y.origin <- y.origin[y.origin > u]
+n <- length(y.origin)
+
+# gamma.origin <- matrix(, nrow = psi, ncol = p)
+# for(j in 1:p){
+#     for (ps in 1:psi){
+#         # gamma.origin[ps, j] <- 1
+#         if(j %in% c(2,4,5,6,9,10)){
+#             gamma.origin[ps, j] <- 0
+#         }
+#         else if(j==7){
+#             if(ps <= (psi/2)){
+#                 gamma.origin[ps, j] <- 1
+#             }
+#             else{
+#                 gamma.origin[ps, j] <- 1
+#             }
+#         }
+#         else {
+#             if(ps <= (psi/2)){
+#                 gamma.origin[ps, j] <- 1
+#             }
+#             else{
+#                 gamma.origin[ps, j] <- 1
+#             }
+#         }
+#     }
+# }
+# f.origin <- matrix(, nrow = n, ncol = p)
+# for(j in 1:p){
+#     f.origin[, j] <- bs.x[1:n,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
+# }
+
+# alp.origin <- y.origin <- NULL
+# for(i in 1:n){
+#   alp.origin[i] <- exp(sum(f.origin[i,]))
+#   y.origin[i] <- rPareto(1, 1, alpha = alp.origin[i])
+# }
 
 
 ###################### Custom Density assigned for Pareto Distribution
