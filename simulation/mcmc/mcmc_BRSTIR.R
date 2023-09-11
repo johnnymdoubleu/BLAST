@@ -179,26 +179,26 @@ model.penalisation <- nimbleCode({
   # tau ~ dinvgamma(shape, scale)
   # w ~ dnorm(0, tau)
   # beta[1] ~ dnorm(0, 0.001)
-  # lambda ~ dgamma(0.1, 0.1) #gamma distribution prior for lambda
-  for (j in 1:p){
-    lambda.1[1,j] ~ dgamma(shape, scale) 
-    gamma[1, j] ~ ddexp(0, lambda.1[1,j])
-    # gamma[2, j] ~ dnorm(0, 1)
-    tau[j] ~ dinvgamma(shape, scale)
-    # w[1,j] ~ dnorm(0, tau[j])
-    # w[2,j] ~ dnorm(0, tau[j])
-    # w[j] ~ dnorm(0, sqrt(tau[j]))
-    for (i in 2:psi){
-      w[i,j] ~ dnorm(0, tau[j])
-      lambda.1[i,j] ~ dgamma(shape, scale)
-      gamma[i,j] <- gamma[(i-1),j] + w[i,j]
-      # gamma[i, j] <- (2*gamma[(i-1),j]) - gamma[(i-2),j] + w[i,j]
-    }
-    # lambda[j] ~ dgamma(0.1, 0.1) #gamma distribution prior for lambda
-    # beta[j] ~ ddexp(0, lambda) #laplace distribution for beta
-    # beta[j] ~ dlaplace(0, lambda)
+  I <- identityMatrix(d = psi)
+  lambda.1 ~ dgamma(shape, scale) #gamma distribution prior for lambda
+  lambda.2 ~ dgamma(shape, scale)
+  for (j in 1:(p+1)){
+    theta[j] ~ ddexp(0, lambda.1)
   }
-  # lambda ~ dgamma(0.1, 0.1) #gamma distribution prior for lambda
+  for (j in 1:p){
+    tau.square[j] ~ gamma((psi+1)/2, (lambda.2^2)/2)
+  }
+  gamma.1[1:psi] ~ dmnorm(zero.vec, sigma^2 * sqrt(tau.square[1]) * I)
+  gamma.2[1:psi] ~ dmnorm(zero.vec, sigma^2 * sqrt(tau.square[2]) * I)
+  gamma.3[1:psi] ~ dmnorm(zero.vec, sigma^2 * sqrt(tau.square[3]) * I)
+  gamma.4[1:psi] ~ dmnorm(zero.vec, sigma^2 * sqrt(tau.square[4]) * I)
+  gamma.5[1:psi] ~ dmnorm(zero.vec, sigma^2 * sqrt(tau.square[5]) * I)
+  gamma.6[1:psi] ~ dmnorm(zero.vec, sigma^2 * sqrt(tau.square[6]) * I)
+  gamma.7[1:psi] ~ dmnorm(zero.vec, sigma^2 * sqrt(tau.square[7]) * I)
+  gamma.8[1:psi] ~ dmnorm(zero.vec, sigma^2 * sqrt(tau.square[8]) * I)
+  gamma.9[1:psi] ~ dmnorm(zero.vec, sigma^2 * sqrt(tau.square[9]) * I)
+  gamma.10[1:psi] ~ dmnorm(zero.vec, sigma^2 * sqrt(tau.square[10]) * I)
+
 #   beta[1] ~ dnorm(0, 0.001)
   # for(j in 1:p){
   #   lambda.1[j] ~ dgamma(0.1, 0.1) #gamma distribution prior for lambda
