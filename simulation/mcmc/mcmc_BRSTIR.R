@@ -98,6 +98,36 @@ x.origin <- x.origin[which(y.origin>u),]
 y.origin <- y.origin[y.origin > u]
 n <- length(y.origin)
 
+xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
+newx <- seq(0, 1, length.out=n)
+xholder <- bs.x <- matrix(, nrow = n, ncol = p)
+for(i in 1:p){
+    xholder[,i] <- seq(0, 1, length.out = n)
+    test.knot <- seq(0, 1, length.out = psi)
+    splines <- basis.tps(newx, test.knot, m=2, rk=FALSE, intercept = TRUE)
+    xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
+    xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
+    knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)  
+    tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = TRUE)
+    # tps <- mSpline(x.origin[,i], df=psi, Boundary.knots = range(x.origin[,i]), degree = 3, intercept=TRUE)
+    #   bs.x <- cbind(bs.x, tps)
+    bs.linear <- cbind(bs.linear, tps[,1:no.theta])
+    bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])  
+}
+
+f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
+for(j in 1:p){
+    f.origin[, j] <- as.matrix(bs.linear[1:n, (((j-1)*no.theta)+1):(((j-1)*no.theta)+no.theta)]) %*% theta.origin[,j] + (bs.nonlinear[1:n,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j])
+    f.linear.origin[,j] <- as.matrix(bs.linear[1:n, (((j-1)*no.theta)+1):(((j-1)*no.theta)+no.theta)]) %*% theta.origin[,j]
+    f.nonlinear.origin[,j] <- (bs.nonlinear[1:n,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j])
+}
+
+alp.origin <- NULL
+for(i in 1:n){
+    alp.origin[i] <- exp(sum(f.origin[i,]))
+}
+
+
 # gamma.origin <- matrix(, nrow = psi, ncol = p)
 # for(j in 1:p){
 #     for (ps in 1:psi){
@@ -179,27 +209,31 @@ model.penalisation <- nimbleCode({
   # tau ~ dinvgamma(shape, scale)
   # w ~ dnorm(0, tau)
   # beta[1] ~ dnorm(0, 0.001)
-  I <- identityMatrix(d = psi)
+#   I <- identityMatrix(d = psi)
+#   I <- diag(psi)
   lambda.1 ~ dgamma(shape, scale) #gamma distribution prior for lambda
   lambda.2 ~ dgamma(shape, scale)
   for (i in 1:2){
-    for (j in 1:(p+1)){
+    for (j in 1:p){
         theta[i, j] ~ ddexp(0, lambda.1)
     }
   }
   for (j in 1:p){
-    tau.square[j] ~ gamma((psi+1)/2, (lambda.2^2)/2)
+    tau.square[j] ~ dgamma((psi+1)/2, (lambda.2^2)/2)
+    covm[1:psi, 1:psi, j] <- (((sigma^2) * sqrt(tau.square[j])) * diag(psi))
+    gamma[1:psi, j] ~ dmnorm(zero.vec, cov = covm[1:psi, 1:psi, j])
   }
-  gamma.1[1:psi] ~ dmnorm(zero.vec, cov = (sigma^2 * sqrt(tau.square[1]) * I[1:psi, 1:psi]))
-  gamma.2[1:psi] ~ dmnorm(zero.vec, cov = (sigma^2 * sqrt(tau.square[2]) * I[1:psi, 1:psi]))
-  gamma.3[1:psi] ~ dmnorm(zero.vec, cov = (sigma^2 * sqrt(tau.square[3]) * I[1:psi, 1:psi]))
-  gamma.4[1:psi] ~ dmnorm(zero.vec, cov = (sigma^2 * sqrt(tau.square[4]) * I[1:psi, 1:psi]))
-  gamma.5[1:psi] ~ dmnorm(zero.vec, cov = (sigma^2 * sqrt(tau.square[5]) * I[1:psi, 1:psi]))
-  gamma.6[1:psi] ~ dmnorm(zero.vec, cov = (sigma^2 * sqrt(tau.square[6]) * I[1:psi, 1:psi]))
-  gamma.7[1:psi] ~ dmnorm(zero.vec, cov = (sigma^2 * sqrt(tau.square[7]) * I[1:psi, 1:psi]))
-  gamma.8[1:psi] ~ dmnorm(zero.vec, cov = (sigma^2 * sqrt(tau.square[8]) * I[1:psi, 1:psi]))
-  gamma.9[1:psi] ~ dmnorm(zero.vec, cov = (sigma^2 * sqrt(tau.square[9]) * I[1:psi, 1:psi]))
-  gamma.10[1:psi] ~ dmnorm(zero.vec, cov = (sigma^2 * sqrt(tau.square[10]) * I[1:psi, 1:psi]))
+
+#   gamma[1:psi, 1] ~ dmnorm(zero.vec, cov = (sigma^2 * sqrt(tau.square[1]) * I[1:psi, 1:psi]))
+#   gamma[1:psi, 2] ~ dmnorm(zero.vec, cov = (sigma^2 * sqrt(tau.square[2]) * I[1:psi, 1:psi]))
+#   gamma[1:psi, 3] ~ dmnorm(zero.vec, cov = (sigma^2 * sqrt(tau.square[3]) * I[1:psi, 1:psi]))
+#   gamma[1:psi, 4] ~ dmnorm(zero.vec, cov = (sigma^2 * sqrt(tau.square[4]) * I[1:psi, 1:psi]))
+#   gamma[1:psi, 5] ~ dmnorm(zero.vec, cov = (sigma^2 * sqrt(tau.square[5]) * I[1:psi, 1:psi]))
+#   gamma[1:psi, 6] ~ dmnorm(zero.vec, cov = (sigma^2 * sqrt(tau.square[6]) * I[1:psi, 1:psi]))
+#   gamma[1:psi, 7] ~ dmnorm(zero.vec, cov = (sigma^2 * sqrt(tau.square[7]) * I[1:psi, 1:psi]))
+#   gamma[1:psi, 8] ~ dmnorm(zero.vec, cov = (sigma^2 * sqrt(tau.square[8]) * I[1:psi, 1:psi]))
+#   gamma[1:psi, 9] ~ dmnorm(zero.vec, cov = (sigma^2 * sqrt(tau.square[9]) * I[1:psi, 1:psi]))
+#   gamma[1:psi, 10] ~ dmnorm(zero.vec, cov = (sigma^2 * sqrt(tau.square[10]) * I[1:psi, 1:psi]))
 
 #   beta[1] ~ dnorm(0, 0.001)
   # for(j in 1:p){
@@ -207,28 +241,24 @@ model.penalisation <- nimbleCode({
   #   beta[j] ~ ddexp(0, lambda.1[j])
   # }
   # Likelihood
-  for(i in 1:n){
-    g.linear[i,1:p] <-
-    g.nonlinear <-  
-  }
-  # for (j in 1:n){
-  #   g[j] <- inprod(x[j, 1:p], beta[1:p])
-  #   new.g[j] <- inprod(new.x[j, 1:p], beta[1:p])
-  # }
-
   for (j in 1:p){
-    f[1:n, j] <- bs.x[1:n,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma[1:psi, j] 
-    new.f[1:n, j] <- new.bs.x[1:n,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma[1:psi,j]
+    g.nonlinear[1:n] <- bs.linear[1:n, (((j-1)*2)+1):(((j-1)*2)+2)] %*% theta[1:2, j]
+    g.linear[1:n, j] <- bs.nonlinear[1:n, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma[1:psi, j]
   }
-  # log(alpha[1:n]) <- sum(f.sum[1:n, 1:(p-1)])
-  # log(newalpha[1:n]) <- sum(new.f.sum[1:n, 1:(p-1)])
-  for(i in 1:n){
-    # g[i] <- inprod(x[i,1:p], beta[1:p])
-    log(alpha[i]) <- sum(f[i, 1:p])
-    log(newalpha[i]) <- sum(new.f[i, 1:p])
+#   g.linear[1:n, 1] <- bs.nonlinear[1:n, 1:psi] %*% gamma.1[1:psi]
+#   g.linear[1:n, 2] <- bs.nonlinear[1:n, 1:psi] %*% gamma.2[1:psi]
+#   g.linear[1:n, 3] <- bs.nonlinear[1:n, 1:psi] %*% gamma.3[1:psi]
+#   g.linear[1:n, 4] <- bs.nonlinear[1:n, 1:psi] %*% gamma.4[1:psi]
+#   g.linear[1:n, 5] <- bs.nonlinear[1:n, 1:psi] %*% gamma.5[1:psi]
+#   g.linear[1:n, 6] <- bs.nonlinear[1:n, 1:psi] %*% gamma.6[1:psi]
+#   g.linear[1:n, 7] <- bs.nonlinear[1:n, 1:psi] %*% gamma.7[1:psi]
+#   g.linear[1:n, 8] <- bs.nonlinear[1:n, 1:psi] %*% gamma.8[1:psi]
+#   g.linear[1:n, 9] <- bs.nonlinear[1:n, 1:psi] %*% gamma.9[1:psi]
+#   g.linear[1:n, 10] <- bs.nonlinear[1:n, 1:psi] %*% gamma.10[1:psi]
+  
+  for (i in 1:n){
+    log(alpha[i]) <- sum(g.nonlinear[i, 1:p]) + g.linear[i]
   }
-  # newalpha[1:n] <- nimRowSums(new.f.sum[1:n,1:(p-1)])
-
   for(i in 1:n){
     y[i] ~ dpareto(1, u, alpha[i])
     # spy[i] <- (alpha[i]*(y[i]/u)^(-1*alpha[i])*y[i]^(-1)) / C
@@ -239,12 +269,14 @@ model.penalisation <- nimbleCode({
 
 constant <- list(psi = psi, n = n, p = p)
 init.alpha <- function() list(list(gamma = matrix(0.5, nrow = psi, ncol=p)),
-                              list(gamma = matrix(0, nrow = psi, ncol=p)),
-                              list(gamma = matrix(1, nrow = psi, ncol=p)))
+                              list(gamma = matrix(0, nrow = psi, ncol=p)))
+                            #   list(gamma = matrix(1, nrow = psi, ncol=p)))
                               # y = as.vector(y),
-monitor.pred <- c("gamma", "alpha", "newalpha")
-data <- list(y = as.vector(y), bs.x = bs.x, x = x.scale,
-               new.x = xholder, new.bs.x = new.bs.x,
+monitor.pred <- c("theta", "gamma", "alpha")
+data <- list(y = as.vector(y.origin), bs.linear = bs.linear, 
+              bs.nonlinear = bs.nonlinear,
+              zero.vec = rep(0, psi), sigma = 1,
+            #    new.x = xholder, new.bs.x = new.bs.x,
               u = u, #C = 1000,  ones = as.vector(rep(1, n)),
               shape = 0.1, scale = 0.1)
 
@@ -257,7 +289,7 @@ fit.v2 <- nimbleMCMC(code = model.penalisation,
                   niter = 30000,
                   nburnin = 10000,
                   # setSeed = 300,
-                  nchains = 3,
+                  nchains = 2,
                   # WAIC = TRUE,-
                   samplesAsCodaMCMC = TRUE,
                   summary = TRUE)
