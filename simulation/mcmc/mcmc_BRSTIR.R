@@ -182,22 +182,24 @@ model.penalisation <- nimbleCode({
   I <- identityMatrix(d = psi)
   lambda.1 ~ dgamma(shape, scale) #gamma distribution prior for lambda
   lambda.2 ~ dgamma(shape, scale)
-  for (j in 1:(p+1)){
-    theta[j] ~ ddexp(0, lambda.1)
+  for (i in 1:2){
+    for (j in 1:(p+1)){
+        theta[i, j] ~ ddexp(0, lambda.1)
+    }
   }
   for (j in 1:p){
     tau.square[j] ~ gamma((psi+1)/2, (lambda.2^2)/2)
   }
-  gamma.1[1:psi] ~ dmnorm(zero.vec, sigma^2 * sqrt(tau.square[1]) * I)
-  gamma.2[1:psi] ~ dmnorm(zero.vec, sigma^2 * sqrt(tau.square[2]) * I)
-  gamma.3[1:psi] ~ dmnorm(zero.vec, sigma^2 * sqrt(tau.square[3]) * I)
-  gamma.4[1:psi] ~ dmnorm(zero.vec, sigma^2 * sqrt(tau.square[4]) * I)
-  gamma.5[1:psi] ~ dmnorm(zero.vec, sigma^2 * sqrt(tau.square[5]) * I)
-  gamma.6[1:psi] ~ dmnorm(zero.vec, sigma^2 * sqrt(tau.square[6]) * I)
-  gamma.7[1:psi] ~ dmnorm(zero.vec, sigma^2 * sqrt(tau.square[7]) * I)
-  gamma.8[1:psi] ~ dmnorm(zero.vec, sigma^2 * sqrt(tau.square[8]) * I)
-  gamma.9[1:psi] ~ dmnorm(zero.vec, sigma^2 * sqrt(tau.square[9]) * I)
-  gamma.10[1:psi] ~ dmnorm(zero.vec, sigma^2 * sqrt(tau.square[10]) * I)
+  gamma.1[1:psi] ~ dmnorm(zero.vec, cov = (sigma^2 * sqrt(tau.square[1]) * I[1:psi, 1:psi]))
+  gamma.2[1:psi] ~ dmnorm(zero.vec, cov = (sigma^2 * sqrt(tau.square[2]) * I[1:psi, 1:psi]))
+  gamma.3[1:psi] ~ dmnorm(zero.vec, cov = (sigma^2 * sqrt(tau.square[3]) * I[1:psi, 1:psi]))
+  gamma.4[1:psi] ~ dmnorm(zero.vec, cov = (sigma^2 * sqrt(tau.square[4]) * I[1:psi, 1:psi]))
+  gamma.5[1:psi] ~ dmnorm(zero.vec, cov = (sigma^2 * sqrt(tau.square[5]) * I[1:psi, 1:psi]))
+  gamma.6[1:psi] ~ dmnorm(zero.vec, cov = (sigma^2 * sqrt(tau.square[6]) * I[1:psi, 1:psi]))
+  gamma.7[1:psi] ~ dmnorm(zero.vec, cov = (sigma^2 * sqrt(tau.square[7]) * I[1:psi, 1:psi]))
+  gamma.8[1:psi] ~ dmnorm(zero.vec, cov = (sigma^2 * sqrt(tau.square[8]) * I[1:psi, 1:psi]))
+  gamma.9[1:psi] ~ dmnorm(zero.vec, cov = (sigma^2 * sqrt(tau.square[9]) * I[1:psi, 1:psi]))
+  gamma.10[1:psi] ~ dmnorm(zero.vec, cov = (sigma^2 * sqrt(tau.square[10]) * I[1:psi, 1:psi]))
 
 #   beta[1] ~ dnorm(0, 0.001)
   # for(j in 1:p){
@@ -205,7 +207,10 @@ model.penalisation <- nimbleCode({
   #   beta[j] ~ ddexp(0, lambda.1[j])
   # }
   # Likelihood
-
+  for(i in 1:n){
+    g.linear[i,1:p] <-
+    g.nonlinear <-  
+  }
   # for (j in 1:n){
   #   g[j] <- inprod(x[j, 1:p], beta[1:p])
   #   new.g[j] <- inprod(new.x[j, 1:p], beta[1:p])
