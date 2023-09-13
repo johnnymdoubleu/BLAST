@@ -280,7 +280,7 @@ data <- list(y = as.vector(y.origin), bs.linear = bs.linear,
               zero.vec = as.matrix(rep(0, psi)), sigma = 1,
             #    new.x = xholder, new.bs.x = new.bs.x,
               u = u, #C = 1000,  ones = as.vector(rep(1, n)),
-              shape = 0.001, scale = 0.001)
+              shape = 0.1, scale = 0.1)
 
 fit.v2 <- nimbleMCMC(code = model.penalisation,
                   constants = constant,
@@ -288,8 +288,8 @@ fit.v2 <- nimbleMCMC(code = model.penalisation,
                   monitors = monitor.pred,
                   inits = init.alpha(),
                   thin = 20,
-                  niter = 30000,
-                  nburnin = 10000,
+                  niter = 70000,
+                  nburnin = 30000,
                   # setSeed = 300,
                   nchains = 2,
                   # WAIC = TRUE,-
@@ -317,7 +317,7 @@ MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2,
 #                                            HPD = TRUE, xlab="gamma", offset = 0.5,
 #                                            horiz = FALSE, params = c("gamma"))),
 #       width=7, height = 5.95)
-gelman.diag(fit.v2$samples, multivariate = FALSE)
+# gelman.diag(fit.v2$samples, multivariate = FALSE)
 # MCMCsummary(fit.v2$samples, params="alpha")
 
 
