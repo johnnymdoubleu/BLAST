@@ -128,6 +128,24 @@ for(i in 1:n){
 }
 
 
+#### Test Set
+f.nonlinear.new <- f.linear.new <- f.new <- matrix(, nrow = n, ncol=p)
+true.alpha <- alp.new <- NULL
+for (j in 1:p){
+    f.linear.new[,j] <- as.matrix(xholder.linear[,(((j-1)*no.theta)+1):(((j-1)*no.theta)+no.theta)]) %*% theta.origin[,j]
+    f.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
+    f.new[,j] <- f.linear.new[,j] + f.nonlinear.new[,j]
+    # f.linear.origin[,j] <- as.matrix(xholder.linear[,(((j-1)*no.theta)+1):(((j-1)*no.theta)+no.theta)]) %*% theta.origin[,j]
+    # f.nonlinear.origin[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
+    # f.origin[,j] <- f.linear.origin[,j] + f.nonlinear.origin[,j]
+}
+    # set.seed(100)
+for(i in 1:n){
+    # true.alpha[i] <- exp(sum(f.origin[i,]))
+    alp.new[i] <- exp(sum(f.new[i,]))
+}
+
+
 # gamma.origin <- matrix(, nrow = psi, ncol = p)
 # for(j in 1:p){
 #     for (ps in 1:psi){
@@ -245,6 +263,10 @@ model.penalisation <- nimbleCode({
     g.linear[1:n] <- bs.linear[1:n, (((j-1)*2)+1):(((j-1)*2)+2)] %*% theta[1:2, j]
     g.nonlinear[1:n, j] <- bs.nonlinear[1:n, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma[1:psi, j]
   }
+  for (j in 1:p){
+    holder.linear[1:n] <- xholder.linear[1:n, (((j-1)*2)+1):(((j-1)*2)+2)] %*% theta[1:2, j]
+    holder.nonlinear[1:n, j] <- xholder.nonlinear[1:n, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma[1:psi, j]
+  }
 #   g.linear[1:n, 1] <- bs.nonlinear[1:n, 1:psi] %*% gamma.1[1:psi]
 #   g.linear[1:n, 2] <- bs.nonlinear[1:n, 1:psi] %*% gamma.2[1:psi]
 #   g.linear[1:n, 3] <- bs.nonlinear[1:n, 1:psi] %*% gamma.3[1:psi]
@@ -258,6 +280,7 @@ model.penalisation <- nimbleCode({
   
   for (i in 1:n){
     log(alpha[i]) <- sum(g.nonlinear[i, 1:p]) + g.linear[i]
+    log(new.alpha[i]) <- sum(holder.nonlinear[i, 1:p]) + holder.linear[i]
   }
   for(i in 1:n){
     y[i] ~ dpareto(1, u, alpha[i])
@@ -274,9 +297,11 @@ init.alpha <- function() list(list(gamma = matrix(0.5, nrow = psi, ncol=p),
                                     theta = matrix(0, nrow = 2, ncol = p)))
                             #   list(gamma = matrix(1, nrow = psi, ncol=p)))
                               # y = as.vector(y),
-monitor.pred <- c("theta", "gamma", "alpha")
+monitor.pred <- c("theta", "gamma", "alpha", "new.alpha")
 data <- list(y = as.vector(y.origin), bs.linear = bs.linear, 
               bs.nonlinear = bs.nonlinear,
+              xholder.linear = xholder.linear,
+              xholder.nonlinear = xholder.nonlinear,
               zero.vec = as.matrix(rep(0, psi)), sigma = 1,
             #    new.x = xholder, new.bs.x = new.bs.x,
               u = u, #C = 1000,  ones = as.vector(rep(1, n)),
@@ -354,12 +379,13 @@ time <- substr(systime, 12, 20)
 
 beta.len <- dim(alpha.summary)[1]-n-n-(psi*(p-1))
 
+
 samples <- fit.v2$samples$chain1
 data.scenario <- data.frame("x" = c(1:n),
                             "constant" = newx,
                             "post.mean" = sort(fit.v2$summary$chain1[1:n,1]),
-                            "trueAlp" = sort(trueAlp),
-                            "meanAlp" = sort(fit.v2$summary$chain1[(n+beta.len+((p-1)*psi)+1):(n+beta.len+n+((p-1)*psi)),1]),
+                            "trueAlp" = sort(alp.new),
+                            "meanAlp" = sort(fit.v2$summary$chain1[701:1200,1]),
                             "post.check" = sort(cutoff.alp))
                             # "post.check" = sort(alp))
 # data.scenario1 <- data.frame("x"=c(1:n)) #, )
