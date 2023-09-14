@@ -231,11 +231,11 @@ model.penalisation <- nimbleCode({
 #   I <- diag(psi)
   lambda.1 ~ dgamma(shape, scale) #gamma distribution prior for lambda
   lambda.2 ~ dgamma(shape, scale)
-  for (i in 1:2){
-    for (j in 1:p){
-        theta[i, j] ~ ddexp(0, lambda.1)
-    }
+  
+  for (j in 1:p){
+      theta[j] ~ ddexp(0, lambda.1)
   }
+  theta.0 ~ ddexp(0, lambda.1)
   for (j in 1:p){
     tau.square[j] ~ dgamma((psi+1)/2, (lambda.2^2)/2)
     covm[1:psi, 1:psi, j] <- (((sigma^2) * sqrt(tau.square[j])) * diag(psi))
@@ -385,8 +385,7 @@ data.scenario <- data.frame("x" = c(1:n),
                             "constant" = newx,
                             "post.mean" = sort(fit.v2$summary$chain1[1:n,1]),
                             "trueAlp" = sort(alp.new),
-                            "meanAlp" = sort(fit.v2$summary$chain1[701:1200,1]),
-                            "post.check" = sort(cutoff.alp))
+                            "meanAlp" = sort(fit.v2$summary$chain1[701:1200,1]))
                             # "post.check" = sort(alp))
 # data.scenario1 <- data.frame("x"=c(1:n)) #, )
 
@@ -397,11 +396,11 @@ for(i in 1:len){
 }
 for(i in 1:len){
   data.scenario <- cbind(data.scenario, 
-                      data.frame(unname(sort(samples[i, (n+beta.len+((p-1)*psi)+1):(n+beta.len+((p-1)*psi)+n)]))))
+                      data.frame(unname(sort(samples[i, 701:1200]))))
 }
 colnames(data.scenario) <- c("x", "constant", "post.mean",
                               "trueAlp", "meanAlp",
-                              "post.check", paste("alp", 1:len, sep = ""),
+                              paste("alp", 1:len, sep = ""),
                               # paste0("post.samp", 1:len))
                               paste0("post.samp.alp", 1:len))
 tail(data.scenario[, c(1:10, ((dim(samples)[1]*2-5):(dim(samples)[1]*2)))], 15)
