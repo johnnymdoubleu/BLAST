@@ -358,8 +358,8 @@ data.scenario <- data.frame("x" = c(1:n),
                             "constant" = newx,
                             "post.mean" = sort(fit.v2$summary$chain1[1:n,1]),
                             "trueAlp" = sort(alp.new),
-                            "meanAlp" = sort(fit.v2$summary$chain1[701:1200,1]))
-                            # "post.check" = sort(alp))
+                            "meanAlp" = sort(fit.v2$summary$chain1[701:1200,1]),
+                            "post.check" = sort(alp.origin))
 # data.scenario1 <- data.frame("x"=c(1:n)) #, )
 
 len <- dim(samples)[1]
@@ -372,7 +372,7 @@ for(i in 1:len){
                       data.frame(unname(sort(samples[i, 701:1200]))))
 }
 colnames(data.scenario) <- c("x", "constant", "post.mean",
-                              "trueAlp", "meanAlp",
+                              "trueAlp", "meanAlp", "post.check"
                               paste("alp", 1:len, sep = ""),
                               # paste0("post.samp", 1:len))
                               paste0("post.samp.alp", 1:len))
