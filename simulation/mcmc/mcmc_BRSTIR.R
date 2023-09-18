@@ -372,7 +372,7 @@ for(i in 1:len){
                       data.frame(unname(sort(samples[i, 701:1200]))))
 }
 colnames(data.scenario) <- c("x", "constant", "post.mean",
-                              "trueAlp", "meanAlp", "post.check"
+                              "trueAlp", "meanAlp", "post.check",
                               paste("alp", 1:len, sep = ""),
                               # paste0("post.samp", 1:len))
                               paste0("post.samp.alp", 1:len))
