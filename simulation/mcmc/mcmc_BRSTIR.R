@@ -388,7 +388,7 @@ colnames(data.scenario) <- c("x", "constant", "post.mean",
 tail(data.scenario[, c(1:10, ((dim(samples)[1]*2-5):(dim(samples)[1]*2)))], 15)
 # saveRDS(data.scenario, file=paste0("Simulation/BayesianPsplines/results/",date,"-",time, "_sc1_data_samp1.rds"))
 #plotting all the points
-plt <- ggplot(data = data.scenario, aes(x = x)) + ylab("alpha(x)") + xlab("")
+plt <- ggplot(data = data.scenario, aes(x = x)) + ylab(expression(alpha(x))) + xlab("")
 for(i in (dim(samples)[1] - 993):(dim(samples)[1]+6)){
   plt <- plt + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
 }
@@ -406,7 +406,7 @@ print(plt + geom_line(aes(y=post.mean, col = "Posterior Mean(Chain1)"), linewidt
 
 cat("sc1_Alp Done")
 
-plt.samp <- ggplot(data = data.scenario, aes(x = constant)) + ylab("alpha(x)")
+plt.samp <- ggplot(data = data.scenario, aes(x = constant)) + ylab(expression(alpha(x)))
 for(i in ((dim(samples)[1]*2)-993):((dim(samples)[1]*2)+6)){
   # print(i)
   plt.samp <- plt.samp + geom_line(aes(y = .data[[names(data.scenario)[i]]]))

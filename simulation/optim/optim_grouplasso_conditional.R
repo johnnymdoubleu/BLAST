@@ -346,12 +346,12 @@ rbind(matrix(theta.map, nrow = no.theta, ncol = p), matrix(gamma.map, nrow = psi
 f.nonlinear.origin <- f.linear.origin <- f.origin <- f.nonlinear.new <- f.linear.new <- f.new <- matrix(, nrow = n, ncol=p)
 true.alpha <- new.alpha <- NULL
 for (j in 1:p){
-  f.linear.new[,j] <- as.matrix(xholder.linear[,(((j-1)*no.theta)+1):(((j-1)*no.theta)+no.theta)]) %*% matrix(theta.map,nrow=no.theta)[,j]
+  f.linear.new[,j] <- xholder.linear[,j] * theta.map[j+1]
   f.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.map, ncol = p)[, j]
-  f.new[,j] <- f.linear.new[,j] + f.nonlinear.new[,j]
-  f.linear.origin[,j] <- as.matrix(xholder.linear[,(((j-1)*no.theta)+1):(((j-1)*no.theta)+no.theta)]) %*% theta.origin[,j]
+  f.new[,j] <- rep(theta.map[1], n) + f.linear.new[,j] + f.nonlinear.new[,j]
+  f.linear.origin[,j] <- xholder.linear[,j] * theta.origin[j+1]
   f.nonlinear.origin[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
-  f.origin[,j] <- f.linear.origin[,j] + f.nonlinear.origin[,j]
+  f.origin[,j] <- rep(theta.origin[1], n) + f.linear.origin[,j] + f.nonlinear.origin[,j]
 }
 # set.seed(100)
 for(i in 1:n){
