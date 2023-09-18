@@ -24,7 +24,7 @@ suppressMessages(library(tidyverse))
 # library(ggplotify)
 
 #Scenario 1
-set.seed(10)
+# set.seed(10)
 n <- 5000
 psi <- 20
 threshold <- 0.90
@@ -203,7 +203,7 @@ model.penalisation <- nimbleCode({
 #   I <- identityMatrix(d = psi)
 #   I <- diag(psi)
   lambda.1 ~ dgamma(shape, scale) #gamma distribution prior for lambda
-  lambda.2 ~ dgamma(shape, scale)
+  lambda.2 ~ dgamma(1, 1)
   
   for (j in 1:p){
       theta[j] ~ ddexp(0, lambda.1)
@@ -273,7 +273,7 @@ data <- list(y = as.vector(y.origin), bs.linear = bs.linear,
               bs.nonlinear = bs.nonlinear,
               xholder.linear = xholder.linear,
               xholder.nonlinear = xholder.nonlinear,
-              zero.vec = as.matrix(rep(0, psi)), sigma = 1,
+              zero.vec = as.matrix(rep(0, psi)), sigma = 0.1,
             #    new.x = xholder, new.bs.x = new.bs.x,
               u = u, #C = 1000,  ones = as.vector(rep(1, n)),
               shape = 0.1, scale = 0.1)
@@ -285,7 +285,7 @@ fit.v2 <- nimbleMCMC(code = model.penalisation,
                   inits = init.alpha(),
                   thin = 20,
                   niter = 70000,
-                  nburnin = 30000,
+                  nburnin = 50000,
                   # setSeed = 300,
                   nchains = 2,
                   # WAIC = TRUE,-
@@ -299,7 +299,7 @@ alpha.summary <- fit.v2$summary$all.chains
 
 MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2,
             HPD = TRUE, xlab="beta", offset = 0.05, exact = TRUE,
-            horiz = FALSE, params = c("theta"))
+            horiz = FALSE, params = c("theta.0", "theta"))
 MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2,
             HPD = TRUE, xlab="gamma", offset = 0.5,
             horiz = FALSE, params = c("gamma"))
@@ -344,7 +344,12 @@ MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2,
 #           pdf = FALSE, # no export to PDF
 #           ind = TRUE, # separate density lines per chain
 #           n.eff = TRUE,# add eff sample size
-#           params = "beta")
+#           params = "theta")
+# MCMCtrace(object = fit.v2$samples,
+#           pdf = FALSE, # no export to PDF
+#           ind = TRUE, # separate density lines per chain
+#           n.eff = TRUE,# add eff sample size
+#           params = c("lambda.1", "lambda.2"))
 
 systime <- Sys.time()
 Sys.time()
@@ -371,7 +376,7 @@ for(i in 1:len){
 }
 for(i in 1:len){
   data.scenario <- cbind(data.scenario, 
-                      data.frame(unname(sort(samples[i, 701:1200]))))
+                      data.frame(unname(sort(samples[i, 703:1202]))))
 }
 colnames(data.scenario) <- c("x", "constant", "post.mean",
                               "trueAlp", "meanAlp", "post.check",
@@ -404,7 +409,7 @@ for(i in ((dim(samples)[1]*2)-993):((dim(samples)[1]*2)+6)){
   # print(i)
   plt.samp <- plt.samp + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
 }
-print(plt.samp + ylim(0, 15) +
+print(plt.samp + ylim(0, 30) +
       geom_line(aes(y = trueAlp, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
       geom_line(aes(y = meanAlp, col = "Posterior Mean(Chain1)"), linewidth = 2.5) +
       labs(col = "") +

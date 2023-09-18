@@ -12,35 +12,119 @@ suppressMessages(library(tidyverse))
 
 #Scenario 1
 # set.seed(12338)
-# n <- 1000
-# # beta <- c(0.2, 0.7)
-# beta <- c(0.2, 0, 0.8, 0, 0, -0.1, 0, 0, 0, -0.4)
-# p <- length(beta)
-# x.scale <- cbind(replicate(p, runif(n, 0, 1)))
-# x.scale <- scale(x.scale)
 
-
-# alp.origin <- y <- NULL
-# for(i in 1:n){
-#   alp.origin[i] <- exp(sum(x.scale[i, ] * beta))
-#   y[i] <- rPareto(1, 1, alpha = alp.origin[i])
-# }
-# # plot(y)
-
+n <- 5000
+psi <- 20
 threshold <- 0.90
-# x.origin <- x.scale
-# y.origin <- y
+p <- 10
+no.theta <- 1
+simul.no <- 50
 
-# # n <- length(y)
-# n <- length(y.origin)
+xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
+x.origin <- cbind(replicate(p, runif(n, 0, 1)))
+for(i in 1:p){
+    knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)  
+    tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
+    # tps <- mSpline(x.origin[,i], df=psi, Boundary.knots = range(x.origin[,i]), degree = 3, intercept=TRUE)
+    #   bs.x <- cbind(bs.x, tps)
+    bs.linear <- cbind(bs.linear, tps[,1:no.theta])
+    bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])  
+}
 
-# newx <- seq(0, 1, length.out=n)
-# xholder <- cbind(xholder, rep(1,n))
-# for(i in 1:p){
-#   splines <- bbase(newx, min(newx), max(newx), nseg = (psi  -3), bdeg = 3)
-#   new.bs.x <- cbind(new.bs.x, splines)
-#   xholder <- cbind(xholder, newx)
+gamma.origin <- matrix(, nrow = psi, ncol = p)
+for(j in 1:p){
+    for (ps in 1:psi){
+        if(j %in% c(2,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
+        else if(j==7){
+            if(ps <= (psi/2)){gamma.origin[ps, j] <- 1}
+            else{gamma.origin[ps, j] <- 1}
+        }
+        else {
+            if(ps <= (psi/2)){gamma.origin[ps, j] <- 1}
+            else{gamma.origin[ps, j] <- 1}
+        }
+    }
+}
+
+# theta.origin <- matrix(, nrow = 2, ncol = p)
+# for(j in 1:p){
+#     for (k in 1:2){
+#         if(j %in% c(2,4,5,6,9,10)){theta.origin[k, j] <- 0}
+#         else if(j==7){
+#             if(k==1){theta.origin[k, j] <- 0.5}
+#             else{theta.origin[k, j] <- -0.3}
+#         }
+#         else {
+#             if(k==1){theta.origin[k,j] <- -0.2}
+#             else{theta.origin[k,j] <- 0.8}
+#         }
+#     }
 # }
+theta.origin <- c(-0.1, 0.8, 0, 0.8, 0, 0, 0, -0.3, 0.8, 0, 0)
+
+f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
+for(j in 1:p){
+    f.linear.origin[,j] <- bs.linear[1:n, j] * theta.origin[j+1]
+    f.nonlinear.origin[,j] <- (bs.nonlinear[1:n,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j])
+    f.origin[, j] <- rep(theta.origin[1], n) + f.linear.origin[,j] + f.nonlinear.origin[,j]
+}
+
+alp.origin <- y.origin <- NULL
+for(i in 1:n){
+    alp.origin[i] <- exp(sum(f.origin[i,]))
+    y.origin[i] <- rPareto(1, 1, alpha = alp.origin[i])
+}
+
+u <- quantile(y.origin, threshold)
+x.origin <- x.origin[which(y.origin>u),]
+y.origin <- y.origin[y.origin > u]
+n <- length(y.origin)
+
+xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
+newx <- seq(0, 1, length.out=n)
+xholder <- bs.x <- matrix(, nrow = n, ncol = p)
+for(i in 1:p){
+    xholder[,i] <- seq(0, 1, length.out = n)
+    test.knot <- seq(0, 1, length.out = psi)
+    splines <- basis.tps(newx, test.knot, m=2, rk=FALSE, intercept = FALSE)
+    xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
+    xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
+    knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)  
+    tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
+    bs.linear <- cbind(bs.linear, tps[,1:no.theta])
+    bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])  
+}
+
+f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
+for(j in 1:p){
+    f.linear.origin[,j] <- bs.linear[1:n, j] * theta.origin[j+1]
+    f.nonlinear.origin[,j] <- bs.nonlinear[1:n,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
+    f.origin[, j] <- rep(theta.origin[1], n) + f.linear.origin[,j] + f.nonlinear.origin[,j]
+}
+
+alp.origin <- NULL
+for(i in 1:n){
+    alp.origin[i] <- exp(sum(f.origin[i,]))
+}
+
+
+#### Test Set
+f.nonlinear.new <- f.linear.new <- f.new <- matrix(, nrow = n, ncol=p)
+true.alpha <- alp.new <- NULL
+for (j in 1:p){
+    f.linear.new[,j] <- xholder.linear[1:n, j] * theta.origin[j+1]
+    f.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
+    f.new[,j] <- rep(theta.origin[1], n) + f.linear.new[,j] + f.nonlinear.new[,j]
+    # f.linear.origin[,j] <- as.matrix(xholder.linear[,(((j-1)*no.theta)+1):(((j-1)*no.theta)+no.theta)]) %*% theta.origin[,j]
+    # f.nonlinear.origin[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
+    # f.origin[,j] <- f.linear.origin[,j] + f.nonlinear.origin[,j]
+}
+    # set.seed(100)
+for(i in 1:n){
+    # true.alpha[i] <- exp(sum(f.origin[i,]))
+    alp.new[i] <- exp(sum(f.new[i,]))
+}
+
 
 n <- 5000
 bs.x <- xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
