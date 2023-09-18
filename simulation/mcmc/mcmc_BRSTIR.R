@@ -211,8 +211,8 @@ model.penalisation <- nimbleCode({
   theta.0 ~ ddexp(0, lambda.1)
   for (j in 1:p){
     tau.square[j] ~ dgamma((psi+1)/2, (lambda.2^2)/2)
-    covm[1:psi, 1:psi, j] <- diag((sigma^2) * sqrt(tau.square[j]) * psi)
-    gamma[1:psi, j] ~ dmnorm(zero.vec[1:psi, 1], cov = covm[1:psi, 1:psi, j])
+    covm[j] <- diag(psi) * ((sigma^2) * sqrt(tau.square[j]))
+    gamma[1:psi, j] ~ dmnorm(zero.vec[1:psi, 1], cov = covm[j])
   }
 
   # Likelihood
@@ -260,9 +260,11 @@ model.penalisation <- nimbleCode({
 
 constant <- list(psi = psi, n = n, p = p)
 init.alpha <- function() list(list(gamma = matrix(0.5, nrow = psi, ncol=p), 
-                                    theta = rep(0.1, p), theta.0 = 0.1),
+                                    theta = rep(0.1, p), theta.0 = 0.1,
+                                    covm = rep(list(diag(psi)), 10)),
                               list(gamma = matrix(0, nrow = psi, ncol=p),
-                                    theta = rep(0, p), theta.0 = 0))
+                                    theta = rep(0, p), theta.0 = 0,
+                                    covm = rep(list(diag(psi)), 10)))
                             #   list(gamma = matrix(1, nrow = psi, ncol=p)))
                               # y = as.vector(y),
 monitor.pred <- c("theta.0", "theta", "gamma", "alpha", "new.alpha", "lambda.1", "lambda.2")
