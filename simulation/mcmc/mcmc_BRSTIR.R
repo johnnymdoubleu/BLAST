@@ -211,8 +211,18 @@ model.penalisation <- nimbleCode({
   theta.0 ~ ddexp(0, lambda.1)
   for (j in 1:p){
     tau.square[j] ~ dgamma((psi+1)/2, (lambda.2^2)/2)
-    covm[1:psi, 1:psi, j] <- (((sigma^2) * sqrt(tau.square[j])) * diag(psi))
+    covm[1:psi, 1:psi, j] <- diag((sigma^2) * sqrt(tau.square[j]) * psi)
     gamma[1:psi, j] ~ dmnorm(zero.vec[1:psi, 1], cov = covm[1:psi, 1:psi, j])
+  }
+
+  # Likelihood
+  for (j in 1:p){
+    g.linear[1:n] <- bs.linear[1:n, (((j-1)*2)+1):(((j-1)*2)+2)] * theta[j]
+    g.nonlinear[1:n, j] <- bs.nonlinear[1:n, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma[1:psi, j]
+  }
+  for (j in 1:p){
+    holder.linear[1:n] <- xholder.linear[1:n, (((j-1)*2)+1):(((j-1)*2)+2)] * theta[j]
+    holder.nonlinear[1:n, j] <- xholder.nonlinear[1:n, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma[1:psi, j]
   }
 
 #   gamma[1:psi, 1] ~ dmnorm(zero.vec, cov = (sigma^2 * sqrt(tau.square[1]) * I[1:psi, 1:psi]))
@@ -225,21 +235,6 @@ model.penalisation <- nimbleCode({
 #   gamma[1:psi, 8] ~ dmnorm(zero.vec, cov = (sigma^2 * sqrt(tau.square[8]) * I[1:psi, 1:psi]))
 #   gamma[1:psi, 9] ~ dmnorm(zero.vec, cov = (sigma^2 * sqrt(tau.square[9]) * I[1:psi, 1:psi]))
 #   gamma[1:psi, 10] ~ dmnorm(zero.vec, cov = (sigma^2 * sqrt(tau.square[10]) * I[1:psi, 1:psi]))
-
-#   beta[1] ~ dnorm(0, 0.001)
-  # for(j in 1:p){
-  #   lambda.1[j] ~ dgamma(0.1, 0.1) #gamma distribution prior for lambda
-  #   beta[j] ~ ddexp(0, lambda.1[j])
-  # }
-  # Likelihood
-  for (j in 1:p){
-    g.linear[1:n] <- bs.linear[1:n, (((j-1)*2)+1):(((j-1)*2)+2)] * theta[j]
-    g.nonlinear[1:n, j] <- bs.nonlinear[1:n, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma[1:psi, j]
-  }
-  for (j in 1:p){
-    holder.linear[1:n] <- xholder.linear[1:n, (((j-1)*2)+1):(((j-1)*2)+2)] * theta[j]
-    holder.nonlinear[1:n, j] <- xholder.nonlinear[1:n, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma[1:psi, j]
-  }
 #   g.linear[1:n, 1] <- bs.nonlinear[1:n, 1:psi] %*% gamma.1[1:psi]
 #   g.linear[1:n, 2] <- bs.nonlinear[1:n, 1:psi] %*% gamma.2[1:psi]
 #   g.linear[1:n, 3] <- bs.nonlinear[1:n, 1:psi] %*% gamma.3[1:psi]
@@ -270,7 +265,7 @@ init.alpha <- function() list(list(gamma = matrix(0.5, nrow = psi, ncol=p),
                                     theta = rep(0, p), theta.0 = 0))
                             #   list(gamma = matrix(1, nrow = psi, ncol=p)))
                               # y = as.vector(y),
-monitor.pred <- c("theta.0", "theta", "gamma", "alpha", "new.alpha")
+monitor.pred <- c("theta.0", "theta", "gamma", "alpha", "new.alpha", "lambda.1", "lambda.2")
 data <- list(y = as.vector(y.origin), bs.linear = bs.linear, 
               bs.nonlinear = bs.nonlinear,
               xholder.linear = xholder.linear,
