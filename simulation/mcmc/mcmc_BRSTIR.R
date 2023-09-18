@@ -15,7 +15,7 @@ library(colorspace)
 library(corrplot)
 library(JOPS)
 library(nimble, warn.conflicts = FALSE)
-# suppressMessages(library(coda))
+suppressMessages(library(coda))
 # library(R6)
 # suppressMessages(library(igraph))
 # library(mgcv)
@@ -211,8 +211,8 @@ model.penalisation <- nimbleCode({
   theta.0 ~ ddexp(0, lambda.1)
   for (j in 1:p){
     tau.square[j] ~ dgamma((psi+1)/2, (lambda.2^2)/2)
-    covm[j] <- diag(psi) * ((sigma^2) * sqrt(tau.square[j]))
-    gamma[1:psi, j] ~ dmnorm(zero.vec[1:psi, 1], cov = covm[j])
+    covm[1:psi, 1:psi, j] <- diag(psi) * ((sigma^2) * sqrt(tau.square[j]))
+    gamma[1:psi, j] ~ dmnorm(zero.vec[1:psi, 1], cov = covm[1:psi, 1:psi, j])
   }
 
   # Likelihood
@@ -261,13 +261,14 @@ model.penalisation <- nimbleCode({
 constant <- list(psi = psi, n = n, p = p)
 init.alpha <- function() list(list(gamma = matrix(0.5, nrow = psi, ncol=p), 
                                     theta = rep(0.1, p), theta.0 = 0.1,
-                                    covm = rep(list(diag(psi)), 10)),
+                                    covm = array(1, dim = c(psi,psi,10))),
                               list(gamma = matrix(0, nrow = psi, ncol=p),
                                     theta = rep(0, p), theta.0 = 0,
-                                    covm = rep(list(diag(psi)), 10)))
+                                    covm = array(1, dim = c(psi,psi,10))))
                             #   list(gamma = matrix(1, nrow = psi, ncol=p)))
                               # y = as.vector(y),
 monitor.pred <- c("theta.0", "theta", "gamma", "alpha", "new.alpha", "lambda.1", "lambda.2")
+# monitor.pred <- c("covm")
 data <- list(y = as.vector(y.origin), bs.linear = bs.linear, 
               bs.nonlinear = bs.nonlinear,
               xholder.linear = xholder.linear,
@@ -302,6 +303,9 @@ MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2,
 MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2,
             HPD = TRUE, xlab="gamma", offset = 0.5,
             horiz = FALSE, params = c("gamma"))
+# MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2,
+#             HPD = TRUE, xlab="lambda", offset = 0.5,
+#             horiz = FALSE, params = c("lambda.1", "lambda.2"))            
 print(alpha.summary)
 MCMCsummary(object = fit.v2$samples, round = 3)
 MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2, 
@@ -312,6 +316,7 @@ MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2,
 #                                            HPD = TRUE, xlab="gamma", offset = 0.5,
 #                                            horiz = FALSE, params = c("gamma"))),
 #       width=7, height = 5.95)
+# gelman.diag(fit.v2$samples)
 # gelman.diag(fit.v2$samples, multivariate = FALSE)
 # MCMCsummary(fit.v2$samples, params="alpha")
 
@@ -355,7 +360,7 @@ data.scenario <- data.frame("x" = c(1:n),
                             "constant" = newx,
                             "post.mean" = sort(fit.v2$summary$chain1[1:n,1]),
                             "trueAlp" = sort(alp.new),
-                            "meanAlp" = sort(fit.v2$summary$chain1[701:1200,1]),
+                            "meanAlp" = sort(fit.v2$summary$chain1[703:1202,1]),
                             "post.check" = sort(alp.origin))
 # data.scenario1 <- data.frame("x"=c(1:n)) #, )
 
@@ -380,6 +385,7 @@ plt <- ggplot(data = data.scenario, aes(x = x)) + ylab("alpha(x)") + xlab("")
 for(i in (dim(samples)[1] - 993):(dim(samples)[1]+6)){
   plt <- plt + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
 }
+
 print(plt + geom_line(aes(y=post.mean, col = "Posterior Mean(Chain1)"), linewidth = 1.5) + 
         geom_line(aes(y = post.check, col=paste0("Simulated Alpha: ",n,"/",psi,"/",threshold)), linewidth = 1.5) +
         # theme(axis.title.y = element_text(size = rel(1.8), angle = 90)) +
@@ -393,12 +399,12 @@ print(plt + geom_line(aes(y=post.mean, col = "Posterior Mean(Chain1)"), linewidt
 
 cat("sc1_Alp Done")
 
-plt.samp <- ggplot(data = data.scenario, aes(x = constant)) + ylab("expression(alpha)(x)")
+plt.samp <- ggplot(data = data.scenario, aes(x = constant)) + ylab("alpha(x)")
 for(i in ((dim(samples)[1]*2)-993):((dim(samples)[1]*2)+6)){
   # print(i)
   plt.samp <- plt.samp + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
 }
-print(plt.samp + ylim(0, 3) +
+print(plt.samp + ylim(0, 15) +
       geom_line(aes(y = trueAlp, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
       geom_line(aes(y = meanAlp, col = "Posterior Mean(Chain1)"), linewidth = 2.5) +
       labs(col = "") +
