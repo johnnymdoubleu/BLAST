@@ -191,29 +191,31 @@ beta.map <- optim(beta.emp, fn = log.posterior, #gr = grad.log.posterior,
                   # method = "SANN",
                   control = list(fnscale = -1))
 # theta.map <- matrix(beta.map$par[1:(2*p)],nrow=2)
-theta.map <- beta.map$par[1:(no.theta*p)]
-gamma.map <- beta.map$par[(no.theta*p)+1:(psi*p)]
+theta.map <- beta.map$par[1:(p+1)]
+gamma.map <- beta.map$par[-(1:(p+1))]
 
-df.theta <- data.frame("seq" = seq(1, (no.theta*p)),
+df.theta <- data.frame("seq" = seq(1, p+1),
                   theta.map,
-                  "theta.true" = as.vector(theta.origin))
-df.theta$covariate <- factor(rep(seq(1, 1 + nrow(df.theta) %/% no.theta), each = no.theta, length.out = nrow(df.theta)))
-df.theta$labels <- factor(1:(no.theta*p))
+                  "theta.true" = theta.origin)
+# df.theta$covariate <- factor(rep(seq(1, 1 + nrow(df.theta) %/% no.theta), each = no.theta, length.out = nrow(df.theta)))
+df.theta$covariate <- factor(0:p)
+df.theta$labels <- factor(0:p)
 # df.theta$labels <- factor(rep(c("X1", "X2", "X3", "X4", "X5", "X6", "X7", "X8", "X9", "X10"), each = no.theta))
 ggplot(df.theta, aes(x = labels)) + ylab("") + xlab("") +
   geom_point(aes(y = theta.map, col = covariate), size = 6) + 
   geom_point(aes(y = theta.true), color="red", size = 4) +
   # labs(title=expression("MAP vs True for"~theta)) + 
-  scale_x_discrete(labels = c("",expression(bold(theta[1])),
-                              "",expression(bold(theta[2])),
-                              "",expression(bold(theta[3])),
-                              "",expression(bold(theta[4])),
-                              "",expression(bold(theta[5])),
-                              "",expression(bold(theta[6])),
-                              "",expression(bold(theta[7])),
-                              "",expression(bold(theta[8])),
-                              "",expression(bold(theta[9])),
-                              "",expression(bold(theta[10]))))+
+  scale_x_discrete(labels = c(expression(bold(theta[0])),
+                              expression(bold(theta[1])),
+                              expression(bold(theta[2])),
+                              expression(bold(theta[3])),
+                              expression(bold(theta[4])),
+                              expression(bold(theta[5])),
+                              expression(bold(theta[6])),
+                              expression(bold(theta[7])),
+                              expression(bold(theta[8])),
+                              expression(bold(theta[9])),
+                              expression(bold(theta[10]))))+
   theme(plot.title = element_text(hjust = 0.5, size = 20),
           legend.title = element_blank(),
           legend.text = element_text(size=30),
