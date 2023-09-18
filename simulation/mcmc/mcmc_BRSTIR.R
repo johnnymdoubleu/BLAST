@@ -260,10 +260,12 @@ model.penalisation <- nimbleCode({
 
 constant <- list(psi = psi, n = n, p = p)
 init.alpha <- function() list(list(gamma = matrix(0.5, nrow = psi, ncol=p), 
-                                    theta = rep(0.1, p), theta.0 = 0.1,
+                                    theta = rep(0.1, p), theta.0 = 0.1, 
+                                    lambda.1 = 0.001, lambda.2 = 0.001,
                                     covm = array(1, dim = c(psi,psi,10))),
                               list(gamma = matrix(0, nrow = psi, ncol=p),
-                                    theta = rep(0, p), theta.0 = 0,
+                                    theta = rep(0, p), theta.0 = 0, 
+                                    lambda.1 = 0.001, lambda.2 = 0.001,
                                     covm = array(1, dim = c(psi,psi,10))))
                             #   list(gamma = matrix(1, nrow = psi, ncol=p)))
                               # y = as.vector(y),
@@ -273,7 +275,7 @@ data <- list(y = as.vector(y.origin), bs.linear = bs.linear,
               bs.nonlinear = bs.nonlinear,
               xholder.linear = xholder.linear,
               xholder.nonlinear = xholder.nonlinear,
-              zero.vec = as.matrix(rep(0, psi)), sigma = 1,
+              zero.vec = as.matrix(rep(0, psi)), sigma = 0.5,
             #    new.x = xholder, new.bs.x = new.bs.x,
               u = u, #C = 1000,  ones = as.vector(rep(1, n)),
               shape = 0.1, scale = 0.1)
@@ -297,7 +299,7 @@ fit.v2 <- nimbleMCMC(code = model.penalisation,
 alpha.summary <- fit.v2$summary$all.chains
 # saveRDS(alpha.summary, file=paste0("Simulation/BayesianPsplines/results/",date,"-",time, "_sc1_allChains.rds"))
 
-alpha.summary[701:702,]
+# alpha.summary[701:702,]
 
 MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2,
             HPD = TRUE, xlab="beta", offset = 0.05, exact = TRUE,
@@ -388,7 +390,7 @@ colnames(data.scenario) <- c("x", "constant", "post.mean",
 tail(data.scenario[, c(1:10, ((dim(samples)[1]*2-5):(dim(samples)[1]*2)))], 15)
 # saveRDS(data.scenario, file=paste0("Simulation/BayesianPsplines/results/",date,"-",time, "_sc1_data_samp1.rds"))
 #plotting all the points
-plt <- ggplot(data = data.scenario, aes(x = x)) + ylab(expression(alpha(x))) + xlab("")
+plt <- ggplot(data = data.scenario, aes(x = x)) + ylab(expression(alpha(x))) + xlab(expression(x))
 for(i in (dim(samples)[1] - 993):(dim(samples)[1]+6)){
   plt <- plt + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
 }
@@ -406,7 +408,7 @@ print(plt + geom_line(aes(y=post.mean, col = "Posterior Mean(Chain1)"), linewidt
 
 cat("sc1_Alp Done")
 
-plt.samp <- ggplot(data = data.scenario, aes(x = constant)) + ylab(expression(alpha(x)))
+plt.samp <- ggplot(data = data.scenario, aes(x = constant)) + ylab(expression(alpha(x))) + xlab(expression(x))
 for(i in ((dim(samples)[1]*2)-993):((dim(samples)[1]*2)+6)){
   # print(i)
   plt.samp <- plt.samp + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
