@@ -203,7 +203,7 @@ model.penalisation <- nimbleCode({
 #   I <- identityMatrix(d = psi)
 #   I <- diag(psi)
   lambda.1 ~ dgamma(shape, scale) #gamma distribution prior for lambda
-  lambda.2 ~ dgamma(1, 1)
+  lambda.2 ~ dgamma(shape, scale)
   
   for (j in 1:p){
       theta[j] ~ ddexp(0, lambda.1)
@@ -273,7 +273,7 @@ data <- list(y = as.vector(y.origin), bs.linear = bs.linear,
               bs.nonlinear = bs.nonlinear,
               xholder.linear = xholder.linear,
               xholder.nonlinear = xholder.nonlinear,
-              zero.vec = as.matrix(rep(0, psi)), sigma = 0.1,
+              zero.vec = as.matrix(rep(0, psi)), sigma = 1,
             #    new.x = xholder, new.bs.x = new.bs.x,
               u = u, #C = 1000,  ones = as.vector(rep(1, n)),
               shape = 0.1, scale = 0.1)
@@ -296,6 +296,8 @@ fit.v2 <- nimbleMCMC(code = model.penalisation,
 # saveRDS(fit.v2, file=paste0("./Simulation/BayesianPsplines/results/",date,"-",time,"_sc1_fit.rds"))
 alpha.summary <- fit.v2$summary$all.chains
 # saveRDS(alpha.summary, file=paste0("Simulation/BayesianPsplines/results/",date,"-",time, "_sc1_allChains.rds"))
+
+alpha.summary[701:702,]
 
 MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2,
             HPD = TRUE, xlab="beta", offset = 0.05, exact = TRUE,

@@ -126,100 +126,6 @@ for(i in 1:n){
 }
 
 
-n <- 5000
-bs.x <- xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
-psi <- 20
-p <- 10
-
-x.origin <- cbind(replicate(p, runif(n, 0, 1)))
-# x.origin <- scale(x.origin)
-no.theta <- 2
-
-
-for(i in 1:p){
-  knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)  
-  tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = TRUE)
-  # tps <- mSpline(x.origin[,i], df=psi, Boundary.knots = range(x.origin[,i]), degree = 3, intercept=TRUE)
-#   bs.x <- cbind(bs.x, tps)
-  bs.linear <- cbind(bs.linear, tps[,1:no.theta])
-  bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])  
-}
-
-gamma.origin <- matrix(, nrow = psi, ncol = p)
-for(j in 1:p){
-    for (ps in 1:psi){
-        if(j %in% c(2,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
-        else if(j==7){
-            if(ps <= (psi/2)){gamma.origin[ps, j] <- 1}
-            else{gamma.origin[ps, j] <- 1}
-        }
-        else {
-            if(ps <= (psi/2)){gamma.origin[ps, j] <- 1}
-            else{gamma.origin[ps, j] <- 1}
-        }
-    }
-}
-
-theta.origin <- matrix(, nrow = no.theta, ncol = p)
-for(j in 1:p){
-    for (k in 1:no.theta){
-        if(j %in% c(2,4,5,6,9,10)){theta.origin[k, j] <- 0}
-        else if(j==7){
-            if(k==1){theta.origin[k, j] <- 0.5}
-            else{theta.origin[k, j] <- -0.3}
-        }
-        else {
-            if(k==1){theta.origin[k,j] <- -0.2}
-            else{theta.origin[k,j] <- 0.8}
-        }
-    }
-}
-
-f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
-for(j in 1:p){
-    f.origin[, j] <- as.matrix(bs.linear[1:n, (((j-1)*no.theta)+1):(((j-1)*no.theta)+no.theta)]) %*% theta.origin[,j] + (bs.nonlinear[1:n,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j])
-    f.linear.origin[,j] <- as.matrix(bs.linear[1:n, (((j-1)*no.theta)+1):(((j-1)*no.theta)+no.theta)]) %*% theta.origin[,j]
-    f.nonlinear.origin[,j] <- (bs.nonlinear[1:n,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j])
-}
-
-alp.origin <- y.origin <- NULL
-for(i in 1:n){
-  alp.origin[i] <- exp(sum(f.origin[i,]))
-  y.origin[i] <- rPareto(1, 1, alpha = alp.origin[i])
-}
-
-u <- quantile(y.origin, threshold)
-x.origin <- x.origin[which(y.origin>u),]
-y.origin <- y.origin[y.origin > u]
-n <- length(y.origin)
-
-bs.x <- xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
-newx <- seq(0, 1, length.out=n)
-for(i in 1:p){
-  test.knot <- seq(0, 1, length.out = psi)
-  splines <- basis.tps(newx, test.knot, m=2, rk=FALSE, intercept = TRUE)
-  xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
-  xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
-  knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)  
-  tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = TRUE)
-  # tps <- mSpline(x.origin[,i], df=psi, Boundary.knots = range(x.origin[,i]), degree = 3, intercept=TRUE)
-#   bs.x <- cbind(bs.x, tps)
-  bs.linear <- cbind(bs.linear, tps[,1:no.theta])
-  bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])  
-}
-
-f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
-for(j in 1:p){
-    f.origin[, j] <- as.matrix(bs.linear[1:n, (((j-1)*no.theta)+1):(((j-1)*no.theta)+no.theta)]) %*% theta.origin[,j] + (bs.nonlinear[1:n,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j])
-    f.linear.origin[,j] <- as.matrix(bs.linear[1:n, (((j-1)*no.theta)+1):(((j-1)*no.theta)+no.theta)]) %*% theta.origin[,j]
-    f.nonlinear.origin[,j] <- (bs.nonlinear[1:n,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j])
-}
-
-alp.origin <- NULL
-for(i in 1:n){
-  alp.origin[i] <- exp(sum(f.origin[i,]))
-}
-
 # lambda <- 0.995#sqrt(2*log(n))
 # theta <- 0
 # lambda.1 <- lambda * theta
@@ -235,19 +141,20 @@ log.posterior <- function(beta, y.origin){
             else{ans <- exp(x)}
             return(ans)
         }
-        theta <- matrix(beta[1:(no.theta*p)], nrow=no.theta)
-        gamma <- matrix(beta[(no.theta*p)+1:(psi*p)], ncol=p)
-        f <- matrix(, nrow=n, ncol=p)
+        theta.0 <- beta[1]
+        theta <- beta[2:(p+1)]
+        gamma <- matrix(beta[-(1:(p+1))], ncol=p)
+        g <- matrix(, nrow=n, ncol=p)
         term <- first.term <- second.term <- NULL
         for(j in 1:p){
             # coef <- as.matrix(gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)])
-            linear.term <- as.matrix(bs.linear[,(((j-1)*no.theta)+1):(((j-1)*no.theta)+no.theta)]) %*% theta[,j]
+            linear.term <- bs.linear[,j] * theta[j]
             nonlinear.term <- bs.nonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma[,j]
-            f[, j] <- linear.term + nonlinear.term
+            g[, j] <- rep(theta.0, n) + linear.term + nonlinear.term
         }
         for(i in 1:n){
-            first.term[i] <- sum(f[i,]) - log(y.origin[i])
-            second.term[i] <- exp.prime(sum(f[i,]), thres = 10) * log(y.origin[i]/u)
+            first.term[i] <- sum(g[i,]) - log(y.origin[i])
+            second.term[i] <- exp.prime(sum(g[i,]), thres = 10) * log(y.origin[i]/u)
             term[i] <- first.term[i] - second.term[i]
         }
         return(sum(term))
@@ -259,14 +166,15 @@ log.posterior <- function(beta, y.origin){
             else {ans <- (w^2) / 2}
             return(ans)
         }
-        theta <- matrix(beta[1:(no.theta*p)], nrow=no.theta)
-        gamma <- matrix(beta[(no.theta*p)+1:(psi*p)], ncol=p)
+        # theta.0 <- beta[1]
+        theta <- beta[1:(p+1)]
+        gamma <- matrix(beta[-(1:(p+1))], ncol=p)
         g.1 <- g.2 <- term <- third.term <- first.term <- second.term <- NULL
         for(j in 1:p){
             first.term[j] <- -1 * lambda.1 * sqrt(sum((gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)])^2))
             # first.term[j] <- -1 * lambda.1 * abs(sum(gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)]))
             second.term[j] <- -1 * lambda.2 * sum((gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)])^2)
-            third.term[j] <- -1 * lambda.3 * sum(abs(theta[,j]))
+            third.term[j] <- -1 * lambda.3 * sum(abs(theta[j]))
             term[j] <- first.term[j] + second.term[j] + third.term[j]
             # term[j] <- first.term[j] + second.term[j] - lambda.3 * sum(abs(beta))
         }
