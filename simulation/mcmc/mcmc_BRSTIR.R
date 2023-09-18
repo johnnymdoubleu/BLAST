@@ -217,11 +217,11 @@ model.penalisation <- nimbleCode({
 
   # Likelihood
   for (j in 1:p){
-    g.linear[1:n] <- bs.linear[1:n, (((j-1)*2)+1):(((j-1)*2)+2)] * theta[j]
+    g.linear[1:n, j] <- bs.linear[1:n,j] * theta[j]
     g.nonlinear[1:n, j] <- bs.nonlinear[1:n, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma[1:psi, j]
   }
   for (j in 1:p){
-    holder.linear[1:n] <- xholder.linear[1:n, (((j-1)*2)+1):(((j-1)*2)+2)] * theta[j]
+    holder.linear[1:n, j] <- xholder.linear[1:n,j] * theta[j]
     holder.nonlinear[1:n, j] <- xholder.nonlinear[1:n, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma[1:psi, j]
   }
 
@@ -247,8 +247,8 @@ model.penalisation <- nimbleCode({
 #   g.linear[1:n, 10] <- bs.nonlinear[1:n, 1:psi] %*% gamma.10[1:psi]
   
   for (i in 1:n){
-    log(alpha[i]) <- theta.0 + sum(g.nonlinear[i, 1:p]) + g.linear[i]
-    log(new.alpha[i]) <- theta.0 + sum(holder.nonlinear[i, 1:p]) + holder.linear[i]
+    log(alpha[i]) <- theta.0 + sum(g.nonlinear[i, 1:p]) + sum(g.linear[i, 1:p])
+    log(new.alpha[i]) <- theta.0 + sum(holder.nonlinear[i, 1:p]) + sum(holder.linear[i, 1:p])
   }
   for(i in 1:n){
     y[i] ~ dpareto(1, u, alpha[i])
@@ -273,7 +273,7 @@ data <- list(y = as.vector(y.origin), bs.linear = bs.linear,
               bs.nonlinear = bs.nonlinear,
               xholder.linear = xholder.linear,
               xholder.nonlinear = xholder.nonlinear,
-              zero.vec = as.matrix(rep(0, psi)), sigma = 0.3,
+              zero.vec = as.matrix(rep(0, psi)), sigma = 1,
             #    new.x = xholder, new.bs.x = new.bs.x,
               u = u, #C = 1000,  ones = as.vector(rep(1, n)),
               shape = 0.1, scale = 0.1)
