@@ -220,7 +220,7 @@ ggplot(df.theta, aes(x = labels)) + ylab("") + xlab("") +
           legend.title = element_blank(),
           legend.text = element_text(size=30),
           # axis.ticks.x = element_blank(),
-          axis.text.x = element_text(hjust=0.75),
+          axis.text.x = element_text(hjust=0.3),
           axis.text = element_text(size = 30),
           panel.grid.minor.x = element_blank())
     
@@ -253,9 +253,9 @@ ggplot(df, aes(x =labels , y = gamma.map, col = covariate)) +
 f.nonlinear.new <- f.linear.new <- f.new <- matrix(, nrow = n, ncol=p)
 newalpha <- NULL
 for (j in 1:p){
-  f.linear.new[,j] <- as.matrix(bs.linear[,(((j-1)*no.theta)+1):(((j-1)*no.theta)+no.theta)]) %*% matrix(theta.map, nrow=no.theta)[,j]
+  f.linear.new[,j] <- bs.linear[,j] * theta.map[j+1]
   f.nonlinear.new[,j] <- bs.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.map, ncol = p)[, j]
-  f.new[1:n, j] <- f.linear.new[,j] + f.nonlinear.new[,j]
+  f.new[1:n, j] <- rep(theta.map[1], n) + f.linear.new[,j] + f.nonlinear.new[,j]
 }
 new.y <- NULL
 
