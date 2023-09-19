@@ -197,12 +197,12 @@ registerDistributions(list(
 
 model.penalisation <- nimbleCode({
   #prior
-  # lambda.1 ~ dgamma(shape, scale) #gamma distribution prior for lambda
+  lambda.1 ~ dgamma(shape, scale) #gamma distribution prior for lambda
   lambda.2 ~ dgamma(shape, scale)
-  for(j in 1:p){
-    lambda.1[j] ~ dgamma(shape, scale)
-    # lambda.2[j] ~ dgamma(shape, scale)
-  }
+  # for(j in 1:p){
+  #   lambda.1[j] ~ dgamma(shape, scale)
+  #   lambda.2[j] ~ dgamma(shape, scale)
+  # }
   # for (j in 1:p){
   #   theta[j] ~ ddexp(0, lambda.1)
   # }
