@@ -197,19 +197,19 @@ registerDistributions(list(
 
 model.penalisation <- nimbleCode({
   #prior
-  lambda.1 ~ dgamma(shape, scale) #gamma distribution prior for lambda
+  # lambda.1 ~ dgamma(shape, scale) #gamma distribution prior for lambda
   lambda.2 ~ dgamma(shape, scale)
-  # for(j in 1:p){
-  #   lambda.1[j] ~ dgamma(shape, scale)
-  #   lambda.2[j] ~ dgamma(shape, scale)
-  # }
+  for(j in 1:p){
+    lambda.1[j] ~ dgamma(shape, scale)
+    # lambda.2[j] ~ dgamma(shape, scale)
+  }
   # for (j in 1:p){
   #   theta[j] ~ ddexp(0, lambda.1)
   # }
-  # lambda.0 ~ dgamma(shape, scale)
-  theta.0 ~ ddexp(0, lambda.1)
+  lambda.0 ~ dgamma(shape, scale)
+  theta.0 ~ ddexp(0, lambda.0)
   for (j in 1:p){
-    theta[j] ~ ddexp(0, lambda.1)
+    theta[j] ~ ddexp(0, lambda.1[j])
     tau.square[j] ~ dgamma((psi+1)/2, (lambda.2^2)/2)
   }
 
@@ -268,7 +268,8 @@ init.alpha <- function() list(list(gamma = matrix(0.5, nrow = psi, ncol=p),
                                     covm = array(1, dim = c(psi,psi,10))))
                             #   list(gamma = matrix(1, nrow = psi, ncol=p)))
                               # y = as.vector(y),
-monitor.pred <- c("theta.0", "theta", "gamma", "alpha", "new.alpha", "lambda.1", "lambda.2")
+monitor.pred <- c("theta.0", "theta", "gamma", "alpha", "new.alpha", 
+                  "lambda.1", "lambda.2")
 # monitor.pred <- c("covm")
 data <- list(y = as.vector(y.origin), bs.linear = bs.linear, 
               bs.nonlinear = bs.nonlinear,
