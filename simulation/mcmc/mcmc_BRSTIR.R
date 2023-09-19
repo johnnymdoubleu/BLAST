@@ -274,7 +274,7 @@ data <- list(y = as.vector(y.origin), bs.linear = bs.linear,
               bs.nonlinear = bs.nonlinear,
               xholder.linear = xholder.linear,
               xholder.nonlinear = xholder.nonlinear,
-              zero.vec = as.matrix(rep(0, psi)), sigma = 1,
+              zero.vec = as.matrix(rep(0, psi)), sigma = 1.1,
             #    new.x = xholder, new.bs.x = new.bs.x,
               u = u, #C = 1000,  ones = as.vector(rep(1, n)),
               shape = 0.1, scale = 0.1)
@@ -348,11 +348,11 @@ MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2,
 #           ind = TRUE, # separate density lines per chain
 #           n.eff = TRUE,# add eff sample size
 #           params = "theta")
-# MCMCtrace(object = fit.v2$samples,
-#           pdf = FALSE, # no export to PDF
-#           ind = TRUE, # separate density lines per chain
-#           n.eff = TRUE,# add eff sample size
-#           params = c("lambda.1", "lambda.2"))
+print(MCMCtrace(object = fit.v2$samples,
+          pdf = FALSE, # no export to PDF
+          ind = TRUE, # separate density lines per chain
+          n.eff = TRUE,# add eff sample size
+          params = c("lambda.1", "lambda.2")))
 
 systime <- Sys.time()
 Sys.time()
