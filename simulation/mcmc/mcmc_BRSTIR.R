@@ -211,10 +211,11 @@ model.penalisation <- nimbleCode({
   for (j in 1:p){
     theta[j] ~ ddexp(0, lambda.1[j])
     tau.square[j] ~ dgamma((psi+1)/2, (lambda.2[j]^2)/2)
+    sigma.square[j] ~ dinvgamma(0.01, 0.01)
   }
 
   for (j in 1:p){
-    covm[1:psi, 1:psi, j] <- diag(psi) * ((sigma^2) * sqrt(tau.square[j]))
+    covm[1:psi, 1:psi, j] <- diag(psi) * (sigma.sqaure[j] * tau.square[j])
     gamma[1:psi, j] ~ dmnorm(zero.vec[1:psi, 1], cov = covm[1:psi, 1:psi, j])
   }
 
@@ -275,7 +276,7 @@ data <- list(y = as.vector(y.origin), bs.linear = bs.linear,
               bs.nonlinear = bs.nonlinear,
               xholder.linear = xholder.linear,
               xholder.nonlinear = xholder.nonlinear,
-              zero.vec = as.matrix(rep(0, psi)), sigma = 0.75,
+              zero.vec = as.matrix(rep(0, psi)), #sigma = 0.75,
             #    new.x = xholder, new.bs.x = new.bs.x,
               u = u, #C = 1000,  ones = as.vector(rep(1, n)),
               shape = 0.1, scale = 0.01)
