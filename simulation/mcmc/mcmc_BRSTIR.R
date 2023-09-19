@@ -202,14 +202,17 @@ model.penalisation <- nimbleCode({
   # beta[1] ~ dnorm(0, 0.001)
 #   I <- identityMatrix(d = psi)
 #   I <- diag(psi)
-  lambda.1 ~ dgamma(shape, scale) #gamma distribution prior for lambda
+  # lambda.1 ~ dgamma(shape, scale) #gamma distribution prior for lambda
   # lambda.2 ~ dgamma(shape, scale)
-  
-  for (j in 1:p){
-      theta[j] ~ ddexp(0, lambda.1)
-      lambda.2[j] ~ dgamma(shape, scale)
+  for(j in 1:p){
+    lambda.1[j] ~ dgamma(shape, scale)
+    lambda.2[j] ~ dgamma(shape, scale)
   }
-  theta.0 ~ ddexp(0, lambda.1)
+  for (j in 1:p){
+    theta[j] ~ ddexp(0, lambda.1[j])
+  }
+  lambda.0 ~ dgamma(shape, scale)
+  theta.0 ~ ddexp(0, lambda.0)
   for (j in 1:p){
     tau.square[j] ~ dgamma((psi+1)/2, (lambda.2[j]^2)/2)
     covm[1:psi, 1:psi, j] <- diag(psi) * ((sigma^2) * sqrt(tau.square[j]))
