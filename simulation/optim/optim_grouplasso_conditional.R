@@ -64,7 +64,7 @@ theta.origin <- c(-0.1, 0.8, 0, 0.8, 0, 0, 0, -0.3, 0.8, 0, 0)
 
 f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
-    f.linear.origin[,j] <- bs.linear[1:n, j] * theta.origin[j+1]
+    f.linear.origin[,j] <- bs.linear[, j] * theta.origin[j+1]
     f.nonlinear.origin[,j] <- (bs.nonlinear[1:n,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j])
     f.origin[, j] <- rep(theta.origin[1], n) + f.linear.origin[,j] + f.nonlinear.origin[,j]
 }
@@ -95,38 +95,22 @@ for(i in 1:p){
     bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])  
 }
 
-f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
+f.nonlinear.new <- f.linear.new <- f.new <- f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
-    f.linear.origin[,j] <- bs.linear[1:n, j] * theta.origin[j+1]
+    f.linear.origin[,j] <- bs.linear[, j] * theta.origin[j+1]
     f.nonlinear.origin[,j] <- bs.nonlinear[1:n,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
     f.origin[, j] <- rep(theta.origin[1], n) + f.linear.origin[,j] + f.nonlinear.origin[,j]
-}
-
-alp.origin <- NULL
-for(i in 1:n){
-    alp.origin[i] <- exp(sum(f.origin[i,]))
-}
-
-
-#### Test Set
-f.nonlinear.new <- f.linear.new <- f.new <- matrix(, nrow = n, ncol=p)
-true.alpha <- alp.new <- NULL
-for (j in 1:p){
-    f.linear.new[,j] <- xholder.linear[1:n, j] * theta.origin[j+1]
+    f.linear.new[,j] <- xholder.linear[, j] * theta.origin[j+1]
     f.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
     f.new[,j] <- rep(theta.origin[1], n) + f.linear.new[,j] + f.nonlinear.new[,j]
-    # f.linear.origin[,j] <- as.matrix(xholder.linear[,(((j-1)*no.theta)+1):(((j-1)*no.theta)+no.theta)]) %*% theta.origin[,j]
-    # f.nonlinear.origin[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
-    # f.origin[,j] <- f.linear.origin[,j] + f.nonlinear.origin[,j]
 }
-    # set.seed(100)
+
+true.alpha <- alp.new <- alp.origin <- NULL
 for(i in 1:n){
-    # true.alpha[i] <- exp(sum(f.origin[i,]))
+    alp.origin[i] <- exp(sum(f.origin[i,]))
     alp.new[i] <- exp(sum(f.new[i,]))
 }
 
-
-# lambda <- 0.995#sqrt(2*log(n))
 # theta <- 0
 # lambda.1 <- lambda * theta
 # lambda.2 <-. lambda * (1-theta)

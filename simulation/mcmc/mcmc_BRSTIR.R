@@ -197,24 +197,23 @@ registerDistributions(list(
 
 model.penalisation <- nimbleCode({
   #prior
-  # tau ~ dinvgamma(shape, scale)
-  # w ~ dnorm(0, tau)
-  # beta[1] ~ dnorm(0, 0.001)
-#   I <- identityMatrix(d = psi)
-#   I <- diag(psi)
-  # lambda.1 ~ dgamma(shape, scale) #gamma distribution prior for lambda
-  # lambda.2 ~ dgamma(shape, scale)
-  for(j in 1:p){
-    lambda.1[j] ~ dgamma(shape, scale)
-    lambda.2[j] ~ dgamma(shape, scale)
-  }
+  lambda.1 ~ dgamma(shape, scale) #gamma distribution prior for lambda
+  lambda.2 ~ dgamma(shape, scale)
+  # for(j in 1:p){
+  #   lambda.1[j] ~ dgamma(shape, scale)
+  #   lambda.2[j] ~ dgamma(shape, scale)
+  # }
+  # for (j in 1:p){
+  #   theta[j] ~ ddexp(0, lambda.1)
+  # }
+  # lambda.0 ~ dgamma(shape, scale)
+  theta.0 ~ ddexp(0, lambda.1)
   for (j in 1:p){
-    theta[j] ~ ddexp(0, lambda.1[j])
+    theta[j] ~ ddexp(0, lambda.1)
+    tau.square[j] ~ dgamma((psi+1)/2, (lambda.2^2)/2)
   }
-  lambda.0 ~ dgamma(shape, scale)
-  theta.0 ~ ddexp(0, lambda.0)
+
   for (j in 1:p){
-    tau.square[j] ~ dgamma((psi+1)/2, (lambda.2[j]^2)/2)
     covm[1:psi, 1:psi, j] <- diag(psi) * ((sigma^2) * sqrt(tau.square[j]))
     gamma[1:psi, j] ~ dmnorm(zero.vec[1:psi, 1], cov = covm[1:psi, 1:psi, j])
   }
@@ -223,8 +222,6 @@ model.penalisation <- nimbleCode({
   for (j in 1:p){
     g.linear[1:n, j] <- bs.linear[1:n,j] * theta[j]
     g.nonlinear[1:n, j] <- bs.nonlinear[1:n, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma[1:psi, j]
-  }
-  for (j in 1:p){
     holder.linear[1:n, j] <- xholder.linear[1:n,j] * theta[j]
     holder.nonlinear[1:n, j] <- xholder.nonlinear[1:n, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma[1:psi, j]
   }
