@@ -136,7 +136,7 @@ for(i in 1:n){
 f.nonlinear.new <- f.linear.new <- f.new <- matrix(, nrow = n, ncol=p)
 true.alpha <- alp.new <- NULL
 for (j in 1:p){
-    f.linear.new[,j] <- xholder.linear[1:n, j] * theta.origin[j+1]
+    f.linear.new[,j] <- xholder.linear[, j] * theta.origin[j+1]
     f.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
     f.new[,j] <- rep(theta.origin[1], n) + f.linear.new[,j] + f.nonlinear.new[,j]
     # f.linear.origin[,j] <- as.matrix(xholder.linear[,(((j-1)*no.theta)+1):(((j-1)*no.theta)+no.theta)]) %*% theta.origin[,j]
@@ -203,14 +203,15 @@ model.penalisation <- nimbleCode({
 #   I <- identityMatrix(d = psi)
 #   I <- diag(psi)
   lambda.1 ~ dgamma(shape, scale) #gamma distribution prior for lambda
-  lambda.2 ~ dgamma(shape, scale)
+  # lambda.2 ~ dgamma(shape, scale)
   
   for (j in 1:p){
       theta[j] ~ ddexp(0, lambda.1)
+      lambda.2[j] ~ dgamma(shape, scale)
   }
   theta.0 ~ ddexp(0, lambda.1)
   for (j in 1:p){
-    tau.square[j] ~ dgamma((psi+1)/2, (lambda.2^2)/2)
+    tau.square[j] ~ dgamma((psi+1)/2, (lambda.2[j]^2)/2)
     covm[1:psi, 1:psi, j] <- diag(psi) * ((sigma^2) * sqrt(tau.square[j]))
     gamma[1:psi, j] ~ dmnorm(zero.vec[1:psi, 1], cov = covm[1:psi, 1:psi, j])
   }
@@ -260,12 +261,10 @@ model.penalisation <- nimbleCode({
 
 constant <- list(psi = psi, n = n, p = p)
 init.alpha <- function() list(list(gamma = matrix(0.5, nrow = psi, ncol=p), 
-                                    theta = rep(0.1, p), theta.0 = 0.1, 
-                                    lambda.1 = 0.001, lambda.2 = 0.001,
+                                    theta = rep(0.2, p), theta.0 = 0.1,
                                     covm = array(1, dim = c(psi,psi,10))),
                               list(gamma = matrix(0, nrow = psi, ncol=p),
-                                    theta = rep(0, p), theta.0 = 0, 
-                                    lambda.1 = 0.001, lambda.2 = 0.001,
+                                    theta = rep(0, p), theta.0 = 0,
                                     covm = array(1, dim = c(psi,psi,10))))
                             #   list(gamma = matrix(1, nrow = psi, ncol=p)))
                               # y = as.vector(y),
@@ -275,7 +274,7 @@ data <- list(y = as.vector(y.origin), bs.linear = bs.linear,
               bs.nonlinear = bs.nonlinear,
               xholder.linear = xholder.linear,
               xholder.nonlinear = xholder.nonlinear,
-              zero.vec = as.matrix(rep(0, psi)), sigma = 0.5,
+              zero.vec = as.matrix(rep(0, psi)), sigma = 1,
             #    new.x = xholder, new.bs.x = new.bs.x,
               u = u, #C = 1000,  ones = as.vector(rep(1, n)),
               shape = 0.1, scale = 0.1)
