@@ -300,7 +300,7 @@ fit.v2 <- nimbleMCMC(code = model.penalisation,
 alpha.summary <- fit.v2$summary$all.chains
 # saveRDS(alpha.summary, file=paste0("Simulation/BayesianPsplines/results/",date,"-",time, "_sc1_allChains.rds"))
 
-# alpha.summary[701:702,]
+alpha.summary[701:711,]
 
 MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2,
             HPD = TRUE, xlab="beta", offset = 0.05, exact = TRUE,
