@@ -211,7 +211,7 @@ model.penalisation <- nimbleCode({
   for (j in 1:p){
     theta[j] ~ ddexp(0, lambda.1[j])
     tau.square[j] ~ dgamma((psi+1)/2, (lambda.2[j]^2)/2)
-    sigma.square[j] ~ dinvgamma(0.01, 0.01)
+    sigma.square[j] ~ dinvgamma(0.1, 0.1)
   }
 
   for (j in 1:p){
@@ -279,7 +279,7 @@ data <- list(y = as.vector(y.origin), bs.linear = bs.linear,
               zero.vec = as.matrix(rep(0, psi)), #sigma = 0.75,
             #    new.x = xholder, new.bs.x = new.bs.x,
               u = u, #C = 1000,  ones = as.vector(rep(1, n)),
-              shape = 0.1, scale = 0.01)
+              shape = 0.1, scale = 0.1)
 
 fit.v2 <- nimbleMCMC(code = model.penalisation,
                   constants = constant,
