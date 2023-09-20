@@ -197,8 +197,6 @@ registerDistributions(list(
 
 model.penalisation <- nimbleCode({
   #prior
-  lambda.1 ~ dgamma(shape, scale) #gamma distribution prior for lambda
-  lambda.2 ~ dgamma(shape, scale)
   theta.0 ~ ddexp(0, lambda.1)
   for (j in 1:p){
     theta[j] ~ ddexp(0, lambda.1)
@@ -261,8 +259,7 @@ init.alpha <- function() list(list(gamma = matrix(0.5, nrow = psi, ncol=p),
                                     covm = array(1, dim = c(psi,psi,10))))
                             #   list(gamma = matrix(1, nrow = psi, ncol=p)))
                               # y = as.vector(y),
-monitor.pred <- c("theta.0", "theta", "gamma", "alpha", "new.alpha", 
-                  "lambda.1", "lambda.2")
+monitor.pred <- c("theta.0", "theta", "gamma", "alpha", "new.alpha")
 # monitor.pred <- c("covm")
 data <- list(y = as.vector(y.origin), bs.linear = bs.linear, 
               bs.nonlinear = bs.nonlinear,
@@ -270,6 +267,7 @@ data <- list(y = as.vector(y.origin), bs.linear = bs.linear,
               xholder.nonlinear = xholder.nonlinear,
               zero.vec = as.matrix(rep(0, psi)), #sigma = 0.75,
             #    new.x = xholder, new.bs.x = new.bs.x,
+              lambda.1 = 0.001, lambda.2 = 0.002,
               u = u, #C = 1000,  ones = as.vector(rep(1, n)),
               shape = 0.1, scale = 0.1)
 
@@ -279,8 +277,8 @@ fit.v2 <- nimbleMCMC(code = model.penalisation,
                   monitors = monitor.pred,
                   inits = init.alpha(),
                   thin = 20,
-                  niter = 70000,
-                  nburnin = 50000,
+                  niter = 30000,
+                  nburnin = 10000,
                   # setSeed = 300,
                   nchains = 2,
                   # WAIC = TRUE,-
@@ -295,7 +293,7 @@ alpha.summary <- fit.v2$summary$all.chains
 alpha.summary[701:711,]
 
 MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2,
-            HPD = TRUE, xlab="beta", offset = 0.05, exact = TRUE,
+            HPD = TRUE, xlab="theta", offset = 0.05, exact = TRUE,
             horiz = FALSE, params = c("theta.0", "theta"))
 MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2,
             HPD = TRUE, xlab="gamma", offset = 0.5,
@@ -342,11 +340,11 @@ MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2,
 #           ind = TRUE, # separate density lines per chain
 #           n.eff = TRUE,# add eff sample size
 #           params = "theta")
-print(MCMCtrace(object = fit.v2$samples,
-          pdf = FALSE, # no export to PDF
-          ind = TRUE, # separate density lines per chain
-          n.eff = TRUE,# add eff sample size
-          params = c("lambda.1", "lambda.2")))
+# print(MCMCtrace(object = fit.v2$samples,
+#           pdf = FALSE, # no export to PDF
+#           ind = TRUE, # separate density lines per chain
+#           n.eff = TRUE,# add eff sample size
+#           params = c("lambda.1", "lambda.2")))
 
 systime <- Sys.time()
 Sys.time()
@@ -362,7 +360,7 @@ data.scenario <- data.frame("x" = c(1:n),
                             "constant" = newx,
                             "post.mean" = sort(fit.v2$summary$chain1[1:n,1]),
                             "trueAlp" = sort(alp.new),
-                            "meanAlp" = sort(fit.v2$summary$chain1[703:1202,1]),
+                            "meanAlp" = sort(fit.v2$summary$chain1[701:1200,1]),
                             "post.check" = sort(alp.origin))
 # data.scenario1 <- data.frame("x"=c(1:n)) #, )
 
@@ -373,7 +371,7 @@ for(i in 1:len){
 }
 for(i in 1:len){
   data.scenario <- cbind(data.scenario, 
-                      data.frame(unname(sort(samples[i, 703:1202]))))
+                      data.frame(unname(sort(samples[i, 701:1200]))))
 }
 colnames(data.scenario) <- c("x", "constant", "post.mean",
                               "trueAlp", "meanAlp", "post.check",

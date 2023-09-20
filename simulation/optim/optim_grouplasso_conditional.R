@@ -11,7 +11,7 @@ suppressMessages(library(tidyverse))
 # library(ggplotify)
 
 #Scenario 1
-# set.seed(12338)
+set.seed(2)
 
 n <- 5000
 psi <- 20
