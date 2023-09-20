@@ -261,7 +261,7 @@ data <- list(y = as.vector(y.origin), bs.linear = bs.linear,
             #    new.x = xholder, new.bs.x = new.bs.x,
               lambda.1 = 0.001, lambda.2 = 0.002,
               u = u, #C = 1000,  ones = as.vector(rep(1, n)),
-              shape = 0.1, scale = 0.1)
+              shape = 0.01, scale = 0.01)
 
 fit.v2 <- nimbleMCMC(code = model.penalisation,
                   constants = constant,
