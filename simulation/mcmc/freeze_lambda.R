@@ -24,20 +24,12 @@ suppressMessages(library(tidyverse))
 # library(ggplotify)
 
 #Scenario 1
-# set.seed(10)
+set.seed(2)
 n <- 5000
 psi <- 20
 threshold <- 0.90
 p <- 10
 no.theta <- 1
-simul.no <- 50
-
-
-theta.container <- as.data.frame(matrix(, nrow = (no.theta *p), ncol= simul.no))
-gamma.container <- as.data.frame(matrix(, nrow = (psi * p), ncol = simul.no))
-# linear.container <- nonlinear.container <- f.container <- lapply(1:simul.no, matrix, data= NA, nrow=(n*(1-threshold)), ncol=p)
-linear.container <- nonlinear.container <- f.container <- lapply(1:simul.no, data.frame)
-alpha.container <- as.data.frame(matrix(, nrow=n, ncol = simul.no))
 
 xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
 x.origin <- cbind(replicate(p, runif(n, 0, 1)))
