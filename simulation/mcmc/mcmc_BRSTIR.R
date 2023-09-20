@@ -88,16 +88,30 @@ for(j in 1:p){
     f.origin[, j] <- rep(theta.origin[1], n) + f.linear.origin[,j] + f.nonlinear.origin[,j]
 }
 
-alp.origin <- y.origin <- NULL
+alp.full <- y.origin <- NULL
 for(i in 1:n){
-    alp.origin[i] <- exp(sum(f.origin[i,]))
-    y.origin[i] <- rPareto(1, 1, alpha = alp.origin[i])
+    alp.full[i] <- exp(sum(f.origin[i,]))
+    y.origin[i] <- rPareto(1, 1, alpha = alp.full[i])
 }
-
+cdf.full <- NULL
+alpha.full <- alp.full
+y.full <- y.origin
 u <- quantile(y.origin, threshold)
+for(i in 1:5000){
+  cdf.full[i] <- 1 - (u/y.full[i])^(alpha.full[i])
+}
+plot(sort(alpha.full), sort(cdf.full))
+
 x.origin <- x.origin[which(y.origin>u),]
 y.origin <- y.origin[y.origin > u]
+alp.full <- alp.full[which(y.origin>u)]
 n <- length(y.origin)
+cdfq.90 <- NULL
+for(i in 1:n){
+  cdfq.90[i] <- 1 - (u/y.origin[i])^(alp.full[i])
+}
+plot(sort(alp.full), sort(cdfq.90))
+
 
 xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
 newx <- seq(0, 1, length.out=n)
@@ -132,6 +146,7 @@ for(i in 1:n){
 }
 
 
+
 #### Test Set
 f.nonlinear.new <- f.linear.new <- f.new <- matrix(, nrow = n, ncol=p)
 true.alpha <- alp.new <- NULL
@@ -148,6 +163,7 @@ for(i in 1:n){
     # true.alpha[i] <- exp(sum(f.origin[i,]))
     alp.new[i] <- exp(sum(f.new[i,]))
 }
+
 
 # alp.origin <- y.origin <- NULL
 # for(i in 1:n){

@@ -20,7 +20,7 @@ library(evir)
 
 
 setwd("C:/Users/Johnny Lee/Documents/GitHub")
-df <- read_excel("./Laboratory/Application/AADiarioAnual.xlsx", col_types = c("date", rep("numeric",40)))
+df <- read_excel("./BRSTIR/application/AADiarioAnual.xlsx", col_types = c("date", rep("numeric",40)))
 df.long <- gather(df, condition, measurement, "1980":"2019", factor_key=TRUE)
 df.long
 head(df.long)
@@ -54,7 +54,7 @@ multiplesheets <- function(fname) {
     return(data_frame)
 }
 setwd("C:/Users/Johnny Lee/Documents/GitHub")
-path <- "./Laboratory/Application/DadosDiariosPT_FWI.xlsx"
+path <- "./BRSTIR/application/DadosDiariosPT_FWI.xlsx"
 # importing fire weather index
 cov <- multiplesheets(path)
 fwi.scaled <- fwi.index <- data.frame(DSR = double(length(Y)),

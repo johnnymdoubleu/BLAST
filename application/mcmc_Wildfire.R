@@ -20,7 +20,7 @@ library(evir)
 
 
 setwd("C:/Users/Johnny Lee/Documents/GitHub")
-df <- read_excel("./Laboratory/Application/AADiarioAnual.xlsx", col_types = c("date", rep("numeric",40)))
+df <- read_excel("./BRSTIR/application/AADiarioAnual.xlsx", col_types = c("date", rep("numeric",40)))
 df.long <- gather(df, condition, measurement, "1980":"2019", factor_key=TRUE)
 df.long
 head(df.long)
@@ -54,7 +54,7 @@ multiplesheets <- function(fname) {
     return(data_frame)
 }
 setwd("C:/Users/Johnny Lee/Documents/GitHub")
-path <- "./Laboratory/Application/DadosDiariosPT_FWI.xlsx"
+path <- "./BRSTIR/application/DadosDiariosPT_FWI.xlsx"
 # importing fire weather index
 cov <- multiplesheets(path)
 fwi.scaled <- fwi.index <- data.frame(DSR = double(length(Y)),
@@ -84,10 +84,10 @@ fwi.index$month <- factor(format(fwi.index$date,"%b"),
 # with(cov.long[missing.values], paste(substr[...1, 6, 10],month,day,sep="-"))
 
 fwi.scaled <- fwi.scaled[which(Y>u),]
-corrplot.mixed(cor(fwi.scaled),
-                upper = "circle",
-                lower = "number",
-                addgrid.col = "black")
+# corrplot.mixed(cor(fwi.scaled),
+#                 upper = "circle",
+#                 lower = "number",
+#                 addgrid.col = "black")
 # ggsave("./Laboratory/Application/figures/correlation.pdf", width=15)
 # cov$date <- as.Date(with(cov, paste(year,month,day,sep="-")),"%Y-%m-%d")
 # cov$yearmon <- as.Date(with(cov, paste(year,month,sep="-")),"%Y-%m")
@@ -118,6 +118,8 @@ ggplot(df.extreme, aes(x=y)) +
       axis.text.x = element_text(hjust=0.35),
       axis.text = element_text(size = 25),
       axis.title = element_text(size = 30))
+
+
 # ggsave("./Laboratory/Application/figures/datahist.pdf", width=15)
 
     # scale_color_gradientn(colours = rainbow(5))
@@ -141,17 +143,18 @@ for(i in 1:p){
   # xholder[,i] <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n)
   # test.knot <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
   # splines <- basis.tps(seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n), test.knot, m=2, rk=FALSE, intercept = TRUE)
-  xholder[,i] <- seq(min(fwi.scaled), max(fwi.scaled), length.out = n)
-  test.knot <- seq(min(fwi.scaled), max(fwi.scaled), length.out = psi)
-  splines <- basis.tps(seq(min(fwi.scaled), max(fwi.scaled), length.out = n), test.knot, m=2, rk=FALSE, intercept = TRUE)
-  xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
-  xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
+  # xholder[,i] <- seq(min(fwi.scaled), max(fwi.scaled), length.out = n)
+  # test.knot <- seq(min(fwi.scaled), max(fwi.scaled), length.out = psi)
+  # splines <- basis.tps(seq(min(fwi.scaled), max(fwi.scaled), length.out = n), test.knot, m=2, rk=FALSE, intercept = TRUE)
+  # xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
+  # xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
   knots <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
   tps <- basis.tps(fwi.scaled[,i], knots, m = 2, rk = FALSE, intercept = TRUE)
   # tps <- mSpline(x.origin[,i], df=psi, Boundary.knots = range(x.origin[,i]), degree = 3, intercept=TRUE)
   bs.linear <- cbind(bs.linear, tps[,1:no.theta])
   bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])
 }
+
 
 # cov <- read_excel("./Laboratory/Application/WTS_ERA_5_ate2019_final(PORTUGAL).xlsx", , col_types = rep("numeric",11))
 # # cov <- read_excel("WTS_ERA_5_ate2019_final(PORTUGAL).xlsx", col_types = rep("numeric",11))
