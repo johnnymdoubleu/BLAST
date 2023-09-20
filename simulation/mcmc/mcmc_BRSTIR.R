@@ -206,7 +206,7 @@ model.penalisation <- nimbleCode({
   # for (j in 1:p){
   #   theta[j] ~ ddexp(0, lambda.1)
   # }
-  lambda.0 ~ dgamma(shape, scale)
+  # lambda.0 ~ dgamma(shape, scale)
   theta.0 ~ ddexp(0, lambda.1)
   for (j in 1:p){
     theta[j] ~ ddexp(0, lambda.1)
