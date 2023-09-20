@@ -207,7 +207,7 @@ model.penalisation <- nimbleCode({
   #   theta[j] ~ ddexp(0, lambda.1)
   # }
   lambda.0 ~ dgamma(shape, scale)
-  theta.0 ~ ddexp(0, lambda.0)
+  theta.0 ~ ddexp(0, lambda.1)
   for (j in 1:p){
     theta[j] ~ ddexp(0, lambda.1)
     tau.square[j] ~ dgamma((psi+1)/2, (lambda.2^2)/2)
