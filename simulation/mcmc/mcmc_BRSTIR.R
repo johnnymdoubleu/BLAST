@@ -430,7 +430,7 @@ for(i in ((dim(samples)[1]*2)-993):((dim(samples)[1]*2)+6)){
   # print(i)
   plt.samp <- plt.samp + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
 }
-print(plt.samp + ylim(0, 30) +
+print(plt.samp + ylim(0, 50) +
       geom_line(aes(y = trueAlp, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
       geom_line(aes(y = meanAlp, col = "Posterior Mean(Chain1)"), linewidth = 2.5) +
       labs(col = "") +
