@@ -85,12 +85,12 @@ f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p
 for(j in 1:p){
     f.linear.origin[,j] <- bs.linear[1:n, j] * theta.origin[j+1]
     f.nonlinear.origin[,j] <- (bs.nonlinear[1:n,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j])
-    f.origin[, j] <- rep(theta.origin[1], n) + f.linear.origin[,j] + f.nonlinear.origin[,j]
+    f.origin[, j] <- f.linear.origin[,j] + f.nonlinear.origin[,j]
 }
 
 alp.full <- y.origin <- NULL
 for(i in 1:n){
-    alp.full[i] <- exp(sum(f.origin[i,]))
+    alp.full[i] <- exp(theta.origin[1] + sum(f.origin[i,]))
     y.origin[i] <- rPareto(1, 1, alpha = alp.full[i])
 }
 cdf.full <- NULL

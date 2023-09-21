@@ -115,12 +115,12 @@ for(j in 1:p){
     # f.nonlinear.origin[,j] <- (bs.nonlinear[1:n,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j])
     f.linear.origin[,j] <- bs.linear[1:n, j] * theta.origin[j+1]
     f.nonlinear.origin[,j] <- bs.nonlinear[1:n,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
-    f.origin[, j] <- rep(theta.origin[1], n) + f.linear.origin[,j] + f.nonlinear.origin[,j]
+    f.origin[, j] <- f.linear.origin[,j] + f.nonlinear.origin[,j]
 }
 
 alp.origin <- NULL
 for(i in 1:n){
-    alp.origin[i] <- exp(sum(f.origin[i,]))
+    alp.origin[i] <- exp(theta.origin[1] + sum(f.origin[i,]))
 }
 
 
@@ -130,7 +130,7 @@ true.alpha <- alp.new <- NULL
 for (j in 1:p){
     f.linear.new[,j] <- xholder.linear[, j] * theta.origin[j+1]
     f.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
-    f.new[,j] <- rep(theta.origin[1], n) + f.linear.new[,j] + f.nonlinear.new[,j]
+    f.new[,j] <- f.linear.new[,j] + f.nonlinear.new[,j]
     # f.linear.origin[,j] <- as.matrix(xholder.linear[,(((j-1)*no.theta)+1):(((j-1)*no.theta)+no.theta)]) %*% theta.origin[,j]
     # f.nonlinear.origin[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
     # f.origin[,j] <- f.linear.origin[,j] + f.nonlinear.origin[,j]
@@ -138,7 +138,7 @@ for (j in 1:p){
     # set.seed(100)
 for(i in 1:n){
     # true.alpha[i] <- exp(sum(f.origin[i,]))
-    alp.new[i] <- exp(sum(f.new[i,]))
+    alp.new[i] <- exp(theta.origin[1] + sum(f.new[i,]))
 }
 
 # alp.origin <- y.origin <- NULL
