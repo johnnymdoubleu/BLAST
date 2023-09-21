@@ -195,16 +195,16 @@ log.posterior <- function(beta, y.origin){
             else{ans <- exp(x)}
             return(ans)
         }
-        theta.0 <- beta[1]
-        theta <- beta[2:(p+1)]
+        # theta.0 <- beta[1]
+        theta <- beta[1:(p+1)]
         gamma <- matrix(beta[-(1:(p+1))], ncol=p)
         g <- matrix(, nrow=n, ncol=p)
         term <- first.term <- second.term <- NULL
         for(j in 1:p){
             # coef <- as.matrix(gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)])
-            linear.term <- bs.linear[,j] * theta[j]
+            linear.term <- bs.linear[,j] * theta[j+1]
             nonlinear.term <- bs.nonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma[,j]
-            g[, j] <- rep(theta.0, n) + linear.term + nonlinear.term
+            g[, j] <- rep(theta[1], n) + linear.term + nonlinear.term
         }
         for(i in 1:n){
             first.term[i] <- sum(g[i,]) - log(y.origin[i])
@@ -228,62 +228,14 @@ log.posterior <- function(beta, y.origin){
             first.term[j] <- -1 * lambda.1 * sqrt(sum((gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)])^2))
             # first.term[j] <- -1 * lambda.1 * abs(sum(gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)]))
             second.term[j] <- -1 * lambda.2 * sum((gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)])^2)
-            third.term[j] <- -1 * lambda.3 * sum(abs(theta[j]))
+            third.term[j] <- -1 * lambda.3 * sum(abs(theta[j+1]))
             term[j] <- first.term[j] + second.term[j] + third.term[j]
             # term[j] <- first.term[j] + second.term[j] - lambda.3 * sum(abs(beta))
         }
-        return(sum(term))
+        return((-1 * lambda.3 * abs(theta[1])) + sum(term))
     }
     return(log.lik(beta) + log.prior(beta))
 }
-
-
-# log.posterior <- function(beta, y.origin){
-# log.lik <- function(beta){
-#     exp.prime <- function(x, thres){
-#         if(x > thres){ans <- exp(thres) + exp(thres)*(x-thres)}
-#         else{ans <- exp(x)}
-#         return(ans)
-#     }
-#     theta <- matrix(beta[1:(no.theta*p)], nrow=no.theta)
-#     gamma <- matrix(beta[(no.theta*p)+1:(psi*p)], ncol=p)
-#     f <- matrix(, nrow=n, ncol=p)
-#     term <- first.term <- second.term <- NULL
-#     for(j in 1:p){
-#         # coef <- as.matrix(gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)])
-#         linear.term <- as.matrix(bs.linear[,(((j-1)*no.theta)+1):(((j-1)*no.theta)+no.theta)]) %*% theta[,j]
-#         nonlinear.term <- bs.nonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma[,j]
-#         f[, j] <- linear.term + nonlinear.term
-#     }
-#     for(i in 1:n){
-#         first.term[i] <- sum(f[i,]) - log(y.origin[i])
-#         second.term[i] <- exp.prime(sum(f[i,]), thres = 10) * log(y.origin[i]/u)
-#         term[i] <- first.term[i] - second.term[i]
-#     }
-#     return(sum(term))
-# }
-# log.prior <- function(beta){
-#     moreau.envelope <- function(w){
-#         if(w < -1){ans <- -0.5 - w}
-#         else if (1 < w){ans <- w - 0.5}
-#         else {ans <- (w^2) / 2}
-#         return(ans)
-#     }
-#     theta <- matrix(beta[1:(no.theta*p)], nrow=no.theta)
-#     gamma <- matrix(beta[(no.theta*p)+1:(psi*p)], ncol=p)
-#     g.1 <- g.2 <- term <- third.term <- first.term <- second.term <- NULL
-#     for(j in 1:p){
-#         first.term[j] <- -1 * lambda.1 * sqrt(sum((gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)])^2))
-#         # first.term[j] <- -1 * lambda.1 * abs(sum(gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)]))
-#         second.term[j] <- -1 * lambda.2 * sum((gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)])^2)
-#         third.term[j] <- -1 * lambda.3 * sum(abs(theta[,j]))
-#         term[j] <- first.term[j] + second.term[j] + third.term[j]
-#         # term[j] <- first.term[j] + second.term[j] - lambda.3 * sum(abs(beta))
-#     }
-#     return(sum(term))
-# }
-# return(log.lik(beta) + log.prior(beta))
-#}
 
 beta.emp <- c(rep(0, p+1), rep(0, p*psi))
 # beta.emp <- c(as.vector(theta.origin), as.vector(gamma.origin))
@@ -378,8 +330,9 @@ for (j in 1:p){
 
 # set.seed(100)
 for(i in 1:n){
-  temp <- theta.map[1] + sum(f.new[i,])
-  newalpha[i] <- exp(temp)
+  # temp <- theta.map[1] + sum(f.new[i,])
+  # newalpha[i] <- exp(temp)
+  newalpha[i] <- exp(theta.map[1] + sum(f.new[i]))
 }
 
 # f.nonlinear.new <- f.linear.new <- f.new <- matrix(, nrow = n, ncol=p)
@@ -394,15 +347,15 @@ for(i in 1:n){
 #   alpha.new[i] <- exp(sum(f.new[i,]))
 # }
 
-for(i in 1:n){
-  cdf[i] <- 1-(u/y[i])^(newalpha[i])
-}
+# for(i in 1:n){
+#   cdf[i] <- 1-(u/y[i])^(newalpha[i])
+# }
 
-plot(1/Hill(sort(Y)[13865:14609])$gamma)
+# plot(1/Hill(sort(Y)[13865:14609])$gamma)
 
-plot(sort(hill(y,option="alpha", reverse = TRUE)$y))
-hill(y, option = "alpha", reverse = TRUE)
-hill(sort(Y)[13865:14609], option="alpha", reverse = TRUE)$y
+# plot(sort(hill(y,option="alpha", reverse = TRUE)$y))
+# hill(y, option = "alpha", reverse = TRUE)
+# hill(sort(Y)[13865:14609], option="alpha", reverse = TRUE)$y
 
 # data.scenario <- data.frame("x" = c(1:n),
 #                             "constant" = seq(0,1,length.out = n),
