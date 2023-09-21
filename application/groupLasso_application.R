@@ -17,7 +17,7 @@ library(evir)
 #FFMC : Fine FUel Moisture Code
 #DMC : Duff Moisture Code
 #DC : Drough Code
-
+plot((seq(0.1, 5, length.out = 500)), (seq(0.1, 5, length.out = 500)) * log(qPareto(0.9, 1, seq(0.1, 5, length.out = 500))))
 
 setwd("C:/Users/Johnny Lee/Documents/GitHub")
 df <- read_excel("./BRSTIR/application/AADiarioAnual.xlsx", col_types = c("date", rep("numeric",40)))
@@ -239,50 +239,50 @@ log.posterior <- function(beta, y.origin){
 
 
 # log.posterior <- function(beta, y.origin){
-    log.lik <- function(beta){
-        exp.prime <- function(x, thres){
-            if(x > thres){ans <- exp(thres) + exp(thres)*(x-thres)}
-            else{ans <- exp(x)}
-            return(ans)
-        }
-        theta <- matrix(beta[1:(no.theta*p)], nrow=no.theta)
-        gamma <- matrix(beta[(no.theta*p)+1:(psi*p)], ncol=p)
-        f <- matrix(, nrow=n, ncol=p)
-        term <- first.term <- second.term <- NULL
-        for(j in 1:p){
-            # coef <- as.matrix(gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)])
-            linear.term <- as.matrix(bs.linear[,(((j-1)*no.theta)+1):(((j-1)*no.theta)+no.theta)]) %*% theta[,j]
-            nonlinear.term <- bs.nonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma[,j]
-            f[, j] <- linear.term + nonlinear.term
-        }
-        for(i in 1:n){
-            first.term[i] <- sum(f[i,]) - log(y.origin[i])
-            second.term[i] <- exp.prime(sum(f[i,]), thres = 10) * log(y.origin[i]/u)
-            term[i] <- first.term[i] - second.term[i]
-        }
-        return(sum(term))
-    }
-    log.prior <- function(beta){
-        moreau.envelope <- function(w){
-            if(w < -1){ans <- -0.5 - w}
-            else if (1 < w){ans <- w - 0.5}
-            else {ans <- (w^2) / 2}
-            return(ans)
-        }
-        theta <- matrix(beta[1:(no.theta*p)], nrow=no.theta)
-        gamma <- matrix(beta[(no.theta*p)+1:(psi*p)], ncol=p)
-        g.1 <- g.2 <- term <- third.term <- first.term <- second.term <- NULL
-        for(j in 1:p){
-            first.term[j] <- -1 * lambda.1 * sqrt(sum((gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)])^2))
-            # first.term[j] <- -1 * lambda.1 * abs(sum(gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)]))
-            second.term[j] <- -1 * lambda.2 * sum((gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)])^2)
-            third.term[j] <- -1 * lambda.3 * sum(abs(theta[,j]))
-            term[j] <- first.term[j] + second.term[j] + third.term[j]
-            # term[j] <- first.term[j] + second.term[j] - lambda.3 * sum(abs(beta))
-        }
-        return(sum(term))
-    }
-    return(log.lik(beta) + log.prior(beta))
+# log.lik <- function(beta){
+#     exp.prime <- function(x, thres){
+#         if(x > thres){ans <- exp(thres) + exp(thres)*(x-thres)}
+#         else{ans <- exp(x)}
+#         return(ans)
+#     }
+#     theta <- matrix(beta[1:(no.theta*p)], nrow=no.theta)
+#     gamma <- matrix(beta[(no.theta*p)+1:(psi*p)], ncol=p)
+#     f <- matrix(, nrow=n, ncol=p)
+#     term <- first.term <- second.term <- NULL
+#     for(j in 1:p){
+#         # coef <- as.matrix(gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)])
+#         linear.term <- as.matrix(bs.linear[,(((j-1)*no.theta)+1):(((j-1)*no.theta)+no.theta)]) %*% theta[,j]
+#         nonlinear.term <- bs.nonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma[,j]
+#         f[, j] <- linear.term + nonlinear.term
+#     }
+#     for(i in 1:n){
+#         first.term[i] <- sum(f[i,]) - log(y.origin[i])
+#         second.term[i] <- exp.prime(sum(f[i,]), thres = 10) * log(y.origin[i]/u)
+#         term[i] <- first.term[i] - second.term[i]
+#     }
+#     return(sum(term))
+# }
+# log.prior <- function(beta){
+#     moreau.envelope <- function(w){
+#         if(w < -1){ans <- -0.5 - w}
+#         else if (1 < w){ans <- w - 0.5}
+#         else {ans <- (w^2) / 2}
+#         return(ans)
+#     }
+#     theta <- matrix(beta[1:(no.theta*p)], nrow=no.theta)
+#     gamma <- matrix(beta[(no.theta*p)+1:(psi*p)], ncol=p)
+#     g.1 <- g.2 <- term <- third.term <- first.term <- second.term <- NULL
+#     for(j in 1:p){
+#         first.term[j] <- -1 * lambda.1 * sqrt(sum((gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)])^2))
+#         # first.term[j] <- -1 * lambda.1 * abs(sum(gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)]))
+#         second.term[j] <- -1 * lambda.2 * sum((gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)])^2)
+#         third.term[j] <- -1 * lambda.3 * sum(abs(theta[,j]))
+#         term[j] <- first.term[j] + second.term[j] + third.term[j]
+#         # term[j] <- first.term[j] + second.term[j] - lambda.3 * sum(abs(beta))
+#     }
+#     return(sum(term))
+# }
+# return(log.lik(beta) + log.prior(beta))
 }
 
 beta.emp <- c(rep(0, p+1), rep(0, p*psi))
@@ -295,7 +295,7 @@ beta.map <- optim(beta.emp, fn = log.posterior, #gr = grad.log.posterior,
                   control = list(fnscale = -1))
 # theta.map <- matrix(beta.map$par[1:(2*p)],nrow=2)
 theta.map <- beta.map$par[1:(p+1)]
-gamma.map <- beta.map$par[(p+2):(psi*p)]
+gamma.map <- beta.map$par[-(1:(p+1))]
 df.theta <- data.frame("seq" = seq(1, (p+1)),
                   theta.map = matrix(beta.map$par[1:(p+1)],nrow=2)[2,])
 # df.theta$covariate <- factor(rep(seq(1, 1 + nrow(df.theta) %/% no.theta), each = no.theta, length.out = nrow(df.theta)))
@@ -370,7 +370,7 @@ ggplot(df, aes(x =labels , y = gamma.map, color = covariate)) +
 f.nonlinear.new <- f.linear.new <- f.new <- matrix(, nrow = n, ncol=p)
 cdf <- newalpha <- NULL
 for (j in 1:p){
-  f.linear.new[,j] <- bs.linear[,j] theta.map[j+1]
+  f.linear.new[,j] <- bs.linear[,j] * theta.map[j+1]
   f.nonlinear.new[,j] <- bs.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.map, ncol = p)[, j]
   f.new[1:n, j] <- f.linear.new[,j] + f.nonlinear.new[,j]
 }
