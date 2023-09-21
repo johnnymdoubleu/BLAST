@@ -24,7 +24,7 @@ suppressMessages(library(tidyverse))
 # library(ggplotify)
 
 #Scenario 1
-set.seed(12338)
+# set.seed(12338)
 n <- 5000
 psi <- 20
 threshold <- 0.90
@@ -258,7 +258,7 @@ data <- list(y = as.vector(y.origin), bs.linear = bs.linear,
               xholder.linear = xholder.linear,
               xholder.nonlinear = xholder.nonlinear,
               zero.vec = as.matrix(rep(0, psi)), #sigma = 0.75,
-            #    new.x = xholder, new.bs.x = new.bs.x,
+            #    new.x = xholder, new.bs.x = new.bs.x, 
               lambda.1 = 0.001, lambda.2 = 0.001,
               u = u, #C = 1000,  ones = as.vector(rep(1, n)),
               shape = 0.01, scale = 0.01)
