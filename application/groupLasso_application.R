@@ -102,7 +102,7 @@ ggplot(df.extreme, aes(x=month, y=y, color=month)) + geom_point(size=6) +
         axis.text.x = element_text(hjust=0.35),
         axis.text = element_text(size = 20),
         axis.title = element_text(size = 15))
-ggsave("./Laboratory/Application/figures/datavis.pdf", width=15)
+# ggsave("./Laboratory/Application/figures/datavis.pdf", width=15)
 
 # ggplot(as.data.frame(y),aes(x=y))+geom_histogram(aes(y=..density..), bins = 5)
 
@@ -118,7 +118,7 @@ ggplot(df.extreme, aes(x=y)) +
       axis.text.x = element_text(hjust=0.35),
       axis.text = element_text(size = 25),
       axis.title = element_text(size = 30))
-ggsave("./Laboratory/Application/figures/datahist.pdf", width=15)
+# ggsave("./Laboratory/Application/figures/datahist.pdf", width=15)
 
     # scale_color_gradientn(colours = rainbow(5))
 # ggplot(data = fwi.scaled) + 
@@ -133,7 +133,7 @@ ggsave("./Laboratory/Application/figures/datahist.pdf", width=15)
 psi <- 20
 n <- dim(fwi.scaled)[[1]]
 p <- dim(fwi.scaled)[[2]]
-no.theta <- 2
+no.theta <- 1
 newx <- seq(0,1,length.out=n)
 xholder.linear <- xholder.nonlinear <- bs.linear <- bs.nonlinear <- matrix(,nrow=n, ncol=0)
 xholder <- matrix(nrow=n, ncol=p)
@@ -143,11 +143,11 @@ for(i in 1:p){
   # splines <- basis.tps(seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n), test.knot, m=2, rk=FALSE, intercept = TRUE)
   xholder[,i] <- seq(min(fwi.scaled), max(fwi.scaled), length.out = n)
   test.knot <- seq(min(fwi.scaled), max(fwi.scaled), length.out = psi)
-  splines <- basis.tps(seq(min(fwi.scaled), max(fwi.scaled), length.out = n), test.knot, m=2, rk=FALSE, intercept = TRUE)
-  xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
+  splines <- basis.tps(seq(min(fwi.scaled), max(fwi.scaled), length.out = n), test.knot, m=2, rk=FALSE, intercept = FALSE)
+  xholder.linear <- cbind(xholder.linear, splines[,1])
   xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
   knots <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
-  tps <- basis.tps(fwi.scaled[,i], knots, m = 2, rk = FALSE, intercept = TRUE)
+  tps <- basis.tps(fwi.scaled[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
   # tps <- mSpline(x.origin[,i], df=psi, Boundary.knots = range(x.origin[,i]), degree = 3, intercept=TRUE)
   bs.linear <- cbind(bs.linear, tps[,1:no.theta])
   bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])
@@ -195,6 +195,56 @@ log.posterior <- function(beta, y.origin){
             else{ans <- exp(x)}
             return(ans)
         }
+        theta.0 <- beta[1]
+        theta <- beta[2:(p+1)]
+        gamma <- matrix(beta[-(1:(p+1))], ncol=p)
+        g <- matrix(, nrow=n, ncol=p)
+        term <- first.term <- second.term <- NULL
+        for(j in 1:p){
+            # coef <- as.matrix(gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)])
+            linear.term <- bs.linear[,j] * theta[j]
+            nonlinear.term <- bs.nonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma[,j]
+            g[, j] <- rep(theta.0, n) + linear.term + nonlinear.term
+        }
+        for(i in 1:n){
+            first.term[i] <- sum(g[i,]) - log(y.origin[i])
+            second.term[i] <- exp.prime(sum(g[i,]), thres = 10) * log(y.origin[i]/u)
+            term[i] <- first.term[i] - second.term[i]
+        }
+        return(sum(term))
+    }
+    log.prior <- function(beta){
+        moreau.envelope <- function(w){
+            if(w < -1){ans <- -0.5 - w}
+            else if (1 < w){ans <- w - 0.5}
+            else {ans <- (w^2) / 2}
+            return(ans)
+        }
+        # theta.0 <- beta[1]
+        theta <- beta[1:(p+1)]
+        gamma <- matrix(beta[-(1:(p+1))], ncol=p)
+        g.1 <- g.2 <- term <- third.term <- first.term <- second.term <- NULL
+        for(j in 1:p){
+            first.term[j] <- -1 * lambda.1 * sqrt(sum((gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)])^2))
+            # first.term[j] <- -1 * lambda.1 * abs(sum(gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)]))
+            second.term[j] <- -1 * lambda.2 * sum((gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)])^2)
+            third.term[j] <- -1 * lambda.3 * sum(abs(theta[j]))
+            term[j] <- first.term[j] + second.term[j] + third.term[j]
+            # term[j] <- first.term[j] + second.term[j] - lambda.3 * sum(abs(beta))
+        }
+        return(sum(term))
+    }
+    return(log.lik(beta) + log.prior(beta))
+}
+
+
+# log.posterior <- function(beta, y.origin){
+    log.lik <- function(beta){
+        exp.prime <- function(x, thres){
+            if(x > thres){ans <- exp(thres) + exp(thres)*(x-thres)}
+            else{ans <- exp(x)}
+            return(ans)
+        }
         theta <- matrix(beta[1:(no.theta*p)], nrow=no.theta)
         gamma <- matrix(beta[(no.theta*p)+1:(psi*p)], ncol=p)
         f <- matrix(, nrow=n, ncol=p)
@@ -235,7 +285,7 @@ log.posterior <- function(beta, y.origin){
     return(log.lik(beta) + log.prior(beta))
 }
 
-beta.emp <- c(rep(0, no.theta*p), rep(0, p*psi))
+beta.emp <- c(rep(0, p+1), rep(0, p*psi))
 # beta.emp <- c(as.vector(theta.origin), as.vector(gamma.origin))
 beta.map <- optim(beta.emp, fn = log.posterior, #gr = grad.log.posterior, 
                   y.origin = y,
@@ -244,14 +294,14 @@ beta.map <- optim(beta.emp, fn = log.posterior, #gr = grad.log.posterior,
                   # method = "SANN",
                   control = list(fnscale = -1))
 # theta.map <- matrix(beta.map$par[1:(2*p)],nrow=2)
-theta.map <- beta.map$par[1:(no.theta*p)]
-gamma.map <- beta.map$par[(no.theta*p)+1:(psi*p)]
-df.theta <- data.frame("seq" = seq(1, p),
-                  theta.map = matrix(beta.map$par[1:(no.theta*p)],nrow=2)[2,])
+theta.map <- beta.map$par[1:(p+1)]
+gamma.map <- beta.map$par[(p+2):(psi*p)]
+df.theta <- data.frame("seq" = seq(1, (p+1)),
+                  theta.map = matrix(beta.map$par[1:(p+1)],nrow=2)[2,])
 # df.theta$covariate <- factor(rep(seq(1, 1 + nrow(df.theta) %/% no.theta), each = no.theta, length.out = nrow(df.theta)))
 # df.theta$covariate <- factor(rep(names(fwi.scaled), each = no.theta, length.out = nrow(df.theta)))
-df.theta$covariate <- factor(names(fwi.scaled), levels = c("DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC"))
-df.theta$labels <- factor(1:p)
+df.theta$covariate <- factor(c("theta0",names(fwi.scaled)), levels = c("theta0","DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC"))
+df.theta$labels <- factor(1:(p+1))
 # ggplot(df.theta, aes(x = seq)) + 
 #   geom_point(aes(y = theta.map, color = covariate), size = 1.5) + 
 # #   geom_smooth(method="gam") +
@@ -267,7 +317,8 @@ ggplot(df.theta, aes(x = labels)) + ylab("") +
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + ylim(-0.5,0.5) + xlab('') + 
   # geom_point(aes(y = theta.true, color = "true"), size = 2.5) +
   # labs(title=expression("MAP vs True for"~theta)) + xlab("") +
-  scale_x_discrete(labels = c(expression(bold(theta[1])),
+  scale_x_discrete(labels = c(expression(bold(theta[0])),
+                              expression(bold(theta[1])),
                               expression(bold(theta[2])),
                               expression(bold(theta[3])),
                               expression(bold(theta[4])),
@@ -281,7 +332,7 @@ ggplot(df.theta, aes(x = labels)) + ylab("") +
           axis.text.x = element_text(hjust=0.35),
           axis.text = element_text(size = 30),
           panel.grid.minor.x = element_blank())
-ggsave("./Laboratory/Application/figures/map_theta.pdf", width=10)
+# ggsave("./Laboratory/Application/figures/map_theta.pdf", width=10)
 df <- data.frame("seq" = seq(1, (psi*p)), 
                   gamma.map)
 # df$covariate <- factor(rep(seq(1, 1 + nrow(df) %/% psi), each = psi, length.out = nrow(df)))
@@ -305,7 +356,7 @@ ggplot(df, aes(x =labels , y = gamma.map, color = covariate)) +
           axis.text.x = element_text(hjust=1.75),
           axis.text = element_text(size = 30),
           panel.grid.major.x = element_blank())
-ggsave("./Laboratory/Application/figures/map_gamma.pdf", width=10)
+# ggsave("./Laboratory/Application/figures/map_gamma.pdf", width=10)
 # ggplot(df, aes(x = seq, y = gamma.map, color = covariate)) + 
 #   geom_point() + 
 #   # geom_smooth(method="gam") +
@@ -317,9 +368,9 @@ ggsave("./Laboratory/Application/figures/map_gamma.pdf", width=10)
 #   theme(plot.title = element_text(hjust = 0.5, size = 20))
 
 f.nonlinear.new <- f.linear.new <- f.new <- matrix(, nrow = n, ncol=p)
-newalpha <- NULL
+cdf <- newalpha <- NULL
 for (j in 1:p){
-  f.linear.new[,j] <- as.matrix(bs.linear[,(((j-1)*no.theta)+1):(((j-1)*no.theta)+no.theta)]) %*% matrix(theta.map, nrow=no.theta)[1:no.theta, j]
+  f.linear.new[,j] <- bs.linear[,j] theta.map[j+1]
   f.nonlinear.new[,j] <- bs.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.map, ncol = p)[, j]
   f.new[1:n, j] <- f.linear.new[,j] + f.nonlinear.new[,j]
 }
@@ -327,20 +378,24 @@ for (j in 1:p){
 
 # set.seed(100)
 for(i in 1:n){
-  temp <- sum(f.new[i,])
+  temp <- theta.map[1] + sum(f.new[i,])
   newalpha[i] <- exp(temp)
 }
 
-f.nonlinear.new <- f.linear.new <- f.new <- matrix(, nrow = n, ncol=p)
-for (j in 1:p){
-  f.linear.new[,j] <- as.matrix(xholder.linear[,(((j-1)*no.theta)+1):(((j-1)*no.theta)+no.theta)]) %*% matrix(theta.map, nrow=no.theta)[1:no.theta, j]
-  f.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.map, ncol = p)[, j]
-  f.new[1:n, j] <- f.linear.new[,j] + f.nonlinear.new[,j]
-}
+# f.nonlinear.new <- f.linear.new <- f.new <- matrix(, nrow = n, ncol=p)
+# for (j in 1:p){
+#   f.linear.new[,j] <- as.matrix(xholder.linear[,(((j-1)*no.theta)+1):(((j-1)*no.theta)+no.theta)]) %*% matrix(theta.map, nrow=no.theta)[1:no.theta, j]
+#   f.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.map, ncol = p)[, j]
+#   f.new[1:n, j] <- f.linear.new[,j] + f.nonlinear.new[,j]
+# }
 
-alpha.new <- NULL
+# cdf <- alpha.new <- NULL
+# for(i in 1:n){
+#   alpha.new[i] <- exp(sum(f.new[i,]))
+# }
+
 for(i in 1:n){
-  alpha.new[i] <- exp(sum(f.new[i,]))
+  cdf[i] <- 1-(u/y[i])^(newalpha[i])
 }
 
 plot(1/Hill(sort(Y)[13865:14609])$gamma)
@@ -410,7 +465,7 @@ ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +
         axis.ticks.x = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
-ggsave("./Laboratory/Application/figures/map_smooth.pdf", width=10.5, height = 15)
+# ggsave("./Laboratory/Application/figures/map_smooth.pdf", width=10.5, height = 15)
 ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +  
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab("Linear Component") + 
   geom_line(aes(y=new.linear, colour = covariates), linewidth=2) + ylab ("") +
@@ -423,7 +478,7 @@ ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +
         strip.text = element_blank(),
         axis.text = element_blank(),
         axis.title.x = element_text(size = 35))
-ggsave("./Laboratory/Application/figures/map_linear.pdf", width=10, height = 15)
+# ggsave("./Laboratory/Application/figures/map_linear.pdf", width=10, height = 15)
 ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab("Nonlinear Component") +
   geom_line(aes(y=new.nonlinear, colour = covariates), linewidth=2) + ylab ("") +
@@ -436,7 +491,7 @@ ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +
         strip.text = element_blank(),
         axis.text = element_blank(),
         axis.title.x = element_text(size = 35))
-ggsave("./Laboratory/Application/figures/map_nonlinear.pdf", width=12.5, height = 15)
+# ggsave("./Laboratory/Application/figures/map_nonlinear.pdf", width=12.5, height = 15)
 
 
 
@@ -481,7 +536,7 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
   theme(text = element_text(size = 20)) + 
   coord_fixed(xlim = c(-3, 3),  
               ylim = c(-3, 3))
-ggsave("./Laboratory/Application/figures/map_qqplot.pdf", width=10)
+# ggsave("./Laboratory/Application/figures/map_qqplot.pdf", width=10)
 
 model.df <- data.frame(y=y, fwi.scaled)
 mod <- lm(log(y) ~ DSR + FWI + BUI + ISI + FFMC + DMC + DC, data= model.df)
@@ -553,16 +608,16 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
   theme(text = element_text(size = 20)) + 
   coord_fixed(xlim = c(-3, 3),  
               ylim = c(-3, 3))
-ggsave("./Laboratory/Application/figures/loglr_qqplot.pdf", width=10)
+# ggsave("./Laboratory/Application/figures/loglr_qqplot.pdf", width=10)
 
 library(gap)
 library(dgof)
-pdf("./Laboratory/Application/figures/map_unifqqplot.pdf", width = 10, height= 7.78)
+# pdf("./Laboratory/Application/figures/map_unifqqplot.pdf", width = 10, height= 7.78)
 qqunif(pPareto(y, u, alpha=newalpha), logscale = FALSE, col = "black")
-dev.off()
-pdf("./Laboratory/Application/figures/loglr_unifqqplot.pdf", width = 10, height= 7.78)
+# dev.off()
+# pdf("./Laboratory/Application/figures/loglr_unifqqplot.pdf", width = 10, height= 7.78)
 qqunif(pnorm(mod.summary$residuals), logscale = FALSE, col = "black")
-dev.off()
+# dev.off()
 
 # qPareto(pPareto(), u, alpha=newalpha)
 ks.test(pPareto(y, u, alpha=newalpha), "punif")
