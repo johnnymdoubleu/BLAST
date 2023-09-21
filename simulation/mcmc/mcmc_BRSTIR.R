@@ -198,18 +198,19 @@ registerDistributions(list(
     )
 ))
 
-# nimRowSums = nimbleFunction(
-#     run = function(a = double(2)) {
-#         nrows <- dim(a)[1]
-#         ncols <- dim(a)[2]
-#         ans <- numeric(nrows)
-#         for(j in 1:nrows) {
-#             ans[j] <- sum(a[j, 1:ncols])
-#         }
-#         return(ans)
-#         returnType(double(1))
-#     }
-# )
+reExp = nimbleFunction(
+    run = function(a = double(0)) {
+        if(a > 10){
+          ans <- exp(10) + exp(10)*(a-10)
+        }
+        else(
+          ans <- exp(a)
+        )
+        returnType(double(0))
+        return(ans)
+        
+    }
+)
 
 model.penalisation <- nimbleCode({
   #prior
@@ -266,7 +267,8 @@ model.penalisation <- nimbleCode({
   
   for (i in 1:n){
     log(alpha[i]) <- theta.0 + sum(g.nonlinear[i, 1:p]) + sum(g.linear[i, 1:p])
-    log(new.alpha[i]) <- theta.0 + sum(holder.nonlinear[i, 1:p]) + sum(holder.linear[i, 1:p])
+    new.alpha[i] <- reExp(theta.0 + sum(holder.nonlinear[i, 1:p]) + sum(holder.linear[i, 1:p]))
+    # new.alpha[i] <- reExp(temp.alpha[i])
   }
   for(i in 1:n){
     y[i] ~ dpareto(1, u, alpha[i])
@@ -329,8 +331,8 @@ MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2,
 #             horiz = FALSE, params = c("lambda.1", "lambda.2"))            
 print(alpha.summary)
 MCMCsummary(object = fit.v2$samples, round = 3)
-MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2, 
-            horiz = FALSE, params = "alpha", offset = 0.2, rank = TRUE)
+# MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2, 
+#             horiz = FALSE, params = "alpha", offset = 0.2, rank = TRUE)
 # ggsave(filename = paste0("Simulation/BayesianPsplines/results/figures/",date,"-",time, "_sc1_gamma.pdf"),
 #       plot = as.ggplot(function() MCMCplot(object = fit.v2$samples$chain1, 
 #                                            object2 = fit.v2$samples$chain2,
