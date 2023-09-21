@@ -283,7 +283,7 @@ log.posterior <- function(beta, y.origin){
 #     return(sum(term))
 # }
 # return(log.lik(beta) + log.prior(beta))
-}
+#}
 
 beta.emp <- c(rep(0, p+1), rep(0, p*psi))
 # beta.emp <- c(as.vector(theta.origin), as.vector(gamma.origin))

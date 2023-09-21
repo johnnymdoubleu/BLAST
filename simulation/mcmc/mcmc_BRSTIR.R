@@ -93,24 +93,24 @@ for(i in 1:n){
     alp.full[i] <- exp(theta.origin[1] + sum(f.origin[i,]))
     y.origin[i] <- rPareto(1, 1, alpha = alp.full[i])
 }
-cdf.full <- NULL
-alpha.full <- alp.full
-y.full <- y.origin
+# cdf.full <- NULL
+# alpha.full <- alp.full
+# y.full <- y.origin
 u <- quantile(y.origin, threshold)
-for(i in 1:5000){
-  cdf.full[i] <- 1 - (u/y.full[i])^(alpha.full[i])
-}
-plot(sort(alpha.full), sort(cdf.full))
+# for(i in 1:5000){
+#   cdf.full[i] <- 1 - (u/y.full[i])^(alpha.full[i])
+# }
+# plot(sort(alpha.full), sort(cdf.full))
 
 x.origin <- x.origin[which(y.origin>u),]
 y.origin <- y.origin[y.origin > u]
 alp.full <- alp.full[which(y.origin>u)]
 n <- length(y.origin)
-cdfq.90 <- NULL
-for(i in 1:n){
-  cdfq.90[i] <- 1 - (u/y.origin[i])^(alp.full[i])
-}
-plot(sort(alp.full), sort(cdfq.90))
+# cdfq.90 <- NULL
+# for(i in 1:n){
+#   cdfq.90[i] <- 1 - (u/y.origin[i])^(alp.full[i])
+# }
+# plot(sort(alp.full), sort(cdfq.90))
 
 
 xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
@@ -267,11 +267,12 @@ model.penalisation <- nimbleCode({
   
   for (i in 1:n){
     log(alpha[i]) <- theta.0 + sum(g.nonlinear[i, 1:p]) + sum(g.linear[i, 1:p])
+    # alpha[i] <- log(10) / log(1 + exp(theta.0 + sum(g.nonlinear[i, 1:p]) + sum(g.linear[i, 1:p])))
     log(new.alpha[i]) <- theta.0 + sum(holder.nonlinear[i, 1:p]) + sum(holder.linear[i, 1:p])
     # new.alpha[i] <- reExp(temp.alpha[i])
   }
   for(i in 1:n){
-    y[i] ~ dpareto(1, u, alpha[i])
+    y[i] ~ dpareto(1, 1, alpha[i])
     # spy[i] <- (alpha[i]*(y[i]/u)^(-1*alpha[i])*y[i]^(-1)) / C
     # ones[i] ~ dbern(spy[i])
   }
@@ -284,6 +285,9 @@ init.alpha <- function() list(list(gamma = matrix(0.5, nrow = psi, ncol=p),
                                     covm = array(1, dim = c(psi,psi,10))),
                               list(gamma = matrix(0, nrow = psi, ncol=p),
                                     theta = rep(0, p), theta.0 = 0,
+                                    covm = array(1, dim = c(psi,psi,10))),
+                              list(gamma = matrix(1, nrow = psi, ncol=p),
+                                    theta = rep(0.5, p), theta.0 = 0.5,
                                     covm = array(1, dim = c(psi,psi,10))))
                             #   list(gamma = matrix(1, nrow = psi, ncol=p)))
                               # y = as.vector(y),
@@ -305,10 +309,10 @@ fit.v2 <- nimbleMCMC(code = model.penalisation,
                   monitors = monitor.pred,
                   inits = init.alpha(),
                   thin = 20,
-                  niter = 70000,
-                  nburnin = 50000,
+                  niter = 120000,
+                  nburnin = 100000,
                   # setSeed = 300,
-                  nchains = 2,
+                  nchains = 3,
                   # WAIC = TRUE,-
                   samplesAsCodaMCMC = TRUE,
                   summary = TRUE)
