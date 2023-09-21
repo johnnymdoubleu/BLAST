@@ -221,8 +221,8 @@ log.posterior <- function(beta, y.origin){
             return(ans)
         }
         # theta.0 <- beta[1]
-        theta <- beta[1:(p+1)]
-        gamma <- matrix(beta[-(1:(p+1))], ncol=p)
+        theta <- beta.map$par[1:(p+1)]
+        gamma <- matrix(beta.map$par[-(1:(p+1))], ncol=p)
         g.1 <- g.2 <- term <- third.term <- first.term <- second.term <- NULL
         for(j in 1:p){
             first.term[j] <- -1 * lambda.1 * sqrt(sum((gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)])^2))
@@ -320,28 +320,32 @@ ggplot(df, aes(x =labels , y = gamma.map, color = covariate)) +
 #   theme(plot.title = element_text(hjust = 0.5, size = 20))
 
 f.nonlinear.new <- f.linear.new <- f.new <- matrix(, nrow = n, ncol=p)
-cdf <- newalpha <- NULL
+alpha.new <- cdf <- newalpha <- NULL
 for (j in 1:p){
   f.linear.new[,j] <- bs.linear[,j] * theta.map[j+1]
   f.nonlinear.new[,j] <- bs.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.map, ncol = p)[, j]
   f.new[1:n, j] <- f.linear.new[,j] + f.nonlinear.new[,j]
 }
 
-
-# set.seed(100)
 for(i in 1:n){
   # temp <- theta.map[1] + sum(f.new[i,])
   # newalpha[i] <- exp(temp)
   newalpha[i] <- exp(theta.map[1] + sum(f.new[i]))
 }
 
-# f.nonlinear.new <- f.linear.new <- f.new <- matrix(, nrow = n, ncol=p)
-# for (j in 1:p){
-#   f.linear.new[,j] <- as.matrix(xholder.linear[,(((j-1)*no.theta)+1):(((j-1)*no.theta)+no.theta)]) %*% matrix(theta.map, nrow=no.theta)[1:no.theta, j]
-#   f.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.map, ncol = p)[, j]
-#   f.new[1:n, j] <- f.linear.new[,j] + f.nonlinear.new[,j]
-# }
+# set.seed(100)
 
+f.nonlinear.new <- f.linear.new <- f.new <- matrix(, nrow = n, ncol=p)
+for (j in 1:p){
+  f.linear.new[,j] <- xholder.linear[,j] * theta.map[j+1]
+  f.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.map, ncol = p)[, j]
+  f.new[1:n, j] <- f.linear.new[,j] + f.nonlinear.new[,j]
+}
+for(i in 1:n){
+  # temp <- theta.map[1] + sum(f.new[i,])
+  # newalpha[i] <- exp(temp)
+  alpha.new[i] <- exp(theta.map[1] + sum(f.new[i]))
+}
 # cdf <- alpha.new <- NULL
 # for(i in 1:n){
 #   alpha.new[i] <- exp(sum(f.new[i,]))
@@ -410,7 +414,7 @@ ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab("Smooth Functions") +
   geom_line(aes(y=new, colour = covariates), linewidth=2) + ylab ("") +
   facet_grid(covariates ~ .) + #ggtitle("MAP for Smooth Functions") + 
-  scale_y_continuous(breaks=c(-10, 0, 10)) +
+  scale_y_continuous(breaks=c(0)) +
   theme(plot.title = element_text(hjust = 0.5, size = 30),
         legend.position = "none",
         strip.text = element_blank(),

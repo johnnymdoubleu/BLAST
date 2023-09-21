@@ -143,11 +143,11 @@ for(i in 1:p){
   # xholder[,i] <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n)
   # test.knot <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
   # splines <- basis.tps(seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n), test.knot, m=2, rk=FALSE, intercept = TRUE)
-  # xholder[,i] <- seq(min(fwi.scaled), max(fwi.scaled), length.out = n)
-  # test.knot <- seq(min(fwi.scaled), max(fwi.scaled), length.out = psi)
-  # splines <- basis.tps(seq(min(fwi.scaled), max(fwi.scaled), length.out = n), test.knot, m=2, rk=FALSE, intercept = TRUE)
-  # xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
-  # xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
+  xholder[,i] <- seq(min(fwi.scaled), max(fwi.scaled), length.out = n)
+  test.knot <- seq(min(fwi.scaled), max(fwi.scaled), length.out = psi)
+  splines <- basis.tps(seq(min(fwi.scaled), max(fwi.scaled), length.out = n), test.knot, m=2, rk=FALSE, intercept = TRUE)
+  xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
+  xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
   knots <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
   tps <- basis.tps(fwi.scaled[,i], knots, m = 2, rk = FALSE, intercept = TRUE)
   # tps <- mSpline(x.origin[,i], df=psi, Boundary.knots = range(x.origin[,i]), degree = 3, intercept=TRUE)
@@ -405,7 +405,7 @@ ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab("Smooth Functions") +
   geom_line(aes(y=new, colour = covariates), linewidth=2) + ylab ("") +
   facet_grid(covariates ~ .) + #ggtitle("MAP for Smooth Functions") + 
-  scale_y_continuous(breaks=c(-10, 0, 10)) +
+  scale_y_continuous(breaks=c(0)) +
   theme(plot.title = element_text(hjust = 0.5, size = 30),
         legend.position = "none",
         strip.text = element_blank(),
