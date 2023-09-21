@@ -272,7 +272,7 @@ model.penalisation <- nimbleCode({
     # new.alpha[i] <- reExp(temp.alpha[i])
   }
   for(i in 1:n){
-    y[i] ~ dpareto(1, 1, alpha[i])
+    y[i] ~ dpareto(1, u, alpha[i])
     # spy[i] <- (alpha[i]*(y[i]/u)^(-1*alpha[i])*y[i]^(-1)) / C
     # ones[i] ~ dbern(spy[i])
   }

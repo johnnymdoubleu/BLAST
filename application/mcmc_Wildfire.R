@@ -94,30 +94,30 @@ fwi.scaled <- fwi.scaled[which(Y>u),]
 df.extreme <- cbind(y, fwi.scaled)
 # df.extreme <- cbind(date = cov$date[which(Y>u)], df.extreme)
 df.extreme <- cbind(month = fwi.index$month[which(Y>u)], df.extreme)
-ggplot(df.extreme, aes(x=month, y=y, color=month)) + geom_point(size=6) +
-    theme(plot.title = element_text(hjust = 0.5, size = 20),
-        legend.title = element_blank(),
-        legend.text = element_text(size=20),
-        # axis.ticks.x = element_blank(),
-        axis.text.x = element_text(hjust=0.35),
-        axis.text = element_text(size = 20),
-        axis.title = element_text(size = 15))
-# ggsave("./Laboratory/Application/figures/datavis.pdf", width=15)
+# ggplot(df.extreme, aes(x=month, y=y, color=month)) + geom_point(size=6) +
+#     theme(plot.title = element_text(hjust = 0.5, size = 20),
+#         legend.title = element_blank(),
+#         legend.text = element_text(size=20),
+#         # axis.ticks.x = element_blank(),
+#         axis.text.x = element_text(hjust=0.35),
+#         axis.text = element_text(size = 20),
+#         axis.title = element_text(size = 15))
+# # ggsave("./Laboratory/Application/figures/datavis.pdf", width=15)
 
-# ggplot(as.data.frame(y),aes(x=y))+geom_histogram(aes(y=..density..), bins = 5)
+# # ggplot(as.data.frame(y),aes(x=y))+geom_histogram(aes(y=..density..), bins = 5)
 
-ggplot(df.extreme, aes(x=y)) +
-    geom_histogram(stat = "density", n=40, adjust=0.1, fill = "darkgrey") + 
-    xlab("Area Burnt") + 
-    # geom_histogram(aes(y=..density..), bins = 10^3) +
-    # geom_density(aes(y=..density..)) +
-    theme(plot.title = element_text(hjust = 0.5, size = 20),
-      legend.title = element_blank(),
-      legend.text = element_text(size=20),
-      # axis.ticks.x = element_blank(),
-      axis.text.x = element_text(hjust=0.35),
-      axis.text = element_text(size = 25),
-      axis.title = element_text(size = 30))
+# ggplot(df.extreme, aes(x=y)) +
+#     geom_histogram(stat = "density", n=40, adjust=0.1, fill = "darkgrey") + 
+#     xlab("Area Burnt") + 
+#     # geom_histogram(aes(y=..density..), bins = 10^3) +
+#     # geom_density(aes(y=..density..)) +
+#     theme(plot.title = element_text(hjust = 0.5, size = 20),
+#       legend.title = element_blank(),
+#       legend.text = element_text(size=20),
+#       # axis.ticks.x = element_blank(),
+#       axis.text.x = element_text(hjust=0.35),
+#       axis.text = element_text(size = 25),
+#       axis.title = element_text(size = 30))
 
 
 # ggsave("./Laboratory/Application/figures/datahist.pdf", width=15)
