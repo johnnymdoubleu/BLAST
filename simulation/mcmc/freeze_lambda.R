@@ -259,7 +259,7 @@ data <- list(y = as.vector(y.origin), bs.linear = bs.linear,
               xholder.nonlinear = xholder.nonlinear,
               zero.vec = as.matrix(rep(0, psi)), #sigma = 0.75,
             #    new.x = xholder, new.bs.x = new.bs.x,
-              lambda.1 = 0.001, lambda.2 = 0.002,
+              lambda.1 = 0.001, lambda.2 = 0.001,
               u = u, #C = 1000,  ones = as.vector(rep(1, n)),
               shape = 0.01, scale = 0.01)
 
