@@ -228,7 +228,7 @@ model.penalisation <- nimbleCode({
   for (j in 1:p){
     theta[j] ~ ddexp(0, lambda.1)
     tau.square[j] ~ dgamma((psi+1)/2, (lambda.2^2)/2)
-    sigma.square[j] ~ dinvgamma(0.1, 0.1)
+    sigma.square[j] ~ dinvgamma(0.1, 0.01)
   }
 
   for (j in 1:p){
@@ -267,7 +267,7 @@ model.penalisation <- nimbleCode({
   
   for (i in 1:n){
     log(alpha[i]) <- theta.0 + sum(g.nonlinear[i, 1:p]) + sum(g.linear[i, 1:p])
-    new.alpha[i] <- reExp(theta.0 + sum(holder.nonlinear[i, 1:p]) + sum(holder.linear[i, 1:p]))
+    log(new.alpha[i]) <- theta.0 + sum(holder.nonlinear[i, 1:p]) + sum(holder.linear[i, 1:p])
     # new.alpha[i] <- reExp(temp.alpha[i])
   }
   for(i in 1:n){
