@@ -204,11 +204,11 @@ log.posterior <- function(beta, y.origin){
             # coef <- as.matrix(gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)])
             linear.term <- bs.linear[,j] * theta[j+1]
             nonlinear.term <- bs.nonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma[,j]
-            g[, j] <- rep(theta[1], n) + linear.term + nonlinear.term
+            g[, j] <- linear.term + nonlinear.term
         }
         for(i in 1:n){
             first.term[i] <- sum(g[i,]) - log(y.origin[i])
-            second.term[i] <- exp.prime(sum(g[i,]), thres = 10) * log(y.origin[i]/u)
+            second.term[i] <- exp.prime((theta[1] + sum(g[i,])), thres = 10) * log(y.origin[i]/u)
             term[i] <- first.term[i] - second.term[i]
         }
         return(sum(term))
@@ -221,8 +221,8 @@ log.posterior <- function(beta, y.origin){
             return(ans)
         }
         # theta.0 <- beta[1]
-        theta <- beta.map$par[1:(p+1)]
-        gamma <- matrix(beta.map$par[-(1:(p+1))], ncol=p)
+        theta <- beta.emp[1:(p+1)]
+        gamma <- matrix(beta.emp[-(1:(p+1))], ncol=p)
         g.1 <- g.2 <- term <- third.term <- first.term <- second.term <- NULL
         for(j in 1:p){
             first.term[j] <- -1 * lambda.1 * sqrt(sum((gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)])^2))
@@ -449,8 +449,6 @@ ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +
         axis.text = element_blank(),
         axis.title.x = element_text(size = 35))
 # ggsave("./Laboratory/Application/figures/map_nonlinear.pdf", width=12.5, height = 15)
-
-
 
 
 # plot(sort(alp.origin))
