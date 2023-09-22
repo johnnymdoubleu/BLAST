@@ -21,8 +21,10 @@ suppressMessages(library(coda))
 # library(mgcv)
 library(MCMCvis)
 suppressMessages(library(tidyverse))
+library(parallel)
 # library(ggplotify)
 
+this.cluster <- makeCluster(4)
 #Scenario 1
 # set.seed(12338)
 n <- 5000
@@ -171,6 +173,9 @@ for(i in 1:n){
 #   y.origin[i] <- rPareto(1, 1, alpha = alp.origin[i])
 # }
 
+mcmc.allcode <- function(seed, data, constant){
+    
+}
 
 ###################### Custom Density assigned for Pareto Distribution
 dpareto <- nimbleFunction(
