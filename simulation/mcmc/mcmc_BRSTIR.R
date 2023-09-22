@@ -285,10 +285,10 @@ init.alpha <- function() list(list(gamma = matrix(0.5, nrow = psi, ncol=p),
                                     covm = array(1, dim = c(psi,psi,10))),
                               list(gamma = matrix(0, nrow = psi, ncol=p),
                                     theta = rep(0, p), theta.0 = 0,
-                                    covm = array(1, dim = c(psi,psi,10))),
-                              list(gamma = matrix(1, nrow = psi, ncol=p),
-                                    theta = rep(0.5, p), theta.0 = 0.5,
-                                    covm = array(1, dim = c(psi,psi,10))))
+                                    covm = array(1, dim = c(psi,psi,10))))#,
+                              # list(gamma = matrix(1, nrow = psi, ncol=p),
+                              #       theta = rep(0.5, p), theta.0 = 0.5,
+                              #       covm = array(1, dim = c(psi,psi,10))))
                             #   list(gamma = matrix(1, nrow = psi, ncol=p)))
                               # y = as.vector(y),
 monitor.pred <- c("theta.0", "theta", "gamma", "alpha", "new.alpha", 
@@ -309,10 +309,10 @@ fit.v2 <- nimbleMCMC(code = model.penalisation,
                   monitors = monitor.pred,
                   inits = init.alpha(),
                   thin = 20,
-                  niter = 120000,
-                  nburnin = 100000,
+                  niter = 70000,
+                  nburnin = 50000,
                   # setSeed = 300,
-                  nchains = 3,
+                  nchains = 2,
                   # WAIC = TRUE,-
                   samplesAsCodaMCMC = TRUE,
                   summary = TRUE)

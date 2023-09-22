@@ -209,7 +209,7 @@ model.penalisation <- nimbleCode({
   for (j in 1:p){
     theta[j] ~ ddexp(0, lambda.1)
     tau.square[j] ~ dgamma((psi+1)/2, (lambda.2^2)/2)
-    sigma.square[j] ~ dinvgamma(0.1, 0.01)
+    sigma.square[j] ~ dinvgamma(0.01, 0.01)
   }
 
   for (j in 1:p){
@@ -246,7 +246,7 @@ init.alpha <- function() list(list(gamma = matrix(0.5, nrow = psi, ncol=p),
                                     covm = array(1, dim = c(psi,psi,10))))
                             #   list(gamma = matrix(1, nrow = psi, ncol=p)))
                               # y = as.vector(y),
-monitor.pred <- c("theta.0", "theta", "gamma", "alpha", 
+monitor.pred <- c("theta.0", "theta", "gamma", "alpha", "g.linear", "g.nonlinear",
                   "lambda.1", "lambda.2")
 # monitor.pred <- c("covm")
 data <- list(y = as.vector(y), bs.linear = bs.linear, 
@@ -310,7 +310,7 @@ for(i in 1:len){
 # }
 colnames(data.scenario) <- c("x", "constant", "post.mean",
                               paste("alp", 1:len, sep = ""))
-tail(data.scenario[, c(1:10, ((dim(samples)[1]*2-5):(dim(samples)[1]*2)))], 15)
+tail(data.scenario[, c(1:10, ((dim(samples)[1]-5):(dim(samples)[1])))], 15)
 # saveRDS(data.scenario, file=paste0("Simulation/BayesianPsplines/results/",date,"-",time, "_sc1_data_samp1.rds"))
 #plotting all the points
 plt <- ggplot(data = data.scenario, aes(x = x)) + ylab(expression(alpha(x))) + xlab(expression(x))
@@ -330,6 +330,17 @@ print(plt + geom_line(aes(y=post.mean, col = "Posterior Mean(Chain1)"), linewidt
 #         width=14, height = 7.5)
 
 cat("sc1_Alp Done")
+
+covariates <- gl(p, n, (p*n), labels = factor(names(fwi.scaled)))
+replicate <- gl(2, n, (p*n))
+func.df <- data.frame(seq = seq(0,1,length.out = n),
+                        # x = as.vector(apply(fwi.scaled, 2, sort, method = "quick")),
+                        # new=as.vector(func.new),
+                        new.linear=as.vector(fit.v2$summary$chain1[(n+1):(n+(n*p)),1]),
+                        new.nonlinear=as.vector(fit.v2$summary$chain1[(n+(n*p)):((n+(n*p*2))),1]),
+                        covariates=covariates, 
+                        replicate=replicate,
+                        x = rep(newx, p))
 
 plt.samp <- ggplot(data = data.scenario, aes(x = constant)) + ylab(expression(alpha(x))) + xlab(expression(x))
 for(i in ((dim(samples)[1]*2)-993):((dim(samples)[1]*2)+6)){
