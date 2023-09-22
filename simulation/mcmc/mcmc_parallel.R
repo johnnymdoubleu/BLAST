@@ -301,7 +301,7 @@ chain_output <- parLapply(cl = this.cluster, X = 1:4,
 # It's good practice to close the cluster when you're done with it.
 str(chain_output[[1]])
 stopCluster(this.cluster)
-fit.v2 <- chain_output[[1]]
+fit.v2 <- chain_output[[4]]
 # alpha.summary <- MCMCsummary(object = fit.v2$samples)
 # saveRDS(fit.v2, file=paste0("./Simulation/BayesianPsplines/results/",date,"-",time,"_sc1_fit.rds"))
 alpha.summary <- fit.v2$summary$all.chains
@@ -502,15 +502,13 @@ print(plt.samp + ylim(0, 50) +
 # ggsave(paste0("./Simulation/BayesianPsplines/results/figures/",date,"-",time, "_true_Alp_samp_2.pdf"), 
 #         width=14, height = 7.5)
 
-
 samples <- fit.v2$samples$chain3
 data.scenario <- data.frame("x" = c(1:n),
                             "constant" = newx,
                             "post.mean" = sort(fit.v2$summary$chain3[1:n,1]),
-                            "trueAlp" = sort(trueAlp),
-                            "meanAlp" = sort(fit.v2$summary$chain3[(n+beta.len+((p-1)*psi)+1):(n+beta.len+n+((p-1)*psi)),1]),
-                            "post.check" = sort(cutoff.alp))
-                            # "post.check" = sort(alp))
+                            "trueAlp" = sort(alp.new),
+                            "meanAlp" = sort(fit.v2$summary$chain3[703:1202,1]),
+                            "post.check" = sort(alp.origin))
 # data.scenario1 <- data.frame("x"=c(1:n)) #, )
 
 len <- dim(samples)[1]
@@ -520,20 +518,21 @@ for(i in 1:len){
 }
 for(i in 1:len){
   data.scenario <- cbind(data.scenario, 
-                      data.frame(unname(sort(samples[i, (n+beta.len+((p-1)*psi)+1):(n+beta.len+((p-1)*psi)+n)]))))
+                      data.frame(unname(sort(samples[i, 703:1202]))))
 }
 colnames(data.scenario) <- c("x", "constant", "post.mean",
-                              "trueAlp", "meanAlp",
-                              "post.check", paste("alp", 1:len, sep = ""),
+                              "trueAlp", "meanAlp", "post.check",
+                              paste("alp", 1:len, sep = ""),
                               # paste0("post.samp", 1:len))
                               paste0("post.samp.alp", 1:len))
 tail(data.scenario[, c(1:10, ((dim(samples)[1]*2-5):(dim(samples)[1]*2)))], 15)
 # saveRDS(data.scenario, file=paste0("Simulation/BayesianPsplines/results/",date,"-",time, "_sc1_data_samp1.rds"))
 #plotting all the points
-plt <- ggplot(data = data.scenario, aes(x = x)) + ylab("alpha(x)") + xlab("")
+plt <- ggplot(data = data.scenario, aes(x = x)) + ylab(expression(alpha(x))) + xlab(expression(x))
 for(i in (dim(samples)[1] - 993):(dim(samples)[1]+6)){
   plt <- plt + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
 }
+
 print(plt + geom_line(aes(y=post.mean, col = "Posterior Mean(Chain3)"), linewidth = 1.5) + 
         geom_line(aes(y = post.check, col=paste0("Simulated Alpha: ",n,"/",psi,"/",threshold)), linewidth = 1.5) +
         # theme(axis.title.y = element_text(size = rel(1.8), angle = 90)) +
@@ -542,17 +541,17 @@ print(plt + geom_line(aes(y=post.mean, col = "Posterior Mean(Chain3)"), linewidt
         scale_color_manual(values = c("#e0b430","red")) +
         theme(text = element_text(size = 27)) + 
         theme(legend.position="top", legend.key.size = unit(1, 'cm')))
-# ggsave(paste0("./Simulation/BayesianPsplines/results/figures/",date,"-",time, "_sc1_Alp_samp_1.pdf"), 
+# ggsave(paste0("./Simulation/BayesianPsplines/results/figures/",date,"-",time, "_sc1_Alp_samp_2.pdf"), 
 #         width=14, height = 7.5)
 
 cat("sc3_Alp Done")
 
-plt.samp <- ggplot(data = data.scenario, aes(x = constant)) + ylab("alpha(x)")
+plt.samp <- ggplot(data = data.scenario, aes(x = constant)) + ylab(expression(alpha(x))) + xlab(expression(x))
 for(i in ((dim(samples)[1]*2)-993):((dim(samples)[1]*2)+6)){
   # print(i)
   plt.samp <- plt.samp + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
 }
-print(plt.samp + ylim(0, 3) +
+print(plt.samp + ylim(0, 50) +
       geom_line(aes(y = trueAlp, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
       geom_line(aes(y = meanAlp, col = "Posterior Mean(Chain3)"), linewidth = 2.5) +
       labs(col = "") +
@@ -563,19 +562,61 @@ print(plt.samp + ylim(0, 3) +
       #               guide = "legend") +
       theme(text = element_text(size = 27)) + 
       theme(legend.position="top", legend.key.size = unit(1, 'cm')))
-
 # ggsave(paste0("./Simulation/BayesianPsplines/results/figures/",date,"-",time, "_true_Alp_samp_2.pdf"), 
 #         width=14, height = 7.5)
 
-cat("true_Alp Done")
-
-data.scenario <- data.frame("meanAlp" = alpha.summary[(n+beta.len+((p-1)*psi)+1):(n+beta.len+n+((p-1)*psi)),1],
+samples <- fit.v2$samples$chain4
+data.scenario <- data.frame("x" = c(1:n),
                             "constant" = newx,
-                            "trueAlp" = sort(trueAlp))
-plt.samp <- ggplot(data = data.scenario, aes(x = constant)) + ylab("alpha(x)")
-print(plt.samp + ylim(0, 3) +
+                            "post.mean" = sort(fit.v2$summary$chain4[1:n,1]),
+                            "trueAlp" = sort(alp.new),
+                            "meanAlp" = sort(fit.v2$summary$chain4[703:1202,1]),
+                            "post.check" = sort(alp.origin))
+# data.scenario1 <- data.frame("x"=c(1:n)) #, )
+
+len <- dim(samples)[1]
+for(i in 1:len){
+  data.scenario <- cbind(data.scenario, 
+                      data.frame(unname(sort(samples[i, 1:n]))))
+}
+for(i in 1:len){
+  data.scenario <- cbind(data.scenario, 
+                      data.frame(unname(sort(samples[i, 703:1202]))))
+}
+colnames(data.scenario) <- c("x", "constant", "post.mean",
+                              "trueAlp", "meanAlp", "post.check",
+                              paste("alp", 1:len, sep = ""),
+                              # paste0("post.samp", 1:len))
+                              paste0("post.samp.alp", 1:len))
+tail(data.scenario[, c(1:10, ((dim(samples)[1]*2-5):(dim(samples)[1]*2)))], 15)
+# saveRDS(data.scenario, file=paste0("Simulation/BayesianPsplines/results/",date,"-",time, "_sc1_data_samp1.rds"))
+#plotting all the points
+plt <- ggplot(data = data.scenario, aes(x = x)) + ylab(expression(alpha(x))) + xlab(expression(x))
+for(i in (dim(samples)[1] - 993):(dim(samples)[1]+6)){
+  plt <- plt + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
+}
+
+print(plt + geom_line(aes(y=post.mean, col = "Posterior Mean(Chain4)"), linewidth = 1.5) + 
+        geom_line(aes(y = post.check, col=paste0("Simulated Alpha: ",n,"/",psi,"/",threshold)), linewidth = 1.5) +
+        # theme(axis.title.y = element_text(size = rel(1.8), angle = 90)) +
+        # theme(axis.title.x = element_text(size = rel(1.8), angle = 00)) +
+        labs(col = "") + 
+        scale_color_manual(values = c("#e0b430","red")) +
+        theme(text = element_text(size = 27)) + 
+        theme(legend.position="top", legend.key.size = unit(1, 'cm')))
+# ggsave(paste0("./Simulation/BayesianPsplines/results/figures/",date,"-",time, "_sc1_Alp_samp_2.pdf"), 
+#         width=14, height = 7.5)
+
+cat("sc4_Alp Done")
+
+plt.samp <- ggplot(data = data.scenario, aes(x = constant)) + ylab(expression(alpha(x))) + xlab(expression(x))
+for(i in ((dim(samples)[1]*2)-993):((dim(samples)[1]*2)+6)){
+  # print(i)
+  plt.samp <- plt.samp + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
+}
+print(plt.samp + ylim(0, 50) +
       geom_line(aes(y = trueAlp, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
-      geom_line(aes(y = meanAlp, col = "Posterior Mean"), linewidth = 2.5) +
+      geom_line(aes(y = meanAlp, col = "Posterior Mean(Chain4)"), linewidth = 2.5) +
       labs(col = "") +
       scale_color_manual(values = c("#e0b430", "red"))+
       # scale_colour_manual("", 
@@ -584,9 +625,9 @@ print(plt.samp + ylim(0, 3) +
       #               guide = "legend") +
       theme(text = element_text(size = 27)) + 
       theme(legend.position="top", legend.key.size = unit(1, 'cm')))
+# ggsave(paste0("./Simulation/BayesianPsplines/results/figures/",date,"-",time, "_true_Alp_samp_2.pdf"), 
+#         width=14, height = 7.5)
 
-# print(plt.samp + 
-#       geom_line(aes(y = trueAlp), colour = "red", linewidth = 1.5))
 
 #--------------------------------------------------------------------------------------
 #plotting bsplines basis function of covariates
