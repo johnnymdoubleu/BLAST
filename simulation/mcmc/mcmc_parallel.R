@@ -283,8 +283,8 @@ mcmc.allcode <- function(seed, data, constant){
                     monitors = monitor.pred,
                     inits = init.alpha(),
                     thin = 20,
-                    niter = 120000,
-                    nburnin = 100000,
+                    niter = 170000,
+                    nburnin = 150000,
                     # setSeed = 300,
                     nchains = 4,
                     # WAIC = TRUE,-
