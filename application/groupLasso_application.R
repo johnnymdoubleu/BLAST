@@ -414,7 +414,7 @@ ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab("Smooth Functions") +
   geom_line(aes(y=new, colour = covariates), linewidth=2) + ylab ("") +
   facet_grid(covariates ~ .) + #ggtitle("MAP for Smooth Functions") + 
-  scale_y_continuous(breaks=c(0)) +
+  scale_y_continuous(breaks=c(0)) + theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 30),
         legend.position = "none",
         strip.text = element_blank(),
@@ -427,7 +427,7 @@ ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab("Linear Component") + 
   geom_line(aes(y=new.linear, colour = covariates), linewidth=2) + ylab ("") +
   facet_grid(covariates ~ .) + #ggtitle("Linear Component of Smooth Functions") + 
-  scale_y_continuous(breaks=c(0)) +
+  scale_y_continuous(breaks=c(0))  + theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 15),
         axis.ticks = element_blank(),
         # panel.grid.minor.y = element_blank(),
@@ -440,11 +440,11 @@ ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab("Nonlinear Component") +
   geom_line(aes(y=new.nonlinear, colour = covariates), linewidth=2) + ylab ("") +
   facet_grid(covariates ~ .) + #ggtitle("Nonlinear Component of Smooth Functions") + 
-  scale_y_continuous(breaks=c(0)) +
+  scale_y_continuous(breaks=c(0))  + theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 15),
         axis.ticks = element_blank(),
         legend.title = element_blank(),
-        legend.text = element_text(size=33),
+        legend.text = element_text(size=25),
         strip.text = element_blank(),
         axis.text = element_blank(),
         axis.title.x = element_text(size = 35))
@@ -490,6 +490,7 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
   geom_line(aes(x = grid, y = trajhat), linetype = "dashed", linewidth = 1.2) + 
   geom_abline(intercept = 0, slope = 1, linewidth = 1.2) + 
   labs(x = "Theoretical quantiles", y = "Sample quantiles") + 
+  theme_minimal(base_size = 20) +
   theme(text = element_text(size = 20)) + 
   coord_fixed(xlim = c(-3, 3),  
               ylim = c(-3, 3))
@@ -562,6 +563,7 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
   geom_line(aes(x = grid, y = trajhat), linetype = "dashed", linewidth = 1.2) + 
   geom_abline(intercept = 0, slope = 1, linewidth = 1.2) + 
   labs(x = "Theoretical quantiles", y = "Sample quantiles") + 
+  theme_minimal(base_size = 20) +
   theme(text = element_text(size = 20)) + 
   coord_fixed(xlim = c(-3, 3),  
               ylim = c(-3, 3))
