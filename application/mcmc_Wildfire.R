@@ -203,8 +203,8 @@ reExp = nimbleFunction(
 
 model.penalisation <- nimbleCode({
   #prior
-  lambda.1 ~ dgamma(shape, scale) #gamma distribution prior for lambda
-  lambda.2 ~ dgamma(shape, scale)
+  lambda.1 ~ dgamma(0.1, 0.1) #gamma distribution prior for lambda
+  lambda.2 ~ dgamma(0.5, 0.5)
   theta.0 ~ ddexp(0, lambda.1)
   for (j in 1:p){
     theta[j] ~ ddexp(0, lambda.1)
@@ -253,8 +253,8 @@ data <- list(y = as.vector(y), bs.linear = bs.linear,
               bs.nonlinear = bs.nonlinear,
               zero.vec = as.matrix(rep(0, psi)), #sigma = 0.75,
             #    new.x = xholder, new.bs.x = new.bs.x,
-              u = u, #C = 1000,  ones = as.vector(rep(1, n)),
-              shape = 0.01, scale = 0.01)
+              u = u) #, #C = 1000,  ones = as.vector(rep(1, n)),
+              #shape = 0.5, scale = 0.5)
 
 fit.v2 <- nimbleMCMC(code = model.penalisation,
                   constants = constant,
@@ -285,7 +285,7 @@ MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2,
 #             HPD = TRUE, xlab="lambda", offset = 0.5,
 #             horiz = FALSE, params = c("lambda.1", "lambda.2"))            
 print(alpha.summary)
-MCMCsummary(object = fit.v2$samples, round = 3)
+# MCMCsummary(object = fit.v2$samples, round = 3)
 
 print(MCMCtrace(object = fit.v2$samples,
           pdf = FALSE, # no export to PDF

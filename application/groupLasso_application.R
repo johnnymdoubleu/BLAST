@@ -249,7 +249,7 @@ beta.map <- optim(beta.emp, fn = log.posterior, #gr = grad.log.posterior,
 theta.map <- beta.map$par[1:(p+1)]
 gamma.map <- beta.map$par[-(1:(p+1))]
 df.theta <- data.frame("seq" = seq(1, (p+1)),
-                  theta.map = matrix(beta.map$par[1:(p+1)],nrow=2)[2,])
+                  theta.map = beta.map$par[1:(p+1)])
 # df.theta$covariate <- factor(rep(seq(1, 1 + nrow(df.theta) %/% no.theta), each = no.theta, length.out = nrow(df.theta)))
 # df.theta$covariate <- factor(rep(names(fwi.scaled), each = no.theta, length.out = nrow(df.theta)))
 df.theta$covariate <- factor(c("theta0",names(fwi.scaled)), levels = c("theta0","DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC"))
