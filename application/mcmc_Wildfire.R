@@ -293,6 +293,11 @@ print(MCMCtrace(object = fit.v2$samples,
           n.eff = TRUE,# add eff sample size
           params = c("lambda.1", "lambda.2")))
 
+
+samples.theta <- fit.v2$summary$chain1[11108:11115,1]
+data.theta <- data.frame("x"= c(1:(p+1)),
+                          "post.mean" = samples.theta)
+
 samples <- fit.v2$samples$chain1
 data.scenario <- data.frame("x" = c(1:n),
                             "constant" = newx,
