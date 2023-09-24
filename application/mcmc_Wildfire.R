@@ -297,14 +297,21 @@ print(MCMCtrace(object = fit.v2$samples,
 samples.theta <- fit.v2$summary$chain1[11108:11115,1]
 data.theta <- data.frame("x"= c(1:(p+1)),
                           "post.mean" = samples.theta)
-
 samples <- fit.v2$samples$chain1
+len <- dim(samples)[1]
+for(i in 1:len){
+  data.theta <- cbind(data.theta, data.frame(unname(sort(samples[i, 11108:11115]))))
+}
+colnames(data.theta) <- c("x", "post.mean",
+                              paste("theta", 1:len, sep = ""))
+
+
 data.scenario <- data.frame("x" = c(1:n),
                             "constant" = newx,
                             "post.mean" = sort(fit.v2$summary$chain1[1:n,1]))
 # data.scenario1 <- data.frame("x"=c(1:n)) #, )
 
-len <- dim(samples)[1]
+
 for(i in 1:len){
   data.scenario <- cbind(data.scenario, 
                       data.frame(unname(sort(samples[i, 1:n]))))
