@@ -197,7 +197,6 @@ reExp = nimbleFunction(
         )
         returnType(double(0))
         return(ans)
-        
     }
 )
 
