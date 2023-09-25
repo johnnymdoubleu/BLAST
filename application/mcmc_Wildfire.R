@@ -260,9 +260,9 @@ fit.v2 <- nimbleMCMC(code = model.penalisation,
                   summary = TRUE)
 
 alpha.summary <- fit.v2$summary$all.chains
-# saveRDS(alpha.summary, file=paste0("Simulation/BayesianPsplines/results/",date,"-",time, "_sc1_allChains.rds"))
+saveRDS(alpha.summary, file=paste0("./BRSTIR/application",Sys.Date(),"_allChains.rds"))
 
-alpha.summary[701:711,]
+# alpha.summary[701:711,]
 
 MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2,
             HPD = TRUE, xlab="theta", offset = 0.05, exact = TRUE,
@@ -324,6 +324,7 @@ ggplot(df.theta, aes(x = covariate, y=m, color = covariate)) + ylab("") +
           plot.margin = margin(0,0,0,-20),
           axis.text.x = element_text(hjust=0.35),
           axis.text = element_text(size = 28))
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_theta.pdf"), width=10, height = 7.78)
 
 # ggplot(data.frame(group = factor(1:(p+1)), m=theta.post.mean, l = theta.q1, u = theta.q3), 
 #        aes(group)) +
@@ -362,23 +363,7 @@ ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) +
           plot.margin = margin(0,0,0,-20),
           axis.text.x = element_text(hjust=0.5),
           axis.text = element_text(size = 28))
-
-
-ggplot(data.frame(group = factor(1:p), m=theta.post.mean, l = theta.q1, u = theta.q3), 
-       aes(group)) +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "grey", size = 1.4) +
-  geom_point(aes(x = group, y = m), size = 4.5) + 
-  #geom_point(aes(x = group, y = beta), shape=8, size = 4.5, col="red")+
-  geom_errorbar(aes(ymin = l, ymax = u), width = 0.3, size = 1.2) + 
-  labs(x = "Regression coefficients", y = "") + 
-  ylim(-5,5) + 
-  scale_x_discrete(labels = c("DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC"))+
-                              #,expression(beta[8]),
-                              #expression(beta[9]))) + 
-  theme_minimal(base_size = 30) + 
-  theme(text = element_text(size = 30), 
-        axis.text.x = element_text(angle = 0, hjust = 0.5))
-
+ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_gamma.pdf"), width=10, height = 7.78)
 
 g.nonlinear.q1 <- g.linear.q1 <- g.q1 <- g.nonlinear.q3 <- g.linear.q3 <- g.q3 <- g.nonlinear.new <- g.linear.new <- g.new <- matrix(, nrow = n, ncol=p)
 g.smooth.q1 <- g.smooth.q3 <- g.smooth.new <- alpha.new <- NULL
@@ -424,7 +409,7 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
         axis.ticks.x = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
-
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_smooth.pdf"), width=10.5, height = 15)
 data.linear <- data.frame("x"=c(1:n),
                           "post.mean" = as.vector(g.linear.new),
                           "q1" = as.vector(g.linear.q1),
@@ -446,7 +431,7 @@ ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) +
         axis.ticks.x = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
-
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_linear.pdf"), width=12, height = 15)
 # post.mean <- as.vector(apply(as.data.frame(matrix(alpha.summary[((n+(n*p))+1):(n+(2*n*p)),1], nrow = n, ncol = p)), 2, sort, decreasing=F))
 # q1 <- as.vector(apply(as.data.frame(matrix(alpha.summary[((n+(n*p))+1):(n+(2*n*p)),4], nrow = n, ncol = p)), 2, sort, decreasing=F))
 # q3 <- as.vector(apply(as.data.frame(matrix(alpha.summary[((n+(n*p))+1):(n+(2*n*p)),5], nrow = n, ncol = p)), 2, sort, decreasing=F))
@@ -471,7 +456,7 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
         axis.ticks.x = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
-
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_nonlinear.pdf"), width=12, height = 15)
 data.scenario <- data.frame("x" = c(1:n),
                             "constant" = newx,
                             "post.mean" = sort(alpha.summary[1:n,1]),
@@ -498,6 +483,7 @@ ggplot(data.scenario, aes(x=x)) +
         axis.ticks.x = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_alpha.pdf"), width=10, height = 7.78)
 
 r <- matrix(, nrow = n, ncol = 20)
 # beta <- as.matrix(mcmc[[1]])[, 1:7] 
@@ -535,6 +521,7 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
   theme(text = element_text(size = 20)) + 
   coord_fixed(xlim = c(-3, 3),  
               ylim = c(-3, 3))
+ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_qqplot.pdf"), width=10, height = 7.78)              
 # saveRDS(data.scenario, file=paste0("Simulation/BayesianPsplines/results/",date,"-",time, "_sc1_data_samp1.rds"))
 
 cat("sc1_Alp Done")

@@ -273,7 +273,7 @@ df.theta$labels <- factor(c("theta0","DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", 
 # #   scale_color_manual(values = c("true"="black"))+
 #   theme(plot.title = element_text(hjust = 0.5, size = 20))
 
-ggplot(df.theta, aes(x = labels)) + ylab("") + 
+ggplot(df.theta, aes(x = covariate)) + ylab("") + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + ylim(-0.5,0.5) + xlab('') +
   geom_point(aes(y = theta.map, color = covariate), size = 5) + 
   scale_x_discrete(labels = c(expression(bold(theta[0])),
@@ -304,7 +304,15 @@ df$labels <- factor(1:(psi*p))
 ggplot(df, aes(x =labels , y = gamma.map, color = covariate)) + 
   geom_point(size = 4) + ylab("") + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab("")+
-  scale_x_discrete(breaks=c(seq(0, (psi*p), psi)+10), label = c(expression(bold(gamma[1])), expression(bold(gamma[2])), expression(bold(gamma[3])), expression(bold(gamma[4])), expression(bold(gamma[5])), expression(bold(gamma[6])), expression(bold(gamma[7]))), expand=c(0,3)) +
+  scale_x_discrete(breaks=c(seq(0, (psi*p), psi)+10), 
+                    label = c(expression(bold(gamma[1])), 
+                              expression(bold(gamma[2])), 
+                              expression(bold(gamma[3])), 
+                              expression(bold(gamma[4])), 
+                              expression(bold(gamma[5])), 
+                              expression(bold(gamma[6])), 
+                              expression(bold(gamma[7]))), 
+                    expand=c(0,3)) +
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 20),
           legend.title = element_blank(),
