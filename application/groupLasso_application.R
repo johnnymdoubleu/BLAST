@@ -248,6 +248,13 @@ beta.map <- optim(beta.emp, fn = log.posterior, #gr = grad.log.posterior,
 # theta.map <- matrix(beta.map$par[1:(2*p)],nrow=2)
 theta.map <- beta.map$par[1:(p+1)]
 gamma.map <- beta.map$par[-(1:(p+1))]
+
+systime <- Sys.time()
+Sys.time()
+systime <- chartr(":","-",systime)
+date <- gsub("-","", substr(systime, 1, 10))
+time <- substr(systime, 12, 20)
+
 df.theta <- data.frame("seq" = seq(1, (p+1)),
                   theta.map = beta.map$par[1:(p+1)])
 # df.theta$covariate <- factor(rep(seq(1, 1 + nrow(df.theta) %/% no.theta), each = no.theta, length.out = nrow(df.theta)))
@@ -284,7 +291,7 @@ ggplot(df.theta, aes(x = labels)) + ylab("") +
           # axis.ticks.x = element_blank(),
           axis.text.x = element_text(hjust=0.35),
           axis.text = element_text(size = 30))
-ggsave("./BRSTIR/application/figures/map_theta.pdf", width=10)
+ggsave(paste0("./BRSTIR/application/figures/",date,"_map_theta.pdf"), width=10, height = 7.78)
 df <- data.frame("seq" = seq(1, (psi*p)), 
                   gamma.map)
 # df$covariate <- factor(rep(seq(1, 1 + nrow(df) %/% psi), each = psi, length.out = nrow(df)))
