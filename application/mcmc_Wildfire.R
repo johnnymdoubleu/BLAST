@@ -302,10 +302,22 @@ for (j in 1:p){
   g.q3[1:n, j] <- g.linear.q3[,j] + g.nonlinear.q3[,j]
 }
 
+for(i in 1:n){
+  g.smooth.new[i] <- tail(alpha.summary, 1)[1] + sum(g.new[i,])
+  g.smooth.q1[i] <- tail(alpha.summary, 1)[4] + sum(g.q1[i,])
+  g.smooth.q2[i] <- tail(alpha.summary, 1)[5] + sum(g.q3[i,])
+}
+
 ### Plotting linear and nonlinear components
 # post.mean <- as.vector(apply(as.data.frame(matrix(alpha.summary[(n+1):(n+(n*p)),1], nrow = n, ncol = p)), 2, sort, decreasing=F))
 # q1 <- as.vector(apply(as.data.frame(matrix(alpha.summary[(n+1):(n+(n*p)),4], nrow = n, ncol = p)), 2, sort, decreasing=F))
 # q3 <- as.vector(apply(as.data.frame(matrix(alpha.summary[(n+1):(n+(n*p)),5], nrow = n, ncol = p)), 2, sort, decreasing=F))
+data.linear <- data.frame("x"=c(1:n),
+                          "post.mean" = as.vector(g.linear.new),
+                          "q1" = as.vector(g.linear.q1),
+                          "q3" = as.vector(g.linear.q3),
+                          "covariates" = gl(p, n, (p*n), labels = factor(names(fwi.scaled))),
+                          "replicate" = gl(2, n, (p*n)))
 
 data.linear <- data.frame("x"=c(1:n),
                           "post.mean" = as.vector(g.linear.new),
@@ -343,7 +355,7 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
   geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
   geom_line(aes(y=post.mean, colour = covariates), linewidth=2) + ylab ("") +
   facet_grid(covariates ~ .) + 
-  scale_y_continuous(breaks=c(0), limits = c(-100,100)) + theme_minimal(base_size = 30) +
+  scale_y_continuous(breaks=c(0), limits = c(-200,200)) + theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 30),
         legend.position = "none",
         plot.margin = margin(0,0,0,-10),
@@ -390,30 +402,3 @@ print(plt + geom_line(aes(y=post.mean, col = "Posterior Mean(Chain1)"), linewidt
 
 cat("sc1_Alp Done")
 
-covariates <- gl(p, n, (p*n), labels = factor(names(fwi.scaled)))
-replicate <- gl(2, n, (p*n))
-func.df <- data.frame(seq = seq(0,1,length.out = n),
-                        # x = as.vector(apply(fwi.scaled, 2, sort, method = "quick")),
-                        # new=as.vector(func.new),
-                        new.linear=as.vector(fit.v2$summary$chain1[(n+1):(n+(n*p)),1]),
-                        new.nonlinear=as.vector(fit.v2$summary$chain1[(n+(n*p)):((n+(n*p*2))),1]),
-                        covariates=covariates, 
-                        replicate=replicate,
-                        x = rep(newx, p))
-
-plt.samp <- ggplot(data = data.scenario, aes(x = constant)) + ylab(expression(alpha(x))) + xlab(expression(x))
-for(i in ((dim(samples)[1]*2)-993):((dim(samples)[1]*2)+6)){
-  # print(i)
-  plt.samp <- plt.samp + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
-}
-print(plt.samp + ylim(0, 50) +
-      geom_line(aes(y = trueAlp, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
-      geom_line(aes(y = meanAlp, col = "Posterior Mean(Chain1)"), linewidth = 2.5) +
-      labs(col = "") +
-      scale_color_manual(values = c("#e0b430", "red"))+
-      # scale_colour_manual("", 
-      #               breaks = c("True Alpha", "Posterior Mean"),
-      #               values = c("True Alpha"="red", "Posterior Mean"="#e0b430"),
-      #               guide = "legend") +
-      theme(text = element_text(size = 27)) + 
-      theme(legend.position="top", legend.key.size = unit(1, 'cm')))

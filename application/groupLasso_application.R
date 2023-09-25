@@ -336,7 +336,7 @@ for (j in 1:p){
 for(i in 1:n){
   # temp <- theta.map[1] + sum(f.new[i,])
   # newalpha[i] <- exp(temp)
-  newalpha[i] <- exp(theta.map[1] + sum(f.new[i]))
+  newalpha[i] <- exp(theta.map[1] + sum(f.new[i,]))
 }
 
 # set.seed(100)
