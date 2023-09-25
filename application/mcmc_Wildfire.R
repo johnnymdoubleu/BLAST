@@ -207,8 +207,8 @@ model.penalisation <- nimbleCode({
   for (j in 1:p){
     g.linear[1:n, j] <- bs.linear[1:n,j] * theta[j]
     g.nonlinear[1:n, j] <- bs.nonlinear[1:n, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma[1:psi, j]
-    holder.linear[1:n, j] <- xholder.linear[1:n,j] * theta[j]
-    holder.nonlinear[1:n, j] <- xholder.nonlinear[1:n, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma[1:psi, j]
+    # holder.linear[1:n, j] <- xholder.linear[1:n,j] * theta[j]
+    # holder.nonlinear[1:n, j] <- xholder.nonlinear[1:n, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma[1:psi, j]
   }
 
   for (i in 1:n){
@@ -281,14 +281,36 @@ print(MCMCtrace(object = fit.v2$samples,
 
 samples <- fit.v2$samples$chain1
 len <- dim(samples)[1]
-post.mean <- as.vector(apply(as.data.frame(matrix(alpha.summary[(n+1):(n+(n*p)),1], nrow = n, ncol = p)), 2, sort, decreasing=F))
-q1 <- as.vector(apply(as.data.frame(matrix(alpha.summary[(n+1):(n+(n*p)),4], nrow = n, ncol = p)), 2, sort, decreasing=F))
-q3 <- as.vector(apply(as.data.frame(matrix(alpha.summary[(n+1):(n+(n*p)),5], nrow = n, ncol = p)), 2, sort, decreasing=F))
+
+gamma.post.mean <- matrix(alpha.summary[((n+(2*n*p))+1):((n+(2*n*p))+(psi*p)),1], nrow = psi, ncol = p)
+gamma.q1 <- matrix(alpha.summary[((n+(2*n*p))+1):((n+(2*n*p))+(psi*p)),4], nrow = psi, ncol = p)
+gamma.q3 <- matrix(alpha.summary[((n+(2*n*p))+1):((n+(2*n*p))+(psi*p)),5], nrow = psi, ncol = p)
+theta.post.mean <- alpha.summary[(n+(n*p*2)+(psi*p)+2+1):(n+(n*p*2)+(psi*p)+2+p),1]
+theta.q1 <- alpha.summary[(n+(n*p*2)+(psi*p)+2+1):(n+(n*p*2)+(psi*p)+2+p),4]
+theta.q3 <- alpha.summary[(n+(n*p*2)+(psi*p)+2+1):(n+(n*p*2)+(psi*p)+2+p),5]
+g.nonlinear.q1 <- g.linear.q1 <- g.q1 <- g.nonlinear.q3 <- g.linear.q3 <- g.q3 <- g.nonlinear.new <- g.linear.new <- g.new <- matrix(, nrow = n, ncol=p)
+alpha.new <- NULL
+for (j in 1:p){
+  g.linear.new[,j] <- xholder.linear[,j] * theta.post.mean[j]
+  g.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.post.mean[,j] 
+  g.new[1:n, j] <- g.linear.new[,j] + g.nonlinear.new[,j]
+  g.linear.q1[,j] <- xholder.linear[,j] * theta.q1[j]
+  g.nonlinear.q1[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.q1[,j] 
+  g.q1[1:n, j] <- g.linear.q1[,j] + g.nonlinear.q1[,j]
+  g.linear.q3[,j] <- xholder.linear[,j] * theta.q3[j]
+  g.nonlinear.q3[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.q3[,j] 
+  g.q3[1:n, j] <- g.linear.q3[,j] + g.nonlinear.q3[,j]
+}
+
+### Plotting linear and nonlinear components
+# post.mean <- as.vector(apply(as.data.frame(matrix(alpha.summary[(n+1):(n+(n*p)),1], nrow = n, ncol = p)), 2, sort, decreasing=F))
+# q1 <- as.vector(apply(as.data.frame(matrix(alpha.summary[(n+1):(n+(n*p)),4], nrow = n, ncol = p)), 2, sort, decreasing=F))
+# q3 <- as.vector(apply(as.data.frame(matrix(alpha.summary[(n+1):(n+(n*p)),5], nrow = n, ncol = p)), 2, sort, decreasing=F))
 
 data.linear <- data.frame("x"=c(1:n),
-                          "post.mean" = post.mean,
-                          "q1" = q1,
-                          "q3" = q3,
+                          "post.mean" = as.vector(g.linear.new),
+                          "q1" = as.vector(g.linear.q1),
+                          "q3" = as.vector(g.linear.q3),
                           "covariates" = gl(p, n, (p*n), labels = factor(names(fwi.scaled))),
                           "replicate" = gl(2, n, (p*n)))
 ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) + 
@@ -306,22 +328,22 @@ ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) +
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
 
-post.mean <- as.vector(apply(as.data.frame(matrix(alpha.summary[((n+(n*p))+1):(n+(2*n*p)),1], nrow = n, ncol = p)), 2, sort, decreasing=F))
-q1 <- as.vector(apply(as.data.frame(matrix(alpha.summary[((n+(n*p))+1):(n+(2*n*p)),4], nrow = n, ncol = p)), 2, sort, decreasing=F))
-q3 <- as.vector(apply(as.data.frame(matrix(alpha.summary[((n+(n*p))+1):(n+(2*n*p)),5], nrow = n, ncol = p)), 2, sort, decreasing=F))
+# post.mean <- as.vector(apply(as.data.frame(matrix(alpha.summary[((n+(n*p))+1):(n+(2*n*p)),1], nrow = n, ncol = p)), 2, sort, decreasing=F))
+# q1 <- as.vector(apply(as.data.frame(matrix(alpha.summary[((n+(n*p))+1):(n+(2*n*p)),4], nrow = n, ncol = p)), 2, sort, decreasing=F))
+# q3 <- as.vector(apply(as.data.frame(matrix(alpha.summary[((n+(n*p))+1):(n+(2*n*p)),5], nrow = n, ncol = p)), 2, sort, decreasing=F))
 
 data.nonlinear <- data.frame("x"=c(1:n),
-                          "post.mean" = post.mean,
-                          "q1" = q1,
-                          "q3" = q3,
+                          "post.mean" = as.vector(g.nonlinear.new),
+                          "q1" = as.vector(g.nonlinear.q1),
+                          "q3" = as.vector(g.nonlinear.q3),
                           "covariates" = gl(p, n, (p*n), labels = factor(names(fwi.scaled))),
                           "replicate" = gl(2, n, (p*n)))
 ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab("Nonlinear Components") +
   geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
   geom_line(aes(y=post.mean, colour = covariates), linewidth=2) + ylab ("") +
-  facet_grid(covariates ~ .) + #ggtitle("MAP for Smooth Functions") + 
-  scale_y_continuous(breaks=c(0)) + theme_minimal(base_size = 30) +
+  facet_grid(covariates ~ .) + 
+  scale_y_continuous(breaks=c(0), limits = c(-100,100)) + theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 30),
         legend.position = "none",
         plot.margin = margin(0,0,0,-10),
@@ -330,19 +352,6 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
         axis.ticks.x = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
-
-
-
-samples.theta <- fit.v2$summary$chain1[11108:11115,1]
-data.theta <- data.frame("x"= c(1:(p+1)),
-                          "post.mean" = samples.theta)
-
-for(i in 1:len){
-  data.theta <- cbind(data.theta, data.frame(unname(sort(samples[i, 11108:11115]))))
-}
-colnames(data.theta) <- c("x", "post.mean",
-                              paste("theta", 1:len, sep = ""))
-
 
 data.scenario <- data.frame("x" = c(1:n),
                             "constant" = newx,
