@@ -323,7 +323,7 @@ data.smooth <- data.frame("x"=c(1:n),
                           "replicate" = gl(2, n, (p*n)))
 ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab("Smooth Functions") +
-  geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
+  # geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
   geom_line(aes(y=post.mean, colour = covariates), linewidth=2) + ylab ("") +
   facet_grid(covariates ~ .) + #ggtitle("MAP for Smooth Functions") + 
   scale_y_continuous(breaks=c(0)) + theme_minimal(base_size = 30) +
@@ -385,38 +385,68 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
 
 data.scenario <- data.frame("x" = c(1:n),
                             "constant" = newx,
-                            "post.mean" = sort(fit.v2$summary$chain1[1:n,1]))
-# data.scenario1 <- data.frame("x"=c(1:n)) #, )
+                            "post.mean" = sort(alpha.summary[1:n,1]),
+                            "q1" = sort(alpha.summary[1:n,4]),
+                            "q3" = sort(alpha.summary[1:n,5]),
+                            "chain1" = sort(fit.v2$summary$chain1[1:n,1]),
+                            "chain2" = sort(fit.v2$summary$chain2[1:n,1]))
 
+ggplot(data.scenario, aes(x=x)) + 
+  # geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab("Nonlinear Components") +
+  geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
+  geom_line(aes(y=post.mean, col = "Posterior Mean"), linewidth=2) + ylab(expression(alpha(x))) + ylim(0, 100) +
+  geom_line(aes(y=chain1, col = "Chain 1"), linetype=2) +
+  geom_line(aes(y=chain2, col = "Chian 2"), linetype=3) +
+  # facet_grid(covariates ~ .) + 
+  # scale_y_continuous(breaks=c(0)) + 
+  scale_color_manual(values = c("red", "blue", "#e0b430"))+
+  theme_minimal(base_size = 30) +
+  theme(plot.title = element_text(hjust = 0.5, size = 30),
+        legend.position = "none",
+        plot.margin = margin(0,0,0,-10),
+        strip.text = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.text.y = element_text(size=33),
+        axis.title.x = element_text(size = 35))
 
-for(i in 1:len){
-  data.scenario <- cbind(data.scenario, 
-                      data.frame(unname(sort(samples[i, 1:n]))))
+r <- matrix(, nrow = n, ncol = 20)
+# beta <- as.matrix(mcmc[[1]])[, 1:7] 
+T <- 20
+for(i in 1:n){
+  for(t in 1:T){
+    r[i, t] <- qnorm(pPareto(y[i], u, alpha = alpha.summary[i,1]))
+  }
 }
-# for(i in 1:len){
-#   data.scenario <- cbind(data.scenario, 
-#                       data.frame(unname(sort(samples[i, 703:1202]))))
-# }
-colnames(data.scenario) <- c("x", "constant", "post.mean",
-                              paste("alp", 1:len, sep = ""))
-tail(data.scenario[, c(1:10, ((dim(samples)[1]-5):(dim(samples)[1])))], 15)
+lgrid <- n
+grid <- qnorm(ppoints(lgrid))
+# qqnorm(r[, 1])
+# points(grid, quantile(r[, 1], ppoints(lgrid), type = 2), 
+#     xlim = c(-3, 3), col = "red")
+traj <- matrix(NA, nrow = T, ncol = lgrid)
+for (t in 1:T){
+  traj[t, ] <- quantile(r[, t], ppoints(lgrid), type = 2)
+}
+l.band <- apply(traj, 2, quantile, prob = 0.025)
+trajhat <- apply(traj, 2, quantile, prob = 0.5)
+u.band <- apply(traj, 2, quantile, prob = 0.975)
+
+ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat, 
+                         u.band = u.band)) + 
+  #geom_ribbon(aes(x = grid, ymin = l.band, ymax = u.band), 
+  #           color = "lightgrey", fill = "lightgrey",
+  #          alpha = 0.4, linetype = "dashed") + 
+  geom_ribbon(aes(x = grid, ymin = l.band, ymax = u.band), 
+              color = "lightgrey", fill = "lightgrey",
+              alpha = 0.4, linetype = "dashed") + 
+  geom_line(aes(x = grid, y = trajhat), linetype = "dashed", linewidth = 1.2) + 
+  geom_abline(intercept = 0, slope = 1, linewidth = 1.2) + 
+  labs(x = "Theoretical quantiles", y = "Sample quantiles") + 
+  theme_minimal(base_size = 20) +
+  theme(text = element_text(size = 20)) + 
+  coord_fixed(xlim = c(-3, 3),  
+              ylim = c(-3, 3))
 # saveRDS(data.scenario, file=paste0("Simulation/BayesianPsplines/results/",date,"-",time, "_sc1_data_samp1.rds"))
-#plotting all the points
-plt <- ggplot(data = data.scenario, aes(x = x)) + ylab(expression(alpha(x))) + xlab(expression(x))
-for(i in (dim(samples)[1] - 996):(dim(samples)[1]+3)){
-  plt <- plt + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
-}
-
-print(plt + geom_line(aes(y=post.mean, col = "Posterior Mean(Chain1)"), linewidth = 1.5) + 
-        # geom_line(aes(y = post.check, col=paste0("Simulated Alpha: ",n,"/",psi,"/",threshold)), linewidth = 1.5) +
-        # theme(axis.title.y = element_text(size = rel(1.8), angle = 90)) +
-        # theme(axis.title.x = element_text(size = rel(1.8), angle = 00)) +
-        labs(col = "") + 
-        scale_color_manual(values = c("#e0b430")) +
-        theme(text = element_text(size = 27)) + 
-        theme(legend.position="top", legend.key.size = unit(1, 'cm')))
-# ggsave(paste0("./Simulation/BayesianPsplines/results/figures/",date,"-",time, "_sc1_Alp_samp_1.pdf"), 
-#         width=14, height = 7.5)
 
 cat("sc1_Alp Done")
 
