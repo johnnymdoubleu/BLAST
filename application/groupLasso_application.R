@@ -8,6 +8,8 @@ library(colorspace)
 library(corrplot)
 library(ReIns)
 library(evir)
+library(mev)
+library(EnvStats)
 
 # Structure of the FWI System
 #DSR : Dail Severity Rating
@@ -260,7 +262,7 @@ df.theta <- data.frame("seq" = seq(1, (p+1)),
 # df.theta$covariate <- factor(rep(seq(1, 1 + nrow(df.theta) %/% no.theta), each = no.theta, length.out = nrow(df.theta)))
 # df.theta$covariate <- factor(rep(names(fwi.scaled), each = no.theta, length.out = nrow(df.theta)))
 df.theta$covariate <- factor(c("\u03b8",names(fwi.scaled)), levels = c("\u03b8","DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC"))
-df.theta$labels <- factor("theta0","DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC")
+df.theta$labels <- factor(c("theta0","DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC"))
 # ggplot(df.theta, aes(x = seq)) + 
 #   geom_point(aes(y = theta.map, color = covariate), size = 1.5) + 
 # #   geom_smooth(method="gam") +
@@ -470,7 +472,7 @@ r <- matrix(, nrow = n, ncol = 20)
 T <- 20
 for(i in 1:n){
   for(t in 1:T){
-    r[i, t] <- qnorm(pPareto(y[i], u, alpha = newalpha[i]))
+    r[i, t] <- qnorm(ppareto(y[i], location = u, shape = newalpha[i]))
   }
 }
 lgrid <- n
