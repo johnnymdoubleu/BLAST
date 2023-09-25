@@ -229,6 +229,9 @@ init.alpha <- function() list(list(gamma = matrix(0.5, nrow = psi, ncol=p),
                                     covm = array(1, dim = c(psi,psi, p))),
                               list(gamma = matrix(0, nrow = psi, ncol=p),
                                     theta = rep(0, p), theta.0 = 0,
+                                    covm = array(1, dim = c(psi,psi, p))),
+                              list(gamma = matrix(-0.1, nrow = psi, ncol=p),
+                                    theta = rep(0.2, p), theta.0 = 0.9,
                                     covm = array(1, dim = c(psi,psi, p))))
                             #   list(gamma = matrix(1, nrow = psi, ncol=p)))
                               # y = as.vector(y),
@@ -248,10 +251,10 @@ fit.v2 <- nimbleMCMC(code = model.penalisation,
                   monitors = monitor.pred,
                   inits = init.alpha(),
                   thin = 20,
-                  niter = 60000,
-                  nburnin = 40000,
+                  niter = 70000,
+                  nburnin = 50000,
                   # setSeed = 300,
-                  nchains = 2,
+                  nchains = 3,
                   # WAIC = TRUE,-
                   samplesAsCodaMCMC = TRUE,
                   summary = TRUE)
@@ -313,14 +316,14 @@ for(i in 1:n){
 # q1 <- as.vector(apply(as.data.frame(matrix(alpha.summary[(n+1):(n+(n*p)),4], nrow = n, ncol = p)), 2, sort, decreasing=F))
 # q3 <- as.vector(apply(as.data.frame(matrix(alpha.summary[(n+1):(n+(n*p)),5], nrow = n, ncol = p)), 2, sort, decreasing=F))
 data.smooth <- data.frame("x"=c(1:n),
-                          "post.mean" = g.smooth.new,
-                          "q1" = g.smooth.q1,
-                          "q3" = g.smooth.q3,
+                          "post.mean" = as.vector(g.new),
+                          "q1" = as.vector(g.q1),
+                          "q3" = as.vector(g.q3),
                           "covariates" = gl(p, n, (p*n), labels = factor(names(fwi.scaled))),
                           "replicate" = gl(2, n, (p*n)))
 ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab("Smooth Functions") +
-  # geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
+  geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
   geom_line(aes(y=post.mean, colour = covariates), linewidth=2) + ylab ("") +
   facet_grid(covariates ~ .) + #ggtitle("MAP for Smooth Functions") + 
   scale_y_continuous(breaks=c(0)) + theme_minimal(base_size = 30) +
