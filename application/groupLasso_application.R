@@ -288,6 +288,7 @@ ggplot(df.theta, aes(x = labels)) + ylab("") +
   theme(plot.title = element_text(hjust = 0.5, size = 20),
           legend.title = element_blank(),
           legend.text = element_text(size=30),
+          plot.margin = unit(c(0.1,0.1,0.1,0.1), "cm"),
           # axis.ticks.x = element_blank(),
           axis.text.x = element_text(hjust=0.35),
           axis.text = element_text(size = 30))
