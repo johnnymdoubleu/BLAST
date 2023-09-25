@@ -278,7 +278,7 @@ alpha.summary <- fit.v2$summary$all.chains
 alpha.summary[701:711,]
 
 MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain3,
-            HPD = TRUE, xlab="beta", offset = 0.05, exact = TRUE,
+            HPD = TRUE, xlab="theta", offset = 0.05, exact = TRUE,
             horiz = FALSE, params = c("theta.0", "theta"))
 MCMCplot(object = fit.v2$samples$chain2, object2 = fit.v2$samples$chain3,
             HPD = TRUE, xlab="gamma", offset = 0.5,
