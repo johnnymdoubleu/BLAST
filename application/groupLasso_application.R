@@ -272,7 +272,7 @@ df.theta$labels <- factor(1:(p+1))
 #   theme(plot.title = element_text(hjust = 0.5, size = 20))
 
 ggplot(df.theta, aes(x = labels)) + ylab("") + 
-  geom_point(aes(y = theta.map, color = covariate), size = 6) + 
+  geom_point(aes(y = theta.map, color = covariate), size = 5) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + ylim(-0.5,0.5) + xlab('') +
   # geom_point(aes(y = theta.true, color = "true"), size = 2.5) +
   # labs(title=expression("MAP vs True for"~theta)) + xlab("") +
@@ -288,11 +288,12 @@ ggplot(df.theta, aes(x = labels)) + ylab("") +
   theme(plot.title = element_text(hjust = 0.5, size = 20),
           legend.title = element_blank(),
           legend.text = element_text(size=25),
-          # plot.margin = unit(c(0.1,0.1,0.1,0.1), "cm"),
-          # axis.ticks.x = element_blank(),
+          legend.margin=margin(0,0,0,-10),
+          legend.box.margin=margin(-10,0,-10,0),
+          plot.margin = margin(0,0,0,-20),
           axis.text.x = element_text(hjust=0.35),
-          axis.text = element_text(size = 28, margin = margin(t = -1, unit = "cm")))
-ggsave(paste0("./BRSTIR/application/figures/",date,"_map_theta.pdf"), width=10, height = 7.78)
+          axis.text = element_text(size = 28))
+# ggsave(paste0("./BRSTIR/application/figures/",date,"_map_theta.pdf"), width=10, height = 7.78)
 df <- data.frame("seq" = seq(1, (psi*p)), 
                   gamma.map)
 # df$covariate <- factor(rep(seq(1, 1 + nrow(df) %/% psi), each = psi, length.out = nrow(df)))
@@ -301,26 +302,17 @@ df$labels <- factor(1:(psi*p))
 ggplot(df, aes(x =labels , y = gamma.map, color = covariate)) + 
   geom_point(size = 4) + ylab("") + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab("")+
-  # geom_smooth(method="gam") +
-  # geom_point(aes(y = gamma.true, color = "true")) + 
-  # geom_line(aes(x = seq, y = true, color = "true"), linetype = 2) +
-  # labs(title=expression("MAP vs True for"~gamma)) + 
-  # ggtitle(expression(atop(paste("MAP vs True for ", bold(gamma))))) +
-#   annotate("text", x = seq(0, 330, length.out=10), y = -1, label = beta, colour = "red", size = 10) +
-  # scale_x_discrete(labels = c("", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", expression(bold(gamma[1])),"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", 
-  # expression(bold(gamma[2])),"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", expression(bold(gamma[3])),"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", expression(bold(gamma[4])),"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", expression(bold(gamma[5])),"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", expression(bold(gamma[6])),"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", expression(bold(gamma[7])))) + 
-  # scale_x_continuous(breaks = seq(0, (psi*p), len = psi), labels = c(expression(bold(gamma[1])), expression(bold(gamma[2])), expression(bold(gamma[3])), expression(bold(gamma[4])), expression(bold(gamma[5])), expression(bold(gamma[6])), expression(bold(gamma[7])))) +
-  annotate(geom = "text", x = c(seq(1, (psi*p), psi)+10), y = -0.12, size = 10,
-           label = c(expression(bold(gamma[1])), expression(bold(gamma[2])), expression(bold(gamma[3])), expression(bold(gamma[4])), expression(bold(gamma[5])), expression(bold(gamma[6])), expression(bold(gamma[7])))) +
+  scale_x_discrete(breaks=c(seq(0, (psi*p), psi)+10), label = c(expression(bold(gamma[1])), expression(bold(gamma[2])), expression(bold(gamma[3])), expression(bold(gamma[4])), expression(bold(gamma[5])), expression(bold(gamma[6])), expression(bold(gamma[7]))), expand=c(0,3)) +
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 20),
           legend.title = element_blank(),
           legend.text = element_text(size=25),
-          axis.text.x = element_blank(),
-          # axis.text.x = element_text(hjust=1.75),
-          axis.text = element_text(size = 30),
-          panel.grid.major.x = element_blank())
-# ggsave("./Laboratory/Application/figures/map_gamma.pdf", width=10)
+          legend.margin=margin(0,0,0,-10),
+          legend.box.margin=margin(-10,0,-10,0),
+          plot.margin = margin(0,0,0,-20),
+          axis.text.x = element_text(hjust=0.5),
+          axis.text = element_text(size = 28))
+# ggsave(paste0("./BRSTIR/application/figures/",date,"_map_gamma.pdf"), width=10, height = 7.78)
 # ggplot(df, aes(x = seq, y = gamma.map, color = covariate)) + 
 #   geom_point() + 
 #   # geom_smooth(method="gam") +
@@ -429,12 +421,14 @@ ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +
   scale_y_continuous(breaks=c(0)) + theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 30),
         legend.position = "none",
+        plot.margin = margin(0,0,0,-10),
         strip.text = element_blank(),
         axis.text.x = element_blank(),
         axis.ticks.x = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
-# ggsave("./Laboratory/Application/figures/map_smooth.pdf", width=10.5, height = 15)
+ggsave(paste0("./BRSTIR/application/figures/",date,"_map_smooth.pdf"), 
+        width=10.5, height = 15)
 ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +  
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab("Linear Component") + 
   geom_line(aes(y=new.linear, colour = covariates), linewidth=2) + ylab ("") +
@@ -444,23 +438,28 @@ ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +
         axis.ticks = element_blank(),
         # panel.grid.minor.y = element_blank(),
         legend.position = "none",
+        plot.margin = margin(0,-20,0,-20),
         strip.text = element_blank(),
         axis.text = element_blank(),
         axis.title.x = element_text(size = 35))
-# ggsave("./Laboratory/Application/figures/map_linear.pdf", width=10, height = 15)
+ggsave(paste0("./BRSTIR/application/figures/",date,"_map_linear.pdf"), 
+        width=10, height = 15)
 ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab("Nonlinear Component") +
   geom_line(aes(y=new.nonlinear, colour = covariates), linewidth=2) + ylab ("") +
-  facet_grid(covariates ~ .) + #ggtitle("Nonlinear Component of Smooth Functions") + 
+  facet_grid(covariates ~ .) +
   scale_y_continuous(breaks=c(0))  + theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 15),
         axis.ticks = element_blank(),
         legend.title = element_blank(),
-        legend.text = element_text(size=30),
+        legend.text = element_text(size=45),
+        legend.margin=margin(0,0,0,-10),
+        legend.box.margin=margin(-10,0,-10,0),
+        plot.margin = margin(0,0,0,-20),
         strip.text = element_blank(),
         axis.text = element_blank(),
         axis.title.x = element_text(size = 35))
-# ggsave("./Laboratory/Application/figures/map_nonlinear.pdf", width=12.5, height = 15)
+ggsave(paste0("./BRSTIR/application/figures/",date,"_map_nonlinear.pdf"), width=12.5, height = 15)
 
 
 # plot(sort(alp.origin))
@@ -592,3 +591,5 @@ qqunif(pnorm(mod.summary$residuals), logscale = FALSE, col = "black")
 ks.test(pPareto(y, u, alpha=newalpha), "punif")
 ks.test(pnorm(mod.summary$residuals), "punif")
 ks.test(pnorm(mod$fitted.values), "punif")
+
+# saveRDS(mcmc,"mcmc_application.rds")
