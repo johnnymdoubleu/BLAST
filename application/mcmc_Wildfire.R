@@ -207,13 +207,13 @@ model.penalisation <- nimbleCode({
   for (j in 1:p){
     g.linear[1:n, j] <- bs.linear[1:n,j] * theta[j]
     g.nonlinear[1:n, j] <- bs.nonlinear[1:n, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma[1:psi, j]
-    # holder.linear[1:n, j] <- xholder.linear[1:n,j] * theta[j]
-    # holder.nonlinear[1:n, j] <- xholder.nonlinear[1:n, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma[1:psi, j]
+    holder.linear[1:n, j] <- xholder.linear[1:n,j] * theta[j]
+    holder.nonlinear[1:n, j] <- xholder.nonlinear[1:n, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma[1:psi, j]
   }
 
   for (i in 1:n){
-    # log(alpha[i]) <- theta.0 + sum(g.nonlinear[i, 1:p]) + sum(g.linear[i, 1:p])
-    alpha[i] <- log(5) / log(1 + exp(theta.0 + sum(g.nonlinear[i, 1:p]) + sum(g.linear[i, 1:p])))
+    alpha[i] <- reExp(theta.0 + sum(g.nonlinear[i, 1:p]) + sum(g.linear[i, 1:p]))
+    # alpha[i] <- log(5) / log(1 + exp(theta.0 + sum(g.nonlinear[i, 1:p]) + sum(g.linear[i, 1:p])))
     # log(new.alpha[i]) <- theta.0 + sum(holder.nonlinear[i, 1:p]) + sum(holder.linear[i, 1:p])
   }
   for(i in 1:n){
@@ -229,10 +229,7 @@ init.alpha <- function() list(list(gamma = matrix(0.5, nrow = psi, ncol=p),
                                     covm = array(1, dim = c(psi,psi, p))),
                               list(gamma = matrix(0, nrow = psi, ncol=p),
                                     theta = rep(0, p), theta.0 = 0,
-                                    covm = array(1, dim = c(psi,psi, p))),
-                              list(gamma = matrix(-0.1, nrow = psi, ncol = p),
-                                    theta = rep(-0.5, p), theta.0 = -0.1,
-                                    covm = array(1, dim = c(psi, psi, p))))
+                                    covm = array(1, dim = c(psi,psi, p))))
                             #   list(gamma = matrix(1, nrow = psi, ncol=p)))
                               # y = as.vector(y),
 monitor.pred <- c("theta.0", "theta", "gamma", "alpha", "g.linear", "g.nonlinear",
@@ -254,7 +251,7 @@ fit.v2 <- nimbleMCMC(code = model.penalisation,
                   niter = 60000,
                   nburnin = 40000,
                   # setSeed = 300,
-                  nchains = 3,
+                  nchains = 2,
                   # WAIC = TRUE,-
                   samplesAsCodaMCMC = TRUE,
                   summary = TRUE)
@@ -264,16 +261,16 @@ alpha.summary <- fit.v2$summary$all.chains
 
 alpha.summary[701:711,]
 
-MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain3,
+MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2,
             HPD = TRUE, xlab="theta", offset = 0.05, exact = TRUE,
             horiz = FALSE, params = c("theta.0", "theta"))
-MCMCplot(object = fit.v2$samples$chain2, object2 = fit.v2$samples$chain3,
+MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2,
             HPD = TRUE, xlab="gamma", offset = 0.5,
             horiz = FALSE, params = c("gamma"))
 # MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2,
 #             HPD = TRUE, xlab="lambda", offset = 0.5,
 #             horiz = FALSE, params = c("lambda.1", "lambda.2"))            
-print(alpha.summary)
+# print(alpha.summary)
 # MCMCsummary(object = fit.v2$samples, round = 3)
 
 print(MCMCtrace(object = fit.v2$samples,
@@ -284,12 +281,57 @@ print(MCMCtrace(object = fit.v2$samples,
 
 samples <- fit.v2$samples$chain1
 len <- dim(samples)[1]
-alpha.summary[(n+1):(n+(psi*p)),]
+post.mean <- as.vector(apply(as.data.frame(matrix(alpha.summary[(n+1):(n+(n*p)),1], nrow = n, ncol = p)), 2, sort, decreasing=F))
+q1 <- as.vector(apply(as.data.frame(matrix(alpha.summary[(n+1):(n+(n*p)),4], nrow = n, ncol = p)), 2, sort, decreasing=F))
+q3 <- as.vector(apply(as.data.frame(matrix(alpha.summary[(n+1):(n+(n*p)),5], nrow = n, ncol = p)), 2, sort, decreasing=F))
 
-data.func <- data.frame("x"=c(1:p),
-                          "post.mean" = )
-alpha.container <- cbind(alpha.container, t(apply(alpha.container[,1:simul.no], 1, quantile, c(0.05, .5, .95))))
-colnames(alpha.container)[(dim(alpha.container)[2]-2):(dim(alpha.container)[2])] <- c("q1","q2","q3")
+data.linear <- data.frame("x"=c(1:n),
+                          "post.mean" = post.mean,
+                          "q1" = q1,
+                          "q3" = q3,
+                          "covariates" = gl(p, n, (p*n), labels = factor(names(fwi.scaled))),
+                          "replicate" = gl(2, n, (p*n)))
+ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) + 
+  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab("Linear Components") +
+  geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
+  geom_line(aes(y=post.mean, colour = covariates), linewidth=2) + ylab ("") +
+  facet_grid(covariates ~ .) + #ggtitle("MAP for Smooth Functions") + 
+  scale_y_continuous(breaks=c(0)) + theme_minimal(base_size = 30) +
+  theme(plot.title = element_text(hjust = 0.5, size = 30),
+        legend.position = "none",
+        plot.margin = margin(0,0,0,-10),
+        strip.text = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.text.y = element_text(size=33),
+        axis.title.x = element_text(size = 35))
+
+post.mean <- as.vector(apply(as.data.frame(matrix(alpha.summary[((n+(n*p))+1):(n+(2*n*p)),1], nrow = n, ncol = p)), 2, sort, decreasing=F))
+q1 <- as.vector(apply(as.data.frame(matrix(alpha.summary[((n+(n*p))+1):(n+(2*n*p)),4], nrow = n, ncol = p)), 2, sort, decreasing=F))
+q3 <- as.vector(apply(as.data.frame(matrix(alpha.summary[((n+(n*p))+1):(n+(2*n*p)),5], nrow = n, ncol = p)), 2, sort, decreasing=F))
+
+data.nonlinear <- data.frame("x"=c(1:n),
+                          "post.mean" = post.mean,
+                          "q1" = q1,
+                          "q3" = q3,
+                          "covariates" = gl(p, n, (p*n), labels = factor(names(fwi.scaled))),
+                          "replicate" = gl(2, n, (p*n)))
+ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) + 
+  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab("Nonlinear Components") +
+  geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
+  geom_line(aes(y=post.mean, colour = covariates), linewidth=2) + ylab ("") +
+  facet_grid(covariates ~ .) + #ggtitle("MAP for Smooth Functions") + 
+  scale_y_continuous(breaks=c(0)) + theme_minimal(base_size = 30) +
+  theme(plot.title = element_text(hjust = 0.5, size = 30),
+        legend.position = "none",
+        plot.margin = margin(0,0,0,-10),
+        strip.text = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.text.y = element_text(size=33),
+        axis.title.x = element_text(size = 35))
+
+
 
 samples.theta <- fit.v2$summary$chain1[11108:11115,1]
 data.theta <- data.frame("x"= c(1:(p+1)),
