@@ -259,8 +259,8 @@ df.theta <- data.frame("seq" = seq(1, (p+1)),
                   theta.map = beta.map$par[1:(p+1)])
 # df.theta$covariate <- factor(rep(seq(1, 1 + nrow(df.theta) %/% no.theta), each = no.theta, length.out = nrow(df.theta)))
 # df.theta$covariate <- factor(rep(names(fwi.scaled), each = no.theta, length.out = nrow(df.theta)))
-df.theta$covariate <- factor(c("theta0",names(fwi.scaled)), levels = c("theta0","DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC"))
-df.theta$labels <- factor(1:(p+1))
+df.theta$covariate <- factor(c("\u03b8",names(fwi.scaled)), levels = c("\u03b8","DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC"))
+df.theta$labels <- factor(c(expression(theta[0]),"DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC"))
 # ggplot(df.theta, aes(x = seq)) + 
 #   geom_point(aes(y = theta.map, color = covariate), size = 1.5) + 
 # #   geom_smooth(method="gam") +
@@ -272,10 +272,8 @@ df.theta$labels <- factor(1:(p+1))
 #   theme(plot.title = element_text(hjust = 0.5, size = 20))
 
 ggplot(df.theta, aes(x = labels)) + ylab("") + 
-  geom_point(aes(y = theta.map, color = covariate), size = 5) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + ylim(-0.5,0.5) + xlab('') +
-  # geom_point(aes(y = theta.true, color = "true"), size = 2.5) +
-  # labs(title=expression("MAP vs True for"~theta)) + xlab("") +
+  geom_point(aes(y = theta.map, color = covariate), size = 5) + 
   scale_x_discrete(labels = c(expression(bold(theta[0])),
                               expression(bold(theta[1])),
                               expression(bold(theta[2])),
@@ -284,8 +282,10 @@ ggplot(df.theta, aes(x = labels)) + ylab("") +
                               expression(bold(theta[5])),
                               expression(bold(theta[6])),
                               expression(bold(theta[7])))) + 
+  scale_color_discrete(labels = c(expression(theta[0]),"DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC")) + 
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 20),
+          legend.text.align = 0,
           legend.title = element_blank(),
           legend.text = element_text(size=25),
           legend.margin=margin(0,0,0,-10),
