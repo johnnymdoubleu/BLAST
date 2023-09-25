@@ -588,7 +588,7 @@ qqunif(pnorm(mod.summary$residuals), logscale = FALSE, col = "black")
 # dev.off()
 
 # qPareto(pPareto(), u, alpha=newalpha)
-ks.test(pPareto(y, u, alpha=newalpha), "punif")
+ks.test(ppareto(y, location = u, shape=newalpha), "punif")
 ks.test(pnorm(mod.summary$residuals), "punif")
 ks.test(pnorm(mod$fitted.values), "punif")
 

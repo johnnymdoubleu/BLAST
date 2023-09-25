@@ -225,7 +225,7 @@ model.penalisation <- nimbleCode({
   }
 
   for (i in 1:n){
-    alpha[i] <- reExp(theta.0 + sum(g.nonlinear[i, 1:p]) + sum(g.linear[i, 1:p]))
+    log(alpha[i]) <- theta.0 + sum(g.nonlinear[i, 1:p]) + sum(g.linear[i, 1:p])
     # alpha[i] <- log(10) / log(1 + exp(theta.0 + sum(g.nonlinear[i, 1:p]) + sum(g.linear[i, 1:p])))
     # log(new.alpha[i]) <- theta.0 + sum(holder.nonlinear[i, 1:p]) + sum(holder.linear[i, 1:p])
   }
@@ -295,12 +295,19 @@ print(MCMCtrace(object = fit.v2$samples,
           n.eff = TRUE,# add eff sample size
           params = c("lambda.1", "lambda.2")))
 
+samples <- fit.v2$samples$chain1
+len <- dim(samples)[1]
+alpha.summary[(n+1):(n+(psi*p)),]
+
+data.func <- data.frame("x"=c(1:p),
+                          "post.mean" = )
+alpha.container <- cbind(alpha.container, t(apply(alpha.container[,1:simul.no], 1, quantile, c(0.05, .5, .95))))
+colnames(alpha.container)[(dim(alpha.container)[2]-2):(dim(alpha.container)[2])] <- c("q1","q2","q3")
 
 samples.theta <- fit.v2$summary$chain1[11108:11115,1]
 data.theta <- data.frame("x"= c(1:(p+1)),
                           "post.mean" = samples.theta)
-samples <- fit.v2$samples$chain1
-len <- dim(samples)[1]
+
 for(i in 1:len){
   data.theta <- cbind(data.theta, data.frame(unname(sort(samples[i, 11108:11115]))))
 }
