@@ -126,19 +126,6 @@ df.extreme <- cbind(month = fwi.index$month[which(Y>u)], df.extreme)
 #       axis.text = element_text(size = 25),
 #       axis.title = element_text(size = 30))
 
-
-# ggsave("./Laboratory/Application/figures/datahist.pdf", width=15)
-
-    # scale_color_gradientn(colours = rainbow(5))
-# ggplot(data = fwi.scaled) + 
-#   geom_histogram(aes(x=DSR), bins = 30) +
-#   geom_histogram(aes(x=FWI), bins = 30) +
-#   geom_histogram(aes(x=BUI), bins = 30) +
-#   geom_histogram(aes(x=ISI), bins = 30) +
-#   geom_histogram(aes(x=FFMC), bins = 30) + 
-#   geom_histogram(aes(x=DMC), bins = 30) +
-#   geom_histogram(aes(x=DC), bins = 30)
-
 psi <- 20
 n <- dim(fwi.scaled)[[1]]
 p <- dim(fwi.scaled)[[2]]
@@ -152,11 +139,11 @@ for(i in 1:p){
   # splines <- basis.tps(seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n), test.knot, m=2, rk=FALSE, intercept = TRUE)
   xholder[,i] <- seq(min(fwi.scaled), max(fwi.scaled), length.out = n)
   test.knot <- seq(min(fwi.scaled), max(fwi.scaled), length.out = psi)
-  splines <- basis.tps(seq(min(fwi.scaled), max(fwi.scaled), length.out = n), test.knot, m=2, rk=FALSE, intercept = TRUE)
+  splines <- basis.tps(seq(min(fwi.scaled), max(fwi.scaled), length.out = n), test.knot, m=2, rk=FALSE, intercept = FALSE)
   xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
   xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
   knots <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
-  tps <- basis.tps(fwi.scaled[,i], knots, m = 2, rk = FALSE, intercept = TRUE)
+  tps <- basis.tps(fwi.scaled[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
   # tps <- mSpline(x.origin[,i], df=psi, Boundary.knots = range(x.origin[,i]), degree = 3, intercept=TRUE)
   bs.linear <- cbind(bs.linear, tps[,1:no.theta])
   bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])
@@ -225,8 +212,8 @@ model.penalisation <- nimbleCode({
   }
 
   for (i in 1:n){
-    log(alpha[i]) <- theta.0 + sum(g.nonlinear[i, 1:p]) + sum(g.linear[i, 1:p])
-    # alpha[i] <- log(10) / log(1 + exp(theta.0 + sum(g.nonlinear[i, 1:p]) + sum(g.linear[i, 1:p])))
+    # log(alpha[i]) <- theta.0 + sum(g.nonlinear[i, 1:p]) + sum(g.linear[i, 1:p])
+    alpha[i] <- log(5) / log(1 + exp(theta.0 + sum(g.nonlinear[i, 1:p]) + sum(g.linear[i, 1:p])))
     # log(new.alpha[i]) <- theta.0 + sum(holder.nonlinear[i, 1:p]) + sum(holder.linear[i, 1:p])
   }
   for(i in 1:n){
@@ -239,13 +226,13 @@ model.penalisation <- nimbleCode({
 constant <- list(psi = psi, n = n, p = p)
 init.alpha <- function() list(list(gamma = matrix(0.5, nrow = psi, ncol=p), 
                                     theta = rep(0.1, p), theta.0 = 0.1,
-                                    covm = array(1, dim = c(psi,psi,10))),
+                                    covm = array(1, dim = c(psi,psi, p))),
                               list(gamma = matrix(0, nrow = psi, ncol=p),
                                     theta = rep(0, p), theta.0 = 0,
-                                    covm = array(1, dim = c(psi,psi,10))),
+                                    covm = array(1, dim = c(psi,psi, p))),
                               list(gamma = matrix(-0.1, nrow = psi, ncol = p),
                                     theta = rep(-0.5, p), theta.0 = -0.1,
-                                    covm = array(1, dim = c(psi, psi, 10))))
+                                    covm = array(1, dim = c(psi, psi, p))))
                             #   list(gamma = matrix(1, nrow = psi, ncol=p)))
                               # y = as.vector(y),
 monitor.pred <- c("theta.0", "theta", "gamma", "alpha", "g.linear", "g.nonlinear",
