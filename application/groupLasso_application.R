@@ -287,11 +287,11 @@ ggplot(df.theta, aes(x = labels)) + ylab("") +
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 20),
           legend.title = element_blank(),
-          legend.text = element_text(size=30),
-          plot.margin = unit(c(0.1,0.1,0.1,0.1), "cm"),
+          legend.text = element_text(size=25),
+          # plot.margin = unit(c(0.1,0.1,0.1,0.1), "cm"),
           # axis.ticks.x = element_blank(),
           axis.text.x = element_text(hjust=0.35),
-          axis.text = element_text(size = 30))
+          axis.text = element_text(size = 28, margin = margin(t = -1, unit = "cm")))
 ggsave(paste0("./BRSTIR/application/figures/",date,"_map_theta.pdf"), width=10, height = 7.78)
 df <- data.frame("seq" = seq(1, (psi*p)), 
                   gamma.map)
@@ -307,14 +307,17 @@ ggplot(df, aes(x =labels , y = gamma.map, color = covariate)) +
   # labs(title=expression("MAP vs True for"~gamma)) + 
   # ggtitle(expression(atop(paste("MAP vs True for ", bold(gamma))))) +
 #   annotate("text", x = seq(0, 330, length.out=10), y = -1, label = beta, colour = "red", size = 10) +
-  scale_x_discrete(labels = c("", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", expression(bold(gamma[1])),"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", 
-  expression(bold(gamma[2])),"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", expression(bold(gamma[3])),"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", expression(bold(gamma[4])),"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", expression(bold(gamma[5])),"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", expression(bold(gamma[6])),"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", expression(bold(gamma[7])))) + 
+  # scale_x_discrete(labels = c("", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", expression(bold(gamma[1])),"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", 
+  # expression(bold(gamma[2])),"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", expression(bold(gamma[3])),"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", expression(bold(gamma[4])),"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", expression(bold(gamma[5])),"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", expression(bold(gamma[6])),"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", expression(bold(gamma[7])))) + 
+  # scale_x_continuous(breaks = seq(0, (psi*p), len = psi), labels = c(expression(bold(gamma[1])), expression(bold(gamma[2])), expression(bold(gamma[3])), expression(bold(gamma[4])), expression(bold(gamma[5])), expression(bold(gamma[6])), expression(bold(gamma[7])))) +
+  annotate(geom = "text", x = c(seq(1, (psi*p), psi)+10), y = -0.12, size = 10,
+           label = c(expression(bold(gamma[1])), expression(bold(gamma[2])), expression(bold(gamma[3])), expression(bold(gamma[4])), expression(bold(gamma[5])), expression(bold(gamma[6])), expression(bold(gamma[7])))) +
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 20),
           legend.title = element_blank(),
-          legend.text = element_text(size=30),
-          axis.ticks.x = element_blank(),
-          axis.text.x = element_text(hjust=1.75),
+          legend.text = element_text(size=25),
+          axis.text.x = element_blank(),
+          # axis.text.x = element_text(hjust=1.75),
           axis.text = element_text(size = 30),
           panel.grid.major.x = element_blank())
 # ggsave("./Laboratory/Application/figures/map_gamma.pdf", width=10)
