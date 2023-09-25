@@ -238,11 +238,14 @@ model.penalisation <- nimbleCode({
 
 constant <- list(psi = psi, n = n, p = p)
 init.alpha <- function() list(list(gamma = matrix(0.5, nrow = psi, ncol=p), 
-                                    theta = rep(0.2, p), theta.0 = 0.1,
+                                    theta = rep(0.1, p), theta.0 = 0.1,
                                     covm = array(1, dim = c(psi,psi,10))),
                               list(gamma = matrix(0, nrow = psi, ncol=p),
                                     theta = rep(0, p), theta.0 = 0,
-                                    covm = array(1, dim = c(psi,psi,10))))
+                                    covm = array(1, dim = c(psi,psi,10))),
+                              list(gamma = matrix(-0.1, nrow = psi, ncol = p),
+                                    theta = rep(-0.5, p), theta.0 = -0.1,
+                                    covm = array(1, dim = c(psi, psi, 10))))
                             #   list(gamma = matrix(1, nrow = psi, ncol=p)))
                               # y = as.vector(y),
 monitor.pred <- c("theta.0", "theta", "gamma", "alpha", "g.linear", "g.nonlinear",
@@ -261,10 +264,10 @@ fit.v2 <- nimbleMCMC(code = model.penalisation,
                   monitors = monitor.pred,
                   inits = init.alpha(),
                   thin = 20,
-                  niter = 30000,
-                  nburnin = 10000,
+                  niter = 60000,
+                  nburnin = 40000,
                   # setSeed = 300,
-                  nchains = 2,
+                  nchains = 3,
                   # WAIC = TRUE,-
                   samplesAsCodaMCMC = TRUE,
                   summary = TRUE)
@@ -274,10 +277,10 @@ alpha.summary <- fit.v2$summary$all.chains
 
 alpha.summary[701:711,]
 
-MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2,
+MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain3,
             HPD = TRUE, xlab="beta", offset = 0.05, exact = TRUE,
             horiz = FALSE, params = c("theta.0", "theta"))
-MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2,
+MCMCplot(object = fit.v2$samples$chain2, object2 = fit.v2$samples$chain3,
             HPD = TRUE, xlab="gamma", offset = 0.5,
             horiz = FALSE, params = c("gamma"))
 # MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2,

@@ -266,7 +266,7 @@ df.theta$labels <- factor(1:(p+1))
 
 ggplot(df.theta, aes(x = labels)) + ylab("") + 
   geom_point(aes(y = theta.map, color = covariate), size = 6) + 
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + ylim(-0.5,0.5) + xlab('') + 
+  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + ylim(-0.5,0.5) + xlab('') +
   # geom_point(aes(y = theta.true, color = "true"), size = 2.5) +
   # labs(title=expression("MAP vs True for"~theta)) + xlab("") +
   scale_x_discrete(labels = c(expression(bold(theta[0])),
@@ -276,15 +276,15 @@ ggplot(df.theta, aes(x = labels)) + ylab("") +
                               expression(bold(theta[4])),
                               expression(bold(theta[5])),
                               expression(bold(theta[6])),
-                              expression(bold(theta[7]))))+
+                              expression(bold(theta[7])))) + 
+  theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 20),
           legend.title = element_blank(),
           legend.text = element_text(size=30),
           # axis.ticks.x = element_blank(),
           axis.text.x = element_text(hjust=0.35),
-          axis.text = element_text(size = 30),
-          panel.grid.minor.x = element_blank())
-# ggsave("./Laboratory/Application/figures/map_theta.pdf", width=10)
+          axis.text = element_text(size = 30))
+ggsave("./BRSTIR/application/figures/map_theta.pdf", width=10)
 df <- data.frame("seq" = seq(1, (psi*p)), 
                   gamma.map)
 # df$covariate <- factor(rep(seq(1, 1 + nrow(df) %/% psi), each = psi, length.out = nrow(df)))
@@ -301,6 +301,7 @@ ggplot(df, aes(x =labels , y = gamma.map, color = covariate)) +
 #   annotate("text", x = seq(0, 330, length.out=10), y = -1, label = beta, colour = "red", size = 10) +
   scale_x_discrete(labels = c("", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", expression(bold(gamma[1])),"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", 
   expression(bold(gamma[2])),"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", expression(bold(gamma[3])),"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", expression(bold(gamma[4])),"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", expression(bold(gamma[5])),"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", expression(bold(gamma[6])),"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", expression(bold(gamma[7])))) + 
+  theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 20),
           legend.title = element_blank(),
           legend.text = element_text(size=30),
@@ -444,7 +445,7 @@ ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +
   theme(plot.title = element_text(hjust = 0.5, size = 15),
         axis.ticks = element_blank(),
         legend.title = element_blank(),
-        legend.text = element_text(size=25),
+        legend.text = element_text(size=30),
         strip.text = element_blank(),
         axis.text = element_blank(),
         axis.title.x = element_text(size = 35))
