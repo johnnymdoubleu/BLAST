@@ -137,9 +137,9 @@ for(i in 1:p){
   # xholder[,i] <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n)
   # test.knot <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
   # splines <- basis.tps(seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n), test.knot, m=2, rk=FALSE, intercept = TRUE)
-  xholder[,i] <- seq(min(fwi.scaled), max(fwi.scaled), length.out = n)
+  xholder[,i] <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n)
   test.knot <- seq(min(fwi.scaled), max(fwi.scaled), length.out = psi)
-  splines <- basis.tps(seq(min(fwi.scaled), max(fwi.scaled), length.out = n), test.knot, m=2, rk=FALSE, intercept = FALSE)
+  splines <- basis.tps(seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n), test.knot, m=2, rk=FALSE, intercept = FALSE)
   xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
   xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
   knots <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
@@ -289,7 +289,7 @@ theta.post.mean <- alpha.summary[(n+(n*p*2)+(psi*p)+2+1):(n+(n*p*2)+(psi*p)+2+p)
 theta.q1 <- alpha.summary[(n+(n*p*2)+(psi*p)+2+1):(n+(n*p*2)+(psi*p)+2+p),4]
 theta.q3 <- alpha.summary[(n+(n*p*2)+(psi*p)+2+1):(n+(n*p*2)+(psi*p)+2+p),5]
 g.nonlinear.q1 <- g.linear.q1 <- g.q1 <- g.nonlinear.q3 <- g.linear.q3 <- g.q3 <- g.nonlinear.new <- g.linear.new <- g.new <- matrix(, nrow = n, ncol=p)
-alpha.new <- NULL
+g.smooth.q1 <- g.smooth.q3 <- g.smooth.new <- alpha.new <- NULL
 for (j in 1:p){
   g.linear.new[,j] <- xholder.linear[,j] * theta.post.mean[j]
   g.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.post.mean[,j] 
@@ -305,19 +305,33 @@ for (j in 1:p){
 for(i in 1:n){
   g.smooth.new[i] <- tail(alpha.summary, 1)[1] + sum(g.new[i,])
   g.smooth.q1[i] <- tail(alpha.summary, 1)[4] + sum(g.q1[i,])
-  g.smooth.q2[i] <- tail(alpha.summary, 1)[5] + sum(g.q3[i,])
+  g.smooth.q3[i] <- tail(alpha.summary, 1)[5] + sum(g.q3[i,])
 }
 
 ### Plotting linear and nonlinear components
 # post.mean <- as.vector(apply(as.data.frame(matrix(alpha.summary[(n+1):(n+(n*p)),1], nrow = n, ncol = p)), 2, sort, decreasing=F))
 # q1 <- as.vector(apply(as.data.frame(matrix(alpha.summary[(n+1):(n+(n*p)),4], nrow = n, ncol = p)), 2, sort, decreasing=F))
 # q3 <- as.vector(apply(as.data.frame(matrix(alpha.summary[(n+1):(n+(n*p)),5], nrow = n, ncol = p)), 2, sort, decreasing=F))
-data.linear <- data.frame("x"=c(1:n),
-                          "post.mean" = as.vector(g.linear.new),
-                          "q1" = as.vector(g.linear.q1),
-                          "q3" = as.vector(g.linear.q3),
+data.smooth <- data.frame("x"=c(1:n),
+                          "post.mean" = g.smooth.new,
+                          "q1" = g.smooth.q1,
+                          "q3" = g.smooth.q3,
                           "covariates" = gl(p, n, (p*n), labels = factor(names(fwi.scaled))),
                           "replicate" = gl(2, n, (p*n)))
+ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) + 
+  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab("Smooth Functions") +
+  # geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
+  geom_line(aes(y=post.mean, colour = covariates), linewidth=2) + ylab ("") +
+  facet_grid(covariates ~ .) + #ggtitle("MAP for Smooth Functions") + 
+  scale_y_continuous(breaks=c(0)) + theme_minimal(base_size = 30) +
+  theme(plot.title = element_text(hjust = 0.5, size = 30),
+        legend.position = "none",
+        plot.margin = margin(0,0,0,-10),
+        strip.text = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.text.y = element_text(size=33),
+        axis.title.x = element_text(size = 35))
 
 data.linear <- data.frame("x"=c(1:n),
                           "post.mean" = as.vector(g.linear.new),
@@ -327,10 +341,11 @@ data.linear <- data.frame("x"=c(1:n),
                           "replicate" = gl(2, n, (p*n)))
 ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab("Linear Components") +
-  geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
+  # geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
   geom_line(aes(y=post.mean, colour = covariates), linewidth=2) + ylab ("") +
-  facet_grid(covariates ~ .) + #ggtitle("MAP for Smooth Functions") + 
-  scale_y_continuous(breaks=c(0)) + theme_minimal(base_size = 30) +
+  scale_y_continuous(breaks=c(0)) +
+  facet_grid(covariates ~ .) + 
+  theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 30),
         legend.position = "none",
         plot.margin = margin(0,0,0,-10),
@@ -352,10 +367,10 @@ data.nonlinear <- data.frame("x"=c(1:n),
                           "replicate" = gl(2, n, (p*n)))
 ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab("Nonlinear Components") +
-  geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
+  # geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
   geom_line(aes(y=post.mean, colour = covariates), linewidth=2) + ylab ("") +
   facet_grid(covariates ~ .) + 
-  scale_y_continuous(breaks=c(0), limits = c(-200,200)) + theme_minimal(base_size = 30) +
+  scale_y_continuous(breaks=c(0)) + theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 30),
         legend.position = "none",
         plot.margin = margin(0,0,0,-10),
