@@ -260,7 +260,7 @@ df.theta <- data.frame("seq" = seq(1, (p+1)),
 # df.theta$covariate <- factor(rep(seq(1, 1 + nrow(df.theta) %/% no.theta), each = no.theta, length.out = nrow(df.theta)))
 # df.theta$covariate <- factor(rep(names(fwi.scaled), each = no.theta, length.out = nrow(df.theta)))
 df.theta$covariate <- factor(c("\u03b8",names(fwi.scaled)), levels = c("\u03b8","DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC"))
-df.theta$labels <- factor(c(expression(theta[0]),"DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC"))
+df.theta$labels <- factor("theta0","DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC")
 # ggplot(df.theta, aes(x = seq)) + 
 #   geom_point(aes(y = theta.map, color = covariate), size = 1.5) + 
 # #   geom_smooth(method="gam") +
@@ -427,8 +427,7 @@ ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +
         axis.ticks.x = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
-ggsave(paste0("./BRSTIR/application/figures/",date,"_map_smooth.pdf"), 
-        width=10.5, height = 15)
+# ggsave(paste0("./BRSTIR/application/figures/",date,"_map_smooth.pdf"), width=10.5, height = 15)
 ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +  
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab("Linear Component") + 
   geom_line(aes(y=new.linear, colour = covariates), linewidth=2) + ylab ("") +
@@ -442,8 +441,7 @@ ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +
         strip.text = element_blank(),
         axis.text = element_blank(),
         axis.title.x = element_text(size = 35))
-ggsave(paste0("./BRSTIR/application/figures/",date,"_map_linear.pdf"), 
-        width=10, height = 15)
+# ggsave(paste0("./BRSTIR/application/figures/",date,"_map_linear.pdf"), width=10, height = 15)
 ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab("Nonlinear Component") +
   geom_line(aes(y=new.nonlinear, colour = covariates), linewidth=2) + ylab ("") +
@@ -459,7 +457,7 @@ ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +
         strip.text = element_blank(),
         axis.text = element_blank(),
         axis.title.x = element_text(size = 35))
-ggsave(paste0("./BRSTIR/application/figures/",date,"_map_nonlinear.pdf"), width=12.5, height = 15)
+# ggsave(paste0("./BRSTIR/application/figures/",date,"_map_nonlinear.pdf"), width=12.5, height = 15)
 
 
 # plot(sort(alp.origin))
@@ -503,7 +501,7 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
   theme(text = element_text(size = 20)) + 
   coord_fixed(xlim = c(-3, 3),  
               ylim = c(-3, 3))
-# ggsave("./Laboratory/Application/figures/map_qqplot.pdf", width=10)
+# ggsave(paste0("./BRSTIR/application/figures/",date,"_map_qqplot.pdf"), width=10, height = 7.78)
 
 model.df <- data.frame(y=y, fwi.scaled)
 mod <- lm(log(y) ~ DSR + FWI + BUI + ISI + FFMC + DMC + DC, data= model.df)
@@ -576,7 +574,7 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
   theme(text = element_text(size = 20)) + 
   coord_fixed(xlim = c(-3, 3),  
               ylim = c(-3, 3))
-# ggsave("./Laboratory/Application/figures/loglr_qqplot.pdf", width=10)
+# ggsave(paste0("./BRSTIR/application/figures/",date,"_loglr_qqplot.pdf"), width=10, height = 7.78)
 
 library(gap)
 library(dgof)
