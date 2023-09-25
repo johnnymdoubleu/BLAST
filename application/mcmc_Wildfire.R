@@ -291,6 +291,95 @@ gamma.q3 <- matrix(alpha.summary[((n+(2*n*p))+1):((n+(2*n*p))+(psi*p)),5], nrow 
 theta.post.mean <- alpha.summary[(n+(n*p*2)+(psi*p)+2+1):(n+(n*p*2)+(psi*p)+2+p),1]
 theta.q1 <- alpha.summary[(n+(n*p*2)+(psi*p)+2+1):(n+(n*p*2)+(psi*p)+2+p),4]
 theta.q3 <- alpha.summary[(n+(n*p*2)+(psi*p)+2+1):(n+(n*p*2)+(psi*p)+2+p),5]
+
+df.theta <- data.frame("seq" = seq(1, (p+1)),
+                        "m" = c(tail(alpha.summary, 1)[1], theta.post.mean),
+                        "l" = c(tail(alpha.summary, 1)[4], theta.q1),
+                        "u" = c(tail(alpha.summary, 1)[5], theta.q3))
+# df.theta$covariate <- factor(rep(seq(1, 1 + nrow(df.theta) %/% no.theta), each = no.theta, length.out = nrow(df.theta)))
+# df.theta$covariate <- factor(rep(names(fwi.scaled), each = no.theta, length.out = nrow(df.theta)))
+df.theta$covariate <- factor(c("\u03b8",names(fwi.scaled)), levels = c("\u03b8","DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC"))
+df.theta$labels <- factor(c("\u03b8","DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC"))
+
+ggplot(df.theta, aes(x = covariate, y=m, color = covariate)) + ylab("") + 
+  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab('') +
+  geom_point(size = 5) + 
+  geom_errorbar(aes(ymin = l, ymax = u), width = 0.3, size =1.2) + 
+  scale_x_discrete(labels = c(expression(bold(theta[0])),
+                              expression(bold(theta[1])),
+                              expression(bold(theta[2])),
+                              expression(bold(theta[3])),
+                              expression(bold(theta[4])),
+                              expression(bold(theta[5])),
+                              expression(bold(theta[6])),
+                              expression(bold(theta[7])))) + 
+  scale_color_discrete(labels = c(expression(theta[0]),"DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC")) + 
+  theme_minimal(base_size = 30) +
+  theme(plot.title = element_text(hjust = 0.5, size = 20),
+          legend.text.align = 0,
+          legend.title = element_blank(),
+          legend.text = element_text(size=25),
+          legend.margin=margin(0,0,0,-10),
+          legend.box.margin=margin(-10,0,-10,0),
+          plot.margin = margin(0,0,0,-20),
+          axis.text.x = element_text(hjust=0.35),
+          axis.text = element_text(size = 28))
+
+# ggplot(data.frame(group = factor(1:(p+1)), m=theta.post.mean, l = theta.q1, u = theta.q3), 
+#        aes(group)) +
+#   geom_hline(yintercept = 0, linetype = "dashed", color = "grey", size = 1.4) +
+#   geom_point(aes(x = group, y = m), size = 4.5) + 
+#   #geom_point(aes(x = group, y = beta), shape=8, size = 4.5, col="red")+
+#   geom_errorbar(aes(ymin = l, ymax = u), width = 0.3, size = 1.2) + 
+#   labs(x = "Regression coefficients", y = "") + 
+#   ylim(-5,5) + 
+#   scale_x_discrete(labels = c("DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC"))+
+#                               #,expression(beta[8]),
+#                               #expression(beta[9]))) + 
+#   theme_minimal(base_size = 30) + 
+#   theme(text = element_text(size = 30), 
+#         axis.text.x = element_text(angle = 0, hjust = 0.5))
+
+
+df.gamma <- data.frame("seq" = seq(1, (psi*p)), 
+                  "m" = as.vector(gamma.post.mean),
+                  "l" = as.vector(gamma.q1),
+                  "u" = as.vector(gamma.q3))
+df.gamma$covariate <- factor(rep(names(fwi.scaled), each = psi, length.out = nrow(df.gamma)), levels = c("DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC"))
+df.gamma$labels <- factor(1:(psi*p))
+ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) + 
+  geom_point(size = 4) + ylab("") +
+  # geom_ribbon(aes(ymin = l, ymax = u)) +
+  geom_errorbar(aes(ymin = l, ymax = u), width = 4, size = 1.2) + 
+  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab("")+
+  scale_x_discrete(breaks=c(seq(0, (psi*p), psi)+10), label = c(expression(bold(gamma[1])), expression(bold(gamma[2])), expression(bold(gamma[3])), expression(bold(gamma[4])), expression(bold(gamma[5])), expression(bold(gamma[6])), expression(bold(gamma[7]))), expand=c(0,3)) +
+  theme_minimal(base_size = 30) +
+  theme(plot.title = element_text(hjust = 0.5, size = 20),
+          legend.title = element_blank(),
+          legend.text = element_text(size=25),
+          legend.margin=margin(0,0,0,-10),
+          legend.box.margin=margin(-10,0,-10,0),
+          plot.margin = margin(0,0,0,-20),
+          axis.text.x = element_text(hjust=0.5),
+          axis.text = element_text(size = 28))
+
+
+ggplot(data.frame(group = factor(1:p), m=theta.post.mean, l = theta.q1, u = theta.q3), 
+       aes(group)) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey", size = 1.4) +
+  geom_point(aes(x = group, y = m), size = 4.5) + 
+  #geom_point(aes(x = group, y = beta), shape=8, size = 4.5, col="red")+
+  geom_errorbar(aes(ymin = l, ymax = u), width = 0.3, size = 1.2) + 
+  labs(x = "Regression coefficients", y = "") + 
+  ylim(-5,5) + 
+  scale_x_discrete(labels = c("DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC"))+
+                              #,expression(beta[8]),
+                              #expression(beta[9]))) + 
+  theme_minimal(base_size = 30) + 
+  theme(text = element_text(size = 30), 
+        axis.text.x = element_text(angle = 0, hjust = 0.5))
+
+
 g.nonlinear.q1 <- g.linear.q1 <- g.q1 <- g.nonlinear.q3 <- g.linear.q3 <- g.q3 <- g.nonlinear.new <- g.linear.new <- g.new <- matrix(, nrow = n, ncol=p)
 g.smooth.q1 <- g.smooth.q3 <- g.smooth.new <- alpha.new <- NULL
 for (j in 1:p){
