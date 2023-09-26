@@ -139,7 +139,7 @@ for(i in 1:p){
   # splines <- basis.tps(seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n), test.knot, m=2, rk=FALSE, intercept = TRUE)
   xholder[,i] <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n)
   test.knot <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
-  splines <- basis.tps(seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n), test.knot, m=2, rk=FALSE, intercept = FALSE)
+  splines <- basis.tps(xholder[,i], test.knot, m=2, rk=FALSE, intercept = FALSE)
   xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
   xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
   knots <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
@@ -176,8 +176,9 @@ registerDistributions(list(
 
 reExp = nimbleFunction(
     run = function(a = double(0)) {
-        if(a > 10){
-          ans <- exp(10) + exp(10)*(a-10)
+        m <- 15
+        if(a > m){
+          ans <- exp(m) + exp(m)*(a-m)
         }
         else(
           ans <- exp(a)
@@ -212,7 +213,7 @@ model.penalisation <- nimbleCode({
   }
 
   for (i in 1:n){
-    log(alpha[i]) <- theta.0 + sum(g.nonlinear[i, 1:p]) + sum(g.linear[i, 1:p])
+    alpha[i] <- reExp(theta.0 + sum(g.nonlinear[i, 1:p]) + sum(g.linear[i, 1:p]))
     # alpha[i] <- log(5) / log(1 + exp(theta.0 + sum(g.nonlinear[i, 1:p]) + sum(g.linear[i, 1:p])))
     # log(new.alpha[i]) <- theta.0 + sum(holder.nonlinear[i, 1:p]) + sum(holder.linear[i, 1:p])
   }
@@ -251,8 +252,8 @@ fit.v2 <- nimbleMCMC(code = model.penalisation,
                   monitors = monitor.pred,
                   inits = init.alpha(),
                   thin = 20,
-                  niter = 70000,
-                  nburnin = 50000,
+                  niter = 50000,
+                  nburnin = 30000,
                   # setSeed = 300,
                   nchains = 3,
                   # WAIC = TRUE,-
@@ -496,12 +497,25 @@ ggplot(data.scenario, aes(x=x)) +
         axis.title.x = element_text(size = 35))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_alpha.pdf"), width=10, height = 7.78)
 
+# f.nonlinear.old <- f.linear.old <- f.old <- matrix(, nrow = n, ncol=p)
+# alpha.new <- NULL
+# for (j in 1:p){
+#   f.linear.old[,j] <- bs.linear[,j] * theta.post.mean[j]
+#   f.nonlinear.old[,j] <- bs.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.post.mean[, j]
+#   f.old[1:n, j] <- f.linear.old[,j] + f.nonlinear.old[,j]
+# }
+# for(i in 1:n){
+#   alpha.new[i] <- exp(tail(alpha.summary, 1)[1] + sum(f.old[i]))
+# }
+
+
 r <- matrix(, nrow = n, ncol = 20)
 # beta <- as.matrix(mcmc[[1]])[, 1:7] 
 T <- 20
 for(i in 1:n){
   for(t in 1:T){
     r[i, t] <- qnorm(pPareto(y[i], u, alpha = alpha.summary[i,1]))
+    # r[i, t] <- qnorm(pPareto(y[i], u, alpha = alpha.new[i]))
   }
 }
 lgrid <- n
