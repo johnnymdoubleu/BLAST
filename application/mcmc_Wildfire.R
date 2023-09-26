@@ -296,8 +296,6 @@ df.theta <- data.frame("seq" = seq(1, (p+1)),
                         "m" = c(tail(alpha.summary, 1)[1], theta.post.mean),
                         "l" = c(tail(alpha.summary, 1)[4], theta.q1),
                         "u" = c(tail(alpha.summary, 1)[5], theta.q3))
-# df.theta$covariate <- factor(rep(seq(1, 1 + nrow(df.theta) %/% no.theta), each = no.theta, length.out = nrow(df.theta)))
-# df.theta$covariate <- factor(rep(names(fwi.scaled), each = no.theta, length.out = nrow(df.theta)))
 df.theta$covariate <- factor(c("\u03b8",names(fwi.scaled)), levels = c("\u03b8","DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC"))
 df.theta$labels <- factor(c("\u03b8","DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC"))
 
