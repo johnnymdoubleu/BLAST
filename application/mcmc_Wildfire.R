@@ -138,7 +138,7 @@ for(i in 1:p){
   # test.knot <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
   # splines <- basis.tps(seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n), test.knot, m=2, rk=FALSE, intercept = TRUE)
   xholder[,i] <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n)
-  test.knot <- seq(min(fwi.scaled), max(fwi.scaled), length.out = psi)
+  test.knot <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
   splines <- basis.tps(seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n), test.knot, m=2, rk=FALSE, intercept = FALSE)
   xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
   xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
@@ -212,8 +212,8 @@ model.penalisation <- nimbleCode({
   }
 
   for (i in 1:n){
-    alpha[i] <- reExp(theta.0 + sum(g.nonlinear[i, 1:p]) + sum(g.linear[i, 1:p]))
-    # alpha[i] <- log(5) / log(1 + exp(theta.0 + sum(g.nonlinear[i, 1:p]) + sum(g.linear[i, 1:p])))
+    # alpha[i] <- reExp(theta.0 + sum(g.nonlinear[i, 1:p]) + sum(g.linear[i, 1:p]))
+    alpha[i] <- log(5) / log(1 + exp(theta.0 + sum(g.nonlinear[i, 1:p]) + sum(g.linear[i, 1:p])))
     # log(new.alpha[i]) <- theta.0 + sum(holder.nonlinear[i, 1:p]) + sum(holder.linear[i, 1:p])
   }
   for(i in 1:n){
@@ -301,10 +301,10 @@ df.theta <- data.frame("seq" = seq(1, (p+1)),
 df.theta$covariate <- factor(c("\u03b8",names(fwi.scaled)), levels = c("\u03b8","DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC"))
 df.theta$labels <- factor(c("\u03b8","DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC"))
 
-ggplot(df.theta, aes(x = covariate, y=m, color = covariate)) + ylab("") + 
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab('') +
+ggplot(df.theta, aes(x = covariate, y=m, color = covariate)) + ylab("") + xlab('') +
+  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_point(size = 5) + 
-  geom_errorbar(aes(ymin = l, ymax = u), width = 0.3, size =1.2) + 
+  geom_errorbar(aes(ymin = l, ymax = u), width = 0.3, linewidth =1.2) + 
   scale_x_discrete(labels = c(expression(bold(theta[0])),
                               expression(bold(theta[1])),
                               expression(bold(theta[2])),
@@ -349,11 +349,14 @@ df.gamma <- data.frame("seq" = seq(1, (psi*p)),
 df.gamma$covariate <- factor(rep(names(fwi.scaled), each = psi, length.out = nrow(df.gamma)), levels = c("DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC"))
 df.gamma$labels <- factor(1:(psi*p))
 ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) + 
-  geom_point(size = 4) + ylab("") +
+  geom_point(size = 4) + ylab("") + xlab("" ) + 
   # geom_ribbon(aes(ymin = l, ymax = u)) +
-  geom_errorbar(aes(ymin = l, ymax = u), width = 4, size = 1.2) + 
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab("")+
-  scale_x_discrete(breaks=c(seq(0, (psi*p), psi)+10), label = c(expression(bold(gamma[1])), expression(bold(gamma[2])), expression(bold(gamma[3])), expression(bold(gamma[4])), expression(bold(gamma[5])), expression(bold(gamma[6])), expression(bold(gamma[7]))), expand=c(0,3)) +
+  geom_errorbar(aes(ymin = l, ymax = u), width = 4, linewidth = 1.2) + 
+  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+  scale_x_discrete(breaks=c(seq(0, (psi*p), psi)+10), 
+                    label = c(expression(bold(gamma[1])), 
+                              expression(bold(gamma[2])), expression(bold(gamma[3])), expression(bold(gamma[4])), expression(bold(gamma[5])), expression(bold(gamma[6])), expression(bold(gamma[7]))),
+                    expand=c(0,3)) +
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 20),
           legend.title = element_blank(),
@@ -363,7 +366,7 @@ ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) +
           plot.margin = margin(0,0,0,-20),
           axis.text.x = element_text(hjust=0.5),
           axis.text = element_text(size = 28))
-ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_gamma.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_gamma.pdf"), width=10, height = 7.78)
 
 g.nonlinear.q1 <- g.linear.q1 <- g.q1 <- g.nonlinear.q3 <- g.linear.q3 <- g.q3 <- g.nonlinear.new <- g.linear.new <- g.new <- matrix(, nrow = n, ncol=p)
 g.smooth.q1 <- g.smooth.q3 <- g.smooth.new <- alpha.new <- NULL
@@ -389,6 +392,14 @@ for(i in 1:n){
 # post.mean <- as.vector(apply(as.data.frame(matrix(alpha.summary[(n+1):(n+(n*p)),1], nrow = n, ncol = p)), 2, sort, decreasing=F))
 # q1 <- as.vector(apply(as.data.frame(matrix(alpha.summary[(n+1):(n+(n*p)),4], nrow = n, ncol = p)), 2, sort, decreasing=F))
 # q3 <- as.vector(apply(as.data.frame(matrix(alpha.summary[(n+1):(n+(n*p)),5], nrow = n, ncol = p)), 2, sort, decreasing=F))
+equal_breaks <- function(n = 3, s = 0.1,...){
+  function(x){
+    d <- s * diff(range(x)) / (1+2*s)
+    seq = seq(min(x)+d, max(x)-d, length=n)
+    round(seq, -floor(log10(abs(seq[2]-seq[1]))))
+  }
+}
+
 data.smooth <- data.frame("x"=c(1:n),
                           "post.mean" = as.vector(g.new),
                           "q1" = as.vector(g.q1),
@@ -399,8 +410,8 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab("Smooth Functions") +
   # geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
   geom_line(aes(y=post.mean, colour = covariates), linewidth=2) + ylab ("") +
-  facet_grid(covariates ~ .) + #ggtitle("MAP for Smooth Functions") + 
-  scale_y_continuous(breaks=c(0)) + theme_minimal(base_size = 30) +
+  facet_grid(covariates ~ ., scales = "free_y") + 
+  scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 30),
         legend.position = "none",
         plot.margin = margin(0,0,0,-10),
@@ -420,8 +431,8 @@ ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) +
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab("Linear Components") +
   # geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
   geom_line(aes(y=post.mean, colour = covariates), linewidth=2) + ylab ("") +
-  scale_y_continuous(breaks=c(0)) +
-  facet_grid(covariates ~ .) + 
+  facet_grid(covariates ~ ., scales = "free_y") + 
+  scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) +
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 30),
         legend.position = "none",
@@ -446,14 +457,16 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab("Nonlinear Components") +
   # geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
   geom_line(aes(y=post.mean, colour = covariates), linewidth=2) + ylab ("") +
-  facet_grid(covariates ~ .) + 
-  scale_y_continuous(breaks=c(0)) + theme_minimal(base_size = 30) +
-  theme(plot.title = element_text(hjust = 0.5, size = 30),
-        legend.position = "none",
-        plot.margin = margin(0,0,0,-10),
+  facet_grid(covariates ~ ., scales = "free_y") + 
+  scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + theme_minimal(base_size = 30) +
+  theme(plot.title = element_text(hjust = 0.5, size = 15),
+        axis.ticks = element_blank(),
+        legend.title = element_blank(),
+        legend.text = element_text(size=45),
+        legend.margin=margin(0,0,0,-10),
+        legend.box.margin=margin(-10,0,-10,0),
+        plot.margin = margin(0,0,0,-20),
         strip.text = element_blank(),
-        axis.text.x = element_blank(),
-        axis.ticks.x = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_nonlinear.pdf"), width=12, height = 15)
@@ -521,7 +534,7 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
   theme(text = element_text(size = 20)) + 
   coord_fixed(xlim = c(-3, 3),  
               ylim = c(-3, 3))
-ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_qqplot.pdf"), width=10, height = 7.78)              
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_qqplot.pdf"), width=10, height = 7.78)              
 # saveRDS(data.scenario, file=paste0("Simulation/BayesianPsplines/results/",date,"-",time, "_sc1_data_samp1.rds"))
 
 cat("sc1_Alp Done")

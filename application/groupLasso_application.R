@@ -143,9 +143,9 @@ for(i in 1:p){
   # xholder[,i] <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n)
   # test.knot <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
   # splines <- basis.tps(seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n), test.knot, m=2, rk=FALSE, intercept = TRUE)
-  xholder[,i] <- seq(min(fwi.scaled), max(fwi.scaled), length.out = n)
-  test.knot <- seq(min(fwi.scaled), max(fwi.scaled), length.out = psi)
-  splines <- basis.tps(seq(min(fwi.scaled), max(fwi.scaled), length.out = n), test.knot, m=2, rk=FALSE, intercept = FALSE)
+  xholder[,i] <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n)
+  test.knot <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
+  splines <- basis.tps(seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n), test.knot, m=2, rk=FALSE, intercept = FALSE)
   xholder.linear <- cbind(xholder.linear, splines[,1])
   xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
   knots <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
@@ -186,11 +186,11 @@ for(i in 1:p){
 #   bs.x <- cbind(bs.x, tps)
 # }
 
-lambda.1 <- 0.001
+lambda.1 <- 3
 lambda.2 <- 0
-lambda.3 <- 0.001
+lambda.3 <- 220
 
-log.posterior <- function(beta, y.origin){
+log.posterior <- function(beta, y.origin, lambda.1, lambda.3){
     log.lik <- function(beta){
         exp.prime <- function(x, thres){
             if(x > thres){ans <- exp(thres) + exp(thres)*(x-thres)}
@@ -242,7 +242,7 @@ log.posterior <- function(beta, y.origin){
 beta.emp <- c(rep(0, (p+1)), rep(0, p*psi))
 # beta.emp <- c(as.vector(theta.origin), as.vector(gamma.origin))
 beta.map <- optim(beta.emp, fn = log.posterior, #gr = grad.log.posterior, 
-                  y.origin = y,
+                  y.origin = y, lambda.1 = lambda.1, lambda.3 = lambda.3,
                   # method = "BFGS",
                   method = "CG",
                   # method = "SANN",
@@ -274,7 +274,7 @@ df.theta$labels <- factor(c("theta0","DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", 
 #   theme(plot.title = element_text(hjust = 0.5, size = 20))
 
 ggplot(df.theta, aes(x = covariate)) + ylab("") + 
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + ylim(-0.5,0.5) + xlab('') +
+  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab('') + ylim(-0.25, 0.25) +
   geom_point(aes(y = theta.map, color = covariate), size = 5) + 
   scale_x_discrete(labels = c(expression(bold(theta[0])),
                               expression(bold(theta[1])),
@@ -424,11 +424,20 @@ func.df <- data.frame(seq = seq(0,1,length.out = n),
                         replicate=replicate,
                         x = rep(newx, p))
 
+
+equal_breaks <- function(n = 3, s = 0.1,...){
+  function(x){
+    d <- s * diff(range(x)) / (1+2*s)
+    seq = seq(min(x)+d, max(x)-d, length=n)
+    round(seq, -floor(log10(abs(seq[2]-seq[1]))))
+  }
+}
+
 ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab("Smooth Functions") +
   geom_line(aes(y=new, colour = covariates), linewidth=2) + ylab ("") +
-  facet_grid(covariates ~ .) + #ggtitle("MAP for Smooth Functions") + 
-  scale_y_continuous(breaks=c(0)) + theme_minimal(base_size = 30) +
+  facet_grid(covariates ~ ., scales="free_y") +
+  scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + theme_minimal(base_size = 30) + 
   theme(plot.title = element_text(hjust = 0.5, size = 30),
         legend.position = "none",
         plot.margin = margin(0,0,0,-10),
@@ -437,37 +446,39 @@ ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +
         axis.ticks.x = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
-# ggsave(paste0("./BRSTIR/application/figures/",date,"_map_smooth.pdf"), width=10.5, height = 15)
+ggsave(paste0("./BRSTIR/application/figures/",date,"_map_smooth.pdf"), width=10.5, height = 15)
 ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +  
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab("Linear Component") + 
   geom_line(aes(y=new.linear, colour = covariates), linewidth=2) + ylab ("") +
-  facet_grid(covariates ~ .) + #ggtitle("Linear Component of Smooth Functions") + 
-  scale_y_continuous(breaks=c(0))  + theme_minimal(base_size = 30) +
+  facet_grid(covariates ~ ., scales="free_y") +
+  scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + theme_minimal(base_size = 30) + 
   theme(plot.title = element_text(hjust = 0.5, size = 15),
-        axis.ticks = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
         # panel.grid.minor.y = element_blank(),
         legend.position = "none",
-        plot.margin = margin(0,-20,0,-20),
+        plot.margin = margin(0,-20,0,-30),
         strip.text = element_blank(),
-        axis.text = element_blank(),
+        axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
-# ggsave(paste0("./BRSTIR/application/figures/",date,"_map_linear.pdf"), width=10, height = 15)
+ggsave(paste0("./BRSTIR/application/figures/",date,"_map_linear.pdf"), width=11, height = 15)
 ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab("Nonlinear Component") +
   geom_line(aes(y=new.nonlinear, colour = covariates), linewidth=2) + ylab ("") +
-  facet_grid(covariates ~ .) +
-  scale_y_continuous(breaks=c(0))  + theme_minimal(base_size = 30) +
+  facet_grid(covariates ~ ., scales="free_y") +
+  scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + theme_minimal(base_size = 30) + 
   theme(plot.title = element_text(hjust = 0.5, size = 15),
-        axis.ticks = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
         legend.title = element_blank(),
         legend.text = element_text(size=45),
         legend.margin=margin(0,0,0,-10),
         legend.box.margin=margin(-10,0,-10,0),
         plot.margin = margin(0,0,0,-20),
         strip.text = element_blank(),
-        axis.text = element_blank(),
+        axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
-# ggsave(paste0("./BRSTIR/application/figures/",date,"_map_nonlinear.pdf"), width=12.5, height = 15)
+ggsave(paste0("./BRSTIR/application/figures/",date,"_map_nonlinear.pdf"), width=12.5, height = 15)
 
 
 # plot(sort(alp.origin))
