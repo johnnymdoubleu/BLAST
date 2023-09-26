@@ -252,8 +252,8 @@ fit.v2 <- nimbleMCMC(code = model.penalisation,
                   monitors = monitor.pred,
                   inits = init.alpha(),
                   thin = 20,
-                  niter = 50000,
-                  nburnin = 30000,
+                  niter = 120000,
+                  nburnin = 100000,
                   # setSeed = 300,
                   nchains = 3,
                   # WAIC = TRUE,-
@@ -348,7 +348,7 @@ df.gamma <- data.frame("seq" = seq(1, (psi*p)),
 df.gamma$covariate <- factor(rep(names(fwi.scaled), each = psi, length.out = nrow(df.gamma)), levels = c("DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC"))
 df.gamma$labels <- factor(1:(psi*p))
 ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) + 
-  geom_point(size = 4) + ylab("") + xlab("" ) + 
+  geom_point(size = 4) + ylab("") + xlab("" ) + ylim(-50,75) +
   # geom_ribbon(aes(ymin = l, ymax = u)) +
   geom_errorbar(aes(ymin = l, ymax = u), width = 4, linewidth = 1.2) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
@@ -441,7 +441,7 @@ ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) +
         axis.ticks.x = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
-# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_linear.pdf"), width=12, height = 15)
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_linear.pdf"), width=10.5, height = 15)
 # post.mean <- as.vector(apply(as.data.frame(matrix(alpha.summary[((n+(n*p))+1):(n+(2*n*p)),1], nrow = n, ncol = p)), 2, sort, decreasing=F))
 # q1 <- as.vector(apply(as.data.frame(matrix(alpha.summary[((n+(n*p))+1):(n+(2*n*p)),4], nrow = n, ncol = p)), 2, sort, decreasing=F))
 # q3 <- as.vector(apply(as.data.frame(matrix(alpha.summary[((n+(n*p))+1):(n+(2*n*p)),5], nrow = n, ncol = p)), 2, sort, decreasing=F))
@@ -468,7 +468,7 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
         strip.text = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
-# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_nonlinear.pdf"), width=12, height = 15)
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_nonlinear.pdf"), width=12.5, height = 15)
 data.scenario <- data.frame("x" = c(1:n),
                             "constant" = newx,
                             "post.mean" = sort(alpha.summary[1:n,1]),
