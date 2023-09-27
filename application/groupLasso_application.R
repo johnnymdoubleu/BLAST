@@ -186,9 +186,9 @@ for(i in 1:p){
 #   bs.x <- cbind(bs.x, tps)
 # }
 
-lambda.1 <- 3
+lambda.1 <- 0.001
 lambda.2 <- 0
-lambda.3 <- 220
+lambda.3 <- 0.001
 
 log.posterior <- function(beta, y.origin, lambda.1, lambda.3){
     log.lik <- function(beta){
@@ -244,8 +244,8 @@ beta.emp <- c(rep(0, (p+1)), rep(0, p*psi))
 beta.map <- optim(beta.emp, fn = log.posterior, #gr = grad.log.posterior, 
                   y.origin = y, lambda.1 = lambda.1, lambda.3 = lambda.3,
                   # method = "BFGS",
-                  method = "CG",
-                  # method = "SANN",
+                  # method = "CG",
+                  method = "SANN",
                   control = list(fnscale = -1))
 # theta.map <- matrix(beta.map$par[1:(2*p)],nrow=2)
 theta.map <- beta.map$par[1:(p+1)]
