@@ -284,7 +284,7 @@ beta.map <- optim(beta.emp, fn = log.posterior, #gr = grad.log.posterior,
                   # method = "BFGS", 
                   method = "CG",
                   # method = "SANN",
-                  control = list(fnscale = -1, maxit = 200))
+                  control = list(fnscale = -1, maxit = 300))
 # theta.map <- matrix(beta.map$par[1:(2*p)],nrow=2)
 theta.map <- beta.map$par[1:(p+1)]
 gamma.map <- beta.map$par[-(1:(p+1))]
