@@ -98,6 +98,11 @@ fwi.scaled <- fwi.scaled[which(Y>u),]
 # ggsave("./Laboratory/Application/figures/correlation.pdf", width=15)
 # cov$date <- as.Date(with(cov, paste(year,month,day,sep="-")),"%Y-%m-%d")
 # cov$yearmon <- as.Date(with(cov, paste(year,month,sep="-")),"%Y-%m")
+# special <- gather(fwi.scaled, cols, value) |> spread(cols, value) |> select(colnames(fwi.scaled))
+ggplot(gather(fwi.scaled, cols, value), aes(x = value)) + 
+       geom_histogram(binwidth = 0.1) + facet_grid(cols~.)
+ggplot(gather(fwi.index[which(Y>u),1:7], cols, value), aes(x = value)) + 
+       geom_histogram(binwidth = 2) + facet_grid(cols~.)
 df.extreme <- cbind(y, fwi.scaled)
 # df.extreme <- cbind(date = cov$date[which(Y>u)], df.extreme)
 df.extreme <- cbind(month = fwi.index$month[which(Y>u)], df.extreme)
