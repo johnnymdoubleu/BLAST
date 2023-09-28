@@ -477,6 +477,7 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
         legend.box.margin=margin(-10,0,-10,0),
         plot.margin = margin(0,0,0,-20),
         strip.text = element_blank(),
+        axis.text.x = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_nonlinear.pdf"), width=12.5, height = 15)
