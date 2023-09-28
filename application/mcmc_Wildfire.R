@@ -219,7 +219,7 @@ model.penalisation <- nimbleCode({
   }
 
   for (i in 1:n){
-    alpha[i] <- reExp(theta.0 + sum(g.nonlinear[i, 1:p]) + sum(g.linear[i, 1:p]))
+    log(alpha[i]) <- theta.0 + sum(g.nonlinear[i, 1:p]) + sum(g.linear[i, 1:p])
     # alpha[i] <- log(5) / log(1 + exp(theta.0 + sum(g.nonlinear[i, 1:p]) + sum(g.linear[i, 1:p])))
     # log(new.alpha[i]) <- theta.0 + sum(holder.nonlinear[i, 1:p]) + sum(holder.linear[i, 1:p])
   }
