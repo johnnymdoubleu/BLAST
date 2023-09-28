@@ -182,7 +182,7 @@ registerDistributions(list(
 
 reExp = nimbleFunction(
     run = function(a = double(0)) {
-        m <- 15
+        m <- 17.5
         if(a > m){
           ans <- exp(m) + exp(m)*(a-m)
         }
@@ -196,7 +196,7 @@ reExp = nimbleFunction(
 
 model.penalisation <- nimbleCode({
   #prior
-  lambda.1 ~ dgamma(0.5, 0.5) #gamma distribution prior for lambda
+  lambda.1 ~ dgamma(0.75, 0.75) #gamma distribution prior for lambda
   lambda.2 ~ dgamma(0.1, 0.1)
   theta.0 ~ ddexp(0, lambda.1)
   for (j in 1:p){
@@ -219,7 +219,7 @@ model.penalisation <- nimbleCode({
   }
 
   for (i in 1:n){
-    log(alpha[i]) <- theta.0 + sum(g.nonlinear[i, 1:p]) + sum(g.linear[i, 1:p])
+    alpha[i] <- reExp(theta.0 + sum(g.nonlinear[i, 1:p]) + sum(g.linear[i, 1:p]))
     # alpha[i] <- log(5) / log(1 + exp(theta.0 + sum(g.nonlinear[i, 1:p]) + sum(g.linear[i, 1:p])))
     # log(new.alpha[i]) <- theta.0 + sum(holder.nonlinear[i, 1:p]) + sum(holder.linear[i, 1:p])
   }
@@ -231,14 +231,14 @@ model.penalisation <- nimbleCode({
 })
 
 constant <- list(psi = psi, n = n, p = p)
-init.alpha <- function() list(list(gamma = matrix(0.5, nrow = psi, ncol=p), 
-                                    theta = rep(0.1, p), theta.0 = 0.1,
+init.alpha <- function() list(list(gamma = matrix(0.05, nrow = psi, ncol=p), 
+                                    theta = rep(0.01, p), theta.0 = 0.1,
                                     covm = array(1, dim = c(psi,psi, p))),
                               list(gamma = matrix(0, nrow = psi, ncol=p),
                                     theta = rep(0, p), theta.0 = 0,
                                     covm = array(1, dim = c(psi,psi, p))),
-                              list(gamma = matrix(-0.1, nrow = psi, ncol=p),
-                                    theta = rep(0.2, p), theta.0 = 0.9,
+                              list(gamma = matrix(-0.01, nrow = psi, ncol=p),
+                                    theta = rep(0.02, p), theta.0 = 0.03,
                                     covm = array(1, dim = c(psi,psi, p))))
                             #   list(gamma = matrix(1, nrow = psi, ncol=p)))
                               # y = as.vector(y),
@@ -519,13 +519,14 @@ ggplot(data.scenario, aes(x=x)) +
 #   alpha.new[i] <- exp(tail(alpha.summary, 1)[1] + sum(f.old[i]))
 # }
 
+mcmc.alpha <- fit.v2$samples$chain1[,1:n]
 
-r <- matrix(, nrow = n, ncol = 20)
+r <- matrix(, nrow = n, ncol = 30)
 # beta <- as.matrix(mcmc[[1]])[, 1:7] 
-T <- 20
+T <- 30
 for(i in 1:n){
   for(t in 1:T){
-    r[i, t] <- qnorm(pPareto(y[i], u, alpha = alpha.summary[i,1]))
+    r[i, t] <- qnorm(pPareto(y[i], u, alpha = mcmc.alpha[round(runif(1,1,len)),i]))
     # r[i, t] <- qnorm(pPareto(y[i], u, alpha = alpha.new[i]))
   }
 }
@@ -548,7 +549,7 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
   #           color = "lightgrey", fill = "lightgrey",
   #          alpha = 0.4, linetype = "dashed") + 
   geom_ribbon(aes(x = grid, ymin = l.band, ymax = u.band), 
-              color = "lightgrey", fill = "lightgrey",
+              # color = "darkgrey", fill = "darkgrey",
               alpha = 0.4, linetype = "dashed") + 
   geom_line(aes(x = grid, y = trajhat), linetype = "dashed", linewidth = 1.2) + 
   geom_abline(intercept = 0, slope = 1, linewidth = 1.2) + 
