@@ -196,13 +196,13 @@ reExp = nimbleFunction(
 
 model.penalisation <- nimbleCode({
   #prior
-  lambda.1 ~ dgamma(0.1, 0.1) #gamma distribution prior for lambda
+  lambda.1 ~ dgamma(0.01, 0.01) #gamma distribution prior for lambda
   lambda.2 ~ dgamma(0.1, 0.1)
   theta.0 ~ ddexp(0, lambda.1)
   for (j in 1:p){
     theta[j] ~ ddexp(0, lambda.1)
     tau.square[j] ~ dgamma((psi+1)/2, (lambda.2^2)/2)
-    sigma.square[j] ~ dinvgamma(0.01, 0.01)
+    sigma.square[j] ~ dinvgamma(0.1, 0.1)
   }
 
   for (j in 1:p){
@@ -359,7 +359,7 @@ df.gamma <- data.frame("seq" = seq(1, (psi*p)),
 df.gamma$covariate <- factor(rep(names(fwi.scaled), each = psi, length.out = nrow(df.gamma)), levels = c("DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC"))
 df.gamma$labels <- factor(1:(psi*p))
 ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) + 
-  geom_point(size = 4) + ylab("") + xlab("" ) + ylim(-50,75) +
+  geom_point(size = 4) + ylab("") + xlab("" ) + ylim(-15,15) +
   # geom_ribbon(aes(ymin = l, ymax = u)) +
   geom_errorbar(aes(ymin = l, ymax = u), width = 4, linewidth = 1.2) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 

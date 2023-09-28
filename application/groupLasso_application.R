@@ -474,7 +474,7 @@ equal_breaks <- function(n = 3, s = 0.1,...){
 ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab("Smooth Functions") +
   geom_line(aes(y=new, colour = covariates), linewidth=2) + ylab ("") +
-  facet_grid(covariates ~ ., scales="free") +
+  facet_grid(covariates ~ .) +
   scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + theme_minimal(base_size = 30) + 
   theme(plot.title = element_text(hjust = 0.5, size = 30),
         legend.position = "none",
