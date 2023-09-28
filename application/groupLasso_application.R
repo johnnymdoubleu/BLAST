@@ -186,11 +186,10 @@ for(i in 1:p){
 #   bs.x <- cbind(bs.x, tps)
 # }
 
-lambda.1 <- 0.001
-lambda.2 <- 0
-lambda.3 <- 0.001
 
-log.posterior <- function(beta, y.origin, lambda.1, lambda.3){
+
+log.posterior <- function(beta, y.origin){
+
     log.lik <- function(beta){
         exp.prime <- function(x, thres){
             if(x > thres){ans <- exp(thres) + exp(thres)*(x-thres)}
@@ -222,6 +221,9 @@ log.posterior <- function(beta, y.origin, lambda.1, lambda.3){
             else {ans <- (w^2) / 2}
             return(ans)
         }
+        lambda.1 <- 20
+        lambda.2 <- 0
+        lambda.3 <- 10
         # theta.0 <- beta[1]
         theta <- beta.emp[1:(p+1)]
         gamma <- matrix(beta.emp[-(1:(p+1))], ncol=p)
@@ -234,19 +236,24 @@ log.posterior <- function(beta, y.origin, lambda.1, lambda.3){
             term[j] <- first.term[j] + second.term[j] + third.term[j]
             # term[j] <- first.term[j] + second.term[j] - lambda.3 * sum(abs(beta))
         }
+        print(head(term))
         return((-1 * lambda.3 * abs(theta[1])) + sum(term))
     }
-    return(log.lik(beta) + log.prior(beta))
+    return(log.prior(beta))
 }
+# -6529.937 
+# -6473.18
+# -6445.875
 
+log.posterior(c(rep(0.1, (p+1)), rep(0.5, p*psi)), y)
 beta.emp <- c(rep(0, (p+1)), rep(0, p*psi))
 # beta.emp <- c(as.vector(theta.origin), as.vector(gamma.origin))
 beta.map <- optim(beta.emp, fn = log.posterior, #gr = grad.log.posterior, 
-                  y.origin = y, lambda.1 = lambda.1, lambda.3 = lambda.3,
-                  # method = "BFGS",
+                  y.origin = y,
+                  method = "BFGS", 
                   # method = "CG",
-                  method = "SANN",
-                  control = list(fnscale = -1))
+                  # method = "SANN",
+                  control = list(fnscale = -1, maxit = 200))
 # theta.map <- matrix(beta.map$par[1:(2*p)],nrow=2)
 theta.map <- beta.map$par[1:(p+1)]
 gamma.map <- beta.map$par[-(1:(p+1))]

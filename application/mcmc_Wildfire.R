@@ -286,6 +286,11 @@ print(MCMCtrace(object = fit.v2$samples,
           pdf = FALSE, # no export to PDF
           ind = TRUE, # separate density lines per chain
           n.eff = TRUE,# add eff sample size
+          params = c("gamma")))
+print(MCMCtrace(object = fit.v2$samples,
+          pdf = FALSE, # no export to PDF
+          ind = TRUE, # separate density lines per chain
+          n.eff = TRUE,# add eff sample size
           params = c("lambda.1", "lambda.2")))
 
 samples <- fit.v2$samples$chain1
