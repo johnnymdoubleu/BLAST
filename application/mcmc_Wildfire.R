@@ -80,7 +80,7 @@ for(i in 1:length(cov)){
     # cov.long[which(!is.na(df.long$measurement)),]
     fwi.index[,i] <- cov.long$measurement[missing.values]
     # fwi.scaled[,i] <- cov.long$measurement[missing.values]
-    fwi.scaled[,i] <- scale(cov.long$measurement[missing.values])
+    fwi.scaled[,i] <- cov.long$measurement[missing.values]
 }
 fwi.index$date <- as.Date(substr(cov.long$...1[missing.values],1,10), "%Y-%m-%d")
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
@@ -91,6 +91,7 @@ fwi.index$month <- factor(format(fwi.index$date,"%b"),
 # with(cov.long[missing.values], paste(substr[...1, 6, 10],month,day,sep="-"))
 
 fwi.scaled <- fwi.scaled[which(Y>u),]
+fwi.scaled <- as.data.frame(scale(fwi.scaled))
 # corrplot.mixed(cor(fwi.scaled),
 #                 upper = "circle",
 #                 lower = "number",
@@ -101,11 +102,11 @@ fwi.scaled <- fwi.scaled[which(Y>u),]
 # special <- gather(fwi.scaled, cols, value) |> spread(cols, value) |> select(colnames(fwi.scaled))
 ggplot(gather(fwi.scaled, cols, value), aes(x = value)) + 
        geom_histogram(binwidth = 0.1) + facet_grid(cols~.)
-ggplot(gather(fwi.index[which(Y>u),1:7], cols, value), aes(x = value)) + 
-       geom_histogram(binwidth = 2) + facet_grid(cols~.)
+# ggplot(gather(fwi.index[which(Y>u),1:7], cols, value), aes(x = value)) + 
+#        geom_histogram(binwidth = 2) + facet_grid(cols~.)
 df.extreme <- cbind(y, fwi.scaled)
 # df.extreme <- cbind(date = cov$date[which(Y>u)], df.extreme)
-df.extreme <- cbind(month = fwi.index$month[which(Y>u)], df.extreme)
+df.extreme <- as.data.frame(cbind(month = fwi.index$month[which(Y>u)], df.extreme))
 # ggplot(df.extreme, aes(x=month, y=y, color=month)) + geom_point(size=6) +
 #     theme(plot.title = element_text(hjust = 0.5, size = 20),
 #         legend.title = element_blank(),
@@ -282,11 +283,11 @@ MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2,
 # print(alpha.summary)
 # MCMCsummary(object = fit.v2$samples, round = 3)
 
-print(MCMCtrace(object = fit.v2$samples,
-          pdf = FALSE, # no export to PDF
-          ind = TRUE, # separate density lines per chain
-          n.eff = TRUE,# add eff sample size
-          params = c("gamma")))
+# print(MCMCtrace(object = fit.v2$samples,
+#           pdf = FALSE, # no export to PDF
+#           ind = TRUE, # separate density lines per chain
+#           n.eff = TRUE,# add eff sample size
+#           params = c("gamma")))
 print(MCMCtrace(object = fit.v2$samples,
           pdf = FALSE, # no export to PDF
           ind = TRUE, # separate density lines per chain

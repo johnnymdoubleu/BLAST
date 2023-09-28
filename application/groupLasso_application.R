@@ -187,65 +187,98 @@ for(i in 1:p){
 #   bs.x <- cbind(bs.x, tps)
 # }
 
-
-
 log.posterior <- function(beta, y.origin){
-    log.lik <- function(beta){
-        exp.prime <- function(x, thres){
-            if(x > thres){ans <- exp(thres) + exp(thres)*(x-thres)}
-            else{ans <- exp(x)}
-            return(ans)
-        }
-        # theta.0 <- beta[1]
-        theta <- beta[1:(p+1)]
-        gamma <- matrix(beta[-(1:(p+1))], ncol=p)
-        g <- matrix(, nrow=n, ncol=p)
-        term <- first.term <- second.term <- NULL
-        for(j in 1:p){
-            # coef <- as.matrix(gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)])
-            linear.term <- bs.linear[,j] * theta[j+1]
-            nonlinear.term <- bs.nonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma[,j]
-            g[, j] <- linear.term + nonlinear.term
-        }
-        for(i in 1:n){
-            first.term[i] <- theta[1] + sum(g[i,]) - log(y.origin[i])
-            second.term[i] <- exp(theta[1] + sum(g[i,])) * log(y.origin[i]/u)
-            term[i] <- first.term[i] - second.term[i]
-        }
-        return(sum(term))
-    }
-    log.prior <- function(beta){
-        moreau.envelope <- function(w){
-            if(w < -1){ans <- -0.5 - w}
-            else if (1 < w){ans <- w - 0.5}
-            else {ans <- (w^2) / 2}
-            return(ans)
-        }
-        lambda.1 <- 20
-        lambda.2 <- 0
-        lambda.3 <- 10
-        # theta.0 <- beta[1]
-        theta <- beta.emp[1:(p+1)]
-        gamma <- matrix(beta.emp[-(1:(p+1))], ncol=p)
-        g.1 <- g.2 <- term <- third.term <- first.term <- second.term <- NULL
-        for(j in 1:p){
-            first.term[j] <- -1 * lambda.1 * sqrt(sum((gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)])^2))
-            # first.term[j] <- -1 * lambda.1 * abs(sum(gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)]))
-            second.term[j] <- -1 * lambda.2 * sum((gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)])^2)
-            third.term[j] <- -1 * lambda.3 * sum(abs(theta[j+1]))
-            term[j] <- first.term[j] + second.term[j] + third.term[j]
-            # term[j] <- first.term[j] + second.term[j] - lambda.3 * sum(abs(beta))
-        }
-        # print(head(term))
-        return((-1 * lambda.3 * abs(theta[1])) + sum(term))
-    }
-    return(log.lik(beta) + log.prior(beta))
+  theta <- beta[1:(p+1)]
+  gamma <- matrix(beta[-(1:(p+1))], ncol=p)
+  g <- matrix(, nrow=n, ncol=p)
+  lik <- first.lik <- second.lik <- NULL
+  for(j in 1:p){
+      # coef <- as.matrix(gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)])
+      linear.term <- bs.linear[,j] * theta[j+1]
+      nonlinear.term <- bs.nonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma[,j]
+      g[, j] <- linear.term + nonlinear.term
+  }
+  for(i in 1:n){
+      first.lik[i] <- theta[1] + sum(g[i,]) - log(y.origin[i])
+      second.lik[i] <- exp(theta[1] + sum(g[i,])) * log(y.origin[i]/u)
+      lik[i] <- first.lik[i] - second.lik[i]
+  }
+  sum.lik <- sum(lik)
+
+  lambda.1 <- 7
+  lambda.2 <- 200
+  # theta.0 <- beta[1]
+  theta <- beta.emp[1:(p+1)]
+  gamma <- matrix(beta.emp[-(1:(p+1))], ncol=p)
+  prior <- first.prior <- second.prior <- NULL
+  for(j in 1:p){
+      first.prior[j] <- -1 * lambda.1 * sum(abs(theta[j+1]))
+      second.prior[j] <- -1 * lambda.2 * sqrt(sum((gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)])^2))
+      prior[j] <- first.prior[j] + second.prior[j]
+  }
+  sum.prior <- (-1 * lambda.2 * abs(theta[1])) + sum(prior)
+  # print(head(term))
+  return(sum.lik + sum.prior)
 }
+
+
+# log.posterior <- function(beta, y.origin){
+#     log.lik <- function(beta){
+#         exp.prime <- function(x, thres){
+#             if(x > thres){ans <- exp(thres) + exp(thres)*(x-thres)}
+#             else{ans <- exp(x)}
+#             return(ans)
+#         }
+#         # theta.0 <- beta[1]
+#         theta <- beta[1:(p+1)]
+#         gamma <- matrix(beta[-(1:(p+1))], ncol=p)
+#         g <- matrix(, nrow=n, ncol=p)
+#         term <- first.term <- second.term <- NULL
+#         for(j in 1:p){
+#             # coef <- as.matrix(gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)])
+#             linear.term <- bs.linear[,j] * theta[j+1]
+#             nonlinear.term <- bs.nonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma[,j]
+#             g[, j] <- linear.term + nonlinear.term
+#         }
+#         for(i in 1:n){
+#             first.term[i] <- theta[1] + sum(g[i,]) - log(y.origin[i])
+#             second.term[i] <- exp(theta[1] + sum(g[i,])) * log(y.origin[i]/u)
+#             term[i] <- first.term[i] - second.term[i]
+#         }
+#         return(sum(term))
+#     }
+#     log.prior <- function(beta){
+#         moreau.envelope <- function(w){
+#             if(w < -1){ans <- -0.5 - w}
+#             else if (1 < w){ans <- w - 0.5}
+#             else {ans <- (w^2) / 2}
+#             return(ans)
+#         }
+#         lambda.1 <- 20
+#         lambda.2 <- 0
+#         lambda.3 <- 10
+#         # theta.0 <- beta[1]
+#         theta <- beta.emp[1:(p+1)]
+#         gamma <- matrix(beta.emp[-(1:(p+1))], ncol=p)
+#         g.1 <- g.2 <- term <- third.term <- first.term <- second.term <- NULL
+#         for(j in 1:p){
+#             first.term[j] <- -1 * lambda.1 * sqrt(sum((gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)])^2))
+#             # first.term[j] <- -1 * lambda.1 * abs(sum(gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)]))
+#             second.term[j] <- -1 * lambda.2 * sum((gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)])^2)
+#             third.term[j] <- -1 * lambda.3 * sum(abs(theta[j+1]))
+#             term[j] <- first.term[j] + second.term[j] + third.term[j]
+#             # term[j] <- first.term[j] + second.term[j] - lambda.3 * sum(abs(beta))
+#         }
+#         # print(head(term))
+#         return((-1 * lambda.3 * abs(theta[1])) + sum(term))
+#     }
+#     return(log.lik(beta) + log.prior(beta))
+# }
 # -6529.937 
 # -6473.18
 # -6445.875
 
-log.posterior(c(rep(0.1, (p+1)), rep(0.5, p*psi)), y)
+# log.posterior(c(rep(0.1, (p+1)), rep(0.5, p*psi)), y)
 beta.emp <- c(rep(0, (p+1)), rep(0, p*psi))
 # beta.emp <- c(as.vector(theta.origin), as.vector(gamma.origin))
 beta.map <- optim(beta.emp, fn = log.posterior, #gr = grad.log.posterior, 
@@ -268,7 +301,7 @@ df.theta <- data.frame("seq" = seq(1, (p+1)),
                   theta.map = beta.map$par[1:(p+1)])
 # df.theta$covariate <- factor(rep(seq(1, 1 + nrow(df.theta) %/% no.theta), each = no.theta, length.out = nrow(df.theta)))
 # df.theta$covariate <- factor(rep(names(fwi.scaled), each = no.theta, length.out = nrow(df.theta)))
-df.theta$covariate <- factor(c("\u03b8",names(fwi.scaled)), levels = c("\u03b8","DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC"))
+df.theta$covariate <- factor(c("\u03b8",colnames(fwi.scaled)), levels = c("\u03b8","DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC"))
 df.theta$labels <- factor(c("theta0","DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC"))
 # ggplot(df.theta, aes(x = seq)) + 
 #   geom_point(aes(y = theta.map, color = covariate), size = 1.5) + 
@@ -306,7 +339,7 @@ ggplot(df.theta, aes(x = covariate)) + ylab("") +
 df <- data.frame("seq" = seq(1, (psi*p)), 
                   gamma.map)
 # df$covariate <- factor(rep(seq(1, 1 + nrow(df) %/% psi), each = psi, length.out = nrow(df)))
-df$covariate <- factor(rep(names(fwi.scaled), each = psi, length.out = nrow(df)), levels = c("DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC"))
+df$covariate <- factor(rep(colnames(fwi.scaled), each = psi, length.out = nrow(df)), levels = c("DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC"))
 df$labels <- factor(1:(psi*p))
 ggplot(df, aes(x =labels , y = gamma.map, color = covariate)) + 
   geom_point(size = 4) + ylab("") + 
@@ -420,7 +453,7 @@ for (j in 1:p){
   func.nonlinear.new <- cbind(func.nonlinear.new, f.nonlinear.new[,j])  
 }
 
-covariates <- gl(p, n, (p*n), labels = factor(names(fwi.scaled)))
+covariates <- gl(p, n, (p*n), labels = factor(colnames(fwi.scaled)))
 replicate <- gl(2, n, (p*n))
 func.df <- data.frame(seq = seq(0,1,length.out = n),
                         # x = as.vector(apply(fwi.scaled, 2, sort, method = "quick")),
