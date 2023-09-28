@@ -624,7 +624,7 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
   #           color = "lightgrey", fill = "lightgrey",
   #          alpha = 0.4, linetype = "dashed") + 
   geom_ribbon(aes(x = grid, ymin = l.band, ymax = u.band), 
-              color = "lightgrey", fill = "lightgrey",
+              # color = "lightgrey", fill = "lightgrey",
               alpha = 0.4, linetype = "dashed") + 
   geom_line(aes(x = grid, y = trajhat), linetype = "dashed", linewidth = 1.2) + 
   geom_abline(intercept = 0, slope = 1, linewidth = 1.2) + 
