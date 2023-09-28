@@ -19,7 +19,7 @@ library(EnvStats)
 #FFMC : Fine FUel Moisture Code
 #DMC : Duff Moisture Code
 #DC : Drough Code
-plot((seq(0.1, 5, length.out = 500)), (seq(0.1, 5, length.out = 500)) * log(qPareto(0.9, 1, seq(0.1, 5, length.out = 500))))
+# plot((seq(0.1, 5, length.out = 500)), (seq(0.1, 5, length.out = 500)) * log(qPareto(0.9, 1, seq(0.1, 5, length.out = 500))))
 
 setwd("C:/Users/Johnny Lee/Documents/GitHub")
 df <- read_excel("./BRSTIR/application/AADiarioAnual.xlsx", col_types = c("date", rep("numeric",40)))
@@ -75,7 +75,7 @@ for(i in 1:length(cov)){
     # cov.long[which(!is.na(df.long$measurement)),]
     fwi.index[,i] <- cov.long$measurement[missing.values]
     # fwi.scaled[,i] <- cov.long$measurement[missing.values]
-    fwi.scaled[,i] <- scale(cov.long$measurement[missing.values])
+    fwi.scaled[,i] <- cov.long$measurement[missing.values]
 }
 fwi.index$date <- as.Date(substr(cov.long$...1[missing.values],1,10), "%Y-%m-%d")
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
@@ -86,6 +86,7 @@ fwi.index$month <- factor(format(fwi.index$date,"%b"),
 # with(cov.long[missing.values], paste(substr[...1, 6, 10],month,day,sep="-"))
 
 fwi.scaled <- fwi.scaled[which(Y>u),]
+fwi.scaled <- scale(fwi.scaled)
 corrplot.mixed(cor(fwi.scaled),
                 upper = "circle",
                 lower = "number",
@@ -93,7 +94,7 @@ corrplot.mixed(cor(fwi.scaled),
 # ggsave("./Laboratory/Application/figures/correlation.pdf", width=15)
 # cov$date <- as.Date(with(cov, paste(year,month,day,sep="-")),"%Y-%m-%d")
 # cov$yearmon <- as.Date(with(cov, paste(year,month,sep="-")),"%Y-%m")
-df.extreme <- cbind(y, fwi.scaled)
+df.extreme <- as.data.frame(cbind(y, fwi.scaled))
 # df.extreme <- cbind(date = cov$date[which(Y>u)], df.extreme)
 df.extreme <- cbind(month = fwi.index$month[which(Y>u)], df.extreme)
 ggplot(df.extreme, aes(x=month, y=y, color=month)) + geom_point(size=6) +
@@ -189,7 +190,6 @@ for(i in 1:p){
 
 
 log.posterior <- function(beta, y.origin){
-
     log.lik <- function(beta){
         exp.prime <- function(x, thres){
             if(x > thres){ans <- exp(thres) + exp(thres)*(x-thres)}
@@ -236,10 +236,10 @@ log.posterior <- function(beta, y.origin){
             term[j] <- first.term[j] + second.term[j] + third.term[j]
             # term[j] <- first.term[j] + second.term[j] - lambda.3 * sum(abs(beta))
         }
-        print(head(term))
+        # print(head(term))
         return((-1 * lambda.3 * abs(theta[1])) + sum(term))
     }
-    return(log.prior(beta))
+    return(log.lik(beta) + log.prior(beta))
 }
 # -6529.937 
 # -6473.18
