@@ -323,7 +323,7 @@ ggplot(df.theta, aes(x = covariate)) + ylab("") +
                               expression(bold(theta[6])),
                               expression(bold(theta[7])))) + 
   scale_color_discrete(labels = c(expression(theta[0]),"DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC")) + 
-  theme_minimal(base_size = 30) + xlab('') + ylim(-0.0015, 0.0015) +
+  theme_minimal(base_size = 30) + xlab('') + ylim(-0.015, 0.015) +
   theme(plot.title = element_text(hjust = 0.5, size = 20),
           legend.text.align = 0,
           legend.title = element_blank(),
