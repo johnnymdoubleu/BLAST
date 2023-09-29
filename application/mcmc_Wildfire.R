@@ -196,7 +196,7 @@ reExp = nimbleFunction(
 
 model.penalisation <- nimbleCode({
   #prior
-  lambda.1 ~ dgamma(0.5, 2) #gamma distribution prior for lambda
+  lambda.1 ~ dgamma(1, 1.1) #gamma distribution prior for lambda
   lambda.2 ~ dgamma(0.1, 0.1)
   theta.0 ~ ddexp(0, lambda.1)
   for (j in 1:p){
@@ -258,8 +258,8 @@ fit.v2 <- nimbleMCMC(code = model.penalisation,
                   monitors = monitor.pred,
                   inits = init.alpha(),
                   thin = 20,
-                  niter = 70000,
-                  nburnin = 50000,
+                  niter = 100000,
+                  nburnin = 120000,
                   # setSeed = 300,
                   nchains = 3,
                   # WAIC = TRUE,-
