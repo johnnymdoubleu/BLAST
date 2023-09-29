@@ -196,14 +196,15 @@ reExp = nimbleFunction(
 
 model.penalisation <- nimbleCode({
   #prior
-  lambda.1 ~ dgamma(1, 1.1) #gamma distribution prior for lambda
-  lambda.2 ~ dgamma(0.1, 0.1)
-  theta.0 ~ ddexp(0, lambda.1)
+  lambda.1 ~ dgamma(1, 10) #gamma distribution prior for lambda
+  lambda.2 ~ dgamma(0.05, 0.05)
+  
   for (j in 1:p){
     theta[j] ~ ddexp(0, lambda.1)
     tau.square[j] ~ dgamma((psi+1)/2, (lambda.2^2)/2)
     sigma.square[j] ~ dinvgamma(0.01, 0.01)
   }
+  theta.0 ~ ddexp(0, lambda.1)
 
   for (j in 1:p){
     covm[1:psi, 1:psi, j] <- diag(psi) * (sigma.square[j] * tau.square[j])
@@ -258,8 +259,8 @@ fit.v2 <- nimbleMCMC(code = model.penalisation,
                   monitors = monitor.pred,
                   inits = init.alpha(),
                   thin = 20,
-                  niter = 100000,
-                  nburnin = 120000,
+                  niter = 120000,
+                  nburnin = 100000,
                   # setSeed = 300,
                   nchains = 3,
                   # WAIC = TRUE,-
