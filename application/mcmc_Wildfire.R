@@ -197,7 +197,7 @@ reExp = nimbleFunction(
 model.penalisation <- nimbleCode({
   #prior
   lambda.1 ~ dgamma(1, 10) #gamma distribution prior for lambda
-  lambda.2 ~ dgamma(0.05, 0.05)
+  lambda.2 ~ dgamma(0.1, 0.1)
   
   for (j in 1:p){
     theta[j] ~ ddexp(0, lambda.1)
