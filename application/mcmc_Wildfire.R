@@ -182,7 +182,7 @@ registerDistributions(list(
 
 reExp = nimbleFunction(
     run = function(a = double(0)) {
-        m <- 11
+        m <- 11.5
         if(a > m){
           ans <- exp(m) + exp(m)*(a-m)
         }
