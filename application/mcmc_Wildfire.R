@@ -100,8 +100,8 @@ fwi.scaled <- as.data.frame(scale(fwi.scaled))
 # cov$date <- as.Date(with(cov, paste(year,month,day,sep="-")),"%Y-%m-%d")
 # cov$yearmon <- as.Date(with(cov, paste(year,month,sep="-")),"%Y-%m")
 # special <- gather(fwi.scaled, cols, value) |> spread(cols, value) |> select(colnames(fwi.scaled))
-ggplot(gather(fwi.scaled, cols, value), aes(x = value)) + 
-       geom_histogram(binwidth = 0.1) + facet_grid(cols~.)
+# ggplot(gather(fwi.scaled, cols, value), aes(x = value)) + 
+#        geom_histogram(binwidth = 0.1) + facet_grid(cols~.)
 # ggplot(gather(fwi.index[which(Y>u),1:7], cols, value), aes(x = value)) + 
 #        geom_histogram(binwidth = 2) + facet_grid(cols~.)
 df.extreme <- cbind(y, fwi.scaled)
@@ -200,14 +200,14 @@ model.penalisation <- nimbleCode({
   lambda.2 ~ dgamma(0.1, 0.1)
   
   for (j in 1:p){
-    theta[j] ~ ddexp(0, lambda.1)
+    theta[j] ~ ddexp(0, sqrt(lambda.1))
     tau.square[j] ~ dgamma((psi+1)/2, (lambda.2^2)/2)
     sigma.square[j] ~ dinvgamma(0.01, 0.01)
   }
-  theta.0 ~ ddexp(0, lambda.1)
+  theta.0 ~ ddexp(0, sqrt(lambda.1))
 
   for (j in 1:p){
-    covm[1:psi, 1:psi, j] <- diag(psi) * (sigma.square[j] * tau.square[j])
+    covm[1:psi, 1:psi, j] <- diag(psi) * tau.square[j] * sigma.square[j]
     gamma[1:psi, j] ~ dmnorm(zero.vec[1:psi, 1], cov = covm[1:psi, 1:psi, j])
   }
 
