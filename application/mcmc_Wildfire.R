@@ -203,7 +203,6 @@ model.penalisation <- nimbleCode({
   for (j in 1:p){
     theta[j] ~ ddexp(0, sqrt(lambda.1))
     tau.square[j] ~ dgamma((psi+1)/2, (lambda.2^2)/2)
-    
   }
   theta0 ~ ddexp(0, sqrt(lambda.1))
   sigma.square ~ dinvgamma(0.01, 0.01)
@@ -211,12 +210,12 @@ model.penalisation <- nimbleCode({
   for (j in 1:p){
     covm[1:psi, 1:psi, j] <- diag(psi) * tau.square[j] * sigma.square
     gamma[1:psi, j] ~ dmnorm(zero.vec[1:psi, 1], cov = covm[1:psi, 1:psi, j])
+    g.nonlinear[1:n, j] <- bs.nonlinear[1:n, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma[1:psi, j]
   }
 
   # Likelihood
   for (j in 1:p){
     g.linear[1:n, j] <- bs.linear[1:n,j] * theta[j]
-    g.nonlinear[1:n, j] <- bs.nonlinear[1:n, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma[1:psi, j]
     # holder.linear[1:n, j] <- xholder.linear[1:n,j] * theta[j]
     # holder.nonlinear[1:n, j] <- xholder.nonlinear[1:n, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma[1:psi, j]
   }
@@ -251,7 +250,7 @@ monitor.pred <- c("theta0", "theta", "gamma", "alpha", "g.linear", "g.nonlinear"
 data <- list(y = as.vector(y), bs.linear = bs.linear, 
               bs.nonlinear = bs.nonlinear,
               zero.vec = as.matrix(rep(0, psi)), #sigma = 0.75,
-            #    new.x = xholder, new.bs.x = new.bs.x,
+              # new.x = xholder, new.bs.x = new.bs.x,
               u = u) #, #C = 1000,  ones = as.vector(rep(1, n)),
               #shape = 0.5, scale = 0.5)
 
