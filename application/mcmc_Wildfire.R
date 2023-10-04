@@ -205,7 +205,7 @@ model.penalisation <- nimbleCode({
     tau.square[j] ~ dgamma((psi+1)/2, (lambda.2^2)/2)
   }
   theta0 ~ ddexp(0, lambda.1)
-  sigma.square ~ dinvgamma(0.01, 0.01)
+  sigma.square ~ dinvgamma(0.1, 0.1)
 
   for (j in 1:p){
     covm[1:psi, 1:psi, j] <- diag(psi) * tau.square[j] * sigma.square
