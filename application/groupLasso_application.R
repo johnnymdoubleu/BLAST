@@ -206,15 +206,15 @@ log.posterior <- function(beta, y.origin){
   sum.lik <- sum(lik)
 
   lambda.1 <- 0.1
-  lambda.2 <- 1200
+  lambda.2 <- 1000
   prior <- first.prior <- second.prior <- NULL
   for(j in 1:p){
       # print(sum(abs(theta[j+1])))
-      first.prior[j] <- -1 * lambda.1 * sum(abs(theta[j+1]))
+      first.prior[j] <- -1 * lambda.1 * abs(theta[j+1])
       second.prior[j] <- -1 * lambda.2 * sqrt(sum((gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)])^2))
       prior[j] <- first.prior[j] + second.prior[j]
   }
-  sum.prior <- (-1 * lambda.2 * abs(theta[1])) + sum(prior)
+  sum.prior <- (-1 * lambda.1 * abs(theta[1])) + sum(prior)
   # print(first.prior)
   return(sum.lik + sum.prior)
 }
@@ -474,7 +474,7 @@ equal_breaks <- function(n = 3, s = 0.1,...){
 ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab("Smooth Functions") +
   geom_line(aes(y=new, colour = covariates), linewidth=2) + ylab ("") +
-  facet_grid(covariates ~ .) +
+  facet_grid(covariates ~ ., scales="free_y") +
   scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + theme_minimal(base_size = 30) + 
   theme(plot.title = element_text(hjust = 0.5, size = 30),
         legend.position = "none",
