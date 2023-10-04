@@ -86,7 +86,7 @@ fwi.index$month <- factor(format(fwi.index$date,"%b"),
 # with(cov.long[missing.values], paste(substr[...1, 6, 10],month,day,sep="-"))
 
 fwi.scaled <- fwi.scaled[which(Y>u),]
-fwi.scaled <- scale(fwi.scaled[,c(1,2,3)])
+fwi.scaled <- scale(fwi.scaled[,c(1,2,4)])
 corrplot.mixed(cor(fwi.scaled),
                 upper = "circle",
                 lower = "number",
