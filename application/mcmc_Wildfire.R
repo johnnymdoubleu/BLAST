@@ -10,6 +10,7 @@ library(ReIns)
 library(evir)
 library(nimble, warn.conflicts = FALSE)
 suppressMessages(library(coda))
+library(ggmcmc)
 # library(R6)
 # suppressMessages(library(igraph))
 # library(mgcv)
@@ -233,17 +234,17 @@ model.penalisation <- nimbleCode({
 
 constant <- list(psi = psi, n = n, p = p)
 init.alpha <- function() list(list(gamma = matrix(0.02, nrow = psi, ncol=p), 
-                                    theta = rep(0.01, p), theta.0 = 0.01,
+                                    theta = rep(0.01, p), theta0 = 0.01,
                                     covm = array(1, dim = c(psi,psi, p))),
                               list(gamma = matrix(0, nrow = psi, ncol=p),
-                                    theta = rep(0, p), theta.0 = 0,
+                                    theta = rep(0, p), theta0 = 0,
                                     covm = array(1, dim = c(psi,psi, p))),
                               list(gamma = matrix(-0.01, nrow = psi, ncol=p),
-                                    theta = rep(0.02, p), theta.0 = 0.03,
+                                    theta = rep(0.02, p), theta0 = 0.03,
                                     covm = array(1, dim = c(psi,psi, p))))
                             #   list(gamma = matrix(1, nrow = psi, ncol=p)))
                               # y = as.vector(y),
-monitor.pred <- c("theta.0", "theta", "gamma", "alpha", "g.linear", "g.nonlinear",
+monitor.pred <- c("theta0", "theta", "gamma", "alpha", "g.linear", "g.nonlinear",
                   "lambda.1", "lambda.2")
 # monitor.pred <- c("covm")
 data <- list(y = as.vector(y), bs.linear = bs.linear, 
@@ -259,8 +260,8 @@ fit.v2 <- nimbleMCMC(code = model.penalisation,
                   monitors = monitor.pred,
                   inits = init.alpha(),
                   thin = 20,
-                  niter = 120000,
-                  nburnin = 100000,
+                  niter = 35000,
+                  nburnin = 15000,
                   # setSeed = 300,
                   nchains = 3,
                   # WAIC = TRUE,-
@@ -272,12 +273,17 @@ alpha.summary <- fit.v2$summary$all.chains
 
 # alpha.summary[701:711,]
 
-MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2,
-            HPD = TRUE, xlab="theta", offset = 0.05, exact = TRUE,
-            horiz = FALSE, params = c("theta.0", "theta"))
-MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2,
-            HPD = TRUE, xlab="gamma", offset = 0.5,
-            horiz = FALSE, params = c("gamma"))
+# MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2,
+#             HPD = TRUE, xlab="theta", offset = 0.05, exact = TRUE,
+#             horiz = FALSE, params = c("theta0", "theta"))
+# MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2,
+#             HPD = TRUE, xlab="gamma", offset = 0.5,
+#             horiz = FALSE, params = c("gamma"))
+gg.fit <- ggs(fit.v2$samples)
+gg.fit %>% filter(Parameter == c("lambda.1", "lambda.2")) %>% 
+  ggs_traceplot() + theme_minimal(base_size = 20)
+gg.fit %>% filter(Parameter == c("lambda.1", "lambda.2")) %>% 
+  ggs_density() + theme_minimal(base_size = 20)
 # MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2,
 #             HPD = TRUE, xlab="lambda", offset = 0.5,
 #             horiz = FALSE, params = c("lambda.1", "lambda.2"))            
@@ -289,11 +295,11 @@ MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2,
 #           ind = TRUE, # separate density lines per chain
 #           n.eff = TRUE,# add eff sample size
 #           params = c("gamma")))
-print(MCMCtrace(object = fit.v2$samples,
-          pdf = FALSE, # no export to PDF
-          ind = TRUE, # separate density lines per chain
-          n.eff = TRUE,# add eff sample size
-          params = c("lambda.1", "lambda.2")))
+# print(MCMCtrace(object = fit.v2$samples,
+#           pdf = FALSE, # no export to PDF
+#           ind = TRUE, # separate density lines per chain
+#           n.eff = TRUE,# add eff sample size
+#           params = c("lambda.1", "lambda.2")))
 
 samples <- fit.v2$samples$chain1
 len <- dim(samples)[1]
@@ -564,4 +570,6 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
 # saveRDS(data.scenario, file=paste0("Simulation/BayesianPsplines/results/",date,"-",time, "_sc1_data_samp1.rds"))
 
 cat("sc1_Alp Done")
+
+alpha.summary[((dim(alpha.summary)[1]-p-2):(dim(alpha.summary)[1]-p-1)),] 
 
