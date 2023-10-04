@@ -204,7 +204,7 @@ model.penalisation <- nimbleCode({
     tau.square[j] ~ dgamma((psi+1)/2, (lambda.2^2)/2)
     sigma.square[j] ~ dinvgamma(0.01, 0.01)
   }
-  theta.0 ~ ddexp(0, sqrt(lambda.1))
+  theta0 ~ ddexp(0, sqrt(lambda.1))
 
   for (j in 1:p){
     covm[1:psi, 1:psi, j] <- diag(psi) * tau.square[j] * sigma.square[j]
@@ -220,7 +220,7 @@ model.penalisation <- nimbleCode({
   }
 
   for (i in 1:n){
-    alpha[i] <- reExp(theta.0 + sum(g.nonlinear[i, 1:p]) + sum(g.linear[i, 1:p]))
+    alpha[i] <- reExp(theta0 + sum(g.nonlinear[i, 1:p]) + sum(g.linear[i, 1:p]))
     # alpha[i] <- log(5) / log(1 + exp(theta.0 + sum(g.nonlinear[i, 1:p]) + sum(g.linear[i, 1:p])))
     # log(new.alpha[i]) <- theta.0 + sum(holder.nonlinear[i, 1:p]) + sum(holder.linear[i, 1:p])
   }

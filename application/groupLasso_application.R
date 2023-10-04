@@ -205,8 +205,8 @@ log.posterior <- function(beta, y.origin){
   }
   sum.lik <- sum(lik)
 
-  lambda.1 <- beta[-c(-1)]
-  lambda.2 <- beta[-c(-2)]
+  lambda.1 <- beta[length(beta)-1]
+  lambda.2 <- beta[length(beta)]
   # lambda.1 <- 0.2700102
   # lambda.2 <- 1431.803
   prior <- first.prior <- second.prior <- NULL
