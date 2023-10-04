@@ -279,7 +279,7 @@ log.posterior <- function(beta, y.origin){
 # -6445.875
 
 
-beta.emp <- c(rep(0, (p+1)), rep(0, p*psi), 0, 0)
+beta.emp <- c(rep(0, (p+1)), rep(0, p*psi), 2, 800)
 # beta.emp <- c(as.vector(theta.origin), as.vector(gamma.origin))
 beta.map <- optim(beta.emp, fn = log.posterior, #gr = grad.log.posterior, 
                   y.origin = y,

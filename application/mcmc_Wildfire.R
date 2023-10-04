@@ -203,12 +203,13 @@ model.penalisation <- nimbleCode({
   for (j in 1:p){
     theta[j] ~ ddexp(0, sqrt(lambda.1))
     tau.square[j] ~ dgamma((psi+1)/2, (lambda.2^2)/2)
-    sigma.square[j] ~ dinvgamma(0.01, 0.01)
+    
   }
   theta0 ~ ddexp(0, sqrt(lambda.1))
+  sigma.square ~ dinvgamma(0.01, 0.01)
 
   for (j in 1:p){
-    covm[1:psi, 1:psi, j] <- diag(psi) * tau.square[j] * sigma.square[j]
+    covm[1:psi, 1:psi, j] <- diag(psi) * tau.square[j] * sigma.square
     gamma[1:psi, j] ~ dmnorm(zero.vec[1:psi, 1], cov = covm[1:psi, 1:psi, j])
   }
 
@@ -281,8 +282,6 @@ alpha.summary <- fit.v2$summary$all.chains
 #             horiz = FALSE, params = c("gamma"))
 gg.fit <- ggs(fit.v2$samples)
 lambda.p1 <- gg.fit %>% filter(Parameter == c("lambda.1", "lambda.2")) %>% 
-  ggs_pairs()
-
   ggs_traceplot() + theme_minimal(base_size = 20)
 lambda.p2 <- gg.fit %>% filter(Parameter == c("lambda.1", "lambda.2")) %>% 
   ggs_density() + theme_minimal(base_size = 20)
