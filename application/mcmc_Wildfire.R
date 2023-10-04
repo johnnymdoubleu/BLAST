@@ -201,10 +201,10 @@ model.penalisation <- nimbleCode({
   lambda.2 ~ dgamma(0.1, 0.1)
   
   for (j in 1:p){
-    theta[j] ~ ddexp(0, sqrt(lambda.1))
+    theta[j] ~ ddexp(0, lambda.1)
     tau.square[j] ~ dgamma((psi+1)/2, (lambda.2^2)/2)
   }
-  theta0 ~ ddexp(0, sqrt(lambda.1))
+  theta0 ~ ddexp(0, lambda.1)
   sigma.square ~ dinvgamma(0.01, 0.01)
 
   for (j in 1:p){
@@ -260,8 +260,8 @@ fit.v2 <- nimbleMCMC(code = model.penalisation,
                   monitors = monitor.pred,
                   inits = init.alpha(),
                   thin = 20,
-                  niter = 35000,
-                  nburnin = 15000,
+                  niter = 75000,
+                  nburnin = 55000,
                   # setSeed = 300,
                   nchains = 3,
                   # WAIC = TRUE,-
