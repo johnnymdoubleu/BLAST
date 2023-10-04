@@ -205,8 +205,8 @@ log.posterior <- function(beta, y.origin){
   }
   sum.lik <- sum(lik)
 
-  lambda.1 <- 0.2
-  lambda.2 <- 800
+  lambda.1 <- 0.1
+  lambda.2 <- 1200
   prior <- first.prior <- second.prior <- NULL
   for(j in 1:p){
       # print(sum(abs(theta[j+1])))
