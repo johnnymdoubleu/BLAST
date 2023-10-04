@@ -277,12 +277,12 @@ log.posterior <- function(beta, y.origin){
 # -6445.875
 
 
-beta.emp <- c(rep(0, (p+1)), rep(0, p*psi))
+beta.emp <- c(rep(0, (p+1)), rep(0, p*psi), 0, 0)
 # beta.emp <- c(as.vector(theta.origin), as.vector(gamma.origin))
 beta.map <- optim(beta.emp, fn = log.posterior, #gr = grad.log.posterior, 
                   y.origin = y,
-                  method = "BFGS", 
-                  # method = "CG",
+                  # method = "BFGS", 
+                  method = "CG",
                   # method = "SANN",
                   control = list(fnscale = -1, maxit = 300))
 # theta.map <- matrix(beta.map$par[1:(2*p)],nrow=2)
@@ -296,7 +296,7 @@ date <- gsub("-","", substr(systime, 1, 10))
 time <- substr(systime, 12, 20)
 
 df.theta <- data.frame("seq" = seq(1, (p+1)),
-                  theta.map = beta.map$par[1:(p+1)])
+                  theta.map)
 # df.theta$covariate <- factor(rep(seq(1, 1 + nrow(df.theta) %/% no.theta), each = no.theta, length.out = nrow(df.theta)))
 # df.theta$covariate <- factor(rep(names(fwi.scaled), each = no.theta, length.out = nrow(df.theta)))
 df.theta$covariate <- factor(c("\u03b8",colnames(fwi.scaled)), levels = c("\u03b8","DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC"))
@@ -323,7 +323,7 @@ ggplot(df.theta, aes(x = covariate)) + ylab("") +
                               expression(bold(theta[6])),
                               expression(bold(theta[7])))) + 
   scale_color_discrete(labels = c(expression(theta[0]),"DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC")) + 
-  theme_minimal(base_size = 30) + xlab('') + ylim(-0.25, 0.25) +
+  theme_minimal(base_size = 30) + xlab('') + ylim(-0.01, 0.01) +
   theme(plot.title = element_text(hjust = 0.5, size = 20),
           legend.text.align = 0,
           legend.title = element_blank(),
