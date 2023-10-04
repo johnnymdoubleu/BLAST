@@ -199,43 +199,43 @@ model.penalisation <- nimbleCode({
   #prior
   lambda.1 ~ dgamma(0.1, 0.5) #gamma distribution prior for lambda
   lambda.2 ~ dgamma(0.1, 0.1)
-  
-  for (j in 1:p){
-    theta[j] ~ ddexp(0, lambda.1)
-    tau.square[j] ~ dgamma((psi+1)/2, (lambda.2^2)/2)
-  }
+
   theta0 ~ ddexp(0, lambda.1)
   sigma.square ~ dinvgamma(0.1, 0.1)
 
+
   for (j in 1:p){
+    theta[j] ~ ddexp(0, lambda.1)
+    tau.square[j] ~ dgamma((psi+1)/2, (lambda.2^2)/2)
     covm[1:psi, 1:psi, j] <- diag(psi) * tau.square[j] * sigma.square
     gamma[1:psi, j] ~ dmnorm(zero.vec[1:psi, 1], cov = covm[1:psi, 1:psi, j])
     g.nonlinear[1:n, j] <- bs.nonlinear[1:n, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma[1:psi, j]
+    g.linear[1:n, j] <- bs.linear[1:n,j] * theta[j]
   }
 
   # Likelihood
-  for (j in 1:p){
-    g.linear[1:n, j] <- bs.linear[1:n,j] * theta[j]
-    # holder.linear[1:n, j] <- xholder.linear[1:n,j] * theta[j]
-    # holder.nonlinear[1:n, j] <- xholder.nonlinear[1:n, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma[1:psi, j]
-  }
+  # for (j in 1:p){
+  #   # holder.linear[1:n, j] <- xholder.linear[1:n,j] * theta[j]
+  #   # holder.nonlinear[1:n, j] <- xholder.nonlinear[1:n, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma[1:psi, j]
+  # }
 
   for (i in 1:n){
     alpha[i] <- reExp(theta0 + sum(g.nonlinear[i, 1:p]) + sum(g.linear[i, 1:p]))
+    y[i] ~ dpareto(1, u, alpha[i])
     # alpha[i] <- log(5) / log(1 + exp(theta.0 + sum(g.nonlinear[i, 1:p]) + sum(g.linear[i, 1:p])))
     # log(new.alpha[i]) <- theta.0 + sum(holder.nonlinear[i, 1:p]) + sum(holder.linear[i, 1:p])
   }
-  for(i in 1:n){
-    y[i] ~ dpareto(1, u, alpha[i])
-    # spy[i] <- (alpha[i]*(y[i]/u)^(-1*alpha[i])*y[i]^(-1)) / C
-    # ones[i] ~ dbern(spy[i])
-  }
+  # for(i in 1:n){
+    
+  #   # spy[i] <- (alpha[i]*(y[i]/u)^(-1*alpha[i])*y[i]^(-1)) / C
+  #   # ones[i] ~ dbern(spy[i])
+  # }
 })
 
 constant <- list(psi = psi, n = n, p = p)
 init.alpha <- function() list(list(gamma = matrix(0.02, nrow = psi, ncol=p), 
                                     theta = rep(0.01, p), theta0 = 0.01,
-                                    covm = array(1, dim = c(psi,psi, p))),
+                                    covm = array(0.5, dim = c(psi,psi, p))),
                               list(gamma = matrix(0, nrow = psi, ncol=p),
                                     theta = rep(0, p), theta0 = 0,
                                     covm = array(1, dim = c(psi,psi, p))),
@@ -289,7 +289,7 @@ grid.arrange(lambda.p1, lambda.p2, ncol=2)
 #             HPD = TRUE, xlab="lambda", offset = 0.5,
 #             horiz = FALSE, params = c("lambda.1", "lambda.2"))            
 # print(alpha.summary)
-# MCMCsummary(object = fit.v2$samples, round = 3)
+MCMCsummary(object = fit.v2$samples, round = 3)[((dim(alpha.summary)[1]-p-2-(psi*p)):dim(alpha.summary)[1]),]
 
 # print(MCMCtrace(object = fit.v2$samples,
 #           pdf = FALSE, # no export to PDF
