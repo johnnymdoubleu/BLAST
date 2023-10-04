@@ -285,10 +285,6 @@ lambda.p1 <- gg.fit %>% filter(Parameter == c("lambda.1", "lambda.2")) %>%
 lambda.p2 <- gg.fit %>% filter(Parameter == c("lambda.1", "lambda.2")) %>% 
   ggs_density() + theme_minimal(base_size = 20)
 grid.arrange(lambda.p1, lambda.p2, ncol=2)
-# ggs(fit.v2$samples, family = "^alpha") %>% 
-#   ggs_caterpillar(horizontal=FALSE, sort = FALSE, greek = TRUE) +
-#   theme_minimal(base_size = 20)
-# ggs_ppmean(ggs(fit.v2$samples, family = "^alpha"), outcome = alpha.new)
 # MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2,
 #             HPD = TRUE, xlab="lambda", offset = 0.5,
 #             horiz = FALSE, params = c("lambda.1", "lambda.2"))            
