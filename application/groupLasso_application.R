@@ -86,7 +86,7 @@ fwi.index$month <- factor(format(fwi.index$date,"%b"),
 # with(cov.long[missing.values], paste(substr[...1, 6, 10],month,day,sep="-"))
 
 fwi.scaled <- fwi.scaled[which(Y>u),]
-fwi.scaled <- scale(fwi.scaled[,c(1,2,4)])
+fwi.scaled <- scale(fwi.scaled)
 corrplot.mixed(cor(fwi.scaled),
                 upper = "circle",
                 lower = "number",
@@ -283,8 +283,8 @@ beta.emp <- c(rep(0, (p+1)), rep(0, p*psi), 0, 0)
 # beta.emp <- c(as.vector(theta.origin), as.vector(gamma.origin))
 beta.map <- optim(beta.emp, fn = log.posterior, #gr = grad.log.posterior, 
                   y.origin = y,
-                  # method = "BFGS", 
-                  method = "CG",
+                  method = "BFGS", 
+                  # method = "CG",
                   # method = "SANN",
                   control = list(fnscale = -1, maxit = 300))
 # theta.map <- matrix(beta.map$par[1:(2*p)],nrow=2)
@@ -301,10 +301,8 @@ df.theta <- data.frame("seq" = seq(1, (p+1)),
                   theta.map)
 # df.theta$covariate <- factor(rep(seq(1, 1 + nrow(df.theta) %/% no.theta), each = no.theta, length.out = nrow(df.theta)))
 # df.theta$covariate <- factor(rep(names(fwi.scaled), each = no.theta, length.out = nrow(df.theta)))
-# df.theta$covariate <- factor(c("\u03b8",colnames(fwi.scaled)), levels = c("\u03b8","DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC"))
-# df.theta$labels <- factor(c("theta0","DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC"))
-df.theta$covariate <- factor(c("\u03b8",colnames(fwi.scaled)), levels = c("\u03b8","DSR", "FWI", "ISI"))
-df.theta$labels <- factor(c("theta0","DSR", "FWI", "ISI"))
+df.theta$covariate <- factor(c("\u03b8",colnames(fwi.scaled)), levels = c("\u03b8","DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC"))
+df.theta$labels <- factor(c("theta0","DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC"))
 # ggplot(df.theta, aes(x = seq)) + 
 #   geom_point(aes(y = theta.map, color = covariate), size = 1.5) + 
 # #   geom_smooth(method="gam") +
@@ -341,10 +339,9 @@ ggplot(df.theta, aes(x = covariate)) + ylab("") +
 df <- data.frame("seq" = seq(1, (psi*p)), 
                   gamma.map)
 # df$covariate <- factor(rep(seq(1, 1 + nrow(df) %/% psi), each = psi, length.out = nrow(df)))
-# df$covariate <- factor(rep(colnames(fwi.scaled), each = psi, length.out = nrow(df)), levels = c("DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC"))
-# df$labels <- factor(1:(psi*p))
-df$covariate <- factor(rep(colnames(fwi.scaled), each = psi, length.out = nrow(df)), levels = c("DSR", "FWI", "ISI"))
+df$covariate <- factor(rep(colnames(fwi.scaled), each = psi, length.out = nrow(df)), levels = c("DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC"))
 df$labels <- factor(1:(psi*p))
+
 ggplot(df, aes(x =labels , y = gamma.map, color = covariate)) + 
   geom_point(size = 4) + ylab("") + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab("")+
