@@ -232,8 +232,8 @@ model.penalisation <- nimbleCode({
 })
 
 constant <- list(psi = psi, n = n, p = p)
-init.alpha <- function() list(list(gamma = matrix(0.05, nrow = psi, ncol=p), 
-                                    theta = rep(0.01, p), theta.0 = 0.1,
+init.alpha <- function() list(list(gamma = matrix(0.02, nrow = psi, ncol=p), 
+                                    theta = rep(0.01, p), theta.0 = 0.01,
                                     covm = array(1, dim = c(psi,psi, p))),
                               list(gamma = matrix(0, nrow = psi, ncol=p),
                                     theta = rep(0, p), theta.0 = 0,
