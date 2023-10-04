@@ -205,8 +205,8 @@ log.posterior <- function(beta, y.origin){
   }
   sum.lik <- sum(lik)
 
-  lambda.1 <- 0.1
-  lambda.2 <- 1000
+  lambda.1 <- 0.2
+  lambda.2 <- 800
   prior <- first.prior <- second.prior <- NULL
   for(j in 1:p){
       # print(sum(abs(theta[j+1])))
@@ -281,8 +281,8 @@ beta.emp <- c(rep(0, (p+1)), rep(0, p*psi))
 # beta.emp <- c(as.vector(theta.origin), as.vector(gamma.origin))
 beta.map <- optim(beta.emp, fn = log.posterior, #gr = grad.log.posterior, 
                   y.origin = y,
-                  method = "BFGS", 
-                  # method = "CG",
+                  # method = "BFGS", 
+                  method = "CG",
                   # method = "SANN",
                   control = list(fnscale = -1, maxit = 300))
 # theta.map <- matrix(beta.map$par[1:(2*p)],nrow=2)
