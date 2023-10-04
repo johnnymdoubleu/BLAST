@@ -189,7 +189,7 @@ for(i in 1:p){
 
 log.posterior <- function(beta, y.origin){
   theta <- beta[1:(p+1)]
-  gamma <- matrix(beta[-(1:(p+1))], ncol=p)
+  gamma <- matrix(beta[(p+2):(p+1+(psi*p))], ncol=p)
   g <- matrix(, nrow=n, ncol=p)
   lik <- first.lik <- second.lik <- NULL
   for(j in 1:p){
@@ -205,8 +205,10 @@ log.posterior <- function(beta, y.origin){
   }
   sum.lik <- sum(lik)
 
-  lambda.1 <- 0.1
-  lambda.2 <- 600
+  # lambda.1 <- beta[-c(-1)]
+  # lambda.2 <- beta[-c(-2)]
+  lambda.1 <- 0.2700102
+  lambda.2 <- 1431.803
   prior <- first.prior <- second.prior <- NULL
   for(j in 1:p){
       # print(sum(abs(theta[j+1])))
@@ -287,8 +289,8 @@ beta.map <- optim(beta.emp, fn = log.posterior, #gr = grad.log.posterior,
                   control = list(fnscale = -1, maxit = 300))
 # theta.map <- matrix(beta.map$par[1:(2*p)],nrow=2)
 theta.map <- beta.map$par[1:(p+1)]
-gamma.map <- beta.map$par[-(1:(p+1))]
-
+gamma.map <- beta.map$par[(p+1+1):(p+1+(psi*p))]
+lambda.map <- beta.map$par[-c(-1,-2)]
 systime <- Sys.time()
 Sys.time()
 systime <- chartr(":","-",systime)
