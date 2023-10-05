@@ -197,27 +197,26 @@ reExp = nimbleFunction(
 
 model.penalisation <- nimbleCode({
   #prior
-  lambda.1 ~ dgamma(0.1, 0.5) #gamma distribution prior for lambda
+  lambda.1 ~ dgamma(1, 10) #gamma distribution prior for lambda
   lambda.2 ~ dgamma(0.1, 0.1)
 
   theta0 ~ ddexp(0, lambda.1)
-  sigma.square ~ dinvgamma(0.1, 0.1)
-
+  sigma.square ~ dinvgamma(0.01, 0.01)
 
   for (j in 1:p){
     theta[j] ~ ddexp(0, lambda.1)
     tau.square[j] ~ dgamma((psi+1)/2, (lambda.2^2)/2)
     covm[1:psi, 1:psi, j] <- diag(psi) * tau.square[j] * sigma.square
     gamma[1:psi, j] ~ dmnorm(zero.vec[1:psi, 1], cov = covm[1:psi, 1:psi, j])
-    g.nonlinear[1:n, j] <- bs.nonlinear[1:n, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma[1:psi, j]
-    g.linear[1:n, j] <- bs.linear[1:n,j] * theta[j]
   }
 
   # Likelihood
-  # for (j in 1:p){
-  #   # holder.linear[1:n, j] <- xholder.linear[1:n,j] * theta[j]
-  #   # holder.nonlinear[1:n, j] <- xholder.nonlinear[1:n, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma[1:psi, j]
-  # }
+  for (j in 1:p){
+    g.nonlinear[1:n, j] <- bs.nonlinear[1:n, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma[1:psi, j]
+    g.linear[1:n, j] <- bs.linear[1:n,j] * theta[j]
+    # holder.linear[1:n, j] <- xholder.linear[1:n,j] * theta[j]
+    # holder.nonlinear[1:n, j] <- xholder.nonlinear[1:n, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma[1:psi, j]
+  }
 
   for (i in 1:n){
     alpha[i] <- reExp(theta0 + sum(g.nonlinear[i, 1:p]) + sum(g.linear[i, 1:p]))
@@ -233,9 +232,9 @@ model.penalisation <- nimbleCode({
 })
 
 constant <- list(psi = psi, n = n, p = p)
-init.alpha <- function() list(list(gamma = matrix(0.02, nrow = psi, ncol=p), 
-                                    theta = rep(0.01, p), theta0 = 0.01,
-                                    covm = array(0.5, dim = c(psi,psi, p))),
+init.alpha <- function() list(#list(gamma = matrix(0.02, nrow = psi, ncol=p), 
+                               #     theta = rep(0.01, p), theta0 = 0.01,
+                                #    covm = array(0.5, dim = c(psi,psi, p))),
                               list(gamma = matrix(0, nrow = psi, ncol=p),
                                     theta = rep(0, p), theta0 = 0,
                                     covm = array(1, dim = c(psi,psi, p))),
@@ -244,7 +243,7 @@ init.alpha <- function() list(list(gamma = matrix(0.02, nrow = psi, ncol=p),
                                     covm = array(1, dim = c(psi,psi, p))))
                             #   list(gamma = matrix(1, nrow = psi, ncol=p)))
                               # y = as.vector(y),
-monitor.pred <- c("theta0", "theta", "gamma", "alpha", "g.linear", "g.nonlinear",
+monitor.pred <- c("theta0", "theta", "gamma", "alpha",
                   "lambda.1", "lambda.2")
 # monitor.pred <- c("covm")
 data <- list(y = as.vector(y), bs.linear = bs.linear, 
@@ -263,7 +262,7 @@ fit.v2 <- nimbleMCMC(code = model.penalisation,
                   niter = 75000,
                   nburnin = 55000,
                   # setSeed = 300,
-                  nchains = 3,
+                  nchains = 2,
                   # WAIC = TRUE,-
                   samplesAsCodaMCMC = TRUE,
                   summary = TRUE)
@@ -305,19 +304,19 @@ MCMCsummary(object = fit.v2$samples, round = 3)[((dim(alpha.summary)[1]-p-2-(psi
 samples <- fit.v2$samples$chain1
 len <- dim(samples)[1]
 
-gamma.post.mean <- matrix(alpha.summary[((n+(2*n*p))+1):((n+(2*n*p))+(psi*p)),1], nrow = psi, ncol = p)
-gamma.q1 <- matrix(alpha.summary[((n+(2*n*p))+1):((n+(2*n*p))+(psi*p)),4], nrow = psi, ncol = p)
-gamma.q3 <- matrix(alpha.summary[((n+(2*n*p))+1):((n+(2*n*p))+(psi*p)),5], nrow = psi, ncol = p)
-theta.post.mean <- alpha.summary[(n+(n*p*2)+(psi*p)+2+1):(n+(n*p*2)+(psi*p)+2+p),1]
-theta.q1 <- alpha.summary[(n+(n*p*2)+(psi*p)+2+1):(n+(n*p*2)+(psi*p)+2+p),4]
-theta.q3 <- alpha.summary[(n+(n*p*2)+(psi*p)+2+1):(n+(n*p*2)+(psi*p)+2+p),5]
+gamma.post.mean <- matrix(alpha.summary[(n+1):(n+(psi*p)),1], nrow = psi, ncol = p)
+gamma.q1 <- matrix(alpha.summary[(n+1):(n+(psi*p)),4], nrow = psi, ncol = p)
+gamma.q3 <- matrix(alpha.summary[(n+1):(n+(psi*p)),5], nrow = psi, ncol = p)
+theta.post.mean <- alpha.summary[(n+(psi*p)+2+1):(n+(psi*p)+2+p),1]
+theta.q1 <- alpha.summary[(n+(psi*p)+2+1):(n+(psi*p)+2+p),4]
+theta.q3 <- alpha.summary[(n+(psi*p)+2+1):(n+(psi*p)+2+p),5]
 
 df.theta <- data.frame("seq" = seq(1, (p+1)),
                         "m" = c(tail(alpha.summary, 1)[1], theta.post.mean),
                         "l" = c(tail(alpha.summary, 1)[4], theta.q1),
                         "u" = c(tail(alpha.summary, 1)[5], theta.q3))
-df.theta$covariate <- factor(c("\u03b8",names(fwi.scaled)), levels = c("\u03b8","DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC"))
-df.theta$labels <- factor(c("\u03b8","DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC"))
+df.theta$covariate <- factor(c("\u03b8",names(fwi.scaled)), levels = c("\u03b8",colnames(fwi.scaled)))
+df.theta$labels <- factor(c("\u03b8",colnames(fwi.scaled)))
 
 ggplot(df.theta, aes(x = covariate, y=m, color = covariate)) + ylab("") + xlab('') +
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
@@ -331,7 +330,7 @@ ggplot(df.theta, aes(x = covariate, y=m, color = covariate)) + ylab("") + xlab('
                               expression(bold(theta[5])),
                               expression(bold(theta[6])),
                               expression(bold(theta[7])))) + 
-  scale_color_discrete(labels = c(expression(theta[0]),"DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC")) + 
+  scale_color_discrete(labels = c(expression(theta[0]),colnames(fwi.scaled))) + 
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 20),
           legend.text.align = 0,
@@ -364,12 +363,13 @@ df.gamma <- data.frame("seq" = seq(1, (psi*p)),
                   "m" = as.vector(gamma.post.mean),
                   "l" = as.vector(gamma.q1),
                   "u" = as.vector(gamma.q3))
-df.gamma$covariate <- factor(rep(names(fwi.scaled), each = psi, length.out = nrow(df.gamma)), levels = c("DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC"))
+df.gamma$covariate <- factor(rep(names(fwi.scaled), each = psi, length.out = nrow(df.gamma)), levels = colnames(fwi.scaled))
 df.gamma$labels <- factor(1:(psi*p))
 ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) + 
-  geom_point(size = 4) + ylab("") + xlab("" ) + ylim(-15,15) +
+  geom_point(size = 4) + ylab("") + xlab("" ) + #ylim(-15,15) +
   # geom_ribbon(aes(ymin = l, ymax = u)) +
   geom_errorbar(aes(ymin = l, ymax = u), width = 4, linewidth = 1.2) + 
+  geom_point(size = 4, color = "red") + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   scale_x_discrete(breaks=c(seq(0, (psi*p), psi)+10), 
                     label = c(expression(bold(gamma[1])), 
