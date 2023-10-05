@@ -287,7 +287,7 @@ alpha.summary <- fit.v2$summary$all.chains
 #             HPD = TRUE, xlab="lambda", offset = 0.5,
 #             horiz = FALSE, params = c("lambda.1", "lambda.2"))            
 # print(alpha.summary)
-# MCMCsummary(object = fit.v2$samples, round = 3)[((dim(alpha.summary)[1]-p-2-(psi*p)):dim(alpha.summary)[1]),]
+
 
 # print(MCMCtrace(object = fit.v2$samples,
 #           pdf = FALSE, # no export to PDF
@@ -573,3 +573,4 @@ cat("sc1_Alp Done")
 
 # alpha.summary[((dim(alpha.summary)[1]-p-2):(dim(alpha.summary)[1]-p-1)),] 
 
+MCMCsummary(object = fit.v2$samples, round = 3)[((dim(alpha.summary)[1]-p-(psi*p)):dim(alpha.summary)[1]),]
