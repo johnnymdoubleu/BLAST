@@ -92,7 +92,7 @@ fwi.index$month <- factor(format(fwi.index$date,"%b"),
 # with(cov.long[missing.values], paste(substr[...1, 6, 10],month,day,sep="-"))
 
 fwi.scaled <- fwi.scaled[which(Y>u),]
-fwi.scaled <- as.data.frame(scale(fwi.scaled[c(3,4,5,6,7)]))
+fwi.scaled <- as.data.frame(scale(fwi.scaled))
 # corrplot.mixed(cor(fwi.scaled),
 #                 upper = "circle",
 #                 lower = "number",
@@ -197,8 +197,8 @@ reExp = nimbleFunction(
 
 model.penalisation <- nimbleCode({
   #prior
-  lambda.1 ~ dgamma(1, 10) #gamma distribution prior for lambda
-  lambda.2 ~ dgamma(0.1, 0.1)
+#   lambda.1 ~ dgamma(1, 10) #gamma distribution prior for lambda
+#   lambda.2 ~ dgamma(0.1, 0.1)
 
   theta0 ~ ddexp(0, lambda.1)
   sigma.square ~ dinvgamma(0.01, 0.01)
@@ -243,13 +243,12 @@ init.alpha <- function() list(#list(gamma = matrix(0.02, nrow = psi, ncol=p),
                                     covm = array(1, dim = c(psi,psi, p))))
                             #   list(gamma = matrix(1, nrow = psi, ncol=p)))
                               # y = as.vector(y),
-monitor.pred <- c("theta0", "theta", "gamma", "alpha",
-                  "lambda.1", "lambda.2")
+monitor.pred <- c("theta0", "theta", "gamma", "alpha")
 # monitor.pred <- c("covm")
 data <- list(y = as.vector(y), bs.linear = bs.linear, 
               bs.nonlinear = bs.nonlinear,
               zero.vec = as.matrix(rep(0, psi)), #sigma = 0.75,
-              # new.x = xholder, new.bs.x = new.bs.x,
+              lambda.1 = 0.002209049, lambda.2 = -0.002187150,
               u = u) #, #C = 1000,  ones = as.vector(rep(1, n)),
               #shape = 0.5, scale = 0.5)
 
@@ -259,8 +258,8 @@ fit.v2 <- nimbleMCMC(code = model.penalisation,
                   monitors = monitor.pred,
                   inits = init.alpha(),
                   thin = 20,
-                  niter = 120000,
-                  nburnin = 100000,
+                  niter = 50000,
+                  nburnin = 30000,
                   # setSeed = 300,
                   nchains = 2,
                   # WAIC = TRUE,-
@@ -278,17 +277,17 @@ alpha.summary <- fit.v2$summary$all.chains
 # MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2,
 #             HPD = TRUE, xlab="gamma", offset = 0.5,
 #             horiz = FALSE, params = c("gamma"))
-gg.fit <- ggs(fit.v2$samples)
-lambda.p1 <- gg.fit %>% filter(Parameter == c("lambda.1", "lambda.2")) %>% 
-  ggs_traceplot() + theme_minimal(base_size = 20)
-lambda.p2 <- gg.fit %>% filter(Parameter == c("lambda.1", "lambda.2")) %>% 
-  ggs_density() + theme_minimal(base_size = 20)
-grid.arrange(lambda.p1, lambda.p2, ncol=2)
+# gg.fit <- ggs(fit.v2$samples)
+# lambda.p1 <- gg.fit %>% filter(Parameter == c("lambda.1", "lambda.2")) %>% 
+#   ggs_traceplot() + theme_minimal(base_size = 20)
+# lambda.p2 <- gg.fit %>% filter(Parameter == c("lambda.1", "lambda.2")) %>% 
+#   ggs_density() + theme_minimal(base_size = 20)
+# grid.arrange(lambda.p1, lambda.p2, ncol=2)
 # MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2,
 #             HPD = TRUE, xlab="lambda", offset = 0.5,
 #             horiz = FALSE, params = c("lambda.1", "lambda.2"))            
 # print(alpha.summary)
-MCMCsummary(object = fit.v2$samples, round = 3)[((dim(alpha.summary)[1]-p-2-(psi*p)):dim(alpha.summary)[1]),]
+# MCMCsummary(object = fit.v2$samples, round = 3)[((dim(alpha.summary)[1]-p-2-(psi*p)):dim(alpha.summary)[1]),]
 
 # print(MCMCtrace(object = fit.v2$samples,
 #           pdf = FALSE, # no export to PDF
@@ -307,9 +306,9 @@ len <- dim(samples)[1]
 gamma.post.mean <- matrix(alpha.summary[(n+1):(n+(psi*p)),1], nrow = psi, ncol = p)
 gamma.q1 <- matrix(alpha.summary[(n+1):(n+(psi*p)),4], nrow = psi, ncol = p)
 gamma.q3 <- matrix(alpha.summary[(n+1):(n+(psi*p)),5], nrow = psi, ncol = p)
-theta.post.mean <- alpha.summary[(n+(psi*p)+2+1):(n+(psi*p)+2+p),1]
-theta.q1 <- alpha.summary[(n+(psi*p)+2+1):(n+(psi*p)+2+p),4]
-theta.q3 <- alpha.summary[(n+(psi*p)+2+1):(n+(psi*p)+2+p),5]
+theta.post.mean <- alpha.summary[(n+(psi*p)+1):(n+(psi*p)+p),1]
+theta.q1 <- alpha.summary[(n+(psi*p)+1):(n+(psi*p)+p),4]
+theta.q3 <- alpha.summary[(n+(psi*p)+1):(n+(psi*p)+p),5]
 
 df.theta <- data.frame("seq" = seq(1, (p+1)),
                         "m" = c(tail(alpha.summary, 1)[1], theta.post.mean),
@@ -502,7 +501,7 @@ ggplot(data.scenario, aes(x=x)) +
   geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
   geom_line(aes(y=post.mean, col = "Posterior Mean"), linewidth=2) + ylab(expression(alpha(x))) + ylim(0, 100) +
   geom_line(aes(y=chain1, col = "Chain 1"), linetype=2) +
-  geom_line(aes(y=chain2, col = "Chian 2"), linetype=3) +
+  geom_line(aes(y=chain2, col = "Chian 2"), linetype=2) +
   # facet_grid(covariates ~ .) + 
   # scale_y_continuous(breaks=c(0)) + 
   scale_color_manual(values = c("red", "blue", "#e0b430"))+
@@ -572,5 +571,5 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
 
 cat("sc1_Alp Done")
 
-alpha.summary[((dim(alpha.summary)[1]-p-2):(dim(alpha.summary)[1]-p-1)),] 
+# alpha.summary[((dim(alpha.summary)[1]-p-2):(dim(alpha.summary)[1]-p-1)),] 
 
