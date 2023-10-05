@@ -409,15 +409,15 @@ true.alpha <- new.alpha <- NULL
 for (j in 1:p){
   f.linear.new[,j] <- xholder.linear[,j] * theta.map[j+1]
   f.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.map, ncol = p)[, j]
-  f.new[,j] <- rep(theta.map[1], n) + f.linear.new[,j] + f.nonlinear.new[,j]
+  f.new[,j] <- f.linear.new[,j] + f.nonlinear.new[,j]
   f.linear.origin[,j] <- xholder.linear[,j] * theta.origin[j+1]
   f.nonlinear.origin[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
-  f.origin[,j] <- rep(theta.origin[1], n) + f.linear.origin[,j] + f.nonlinear.origin[,j]
+  f.origin[,j] <- f.linear.origin[,j] + f.nonlinear.origin[,j]
 }
 # set.seed(100)
 for(i in 1:n){
-  true.alpha[i] <- exp(sum(f.origin[i,]))
-  new.alpha[i] <- exp(sum(f.new[i,]))
+  true.alpha[i] <- exp(theta.map[1] + sum(f.origin[i,]))
+  new.alpha[i] <- exp(theta.origin[1] + sum(f.new[i,]))
 }
 
 func.linear.new <- func.nonlinear.new <- func.linear.origin <- func.nonlinear.origin <- func.new <- func.origin <- matrix(, nrow=n, ncol=0)

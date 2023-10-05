@@ -23,24 +23,29 @@ no.theta <- 1
 simul.no <- 50
 
 xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
-# x.origin <- cbind(replicate(p, runif(n, 0, 1)))
-posdef <- function (n, ev = runif(n, 0, 10)) {
-    Z <- matrix(ncol=n, rnorm(n^2))
-    decomp <- qr(Z)
-    Q <- qr.Q(decomp) 
-    R <- qr.R(decomp)
-    d <- diag(R)
-    ph <- d / abs(d)
-    O <- Q %*% diag(ph)
-    Z <- t(O) %*% diag(ev) %*% O
-    return(Z)
+
+sample_covariance_matrix <- matrix(NA, nrow = p, ncol = p)
+diag(sample_covariance_matrix) <- 1
+
+mat_Sim <- matrix(data = NA, nrow = p, ncol = p)
+U <- runif(n = p) * 0.5
+
+for(i in 1 : p){
+  if(i <= 4){
+    U_Star <- pmin(U + 0.25 * runif(n = p), 0.99999)
+  }
+  else{
+    U_Star <- pmin(pmax(U + sample(c(0, 1), size = p, replace = TRUE) * runif(n = p), 0.00001), 0.99999)
+  }
+  mat_Sim[, i] <- qnorm(U_Star)  
 }
 
-covmat <- posdef(n=p, ev=1:p)
+cor_Mat <- cor(mat_Sim)
+covmat <- cor_Mat
+x.origin <- mvrnorm(n = n, mu = rep(0.01, p), Sigma = covmat)
+# x.origin <- cbind(replicate(p, runif(n, 0, 1)))
 
-x.origin <- mvrnorm(n = n, rep(0, p), covmat)
-
-corrplot.mixed(cor(fwi.scaled),
+corrplot.mixed(cor(x.origin),
                 upper = "circle",
                 lower = "number",
                 addgrid.col = "black")
@@ -58,12 +63,12 @@ for(j in 1:p){
     for (ps in 1:psi){
         if(j %in% c(2,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
         else if(j==7){
-            if(ps <= (psi/2)){gamma.origin[ps, j] <- 1}
-            else{gamma.origin[ps, j] <- 1}
+            if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.01}
+            else{gamma.origin[ps, j] <- 0.01}
         }
         else {
-            if(ps <= (psi/2)){gamma.origin[ps, j] <- 1}
-            else{gamma.origin[ps, j] <- 1}
+            if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.01}
+            else{gamma.origin[ps, j] <- 0.01}
         }
     }
 }
@@ -82,7 +87,7 @@ for(j in 1:p){
 #         }
 #     }
 # }
-theta.origin <- c(-0.1, 0.8, 0, 0.8, 0, 0, 0, -0.3, 0.8, 0, 0)
+theta.origin <- c(-0.1, 0.05, 0, 0.1, 0, 0)
 
 f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
@@ -99,6 +104,7 @@ for(i in 1:n){
 
 u <- quantile(y.origin, threshold)
 x.origin <- x.origin[which(y.origin>u),]
+x.origin <- scale(x.origin)
 y.origin <- y.origin[y.origin > u]
 n <- length(y.origin)
 
@@ -106,8 +112,8 @@ xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow
 newx <- seq(0, 1, length.out=n)
 xholder <- bs.x <- matrix(, nrow = n, ncol = p)
 for(i in 1:p){
-    xholder[,i] <- seq(0, 1, length.out = n)
-    test.knot <- seq(0, 1, length.out = psi)
+    xholder[,i] <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = n)  
+    test.knot <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)  
     splines <- basis.tps(newx, test.knot, m=2, rk=FALSE, intercept = FALSE)
     xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
     xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
@@ -158,8 +164,8 @@ log.posterior <- function(beta, y.origin){
 
   # lambda.1 <- beta[length(beta)-1]
   # lambda.2 <- beta[length(beta)]
-  lambda.1 <- 0.00001
-  lambda.2 <- 0.00001
+  lambda.1 <- 1
+  lambda.2 <- 1
   prior <- first.prior <- second.prior <- NULL
   for(j in 1:p){
       # print(sum(abs(theta[j+1])))
@@ -431,15 +437,15 @@ true.alpha <- new.alpha <- NULL
 for (j in 1:p){
   f.linear.new[,j] <- xholder.linear[,j] * theta.map[j+1]
   f.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.map, ncol = p)[, j]
-  f.new[,j] <- rep(theta.map[1], n) + f.linear.new[,j] + f.nonlinear.new[,j]
+  f.new[,j] <- f.linear.new[,j] + f.nonlinear.new[,j]
   f.linear.origin[,j] <- xholder.linear[,j] * theta.origin[j+1]
   f.nonlinear.origin[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
-  f.origin[,j] <- rep(theta.origin[1], n) + f.linear.origin[,j] + f.nonlinear.origin[,j]
+  f.origin[,j] <- f.linear.origin[,j] + f.nonlinear.origin[,j]
 }
 # set.seed(100)
 for(i in 1:n){
-  true.alpha[i] <- exp(sum(f.origin[i,]))
-  new.alpha[i] <- exp(sum(f.new[i,]))
+  true.alpha[i] <- exp(theta.map[1] + sum(f.origin[i,]))
+  new.alpha[i] <- exp(theta.origin[1] + sum(f.new[i,]))
 }
 
 func.linear.new <- func.nonlinear.new <- func.linear.origin <- func.nonlinear.origin <- func.new <- func.origin <- matrix(, nrow=n, ncol=0)
