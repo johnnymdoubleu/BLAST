@@ -220,8 +220,6 @@ log.posterior <- function(beta, y.origin){
   # print(first.prior)
   return(sum.lik + sum.prior)
 }
-# log.posterior(c(rep(1, (p+1)), rep(1.5, p*psi)), y)
-
 # log.posterior <- function(beta, y.origin){
 #     log.lik <- function(beta){
 #         exp.prime <- function(x, thres){
