@@ -216,20 +216,6 @@ df.theta <- data.frame("seq" = seq(1, p+1),
 # df.theta$covariate <- factor(rep(seq(1, 1 + nrow(df.theta) %/% no.theta), each = no.theta, length.out = nrow(df.theta)))
 df.theta$covariate <- factor(0:p)
 df.theta$labels <- factor(0:p)
-df.theta$covariate <- factor(c("\u03b8",1:p), 
-                              levels = c("\u03b8",
-                                          expression(bold(theta[1])),
-                                          expression(bold(theta[2])),
-                                          expression(bold(theta[3])),
-                                          expression(bold(theta[4])),
-                                          expression(bold(theta[5])),
-                                          expression(bold(theta[6])),
-                                          expression(bold(theta[7])),
-                                          expression(bold(theta[8])),
-                                          expression(bold(theta[9])),
-                                          expression(bold(theta[10]))))
-df.theta$labels <- factor(c("theta0",1:p))
-# df.theta$labels <- factor(rep(c("X1", "X2", "X3", "X4", "X5", "X6", "X7", "X8", "X9", "X10"), each = no.theta))
 ggplot(df.theta, aes(x = labels)) + ylab("") + xlab("") +
   geom_point(aes(y = theta.map, col = covariate), size = 6) + 
   geom_point(aes(y = theta.true), color="red", size = 4) +
@@ -269,8 +255,18 @@ ggplot(df, aes(x =labels , y = gamma.map, col = covariate)) +
   # labs(title=expression("MAP vs True for"~gamma)) + 
   # ggtitle(expression(atop(paste("MAP vs True for ", bold(gamma))))) +
 #   annotate("text", x = seq(0, 330, length.out=10), y = -1, label = beta, colour = "red", size = 10) +
-  scale_x_discrete(labels = c("", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", expression(bold(gamma[1])),"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", 
-  expression(bold(gamma[2])),"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", expression(bold(gamma[3])),"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", expression(bold(gamma[4])),"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", expression(bold(gamma[5])),"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", expression(bold(gamma[6])),"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", expression(bold(gamma[7])),"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", expression(bold(gamma[8])),"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", expression(bold(gamma[9])),"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", expression(bold(gamma[10])))) + 
+  scale_x_discrete(breaks=c(seq(0, (psi*p), psi)+15), 
+                    label = c(expression(bold(gamma[1])), 
+                              expression(bold(gamma[2])), 
+                              expression(bold(gamma[3])), 
+                              expression(bold(gamma[4])), 
+                              expression(bold(gamma[5])), 
+                              expression(bold(gamma[6])),
+                              expression(bold(gamma[7])),
+                              expression(bold(gamma[8])),
+                              expression(bold(gamma[9])),
+                              expression(bold(gamma[10]))), 
+                    expand=c(0,5)) +
   theme(plot.title = element_text(hjust = 0.5, size = 20),
           legend.title = element_blank(),
           legend.text = element_text(size=30),
@@ -320,13 +316,31 @@ func.df <- data.frame(seq = seq(0,1,length.out = n),
                         covariates=covariates, 
                         replicate=replicate)
 
+equal_breaks <- function(n = 3, s = 0.1,...){
+  function(x){
+    d <- s * diff(range(x)) / (1+2*s)
+    seq = seq(min(x)+d, max(x)-d, length=n)
+    round(seq, -floor(log10(abs(seq[2]-seq[1]))))
+  }
+}
+
 ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) + 
-  geom_line(aes(y=origin, colour = covariates, linetype = "true")) + 
-  geom_line(aes(y=new, colour = covariates, linetype = "MAP")) + ylab ("") +
+  geom_line(aes(y=origin, colour = covariates, linetype = "true"), linewidth=2) + 
+  geom_line(aes(y=new, colour = covariates, linetype = "MAP"), linewidth=2) + 
+  ylab("") + xlab ("") +
   # geom_point(aes(y=origin, shape = replicate)) + geom_point(aes(y=new, shape = replicate)) +
-  facet_grid(covariates ~ .) + ggtitle("MAP vs True for Smooth Functions") + 
+  facet_grid(covariates ~ .) + ggtitle("MAP vs True for Smooth Functions") +
   scale_linetype_manual("functions",values=c("MAP"=3,"true"=1)) +
-  theme(plot.title = element_text(hjust = 0.5, size = 20))
+  # theme(plot.title = element_text(hjust = 0.5, size = 20))
+  scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + theme_minimal(base_size = 30) + 
+  theme(plot.title = element_text(hjust = 0.5, size = 30),
+        legend.position = "none",
+        plot.margin = margin(0,0,0,-10),
+        strip.text = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.text.y = element_text(size=33),
+        axis.title.x = element_text(size = 35))
 
 ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_line(aes(y=origin.linear, colour = covariates, linetype = "true")) + 
