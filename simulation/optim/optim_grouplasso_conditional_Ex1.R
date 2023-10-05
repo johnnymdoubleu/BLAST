@@ -136,8 +136,8 @@ log.posterior <- function(beta, y.origin){
 
   # lambda.1 <- beta[length(beta)-1]
   # lambda.2 <- beta[length(beta)]
-  lambda.1 <- 0.001
-  lambda.2 <- 0.001
+  lambda.1 <- 0.00001
+  lambda.2 <- 0.00001
   prior <- first.prior <- second.prior <- NULL
   for(j in 1:p){
       # print(sum(abs(theta[j+1])))
@@ -330,7 +330,6 @@ ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +
   # geom_point(aes(y=origin, shape = replicate)) + geom_point(aes(y=new, shape = replicate)) +
   facet_grid(covariates ~ .) + ggtitle("MAP vs True for Smooth Functions") +
   scale_linetype_manual("functions",values=c("MAP"=3,"true"=1)) +
-  # theme(plot.title = element_text(hjust = 0.5, size = 20))
   scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + theme_minimal(base_size = 30) + 
   theme(plot.title = element_text(hjust = 0.5, size = 30),
         legend.position = "none",
@@ -443,78 +442,58 @@ func.df <- data.frame(seq = seq(0,1,length.out = n),
                         covariates=covariates, 
                         replicate=replicate)
 
-# ggplot(func.df, aes(x=seq, group=interaction(covariates, replicate))) + 
-#   geom_line(aes(y=origin, colour = covariates, linetype = "true")) + 
-#   geom_line(aes(y=new, colour = covariates, linetype = "MAP")) + ylab ("") +
-#   # geom_point(aes(y=origin, shape = replicate)) + geom_point(aes(y=new, shape = replicate)) +
-#   facet_grid(covariates ~ .) + ggtitle("MAP vs True for Smooth Functions") + 
-#   scale_linetype_manual("functions",values=c("MAP"=3,"true"=1)) +
-#   theme(plot.title = element_text(hjust = 0.5, size = 20))
-
 ggplot(func.df, aes(x=seq, group=interaction(covariates, replicate))) + 
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab("Smooth Functions") +
+  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_line(aes(y=origin, colour = covariates, linetype = "true"), linewidth = 2) + 
-  geom_line(aes(y=new, colour = covariates, linetype = "MAP"), linewidth = 2) + ylab ("") +
-  facet_grid(covariates ~ .) + #ggtitle("MAP for Smooth Functions") +
-  scale_y_continuous(breaks=c(0)) +
-  scale_linetype_manual("functions",values=c("MAP"=3,"true"=1)) + 
+  geom_line(aes(y=new, colour = covariates, linetype = "MAP"), linewidth = 2) + 
+  ylab ("") + facet_grid(covariates ~ .) + xlab("Smooth Functions") +
+  scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + theme_minimal(base_size = 30) + 
   theme(plot.title = element_text(hjust = 0.5, size = 30),
         legend.position = "none",
+        plot.margin = margin(0,0,0,-10),
         strip.text = element_blank(),
         axis.text.x = element_blank(),
         axis.ticks.x = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
-ggsave("../Laboratory/Simulation/BayesianFusedLasso/results/map_smooth_n1.pdf", width=10.5, height = 15)
-
-# ggplot(func.df, aes(x=seq, group=interaction(covariates, replicate))) + 
-#   geom_line(aes(y=origin.linear, colour = covariates, linetype = "true")) + 
-#   geom_line(aes(y=new.linear, colour = covariates, linetype = "MAP")) + ylab ("") +
-#   # geom_point(aes(y=origin, shape = replicate)) + geom_point(aes(y=new, shape = replicate)) +
-#   facet_grid(covariates ~ .) + ggtitle("MAP vs True for Linear Components of Smooth Functions") + 
-#   scale_linetype_manual("functions",values=c("MAP"=3,"true"=1)) +
-#   theme(plot.title = element_text(hjust = 0.5, size = 20))
+# ggsave("../Laboratory/Simulation/BayesianFusedLasso/results/map_smooth_n1.pdf", width=10.5, height = 15)
 
 ggplot(func.df, aes(x=seq, group=interaction(covariates, replicate))) +  
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab("Linear Component") + 
+  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_line(aes(y=origin.linear, colour = covariates, linetype = "true"), linewidth = 2) + 
-  geom_line(aes(y=new.linear, colour = covariates, linetype = "MAP"), linewidth = 2) + ylab ("") +
-  facet_grid(covariates ~ .) + #ggtitle("Linear Component of Smooth Functions") + 
-  scale_y_continuous(breaks=c(0)) +
+  geom_line(aes(y=new.linear, colour = covariates, linetype = "MAP"), linewidth = 2) + 
+  facet_grid(covariates ~ .) + xlab("Linear Component") + ylab ("") +
   scale_linetype_manual("functions",values=c("MAP"=3,"true"=1)) +
+  scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + theme_minimal(base_size = 30) + 
   theme(plot.title = element_text(hjust = 0.5, size = 15),
-        axis.ticks = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
         # panel.grid.minor.y = element_blank(),
         legend.position = "none",
+        plot.margin = margin(0,-20,0,-30),
         strip.text = element_blank(),
-        axis.text = element_blank(),
+        axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
-ggsave("../Laboratory/Simulation/BayesianFusedLasso/results/map_linear_n1.pdf", width=10, height = 15)
-
-# ggplot(func.df, aes(x=seq, group=interaction(covariates, replicate))) + 
-#   geom_line(aes(y=origin.nonlinear, colour = covariates, linetype = "true")) + 
-#   geom_line(aes(y=new.nonlinear, colour = covariates, linetype = "MAP")) + ylab ("") +
-#   # geom_point(aes(y=origin, shape = replicate)) + geom_point(aes(y=new, shape = replicate)) +
-#   facet_grid(covariates ~ .) + ggtitle("MAP vs True for Nonlinear Components of Smooth Functions") + 
-#   scale_linetype_manual("functions",values=c("MAP"=3,"true"=1)) +
-#   theme(plot.title = element_text(hjust = 0.5, size = 20))
-
+# ggsave("../Laboratory/Simulation/BayesianFusedLasso/results/map_linear_n1.pdf", width=10, height = 15)
 
 ggplot(func.df, aes(x=seq, group=interaction(covariates, replicate))) + 
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab("Nonlinear Component") +
+  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_line(aes(y=origin.nonlinear, colour = covariates, linetype = "true"), linewidth = 2) + 
-  geom_line(aes(y=new.nonlinear, colour = covariates, linetype = "MAP"), linewidth=2) + ylab ("") +
-  facet_grid(covariates ~ .) + #ggtitle("Nonlinear Component of Smooth Functions") + 
-  scale_y_continuous(breaks=c(0)) +
+  geom_line(aes(y=new.nonlinear, colour = covariates, linetype = "MAP"), linewidth=2) + ylab ("") + xlab("Nonlinear Component") + facet_grid(covariates ~ .) + 
   scale_linetype_manual("functions",values=c("MAP"=3,"true"=1)) +
+  scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + theme_minimal(base_size = 30) + 
   theme(plot.title = element_text(hjust = 0.5, size = 15),
-        axis.ticks = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
         legend.title = element_blank(),
-        legend.text = element_text(size=33),
+        legend.text = element_text(size=45),
+        legend.margin=margin(0,0,0,-10),
+        legend.box.margin=margin(-10,0,-10,0),
+        plot.margin = margin(0,0,0,-20),
         strip.text = element_blank(),
-        axis.text = element_blank(),
+        axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
-ggsave("../Laboratory/Simulation/BayesianFusedLasso/results/map_nonlinear_n1.pdf", width=12, height = 15)
+# ggsave("../Laboratory/Simulation/BayesianFusedLasso/results/map_nonlinear_n1.pdf", width=12, height = 15)
 
 
 data.scenario <- data.frame("x" = c(1:n),
@@ -525,7 +504,7 @@ data.scenario <- data.frame("x" = c(1:n),
 plt.samp <- ggplot(data = data.scenario, aes(x = constant)) + ylab(expression(alpha(x))) + xlab("")
 print(plt.samp + 
       geom_line(aes(y = trueAlp, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
-      geom_line(aes(y = mapAlp, col = paste0("MAP Alpha:",lambda.1,"/",lambda.3)), linewidth = 2.5, linetype = 2) +
+      geom_line(aes(y = mapAlp, col = "MAP Alpha"), linewidth = 2.5, linetype = 2) +
       labs(col = "") +
         theme(axis.title.y = element_text(size = rel(1.8), angle = 90)) +
         theme(axis.title.x = element_text(size = rel(1.8), angle = 00)) +
@@ -581,98 +560,98 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
 # plotting bsplines basis function of covariates
 
 
-plts <- list()
-for(j in 1:p){
-  x.x <- sort(scale(x.origin[,j]))
-  # # Make a matrix containing the thin plate basis
-  ndx <- 20
-  basis.x <- data.frame(x=x.x, y=y.origin, id = as.factor(ndx))
-  # deg <- 3
-  # B <- bbase(x.x, min(x.x), max(x.x), nseg = ndx, bdeg = deg)
-  knots <- seq(min(x.x), max(x.x), length.out = (ndx))
-  B <- basis.tps(x.x, knots, m = 2, rk = FALSE)
-  nb1 <- ncol(B)
+# plts <- list()
+# for(j in 1:p){
+#   x.x <- sort(scale(x.origin[,j]))
+#   # # Make a matrix containing the thin plate basis
+#   ndx <- 20
+#   basis.x <- data.frame(x=x.x, y=y.origin, id = as.factor(ndx))
+#   # deg <- 3
+#   # B <- bbase(x.x, min(x.x), max(x.x), nseg = ndx, bdeg = deg)
+#   knots <- seq(min(x.x), max(x.x), length.out = (ndx))
+#   B <- basis.tps(x.x, knots, m = 2, rk = FALSE)
+#   nb1 <- ncol(B)
 
-  # A basis for plotting the fit on the grid xg
-  ng <- length(x.x)
-  xg <- seq(min(x.x), max(x.x), length.out = ng)
-  Bg <- basis.tps(xg, seq(min(x.x), max(x.x), length.out = ndx), m = 2, rk = FALSE)
-  # Bg <- bbase(xg, min(x.x), max(x.x), nseg = ndx, bdeg = deg)
+#   # A basis for plotting the fit on the grid xg
+#   ng <- length(x.x)
+#   xg <- seq(min(x.x), max(x.x), length.out = ng)
+#   Bg <- basis.tps(xg, seq(min(x.x), max(x.x), length.out = ndx), m = 2, rk = FALSE)
+#   # Bg <- bbase(xg, min(x.x), max(x.x), nseg = ndx, bdeg = deg)
 
-  a <- solve(t(B) %*% B, t(B) %*% y.origin, tol = 1e-20)
-  z <- Bg %*% a
+#   a <- solve(t(B) %*% B, t(B) %*% y.origin, tol = 1e-20)
+#   z <- Bg %*% a
 
-  # Make a matrix with B-splines scaled by coefficients
-  Bsc1 <- Bg %*% diag(c(a))
-  # Create data frames for ggplot
-  Zf1 <- data.frame(x = xg, y = z, id = as.factor(1))
-  Bf1 <- data.frame(x = rep(xg, nb1), y = as.vector(Bsc1), id = as.factor(rep(1:nb1, each = ng)))
-  # Bf1$y[abs(Bf1$y) < 0.0001] = NA
-  # Bf1 <- na.omit(Bf1)
+#   # Make a matrix with B-splines scaled by coefficients
+#   Bsc1 <- Bg %*% diag(c(a))
+#   # Create data frames for ggplot
+#   Zf1 <- data.frame(x = xg, y = z, id = as.factor(1))
+#   Bf1 <- data.frame(x = rep(xg, nb1), y = as.vector(Bsc1), id = as.factor(rep(1:nb1, each = ng)))
+#   # Bf1$y[abs(Bf1$y) < 0.0001] = NA
+#   # Bf1 <- na.omit(Bf1)
 
-  # Build the graphs
-  plt <- ggplot(Bf1 , aes(x = x, y = y, group = id, colour = id)) +
-    ggtitle(paste0("Basis Function of X_" ,j)) +
-    # geom_hline(yintercept = 0, linewidth = 0.3) +
-    geom_line(data = Zf1, linewidth = 1, colour = "grey") +
-    # geom_point(data = basis.x, colour = "grey60", size = 0.8, shape=1) +
-    geom_line(linewidth = 0.7) +
-    # geom_point(data = basis.x, colour = "red", size = 2, shape = 1) +
-    xlab("") + ylab ("") +
-    JOPS_theme() +
-    theme(legend.position = "none") +
-    scale_color_manual(values = rainbow_hcl(nb1 + 1, start = 10, end = 350))
+#   # Build the graphs
+#   plt <- ggplot(Bf1 , aes(x = x, y = y, group = id, colour = id)) +
+#     ggtitle(paste0("Basis Function of X_" ,j)) +
+#     # geom_hline(yintercept = 0, linewidth = 0.3) +
+#     geom_line(data = Zf1, linewidth = 1, colour = "grey") +
+#     # geom_point(data = basis.x, colour = "grey60", size = 0.8, shape=1) +
+#     geom_line(linewidth = 0.7) +
+#     # geom_point(data = basis.x, colour = "red", size = 2, shape = 1) +
+#     xlab("") + ylab ("") +
+#     JOPS_theme() +
+#     theme(legend.position = "none") +
+#     scale_color_manual(values = rainbow_hcl(nb1 + 1, start = 10, end = 350))
 
-  plts[[j]] <- plt
-  # ggsave(paste0("./Results/vert_bsplines_",j,".png"))
-}
-# plts
-grid.arrange(grobs = plts, ncol = 2, nrow = 5)
+#   plts[[j]] <- plt
+#   # ggsave(paste0("./Results/vert_bsplines_",j,".png"))
+# }
+# # plts
+# grid.arrange(grobs = plts, ncol = 2, nrow = 5)
 
-# Bspline basis
-plts <- list()
-for(j in 1:p){
-  x.x <- sort(scale(x.origin[,j]))
-  # # Make a matrix containing the B-spline basis
-  ndx <- 13
-  basis.x <- data.frame(x=x.x, y=y.origin, id = as.factor(ndx))
-  deg <- 3
-  B <- bbase(x.x, min(x.x), max(x.x), nseg = ndx, bdeg = deg)
-  nb1 <- ncol(B)
+# # Bspline basis
+# plts <- list()
+# for(j in 1:p){
+#   x.x <- sort(scale(x.origin[,j]))
+#   # # Make a matrix containing the B-spline basis
+#   ndx <- 13
+#   basis.x <- data.frame(x=x.x, y=y.origin, id = as.factor(ndx))
+#   deg <- 3
+#   B <- bbase(x.x, min(x.x), max(x.x), nseg = ndx, bdeg = deg)
+#   nb1 <- ncol(B)
 
-  # A basis for plotting the fit on the grid xg
-  ng <- length(x.x)
-  xg <- seq(min(x.x), max(x.x), length.out = ng)
-  # Bg <- basis.tps(xg, seq(min(x.x), max(x.x), length.out = ndx), m = 2, rk = FALSE)
-  Bg <- bbase(xg, min(x.x), max(x.x), nseg = ndx, bdeg = deg)
+#   # A basis for plotting the fit on the grid xg
+#   ng <- length(x.x)
+#   xg <- seq(min(x.x), max(x.x), length.out = ng)
+#   # Bg <- basis.tps(xg, seq(min(x.x), max(x.x), length.out = ndx), m = 2, rk = FALSE)
+#   Bg <- bbase(xg, min(x.x), max(x.x), nseg = ndx, bdeg = deg)
 
-  a <- solve(t(B) %*% B, t(B) %*% y.origin, tol = 1e-20)
-  z <- Bg %*% a
+#   a <- solve(t(B) %*% B, t(B) %*% y.origin, tol = 1e-20)
+#   z <- Bg %*% a
 
-  # Make a matrix with B-splines scaled by coefficients
-  Bsc1 <- Bg %*% diag(c(a))
-  # Create data frames for ggplot
-  Zf1 <- data.frame(x = xg, y = z, id = as.factor(1))
-  Bf1 <- data.frame(x = rep(xg, nb1), y = as.vector(Bsc1), id = as.factor(rep(1:nb1, each = ng)))
-  # Bf1$y[abs(Bf1$y) < 0.0001] = NA
-  # Bf1 <- na.omit(Bf1)
+#   # Make a matrix with B-splines scaled by coefficients
+#   Bsc1 <- Bg %*% diag(c(a))
+#   # Create data frames for ggplot
+#   Zf1 <- data.frame(x = xg, y = z, id = as.factor(1))
+#   Bf1 <- data.frame(x = rep(xg, nb1), y = as.vector(Bsc1), id = as.factor(rep(1:nb1, each = ng)))
+#   # Bf1$y[abs(Bf1$y) < 0.0001] = NA
+#   # Bf1 <- na.omit(Bf1)
 
-  # Build the graphs
-  plt <- ggplot(Bf1 , aes(x = x, y = y, group = id, colour = id)) +
-    ggtitle(paste("Basis Function of ", colnames(x.origin)[j])) +
-    # geom_hline(yintercept = 0, linewidth = 0.3) +
-    geom_line(data = Zf1, linewidth = 1, colour = "grey") +
-    # geom_point(data = basis.x, colour = "grey60", size = 0.8, shape=1) +
-    geom_line(linewidth = 0.7) +
-    # geom_point(data = basis.x, colour = "red", size = 2, shape = 1) +
-    xlab("") + ylab ("") +
-    JOPS_theme() +
-    theme(legend.position = "none") +
-    scale_color_manual(values = rainbow_hcl(nb1 + 1, start = 10, end = 350))
+#   # Build the graphs
+#   plt <- ggplot(Bf1 , aes(x = x, y = y, group = id, colour = id)) +
+#     ggtitle(paste("Basis Function of ", colnames(x.origin)[j])) +
+#     # geom_hline(yintercept = 0, linewidth = 0.3) +
+#     geom_line(data = Zf1, linewidth = 1, colour = "grey") +
+#     # geom_point(data = basis.x, colour = "grey60", size = 0.8, shape=1) +
+#     geom_line(linewidth = 0.7) +
+#     # geom_point(data = basis.x, colour = "red", size = 2, shape = 1) +
+#     xlab("") + ylab ("") +
+#     JOPS_theme() +
+#     theme(legend.position = "none") +
+#     scale_color_manual(values = rainbow_hcl(nb1 + 1, start = 10, end = 350))
 
-  plts[[j]] <- plt
-  # ggsave(paste0("./Results/vert_bsplines_",j,".png"))
-}
+#   plts[[j]] <- plt
+#   # ggsave(paste0("./Results/vert_bsplines_",j,".png"))
+# }
 # plts
 # grid.arrange(grobs = plts, ncol = 2, nrow = 5)
 
