@@ -87,7 +87,7 @@ for(j in 1:p){
 #         }
 #     }
 # }
-theta.origin <- c(-0.1, 0.05, 0, 0.1, 0, 0)
+theta.origin <- c(-0.1, 0.5, 0, 0.1, 0, 0)
 
 f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
@@ -164,8 +164,8 @@ log.posterior <- function(beta, y.origin){
 
   # lambda.1 <- beta[length(beta)-1]
   # lambda.2 <- beta[length(beta)]
-  lambda.1 <- 1
-  lambda.2 <- 1
+  lambda.1 <- 2.5
+  lambda.2 <- 25
   prior <- first.prior <- second.prior <- NULL
   for(j in 1:p){
       # print(sum(abs(theta[j+1])))
@@ -230,8 +230,8 @@ log.posterior <- function(beta, y.origin){
 beta.emp <- c(as.vector(theta.origin), as.vector(gamma.origin))
 beta.map <- optim(beta.emp, fn = log.posterior, #gr = grad.log.posterior, 
                   y.origin = y.origin,
-                  # method = "BFGS",
-                  method = "CG",
+                  method = "BFGS",
+                  # method = "CG",
                   # method = "SANN",
                   control = list(fnscale = -1))
 # theta.map <- matrix(beta.map$par[1:(2*p)],nrow=2)
@@ -533,7 +533,7 @@ plt.samp <- ggplot(data = data.scenario, aes(x = constant)) + ylab(expression(al
 print(plt.samp + 
       geom_line(aes(y = trueAlp, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
       geom_line(aes(y = mapAlp, col = "MAP Alpha"), linewidth = 2.5, linetype = 2) +
-      labs(col = "") +
+      labs(col = "") + ylim(0,10)+
         theme(axis.title.y = element_text(size = rel(1.8), angle = 90)) +
         theme(axis.title.x = element_text(size = rel(1.8), angle = 00)) +
         scale_color_manual(values = c("#e0b430", "red"))+
