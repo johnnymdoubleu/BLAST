@@ -42,7 +42,7 @@ for(i in 1 : p){
 
 cor_Mat <- cor(mat_Sim)
 covmat <- cor_Mat
-x.origin <- mvrnorm(n = n, mu = rep(0.01, p), Sigma = covmat)
+x.origin <- mvrnorm(n = n, mu = rep(0, p), Sigma = covmat)
 # x.origin <- cbind(replicate(p, runif(n, 0, 1)))
 
 corrplot.mixed(cor(x.origin),
@@ -164,8 +164,8 @@ log.posterior <- function(beta, y.origin){
 
   # lambda.1 <- beta[length(beta)-1]
   # lambda.2 <- beta[length(beta)]
-  lambda.1 <- 2.5
-  lambda.2 <- 25
+  lambda.1 <- 1
+  lambda.2 <- 10
   prior <- first.prior <- second.prior <- NULL
   for(j in 1:p){
       # print(sum(abs(theta[j+1])))
@@ -230,8 +230,8 @@ log.posterior <- function(beta, y.origin){
 beta.emp <- c(as.vector(theta.origin), as.vector(gamma.origin))
 beta.map <- optim(beta.emp, fn = log.posterior, #gr = grad.log.posterior, 
                   y.origin = y.origin,
-                  method = "BFGS",
-                  # method = "CG",
+                #   method = "BFGS",
+                  method = "CG",
                   # method = "SANN",
                   control = list(fnscale = -1))
 # theta.map <- matrix(beta.map$par[1:(2*p)],nrow=2)
@@ -245,6 +245,7 @@ df.theta <- data.frame("seq" = seq(1, p+1),
 df.theta$covariate <- factor(0:p)
 df.theta$labels <- factor(0:p)
 ggplot(df.theta, aes(x = labels)) + ylab("") + xlab("") +
+  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_point(aes(y = theta.map, col = covariate), size = 6) + 
   geom_point(aes(y = theta.true), color="red", size = 4) +
   # labs(title=expression("MAP vs True for"~theta)) + 
@@ -259,6 +260,7 @@ ggplot(df.theta, aes(x = labels)) + ylab("") + xlab("") +
                               expression(bold(theta[8])),
                               expression(bold(theta[9])),
                               expression(bold(theta[10]))))+
+  theme_minimal(base_size = 30) + 
   theme(plot.title = element_text(hjust = 0.5, size = 20),
           legend.title = element_blank(),
           legend.text = element_text(size=30),
@@ -352,6 +354,7 @@ equal_breaks <- function(n = 3, s = 0.1,...){
 }
 
 ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) + 
+  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_line(aes(y=origin, colour = covariates, linetype = "true"), linewidth=2) + 
   geom_line(aes(y=new, colour = covariates, linetype = "MAP"), linewidth=2) + 
   ylab("") + xlab ("Smooth Functions") +
@@ -369,6 +372,7 @@ ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +
         axis.title.x = element_text(size = 35))
 
 ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) + 
+  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_line(aes(y=origin.linear, colour = covariates, linetype = "true"), linewidth=2) + 
   geom_line(aes(y=new.linear, colour = covariates, linetype = "MAP"), linewidth=2) + 
   ylab ("") + facet_grid(covariates ~ .) + xlab("Linear Components") + 
@@ -386,6 +390,7 @@ ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +
         axis.title.x = element_text(size = 35))
 
 ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) + 
+  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_line(aes(y=origin.nonlinear, colour = covariates, linetype = "true"), linewidth=2) + 
   geom_line(aes(y=new.nonlinear, colour = covariates, linetype = "MAP"), linewidth=2) +
   ylab ("") + facet_grid(covariates ~ .) + xlab("Nonlinear Components") +
@@ -472,6 +477,7 @@ func.df <- data.frame(seq = seq(0,1,length.out = n),
 
 ggplot(func.df, aes(x=seq, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_line(aes(y=origin, colour = covariates, linetype = "true"), linewidth = 2) + 
   geom_line(aes(y=new, colour = covariates, linetype = "MAP"), linewidth = 2) + 
   ylab ("") + facet_grid(covariates ~ .) + xlab("Smooth Functions") +
@@ -487,6 +493,7 @@ ggplot(func.df, aes(x=seq, group=interaction(covariates, replicate))) +
 # ggsave("../Laboratory/Simulation/BayesianFusedLasso/results/map_smooth_n1.pdf", width=10.5, height = 15)
 
 ggplot(func.df, aes(x=seq, group=interaction(covariates, replicate))) +  
+  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_line(aes(y=origin.linear, colour = covariates, linetype = "true"), linewidth = 2) + 
   geom_line(aes(y=new.linear, colour = covariates, linetype = "MAP"), linewidth = 2) + 
@@ -505,6 +512,7 @@ ggplot(func.df, aes(x=seq, group=interaction(covariates, replicate))) +
 # ggsave("../Laboratory/Simulation/BayesianFusedLasso/results/map_linear_n1.pdf", width=10, height = 15)
 
 ggplot(func.df, aes(x=seq, group=interaction(covariates, replicate))) + 
+  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_line(aes(y=origin.nonlinear, colour = covariates, linetype = "true"), linewidth = 2) + 
   geom_line(aes(y=new.nonlinear, colour = covariates, linetype = "MAP"), linewidth=2) + ylab ("") + xlab("Nonlinear Component") + facet_grid(covariates ~ .) + 
