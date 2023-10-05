@@ -197,10 +197,10 @@ reExp = nimbleFunction(
 
 model.penalisation <- nimbleCode({
   #prior
-  lambda.1 ~ dunif(0,0.5)
-  lambda.2 ~ dunif(200, 900)
-  # lambda.1 ~ dgamma(1, 5) #gamma distribution prior for lambda
-  # lambda.2 ~ dgamma(0.1, 0.1)
+  # lambda.1 ~ dunif(0,0.5)
+  # lambda.2 ~ dunif(200, 900)
+  lambda.1 ~ dgamma(1, 5) #gamma distribution prior for lambda
+  lambda.2 ~ dgamma(0.1, 0.1)
   # omega0 ~ dexp((lambda.1^2)/2)
   # theta0 ~ dnorm(0, omega0)
   theta0 ~ ddexp(0, lambda.1)

@@ -8,6 +8,7 @@ library(splines2)
 library(scales)
 library(MASS)
 library(corrplot)
+library(splines2)
 
 suppressMessages(library(tidyverse))
 # library(ggplotify)
@@ -50,8 +51,9 @@ corrplot.mixed(cor(x.origin),
                 lower = "number",
                 addgrid.col = "black")
 for(i in 1:p){
-    knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)  
-    tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
+    knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)
+    # tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
+    tps <- bSpline(x = x.origin[,i], knots = knots, intercept = TRUE)
     # tps <- mSpline(x.origin[,i], df=psi, Boundary.knots = range(x.origin[,i]), degree = 3, intercept=TRUE)
     #   bs.x <- cbind(bs.x, tps)
     bs.linear <- cbind(bs.linear, tps[,1:no.theta])

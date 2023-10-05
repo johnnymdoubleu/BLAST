@@ -49,7 +49,7 @@ corrplot.mixed(cor(x.origin),
                 upper = "circle",
                 lower = "number",
                 addgrid.col = "black")
-for(i in 1:p){
+for(i in 1:5){
     knots[,j] <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)
     tps <- basis.tps(x.origin[,i], knots[,j], m = 2, rk = TRUE, intercept = TRUE)
     # tps <- mSpline(x.origin[,i], df=psi, Boundary.knots = range(x.origin[,i]), degree = 3, intercept=TRUE)
@@ -57,7 +57,7 @@ for(i in 1:p){
     bs.linear <- cbind(bs.linear, tps[,1:no.theta])
     bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])  
 }
-# cdcd <- basis.tps(x.origin, knots, m=3, rk=FALSE, intercept=TRUE)
+cdcd <- basis.tps(x.origin[,c(1,2,4)], knots[, c(1,2,4)], m=2, rk=FALSE, intercept=FALSE)
 
 gamma.origin <- matrix(, nrow = psi, ncol = p)
 for(j in 1:p){
@@ -535,7 +535,7 @@ data.scenario <- data.frame("x" = c(1:n),
 
 plt.samp <- ggplot(data = data.scenario, aes(x = constant)) + ylab(expression(alpha(x))) + xlab("")
 print(plt.samp + 
-      geom_line(aes(y = trueAlp, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
+      geom_line(aes(y = trueAlp, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + ylim(0, 5) +
       geom_line(aes(y = mapAlp, col = "MAP Alpha"), linewidth = 2.5, linetype = 2) +
       labs(col = "") + 
         theme(axis.title.y = element_text(size = rel(1.8), angle = 90)) +
