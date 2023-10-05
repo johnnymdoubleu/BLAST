@@ -327,7 +327,7 @@ equal_breaks <- function(n = 3, s = 0.1,...){
 ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_line(aes(y=origin, colour = covariates, linetype = "true"), linewidth=2) + 
   geom_line(aes(y=new, colour = covariates, linetype = "MAP"), linewidth=2) + 
-  ylab("") + xlab ("") +
+  ylab("") + xlab ("Smooth Functions") +
   # geom_point(aes(y=origin, shape = replicate)) + geom_point(aes(y=new, shape = replicate)) +
   facet_grid(covariates ~ .) + ggtitle("MAP vs True for Smooth Functions") +
   scale_linetype_manual("functions",values=c("MAP"=3,"true"=1)) +
@@ -343,12 +343,21 @@ ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +
         axis.title.x = element_text(size = 35))
 
 ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) + 
-  geom_line(aes(y=origin.linear, colour = covariates, linetype = "true")) + 
-  geom_line(aes(y=new.linear, colour = covariates, linetype = "MAP")) + ylab ("") +
+  geom_line(aes(y=origin.linear, colour = covariates, linetype = "true"), linewidth=2) + 
+  geom_line(aes(y=new.linear, colour = covariates, linetype = "MAP"), linewidth=2) + 
+  ylab ("") + facet_grid(covariates ~ .) + xlab("Linear Components") + 
   # geom_point(aes(y=origin, shape = replicate)) + geom_point(aes(y=new, shape = replicate)) +
-  facet_grid(covariates ~ .) + ggtitle("MAP vs True for Linear Components of Smooth Functions") + 
   scale_linetype_manual("functions",values=c("MAP"=3,"true"=1)) +
-  theme(plot.title = element_text(hjust = 0.5, size = 20))
+  scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + theme_minimal(base_size = 30) + 
+  theme(plot.title = element_text(hjust = 0.5, size = 15),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        # panel.grid.minor.y = element_blank(),
+        legend.position = "none",
+        plot.margin = margin(0,-20,0,-30),
+        strip.text = element_blank(),
+        axis.text.y = element_text(size=33),
+        axis.title.x = element_text(size = 35))
 
 ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_line(aes(y=origin.nonlinear, colour = covariates, linetype = "true")) + 
