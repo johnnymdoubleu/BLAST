@@ -164,8 +164,8 @@ log.posterior <- function(beta, y.origin){
 
   # lambda.1 <- beta[length(beta)-1]
   # lambda.2 <- beta[length(beta)]
-  lambda.1 <- 2.5
-  lambda.2 <- 25
+  lambda.1 <- 1
+  lambda.2 <- 1
   prior <- first.prior <- second.prior <- NULL
   for(j in 1:p){
       # print(sum(abs(theta[j+1])))
@@ -233,7 +233,7 @@ beta.map <- optim(beta.emp, fn = log.posterior, #gr = grad.log.posterior,
                 #   method = "BFGS",
                   method = "CG",
                   # method = "SANN",
-                  control = list(fnscale = -1))
+                  control = list(fnscale = -1, maxit = 300))
 # theta.map <- matrix(beta.map$par[1:(2*p)],nrow=2)
 theta.map <- beta.map$par[1:(no.theta*p)]
 gamma.map <- beta.map$par[(no.theta*p)+1:(psi*p)]

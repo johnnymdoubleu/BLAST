@@ -86,7 +86,7 @@ fwi.index$month <- factor(format(fwi.index$date,"%b"),
 # with(cov.long[missing.values], paste(substr[...1, 6, 10],month,day,sep="-"))
 
 fwi.scaled <- fwi.scaled[which(Y>u),]
-fwi.scaled <- scale(fwi.scaled[,c(2,3)])
+fwi.scaled <- scale(fwi.scaled)
 corrplot.mixed(cor(fwi.scaled),
                 upper = "circle",
                 lower = "number",
@@ -146,11 +146,11 @@ for(i in 1:p){
   # splines <- basis.tps(seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n), test.knot, m=2, rk=FALSE, intercept = TRUE)
   xholder[,i] <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n)
   test.knot <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
-  splines <- basis.tps(seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n), test.knot, m=2, rk=FALSE, intercept = FALSE)
+  splines <- basis.tps(seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n), test.knot, m=2, rk=TRUE, intercept = FALSE)
   xholder.linear <- cbind(xholder.linear, splines[,1])
   xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
   knots <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
-  tps <- basis.tps(fwi.scaled[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
+  tps <- basis.tps(fwi.scaled[,i], knots, m = 2, rk = TRUE, intercept = FALSE)
   # tps <- mSpline(x.origin[,i], df=psi, Boundary.knots = range(x.origin[,i]), degree = 3, intercept=TRUE)
   bs.linear <- cbind(bs.linear, tps[,1:no.theta])
   bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])
@@ -207,8 +207,8 @@ log.posterior <- function(beta, y.origin){
 
   # lambda.1 <- beta[length(beta)-1]
   # lambda.2 <- beta[length(beta)]
-  lambda.1 <- 100
-  lambda.2 <- 100
+  lambda.1 <- 0.001
+  lambda.2 <- 0.001
   prior <- first.prior <- second.prior <- NULL
   for(j in 1:p){
       # print(sum(abs(theta[j+1])))
