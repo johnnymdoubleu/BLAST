@@ -86,7 +86,7 @@ fwi.index$month <- factor(format(fwi.index$date,"%b"),
 # with(cov.long[missing.values], paste(substr[...1, 6, 10],month,day,sep="-"))
 
 fwi.scaled <- fwi.scaled[which(Y>u),]
-fwi.scaled <- scale(fwi.scaled)
+fwi.scaled <- scale(fwi.scaled[,c(2,3,4,5,6)])
 corrplot.mixed(cor(fwi.scaled),
                 upper = "circle",
                 lower = "number",
@@ -279,12 +279,12 @@ log.posterior <- function(beta, y.origin){
 # -6445.875
 
 
-beta.emp <- c(rep(0, (p+1)), rep(0, p*psi), 2, 800)
+beta.emp <- c(rep(0, (p+1)), rep(0, p*psi), 0, 0)
 # beta.emp <- c(as.vector(theta.origin), as.vector(gamma.origin))
 beta.map <- optim(beta.emp, fn = log.posterior, #gr = grad.log.posterior, 
                   y.origin = y,
-                  # method = "BFGS", 
-                  method = "CG",
+                  method = "BFGS", 
+                  # method = "CG",
                   # method = "SANN",
                   control = list(fnscale = -1, maxit = 300))
 # theta.map <- matrix(beta.map$par[1:(2*p)],nrow=2)

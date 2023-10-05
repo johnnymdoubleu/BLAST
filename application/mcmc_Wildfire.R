@@ -92,7 +92,7 @@ fwi.index$month <- factor(format(fwi.index$date,"%b"),
 # with(cov.long[missing.values], paste(substr[...1, 6, 10],month,day,sep="-"))
 
 fwi.scaled <- fwi.scaled[which(Y>u),]
-fwi.scaled <- as.data.frame(scale(fwi.scaled))
+fwi.scaled <- as.data.frame(scale(fwi.scaled[c(1,3,4,5,6)]))
 # corrplot.mixed(cor(fwi.scaled),
 #                 upper = "circle",
 #                 lower = "number",
@@ -369,7 +369,7 @@ ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) +
   geom_point(size = 4) + ylab("") + xlab("" ) + #ylim(-15,15) +
   # geom_ribbon(aes(ymin = l, ymax = u)) +
   geom_errorbar(aes(ymin = l, ymax = u), width = 4, linewidth = 1.2) + 
-  geom_point(size = 4, color = "red") + 
+  geom_point(size = 4, color = "black") + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   scale_x_discrete(breaks=c(seq(0, (psi*p), psi)+10), 
                     label = c(expression(bold(gamma[1])), 
