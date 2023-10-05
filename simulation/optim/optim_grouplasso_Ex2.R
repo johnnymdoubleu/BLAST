@@ -7,6 +7,7 @@ library(reshape2)
 library(splines2)
 library(scales)
 library(MASS)
+library(corrplot)
 
 suppressMessages(library(tidyverse))
 # library(ggplotify)
@@ -38,6 +39,11 @@ posdef <- function (n, ev = runif(n, 0, 10)) {
 covmat <- posdef(n=p, ev=1:p)
 
 x.origin <- mvrnorm(n = n, rep(0, p), covmat)
+
+corrplot.mixed(cor(fwi.scaled),
+                upper = "circle",
+                lower = "number",
+                addgrid.col = "black")
 for(i in 1:p){
     knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)  
     tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
