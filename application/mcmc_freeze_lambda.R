@@ -248,7 +248,7 @@ monitor.pred <- c("theta0", "theta", "gamma", "alpha")
 data <- list(y = as.vector(y), bs.linear = bs.linear, 
               bs.nonlinear = bs.nonlinear,
               zero.vec = as.matrix(rep(0, psi)), #sigma = 0.75,
-              lambda.1 = 0.002209049, lambda.2 = -0.002187150,
+              lambda.1 = 0.5, lambda.2 = 250,
               u = u) #, #C = 1000,  ones = as.vector(rep(1, n)),
               #shape = 0.5, scale = 0.5)
 
