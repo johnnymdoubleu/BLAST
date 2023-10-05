@@ -92,7 +92,7 @@ fwi.index$month <- factor(format(fwi.index$date,"%b"),
 # with(cov.long[missing.values], paste(substr[...1, 6, 10],month,day,sep="-"))
 
 fwi.scaled <- fwi.scaled[which(Y>u),]
-fwi.scaled <- as.data.frame(scale(fwi.scaled[,c(1,3,4,5,6,7)]))
+fwi.scaled <- as.data.frame(scale(fwi.scaled))
 # corrplot.mixed(cor(fwi.scaled),
 #                 upper = "circle",
 #                 lower = "number",
@@ -197,17 +197,19 @@ reExp = nimbleFunction(
 
 model.penalisation <- nimbleCode({
   #prior
-  lambda.1 ~ dgamma(1, 5) #gamma distribution prior for lambda
-  lambda.2 ~ dgamma(0.1, 0.1)
-  omega0 ~ dexp((lambda.1^2)/2)
-  theta0 ~ dnorm(0, omega0)
-  # theta0 ~ ddexp(0, lambda.1)
+  lambda.1 ~ dunif(0,0.5)
+  lambda.2 ~ dunif(200, 900)
+  # lambda.1 ~ dgamma(1, 5) #gamma distribution prior for lambda
+  # lambda.2 ~ dgamma(0.1, 0.1)
+  # omega0 ~ dexp((lambda.1^2)/2)
+  # theta0 ~ dnorm(0, omega0)
+  theta0 ~ ddexp(0, lambda.1)
   sigma.square ~ dinvgamma(0.01, 0.01)
   
   for (j in 1:p){
-    # theta[j] ~ ddexp(0, lambda.1)
-    omega[j] ~ dexp((lambda.1^2)/2)
-    theta[j] ~ dnorm(0, omega[j]*sigma.square)
+    theta[j] ~ ddexp(0, lambda.1)
+    # omega[j] ~ dexp((lambda.1^2)/2)
+    # theta[j] ~ dnorm(0, omega[j]*sigma.square)
     tau.square[j] ~ dgamma((psi+1)/2, (lambda.2^2)/2)
     covm[1:psi, 1:psi, j] <- diag(psi) * tau.square[j] * sigma.square
     gamma[1:psi, j] ~ dmnorm(zero.vec[1:psi, 1], cov = covm[1:psi, 1:psi, j])
