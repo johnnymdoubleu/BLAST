@@ -66,12 +66,12 @@ f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p
 for(j in 1:p){
     f.linear.origin[,j] <- bs.linear[, j] * theta.origin[j+1]
     f.nonlinear.origin[,j] <- (bs.nonlinear[1:n,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j])
-    f.origin[, j] <- rep(theta.origin[1], n) + f.linear.origin[,j] + f.nonlinear.origin[,j]
+    f.origin[, j] <- f.linear.origin[,j] + f.nonlinear.origin[,j]
 }
 
 alp.origin <- y.origin <- NULL
 for(i in 1:n){
-    alp.origin[i] <- exp(sum(f.origin[i,]))
+    alp.origin[i] <- exp(theta.origin[1] + sum(f.origin[i,]))
     y.origin[i] <- rPareto(1, 1, alpha = alp.origin[i])
 }
 
@@ -99,16 +99,16 @@ f.nonlinear.new <- f.linear.new <- f.new <- f.nonlinear.origin <- f.linear.origi
 for(j in 1:p){
     f.linear.origin[,j] <- bs.linear[, j] * theta.origin[j+1]
     f.nonlinear.origin[,j] <- bs.nonlinear[1:n,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
-    f.origin[, j] <- rep(theta.origin[1], n) + f.linear.origin[,j] + f.nonlinear.origin[,j]
+    f.origin[, j] <- f.linear.origin[,j] + f.nonlinear.origin[,j]
     f.linear.new[,j] <- xholder.linear[, j] * theta.origin[j+1]
     f.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
-    f.new[,j] <- rep(theta.origin[1], n) + f.linear.new[,j] + f.nonlinear.new[,j]
+    f.new[,j] <- f.linear.new[,j] + f.nonlinear.new[,j]
 }
 
 true.alpha <- alp.new <- alp.origin <- NULL
 for(i in 1:n){
-    alp.origin[i] <- exp(sum(f.origin[i,]))
-    alp.new[i] <- exp(sum(f.new[i,]))
+    alp.origin[i] <- exp(theta.origin[1] + sum(f.origin[i,]))
+    alp.new[i] <- exp(theta.origin[1] + sum(f.new[i,]))
 }
 
 # theta <- 0
@@ -280,14 +280,13 @@ newalpha <- NULL
 for (j in 1:p){
   f.linear.new[,j] <- bs.linear[,j] * theta.map[j+1]
   f.nonlinear.new[,j] <- bs.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.map, ncol = p)[, j]
-  f.new[1:n, j] <- rep(theta.map[1], n) + f.linear.new[,j] + f.nonlinear.new[,j]
+  f.new[1:n, j] <- f.linear.new[,j] + f.nonlinear.new[,j]
 }
 new.y <- NULL
 
 # set.seed(100)
-for(i in 1:n){  
-  temp <- sum(f.new[i,])
-  newalpha[i] <- exp(temp)
+for(i in 1:n){
+  newalpha[i] <- exp(theta.map[1] + sum(f.new[i,]))
   # new.y[i] <- rPareto(1, 1, alpha = newalpha[i])
 }
 
@@ -360,12 +359,23 @@ ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +
         axis.title.x = element_text(size = 35))
 
 ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) + 
-  geom_line(aes(y=origin.nonlinear, colour = covariates, linetype = "true")) + 
-  geom_line(aes(y=new.nonlinear, colour = covariates, linetype = "MAP")) + ylab ("") +
+  geom_line(aes(y=origin.nonlinear, colour = covariates, linetype = "true"), linewidth=2) + 
+  geom_line(aes(y=new.nonlinear, colour = covariates, linetype = "MAP"), linewidth=2) +
+  ylab ("") + facet_grid(covariates ~ .) + xlab("Nonlinear Components") +
   # geom_point(aes(y=origin, shape = replicate)) + geom_point(aes(y=new, shape = replicate)) +
-  facet_grid(covariates ~ .) + ggtitle("MAP vs True for Nonlinear Components of Smooth Functions") + 
   scale_linetype_manual("functions",values=c("MAP"=3,"true"=1)) +
-  theme(plot.title = element_text(hjust = 0.5, size = 20))
+  scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + theme_minimal(base_size = 30) + 
+  theme(plot.title = element_text(hjust = 0.5, size = 15),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        legend.title = element_blank(),
+        legend.text = element_text(size=45),
+        legend.margin=margin(0,0,0,-10),
+        legend.box.margin=margin(-10,0,-10,0),
+        plot.margin = margin(0,0,0,-20),
+        strip.text = element_blank(),
+        axis.text.y = element_text(size=33),
+        axis.title.x = element_text(size = 35))
 
 
 data.scenario <- data.frame("x" = c(1:n),
@@ -376,7 +386,7 @@ data.scenario <- data.frame("x" = c(1:n),
 plt.samp <- ggplot(data = data.scenario, aes(x = constant)) + ylab(expression(alpha(x))) + xlab("")
 print(plt.samp + 
       geom_line(aes(y = trueAlp, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
-      geom_line(aes(y = mapAlp, col = paste0("MAP Alpha:",lambda.1,"/",lambda.3)), linewidth = 2.5, linetype = 2) +
+      geom_line(aes(y = mapAlp, col = "MAP Alpha"), linewidth = 2.5, linetype = 2) +
       labs(col = "") +
         theme(axis.title.y = element_text(size = rel(1.8), angle = 90)) +
         theme(axis.title.x = element_text(size = rel(1.8), angle = 00)) +
@@ -392,7 +402,7 @@ print(plt.samp +
 # plot(sort(alp.origin))
 # plot(sort(new.y), sort(y.origin))
 # abline(a=0, b=1, col = "red", lty = 2)
-rbind(matrix(theta.map, nrow = no.theta, ncol = p), matrix(gamma.map, nrow = psi, ncol = p))
+# rbind(matrix(theta.map, nrow = no.theta, ncol = p), matrix(gamma.map, nrow = psi, ncol = p))
 
 #### Test Set
 f.nonlinear.origin <- f.linear.origin <- f.origin <- f.nonlinear.new <- f.linear.new <- f.new <- matrix(, nrow = n, ncol=p)
