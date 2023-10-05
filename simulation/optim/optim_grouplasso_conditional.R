@@ -216,6 +216,19 @@ df.theta <- data.frame("seq" = seq(1, p+1),
 # df.theta$covariate <- factor(rep(seq(1, 1 + nrow(df.theta) %/% no.theta), each = no.theta, length.out = nrow(df.theta)))
 df.theta$covariate <- factor(0:p)
 df.theta$labels <- factor(0:p)
+df.theta$covariate <- factor(c("\u03b8",1:p), 
+                              levels = c("\u03b8",
+                                          expression(bold(theta[1])),
+                                          expression(bold(theta[2])),
+                                          expression(bold(theta[3])),
+                                          expression(bold(theta[4])),
+                                          expression(bold(theta[5])),
+                                          expression(bold(theta[6])),
+                                          expression(bold(theta[7])),
+                                          expression(bold(theta[8])),
+                                          expression(bold(theta[9])),
+                                          expression(bold(theta[10]))))
+df.theta$labels <- factor(c("theta0",1:p))
 # df.theta$labels <- factor(rep(c("X1", "X2", "X3", "X4", "X5", "X6", "X7", "X8", "X9", "X10"), each = no.theta))
 ggplot(df.theta, aes(x = labels)) + ylab("") + xlab("") +
   geom_point(aes(y = theta.map, col = covariate), size = 6) + 
