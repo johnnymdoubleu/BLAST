@@ -414,9 +414,9 @@ data.scenario <- data.frame("x" = c(1:n),
 
 plt.samp <- ggplot(data = data.scenario, aes(x = constant)) + ylab(expression(alpha(x))) + xlab("")
 print(plt.samp + 
-      geom_line(aes(y = trueAlp, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
+      geom_line(aes(y = trueAlp, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + labs(col = "") +
       geom_line(aes(y = mapAlp, col = "MAP Alpha"), linewidth = 2.5, linetype = 2) +
-      labs(col = "") +
+      
         theme(axis.title.y = element_text(size = rel(1.8), angle = 90)) +
         theme(axis.title.x = element_text(size = rel(1.8), angle = 00)) +
         scale_color_manual(values = c("#e0b430", "red"))+
@@ -538,7 +538,7 @@ plt.samp <- ggplot(data = data.scenario, aes(x = constant)) + ylab(expression(al
 print(plt.samp + 
       geom_line(aes(y = trueAlp, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
       geom_line(aes(y = mapAlp, col = "MAP Alpha"), linewidth = 2.5, linetype = 2) +
-      labs(col = "") + ylim(0,10)+
+      labs(col = "") + 
         theme(axis.title.y = element_text(size = rel(1.8), angle = 90)) +
         theme(axis.title.x = element_text(size = rel(1.8), angle = 00)) +
         scale_color_manual(values = c("#e0b430", "red"))+
