@@ -92,7 +92,7 @@ fwi.index$month <- factor(format(fwi.index$date,"%b"),
 # with(cov.long[missing.values], paste(substr[...1, 6, 10],month,day,sep="-"))
 
 fwi.scaled <- fwi.scaled[which(Y>u),]
-fwi.scaled <- as.data.frame(scale(fwi.scaled[c(1,3,4,5,6)]))
+fwi.scaled <- as.data.frame(scale(fwi.scaled[c(2,3,4,5,6)]))
 # corrplot.mixed(cor(fwi.scaled),
 #                 upper = "circle",
 #                 lower = "number",
@@ -259,8 +259,8 @@ fit.v2 <- nimbleMCMC(code = model.penalisation,
                   monitors = monitor.pred,
                   inits = init.alpha(),
                   thin = 20,
-                  niter = 75000,
-                  nburnin = 55000,
+                  niter = 120000,
+                  nburnin = 100000,
                   # setSeed = 300,
                   nchains = 2,
                   # WAIC = TRUE,-
