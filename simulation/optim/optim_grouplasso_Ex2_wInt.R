@@ -32,7 +32,7 @@ U <- runif(n = p) * 0.5
 
 for(i in 1 : p){
   if(i <= 4){
-    U_Star <- pmin(U + 0.25 * runif(n = p), 0.99999)
+    U_Star <- pmin(U + 0.35 * runif(n = p), 0.99999)
   }
   else{
     U_Star <- pmin(pmax(U + sample(c(0, 1), size = p, replace = TRUE) * runif(n = p), 0.00001), 0.99999)
