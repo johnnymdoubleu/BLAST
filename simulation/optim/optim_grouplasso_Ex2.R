@@ -19,7 +19,7 @@ set.seed(2)
 n <- 5000
 psi <- 20
 threshold <- 0.90
-p <- 5
+p <- 10
 no.theta <- 1
 simul.no <- 50
 
@@ -43,7 +43,7 @@ for(i in 1 : p){
 
 cor_Mat <- cor(mat_Sim)
 covmat <- cor_Mat
-x.origin <- mvrnorm(n = n, mu = rep(0, p), Sigma = covmat)
+x.origin <- mvrnorm(n = n, mu = runif(n=p, 0, 10), Sigma = covmat)
 # x.origin <- cbind(replicate(p, runif(n, 0, 1)))
 
 corrplot.mixed(cor(x.origin),
@@ -65,12 +65,12 @@ for(j in 1:p){
     for (ps in 1:psi){
         if(j %in% c(2,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
         else if(j==7){
-            if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.01}
-            else{gamma.origin[ps, j] <- 0.01}
+            if(ps <= (psi/2)){gamma.origin[ps, j] <- 1}
+            else{gamma.origin[ps, j] <- 1}
         }
         else {
-            if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.01}
-            else{gamma.origin[ps, j] <- 0.01}
+            if(ps <= (psi/2)){gamma.origin[ps, j] <- 1}
+            else{gamma.origin[ps, j] <- 1}
         }
     }
 }
@@ -89,7 +89,7 @@ for(j in 1:p){
 #         }
 #     }
 # }
-theta.origin <- c(-0.04, 0.08, 0, 0.08, 0, 0)
+theta.origin <- c(-0.4, 0.8, 0, 0.8, 0, 0, 0.2, 0, 0, 0)
 
 f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
@@ -185,7 +185,8 @@ log.posterior <- function(beta, y.origin){
 }
 
 
-beta.emp <- c(as.vector(theta.origin), as.vector(gamma.origin), 0.5, 1)
+# beta.emp <- c(as.vector(theta.origin), as.vector(gamma.origin), 1, 300)
+beta.emp <- c(rep(0, (p+1)), rep(0, p*psi), 1, 300)
 beta.map <- optim(beta.emp, fn = log.posterior, #gr = grad.log.posterior, 
                   y.origin = y.origin,
                   method = "BFGS",
