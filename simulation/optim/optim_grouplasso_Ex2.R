@@ -232,8 +232,8 @@ log.posterior <- function(beta, y.origin){
 beta.emp <- c(as.vector(theta.origin), as.vector(gamma.origin))
 beta.map <- optim(beta.emp, fn = log.posterior, #gr = grad.log.posterior, 
                   y.origin = y.origin,
-                #   method = "BFGS",
-                  method = "CG",
+                  method = "BFGS",
+                  # method = "CG",
                   # method = "SANN",
                   control = list(fnscale = -1, maxit = 300))
 # theta.map <- matrix(beta.map$par[1:(2*p)],nrow=2)
