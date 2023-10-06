@@ -64,12 +64,12 @@ for(j in 1:p){
     for (ps in 1:psi){
         if(j %in% c(2,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
         else if(j==7){
-            if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.01}
-            else{gamma.origin[ps, j] <- 0.01}
+            if(ps <= (psi/2)){gamma.origin[ps, j] <- 1}
+            else{gamma.origin[ps, j] <- 1}
         }
         else {
-            if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.01}
-            else{gamma.origin[ps, j] <- 0.01}
+            if(ps <= (psi/2)){gamma.origin[ps, j] <- 1}
+            else{gamma.origin[ps, j] <- 1}
         }
     }
 }
@@ -79,12 +79,12 @@ for(j in 1:p){
     for (k in 1:2){
         if(j %in% c(2,4,5,6,9,10)){theta.origin[k, j] <- 0}
         else if(j==7){
-            if(k==1){theta.origin[k, j] <- 0.5}
-            else{theta.origin[k, j] <- -0.3}
+            if(k==1){theta.origin[k, j] <- 0.55}
+            else{theta.origin[k, j] <- -0.33}
         }
         else {
-            if(k==1){theta.origin[k,j] <- -0.02}
-            else{theta.origin[k,j] <- 0.08}
+            if(k==1){theta.origin[k,j] <- -0.22}
+            else{theta.origin[k,j] <- 0.8}
         }
     }
 }
@@ -165,12 +165,12 @@ log.posterior <- function(beta, y.origin){
   # lambda.1 <- beta[length(beta)-1]
   # lambda.2 <- beta[length(beta)]
   lambda.1 <- 0.001
-  lambda.2 <- 1
+  lambda.2 <- 0.001
   prior <- first.prior <- second.prior <- NULL
   for(j in 1:p){
       # print(sum(abs(theta[j+1])))
       first.prior[j] <- -1 * lambda.1 * sum(abs(theta[,j]))
-      second.prior[j] <- -1 * lambda.2 * sqrt(sum((gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)])^2))
+      second.prior[j] <- -1 * lambda.2 * sqrt(sum(((gamma^2)[(((j-1)*psi)+1):(((j-1)*psi)+psi)])^2))
       prior[j] <- first.prior[j] + second.prior[j]
   }
   sum.prior <- sum(prior)

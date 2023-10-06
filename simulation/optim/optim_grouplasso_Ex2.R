@@ -164,72 +164,28 @@ log.posterior <- function(beta, y.origin){
   }
   sum.lik <- sum(lik)
 
-  # lambda.1 <- beta[length(beta)-1]
-  # lambda.2 <- beta[length(beta)]
-  lambda.1 <- 1
-  lambda.2 <- 10
+  lambda.1 <- beta[length(beta)-1]
+  lambda.2 <- beta[length(beta)]
+  # lambda.1 <- 1
+  # lambda.2 <- 10
   prior <- first.prior <- second.prior <- NULL
   for(j in 1:p){
       # print(sum(abs(theta[j+1])))
-      first.prior[j] <- -1 * lambda.1 * abs(theta[j+1])
-      second.prior[j] <- -1 * lambda.2 * sqrt(sum((gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)])^2))
+      first.prior[j] <-  -1 * lambda.1 * abs(theta[j+1])
+      second.prior[j] <-  -1 * lambda.2 * sqrt(sum((gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)])^2))
       prior[j] <- first.prior[j] + second.prior[j]
   }
-  sum.prior <- sum(prior) - (lambda.1 * abs(theta[1]))
+  sum.prior <- sum(prior) + (-1 * lambda.1 * abs(theta[1])) +
+                (p * log(lambda.1)) + (p * psi * log(lambda.2)) +
+                ((1-1)*log(lambda.1) - (10 * lambda.1)) + 
+                ((0.1-1)*log(lambda.2) - (0.1 * lambda.2))
+                # ((1.1-1)*log(lambda.1 * lambda.2)) - (2 * (lambda.1 + lambda.2))
   # print(first.prior)
   return(sum.lik + sum.prior)
 }
 
-# log.posterior <- function(beta, y.origin){
-#     log.lik <- function(beta){
-#         exp.prime <- function(x, thres){
-#             if(x > thres){ans <- exp(thres) + exp(thres)*(x-thres)}
-#             else{ans <- exp(x)}
-#             return(ans)
-#         }
-#         theta.0 <- beta[1]
-#         theta <- beta[2:(p+1)]
-#         gamma <- matrix(beta[-(1:(p+1))], ncol=p)
-#         g <- matrix(, nrow=n, ncol=p)
-#         term <- first.term <- second.term <- NULL
-#         for(j in 1:p){
-#             # coef <- as.matrix(gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)])
-#             linear.term <- bs.linear[,j] * theta[j]
-#             nonlinear.term <- bs.nonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma[,j]
-#             g[, j] <- rep(theta.0, n) + linear.term + nonlinear.term
-#         }
-#         for(i in 1:n){
-#             first.term[i] <- sum(g[i,]) - log(y.origin[i])
-#             second.term[i] <- exp.prime(sum(g[i,]), thres = 10) * log(y.origin[i]/u)
-#             term[i] <- first.term[i] - second.term[i]
-#         }
-#         return(sum(term))
-#     }
-#     log.prior <- function(beta){
-#         moreau.envelope <- function(w){
-#             if(w < -1){ans <- -0.5 - w}
-#             else if (1 < w){ans <- w - 0.5}
-#             else {ans <- (w^2) / 2}
-#             return(ans)
-#         }
-#         # theta.0 <- beta[1]
-#         theta <- beta[1:(p+1)]
-#         gamma <- matrix(beta[-(1:(p+1))], ncol=p)
-#         g.1 <- g.2 <- term <- third.term <- first.term <- second.term <- NULL
-#         for(j in 1:p){
-#             first.term[j] <- -1 * lambda.1 * sqrt(sum((gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)])^2))
-#             # first.term[j] <- -1 * lambda.1 * abs(sum(gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)]))
-#             second.term[j] <- -1 * lambda.2 * sum((gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)])^2)
-#             third.term[j] <- -1 * lambda.3 * sum(abs(theta[j]))
-#             term[j] <- first.term[j] + second.term[j] + third.term[j]
-#             # term[j] <- first.term[j] + second.term[j] - lambda.3 * sum(abs(beta))
-#         }
-#         return(sum(term))
-#     }
-#     return(log.lik(beta) + log.prior(beta))
-# }
-# beta.emp <- c(rep(0, no.theta*p), rep(0, p*psi))
-beta.emp <- c(as.vector(theta.origin), as.vector(gamma.origin))
+
+beta.emp <- c(as.vector(theta.origin), as.vector(gamma.origin), 0.5, 1)
 beta.map <- optim(beta.emp, fn = log.posterior, #gr = grad.log.posterior, 
                   y.origin = y.origin,
                   method = "BFGS",
@@ -238,7 +194,8 @@ beta.map <- optim(beta.emp, fn = log.posterior, #gr = grad.log.posterior,
                   control = list(fnscale = -1, maxit = 300))
 # theta.map <- matrix(beta.map$par[1:(2*p)],nrow=2)
 theta.map <- beta.map$par[1:(p+1)]
-gamma.map <- beta.map$par[-(1:(p+1))]
+gamma.map <- beta.map$par[(p+1+1):(p+1+(psi*p))]
+lambda.map <- beta.map$par[-c(-1,-2)]
 
 df.theta <- data.frame("seq" = seq(1, p+1),
                   theta.map,

@@ -199,7 +199,7 @@ model.penalisation <- nimbleCode({
   #prior
   # lambda.1 ~ dunif(0, 1)
   # lambda.2 ~ dunif(50, 500)
-  lambda.1 ~ dgamma(0.1, 0.1) #gamma distribution prior for lambda
+  lambda.1 ~ dgamma(0.5, 5) #gamma distribution prior for lambda
   lambda.2 ~ dgamma(0.1, 0.1)
   # omega0 ~ dexp((lambda.1^2)/2)
   # theta0 ~ dnorm(0, omega0)
@@ -210,9 +210,9 @@ model.penalisation <- nimbleCode({
     theta[j] ~ ddexp(0, lambda.1)
     # omega[j] ~ dexp((lambda.1^2)/2)
     # theta[j] ~ dnorm(0, omega[j]*sigma.square)
-    sigma.square[j] ~ dinvgamma(0.001, 0.001)
+    sigma.square ~ dinvgamma(0.01, 0.01)
     tau.square[j] ~ dgamma((psi+1)/2, (lambda.2^2)/2)
-    covm[1:psi, 1:psi, j] <- diag(psi) * tau.square[j] * sigma.square[j]
+    covm[1:psi, 1:psi, j] <- diag(psi) * tau.square[j] * sigma.square
     gamma[1:psi, j] ~ dmnorm(zero.vec[1:psi, 1], cov = covm[1:psi, 1:psi, j])
   }
 
@@ -265,8 +265,8 @@ fit.v2 <- nimbleMCMC(code = model.penalisation,
                   monitors = monitor.pred,
                   inits = init.alpha(),
                   # thin = 20,
-                  niter = 30000,
-                  nburnin = 20000,
+                  niter = 60000,
+                  nburnin = 50000,
                   # setSeed = 300,
                   nchains = 2,
                   # WAIC = TRUE,-
