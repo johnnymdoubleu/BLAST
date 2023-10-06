@@ -199,7 +199,7 @@ model.penalisation <- nimbleCode({
   #prior
   # lambda.1 ~ dunif(0,0.5)
   # lambda.2 ~ dunif(200, 900)
-  lambda.1 ~ dgamma(1, 5) #gamma distribution prior for lambda
+  lambda.1 ~ dgamma(0.1, 0.1) #gamma distribution prior for lambda
   lambda.2 ~ dgamma(0.1, 0.1)
   # omega0 ~ dexp((lambda.1^2)/2)
   # theta0 ~ dnorm(0, omega0)
@@ -264,7 +264,7 @@ fit.v2 <- nimbleMCMC(code = model.penalisation,
                   monitors = monitor.pred,
                   inits = init.alpha(),
                   # thin = 20,
-                  niter = 70000,
+                  niter = 90000,
                   nburnin = 50000,
                   # setSeed = 300,
                   nchains = 2,
@@ -285,7 +285,7 @@ alpha.summary <- fit.v2$summary$all.chains
 #             horiz = FALSE, params = c("gamma"))
 gg.fit <- ggs(fit.v2$samples)
 lambda.p1 <- gg.fit %>% filter(Parameter == c("lambda.1", "lambda.2")) %>% 
-  ggs_traceplot() + theme_minimal(base_size = 20)
+  ggs_traceplot() + theme_minimal(base_size = 20) + theme(, legend.position = "none")
 lambda.p2 <- gg.fit %>% filter(Parameter == c("lambda.1", "lambda.2")) %>% 
   ggs_density() + theme_minimal(base_size = 20)
 grid.arrange(lambda.p1, lambda.p2, ncol=2)
