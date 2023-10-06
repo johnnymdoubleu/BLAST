@@ -18,7 +18,7 @@ set.seed(2)
 n <- 5000
 psi <- 20
 threshold <- 0.90
-p <- 5
+p <- 10
 no.theta <- 2
 simul.no <- 50
 
@@ -49,9 +49,9 @@ corrplot.mixed(cor(x.origin),
                 upper = "circle",
                 lower = "number",
                 addgrid.col = "black")
-for(i in 1:5){
-    knots[,j] <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)
-    tps <- basis.tps(x.origin[,i], knots[,j], m = 2, rk = TRUE, intercept = TRUE)
+for(i in 1:p){
+    knots[,i] <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)
+    tps <- basis.tps(x.origin[,i], knots[,i], m = 2, rk = TRUE, intercept = TRUE)
     # tps <- mSpline(x.origin[,i], df=psi, Boundary.knots = range(x.origin[,i]), degree = 3, intercept=TRUE)
     #   bs.x <- cbind(bs.x, tps)
     bs.linear <- cbind(bs.linear, tps[,1:no.theta])
@@ -164,8 +164,8 @@ log.posterior <- function(beta, y.origin){
 
   # lambda.1 <- beta[length(beta)-1]
   # lambda.2 <- beta[length(beta)]
-  lambda.1 <- 1
-  lambda.2 <- 1
+  lambda.1 <- 0.001
+  lambda.2 <- 0.001
   prior <- first.prior <- second.prior <- NULL
   for(j in 1:p){
       # print(sum(abs(theta[j+1])))
@@ -233,7 +233,7 @@ beta.map <- optim(beta.emp, fn = log.posterior, #gr = grad.log.posterior,
                 #   method = "BFGS",
                   method = "CG",
                   # method = "SANN",
-                  control = list(fnscale = -1, maxit = 300))
+                  control = list(fnscale = -1, maxit = 500))
 # theta.map <- matrix(beta.map$par[1:(2*p)],nrow=2)
 theta.map <- beta.map$par[1:(no.theta*p)]
 gamma.map <- beta.map$par[(no.theta*p)+1:(psi*p)]
