@@ -9,7 +9,6 @@ library(corrplot)
 library(ReIns)
 library(evir)
 library(rstan)
-library(nimbleHMC, warn.conflicts = FALSE)
 suppressMessages(library(coda))
 library(ggmcmc)
 # library(R6)
@@ -157,6 +156,17 @@ for(i in 1:p){
   bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])
 }
 # gsmooth[,j] <-  * gamma[,j];
+# // priors
+# lambda1 ~ gamma(1, 1.78);
+# intercept ~ double_exponential(0, lambda1);
+# lambda2 ~ gamma(0.1, 0.1);
+# sigma ~ inv_gamma(0.01, 0.01);
+# for (j in 1:p){
+#     theta[j] ~ double_exponential(0, lambda1);
+#     tau[j] ~ gamma(atau, square(lambda2));
+#     gamma[j] ~ multi_normal(rep_vector(0, psi), diag_matrix(rep_vector(1,psi)) * tau[j] * sigma);
+# }
+
 
 write("// Stan model for simple linear regression
 data {
@@ -192,19 +202,18 @@ transformed parameters {
 }
 
 model {
-    // priors
-    lambda1 ~ gamma(1, 1.78);
-    intercept ~ double_exponential(0, lambda1);
-    lambda2 ~ gamma(0.1, 0.1);
-    sigma ~ inv_gamma(0.01, 0.01);
-    for (j in 1:p){
-        theta[j] ~ double_exponential(0, lambda1);
-        tau[j] ~ gamma(atau, square(lambda2));
-        gamma[j] ~ multi_normal(rep_vector(0, psi), diag_matrix(rep_vector(1,psi)) * tau[j] * sigma);
-    }
     // likelihood
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
+    }
+    target += gamma_lpdf(lambda1 | 1, 1.178);
+    target += gamma_lpdf(lambda2 | 0.1, 0.1);
+    target += inv_gamma_lpdf(sigma | 0.01, 0.01);
+    target += double_exponential_lpdf(intercept | 0, lambda1);
+    for (j in 1:p){
+        target += double_exponential_lpdf(theta[j] | 0, lambda1);
+        target += gamma_lpdf(tau[j] | atau, square(lambda2));
+        target += multi_normal(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1,psi)) * tau[j] * sigma);
     }
 }
 //generated quantities {} // Used in Posterior predictive check"
@@ -235,127 +244,6 @@ print(fit1, pars=c("alpha", "theta", "lambda1", "lp__"), probs=c(.1,.5,.9))
 traceplot(fit1, pars = c("theta"), inc_warmup = TRUE, nrow = p)
 traceplot(fit1, pars = c("lambda1"), inc_warmup = TRUE, nrow = 1)
 ###################### Custom Density assigned for Pareto Distribution
-dpareto <- nimbleFunction(
-  run = function(x = double(0), t = double(0, default=1), u = double(0), alpha = double(0), log = integer(0, default = 0)){
-    log.f <- log(t)*alpha + log(alpha) - log(x/u)*(alpha)- log(x)
-    returnType(double(0))
-    if(log) return(log.f)
-    else return(exp(log.f))
-})
-
-rpareto <- nimbleFunction(
-  run = function(n = integer(0), t = double(0, default=1), u = double(0), alpha = double(0)){
-  returnType(double(0))
-  if(n != 1) print("rpareto only allows n = 1; using n = 1.")
-  dev <- runif(1)
-  return(t/(1-dev)^(1/alpha))
-})
-
-registerDistributions(list(
-  dpareto = list(
-    BUGSdist = "dpareto(t, u, alpha)",
-    Rdist = "dpareto(t, u, alpha)",
-    pqAvail = FALSE, 
-    range = c(0, Inf)
-    )
-))
-
-reExp = nimbleFunction(
-    run = function(a = double(0)) {
-        m <- 11.5
-        if(a > m){
-          ans <- exp(m) + exp(m)*(a-m)
-        }
-        else(
-          ans <- exp(a)
-        )
-        returnType(double(0))
-        return(ans)
-    }
-)
-
-model.penalisation <- nimbleCode({
-  #prior
-  # lambda.1 ~ dunif(0, 1)
-  # lambda.2 ~ dunif(50, 500)
-  lambda.1 ~ dgamma(1, 10) #gamma distribution prior for lambda
-  lambda.2 ~ dgamma(0.5, 0.5)
-  # omega0 ~ dexp((lambda.1^2)/2)
-  # theta0 ~ dnorm(0, omega0)
-  for (j in 1:p){
-    theta[j] ~ ddexp(0, sqrt(lambda.1))
-    # omega[j] ~ dexp((lambda.1^2)/2)
-    # theta[j] ~ dnorm(0, omega[j]*sigma.square)
-    
-    tau.square[j] ~ dgamma((psi+1)/2, (lambda.2^2)/2)
-    covm[1:psi, 1:psi, j] <- diag(psi) * tau.square[j] * sigma.square
-    gamma[1:psi, j] ~ dmnorm(zero.vec[1:psi, 1], cov = covm[1:psi, 1:psi, j])
-  }
-  sigma.square ~ dinvgamma(0.01, 0.01)
-  theta0 ~ ddexp(0, sqrt(lambda.1))
-  # Likelihood
-  for (j in 1:p){
-    g.nonlinear[1:n, j] <- bs.nonlinear[1:n, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma[1:psi, j]
-    g.linear[1:n, j] <- bs.linear[1:n,j] * theta[j]
-    # holder.linear[1:n, j] <- xholder.linear[1:n,j] * theta[j]
-    # holder.nonlinear[1:n, j] <- xholder.nonlinear[1:n, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma[1:psi, j]
-  }
-
-  for (i in 1:n){
-    alpha[i] <- exp(theta0 + sum(g.nonlinear[i, 1:p]) + sum(g.linear[i, 1:p]))
-    y[i] ~ dpareto(1, u, alpha[i])
-    # alpha[i] <- log(5) / log(1 + exp(theta.0 + sum(g.nonlinear[i, 1:p]) + sum(g.linear[i, 1:p])))
-    # log(new.alpha[i]) <- theta.0 + sum(holder.nonlinear[i, 1:p]) + sum(holder.linear[i, 1:p])
-  }
-  # for(i in 1:n){
-    
-  #   # spy[i] <- (alpha[i]*(y[i]/u)^(-1*alpha[i])*y[i]^(-1)) / C
-  #   # ones[i] ~ dbern(spy[i])
-  # }
-})
-
-constant <- list(psi = psi, n=n, p=p)
-init.alpha <- function() list(#list(gamma = matrix(0.02, nrow = psi, ncol=p), 
-                               #     theta = rep(0.01, p), theta0 = 0.01,
-                                #    covm = array(0.5, dim = c(psi,psi, p))),
-                              list(gamma = matrix(0, nrow = psi, ncol=p),
-                                    theta = rep(0, p), theta0 = 0,
-                                    covm = array(1, dim = c(psi,psi, p))),
-                              list(gamma = matrix(-0.01, nrow = psi, ncol=p),
-                                    theta = rep(0.02, p), theta0 = 0.03,
-                                    covm = array(1, dim = c(psi,psi, p))))
-                            #   list(gamma = matrix(1, nrow = psi, ncol=p)))
-                              # y = as.vector(y),
-monitor.pred <- c("theta0", "theta", "gamma", "alpha",
-                  "lambda.1", "lambda.2")
-# monitor.pred <- c("covm")
-data <- list(y = as.vector(y), 
-              bs.linear = bs.linear, bs.nonlinear = bs.nonlinear,
-              zero.vec = as.matrix(rep(0, psi)), #sigma = 0.75,
-              # new.x = xholder, new.bs.x = new.bs.x,
-              u = u) #, #C = 1000,  ones = as.vector(rep(1, n)),
-              #shape = 0.5, scale = 0.5)
-# init <- list(gamma = matrix(0.02, nrow = psi, ncol=p), 
-#                                    theta = rep(0.01, p), theta0 = 0.01,
-#                                    covm = array(0.5, dim = c(psi,psi, p)))
-# model <- nimbleModel(model.penalisation, constants = constant, calculate = FALSE, buildDerivs = TRUE)
-# model$simulate(model$getDependencies('ran_eff'))
-# model$calculate()
-# model$setData(c('y', 'bs.linear', 'bs.nonlinear', 'zero.vec', 'u'))
-
-fit.v2 <- nimbleMCMC(code = model.penalisation,
-                  constants = constant,
-                  data = data,
-                  monitors = monitor.pred,
-                  inits = init.alpha(),
-                  # thin = 20,
-                  niter = 60000,
-                  nburnin = 40000,
-                  # setSeed = 300,
-                  nchains = 2,
-                  # WAIC = TRUE,-
-                  samplesAsCodaMCMC = TRUE,
-                  summary = TRUE)
 
 alpha.summary <- fit.v2$summary$all.chains
 # saveRDS(alpha.summary, file=paste0("./BRSTIR/application/",Sys.Date(),"_allChains.rds"))
