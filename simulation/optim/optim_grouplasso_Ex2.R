@@ -24,7 +24,7 @@ simul.no <- 50
 
 xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
 
-sample_meanvector <- c(runif(p/2,0,1), runif(p/2,6,8))
+sample_meanvector <- c(runif(p/2,0,1), runif(p/2,0,10))
 sample_covariance_matrix <- matrix(NA, nrow = p, ncol = p)
 diag(sample_covariance_matrix) <- 1
 # set.seed(666)
@@ -96,7 +96,7 @@ for(j in 1:p){
 #         }
 #     }
 # }
-theta.origin <- c(0, 0.08, 0, 0.08, 0, 0, 0, -0.02, -0.03, 0,0)
+theta.origin <- c(0.04, 0.08, 0, 0.08, 0, 0, 0, -0.02, -0.03, 0,0)
 
 f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
@@ -193,7 +193,7 @@ log.posterior <- function(beta, y.origin){
 
 
 # beta.emp <- c(as.vector(theta.origin), as.vector(gamma.origin), 1, 300)
-beta.emp <- c(rep(0, (p+1)), rep(0, p*psi), 1, 300)
+beta.emp <- c(rep(0, (p+1)), rep(0, p*psi), 1, 10)
 beta.map <- optim(beta.emp, fn = log.posterior, #gr = grad.log.posterior, 
                   y.origin = y.origin,
                   method = "BFGS",
