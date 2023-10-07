@@ -24,7 +24,7 @@ simul.no <- 50
 
 xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
 
-sample_meanvector <- runif(p,0,10)
+sample_meanvector <- runif(p,0,1)
 sample_covariance_matrix <- matrix(NA, nrow = p, ncol = p)
 diag(sample_covariance_matrix) <- 1
 # set.seed(666)
@@ -40,7 +40,7 @@ for(i in 1 : p)
     
   }else
   {
-    U_Star <- pmin(pmax(U + sample(c(0.05, 1), size = p, replace = TRUE) * runif(n = p), 0.00001), 0.99999)
+    U_Star <- pmin(pmax(U + sample(c(-1, 1), size = p, replace = TRUE) * runif(n = p), 0.00001), 0.99999)
   }
   
   mat_Sim[, i] <- qnorm(U_Star)  
@@ -52,7 +52,7 @@ sample_covariance_matrix <- cor_Mat * (p/2)
 ## create multivariate normal distribution
 x.origin <- mvrnorm(n = n, mu = sample_meanvector, Sigma = sample_covariance_matrix)
 
-mvrnorm(n=samples, mu=c(0, 0), Sigma=matrix(c(1, r, r, 1), nrow=2), empirical=TRUE)
+
 # x.origin <- cbind(replicate(p, runif(n, 0, 1)))
 
 corrplot.mixed(cor(x.origin),
@@ -98,7 +98,7 @@ for(j in 1:p){
 #         }
 #     }
 # }
-theta.origin <- c(0.04, 0, 0, 0.08, 0, 0)
+theta.origin <- c(0.04, 0, 0, 0.4, 0, 0)
 
 f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
