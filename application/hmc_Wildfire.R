@@ -156,42 +156,84 @@ for(i in 1:p){
   bs.linear <- cbind(bs.linear, tps[,1:no.theta])
   bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])
 }
-
+# gsmooth[,j] <-  * gamma[,j];
 
 write("// Stan model for simple linear regression
-
 data {
-    int <lower = 1> n; // Sample size
-    int <lower = 1> p; // regression coefficient size, p
-    int <lower = 1> psi; // splines coefficient size, psi
-    real <lower = 1> u; // large threshold value, u
-    vector[n] zero; // zero vector for multivariate normal
-    matrix[n,p] bs.linear; // x.origin
-    matrix[n] y; // extreme response
+    int <lower=1> n; // Sample size
+    int <lower=1> p; // regression coefficient size
+    int <lower=1> psi; // splines coefficient size
+    real <lower=0> u; // large threshold value
+    matrix[n,p] bsLinear; // fwi dataset
+    matrix[n, (psi*p)] bsNonlinear; // thin plate splines basis
+    vector[n] y; // extreme response
+    real <lower=0> atau;
 }
 
 parameters {
-    vector[n] alpha; // tail index
     vector[p] theta; // linear predictor
-    matrix[psi, p] gamma; // 
-    real lambda1; // lasso penalty
-    real lambda2; // group lasso penalty
+    vector[psi] gamma[p];
+    real <lower=0> sigma; //
+    real <lower=0> lambda1; // lasso penalty
+    real <lower=0> lambda2; // group lasso penalty
+    real intercept; // intercept term
+    vector[p] tau;
+}
+
+transformed parameters {
+    vector[n] alpha; // tail index
+    matrix[n, p] gsmooth; // nonlinear component
+    for (j in 1:p){
+        gsmooth[,j] <- bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
+    }
+    for (i in 1:n){
+        alpha[i] <- exp(intercept + dot_product(bsLinear[i], theta) + (gsmooth[i,] * rep_vector(1, p)));
+    }
 }
 
 model {
-    lambda1 ~ dgamma(1, 1.78) 
-    lambda2 ~ dgamma(0.1, 0.1)
-
-    y ~ pareto(u, alpha[i])
-    y ~ normal(alpha + x * beta , sigma);
+    // priors
+    lambda1 ~ gamma(1, 1.78);
+    intercept ~ double_exponential(0, lambda1);
+    lambda2 ~ gamma(0.1, 0.1);
+    sigma ~ inv_gamma(0.01, 0.01);
+    for (j in 1:p){
+        theta[j] ~ double_exponential(0, lambda1);
+        tau[j] ~ gamma(atau, square(lambda2));
+        gamma[j] ~ multi_normal(rep_vector(0, psi), diag_matrix(rep_vector(1,psi)) * tau[j] * sigma);
+    }
+    // likelihood
+    for (i in 1:n){
+        target += pareto_lpdf(y[i] | u, alpha[i]);
+    }
 }
-//generated quantities {} // The posterior predictive distribution"
-,
+//generated quantities {} // Used in Posterior predictive check"
+, "model.stan")
 
-"model.stan"
+data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, 
+                    atau = ((psi+1)/2),
+                    bsLinear = bs.linear, bsNonlinear = bs.nonlinear)
+
+# stanc("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/application/model1.stan")
+fit1 <- stan(
+    file = "model.stan",  # Stan program
+    data = data.stan,    # named list of data
+    chains = 1,             # number of Markov chains
+    warmup = 1000,          # number of warmup iterations per chain
+    iter = 2000,            # total number of iterations per chain
+    cores = 1,              # number of cores (could use one per chain)
+    refresh = 1             # no progress shown
 )
 
+posterior <- extract(fit1)
+str(posterior)
 
+print(fit1, pars=c("alpha", "theta", "lambda1", "lp__"), probs=c(.1,.5,.9))
+        # tau[j] ~ dgamma((psi+1)/2, (lambda.2^2)/2)
+        # covm[1:psi, 1:psi, j] <- diag(psi) * tau.square[j] * sigma.square
+        # gamma[1:psi, j] ~ dmnorm(zero, covm[1:psi, 1:psi, j])
+traceplot(fit1, pars = c("theta"), inc_warmup = TRUE, nrow = p)
+traceplot(fit1, pars = c("lambda1"), inc_warmup = TRUE, nrow = 1)
 ###################### Custom Density assigned for Pareto Distribution
 dpareto <- nimbleFunction(
   run = function(x = double(0), t = double(0, default=1), u = double(0), alpha = double(0), log = integer(0, default = 0)){
