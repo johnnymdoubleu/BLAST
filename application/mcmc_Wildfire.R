@@ -199,15 +199,15 @@ model.penalisation <- nimbleCode({
   #prior
   # lambda.1 ~ dunif(0, 1)
   # lambda.2 ~ dunif(50, 500)
-  lambda.1 ~ dgamma(0.5, 5) #gamma distribution prior for lambda
-  lambda.2 ~ dgamma(0.1, 0.1)
+  lambda.1 ~ dgamma(1, 10) #gamma distribution prior for lambda
+  lambda.2 ~ dgamma(0.5, 0.5)
   # omega0 ~ dexp((lambda.1^2)/2)
   # theta0 ~ dnorm(0, omega0)
-  theta0 ~ ddexp(0, lambda.1)
+  theta0 ~ ddexp(0, sqrt(lambda.1))
   
   
   for (j in 1:p){
-    theta[j] ~ ddexp(0, lambda.1)
+    theta[j] ~ ddexp(0, sqrt(lambda.1))
     # omega[j] ~ dexp((lambda.1^2)/2)
     # theta[j] ~ dnorm(0, omega[j]*sigma.square)
     sigma.square ~ dinvgamma(0.01, 0.01)
@@ -225,7 +225,7 @@ model.penalisation <- nimbleCode({
   }
 
   for (i in 1:n){
-    alpha[i] <- reExp(theta0 + sum(g.nonlinear[i, 1:p]) + sum(g.linear[i, 1:p]))
+    alpha[i] <- exp(theta0 + sum(g.nonlinear[i, 1:p]) + sum(g.linear[i, 1:p]))
     y[i] ~ dpareto(1, u, alpha[i])
     # alpha[i] <- log(5) / log(1 + exp(theta.0 + sum(g.nonlinear[i, 1:p]) + sum(g.linear[i, 1:p])))
     # log(new.alpha[i]) <- theta.0 + sum(holder.nonlinear[i, 1:p]) + sum(holder.linear[i, 1:p])

@@ -18,13 +18,13 @@ suppressMessages(library(tidyverse))
 n <- 5000
 psi <- 20
 threshold <- 0.90
-p <- 10
+p <- 5
 no.theta <- 1
 simul.no <- 50
 
 xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
 
-sample_meanvector <- c(runif(p/2,0,1), runif(p/2,0,10))
+sample_meanvector <- runif(p,0,10)
 sample_covariance_matrix <- matrix(NA, nrow = p, ncol = p)
 diag(sample_covariance_matrix) <- 1
 # set.seed(666)
@@ -34,7 +34,7 @@ U <- runif(n = p) * 0.5
 
 for(i in 1 : p)
 {
-  if(i <= 7)
+  if(i <= (p*1.3/2))
   {
     U_Star <- pmin(U + 0.25 * runif(n = p), 0.99999)
     
@@ -51,6 +51,8 @@ sample_covariance_matrix <- cor_Mat * (p/2)
 
 ## create multivariate normal distribution
 x.origin <- mvrnorm(n = n, mu = sample_meanvector, Sigma = sample_covariance_matrix)
+
+mvrnorm(n=samples, mu=c(0, 0), Sigma=matrix(c(1, r, r, 1), nrow=2), empirical=TRUE)
 # x.origin <- cbind(replicate(p, runif(n, 0, 1)))
 
 corrplot.mixed(cor(x.origin),
@@ -96,7 +98,7 @@ for(j in 1:p){
 #         }
 #     }
 # }
-theta.origin <- c(0.04, 0.08, 0, 0.08, 0, 0, 0, -0.02, -0.03, 0,0)
+theta.origin <- c(0.04, 0, 0, 0.08, 0, 0)
 
 f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){

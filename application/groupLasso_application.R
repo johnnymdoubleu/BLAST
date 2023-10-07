@@ -205,10 +205,10 @@ log.posterior <- function(beta, y.origin){
   }
   sum.lik <- sum(lik)
 
-  # lambda.1 <- beta[length(beta)-1]
-  # lambda.2 <- beta[length(beta)]
-  lambda.1 <- 10
-  lambda.2 <- 70
+  lambda.1 <- beta[length(beta)-1]
+  lambda.2 <- beta[length(beta)]
+  # lambda.1 <- 10
+  # lambda.2 <- 70
   prior <- first.prior <- second.prior <- NULL
   for(j in 1:p){
       # print(sum(abs(theta[j+1])))
@@ -216,7 +216,10 @@ log.posterior <- function(beta, y.origin){
       second.prior[j] <- -1 * lambda.2 * sqrt(sum((gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)])^2))
       prior[j] <- first.prior[j] + second.prior[j]
   }
-  sum.prior <- sum(prior) - (lambda.1 * abs(theta[1]))
+  sum.prior <- sum(prior) - (lambda.1 * abs(theta[1])) +
+                (p * log(lambda.1^2)) + (p * psi * log(lambda.2)) +
+                ((1-1)*log(lambda.1^2) - (1.78 * lambda.1^2)) + 
+                ((0.5-1)*log(lambda.2) - (0.5 * lambda.2))
   # print(first.prior)
   return(sum.lik + sum.prior)
 }
@@ -277,7 +280,7 @@ log.posterior <- function(beta, y.origin){
 # -6445.875
 
 
-beta.emp <- c(rep(0, (p+1)), rep(0, p*psi))
+beta.emp <- c(rep(0, (p+1)), rep(0, p*psi), 1, 1)
 # beta.emp <- c(as.vector(theta.origin), as.vector(gamma.origin))
 beta.map <- optim(beta.emp, fn = log.posterior, #gr = grad.log.posterior, 
                   y.origin = y,
