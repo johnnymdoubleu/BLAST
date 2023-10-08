@@ -197,7 +197,7 @@ transformed parameters {
         gsmooth[,j] <- bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
     }
     for (i in 1:n){
-        alpha[i] <- exp(intercept + dot_product(bsLinear[i], theta) + (gsmooth[i,] * rep_vector(1, p)));
+        alpha[i] <- exp(intercept + dot_product(bsLinear[i], theta) + (gsmooth[i,] *rep_vector(1, p)));
     }
 }
 
@@ -213,7 +213,7 @@ model {
     for (j in 1:p){
         target += double_exponential_lpdf(theta[j] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, square(lambda2));
-        target += multi_normal(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1,psi)) * tau[j] * sigma);
+        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1,psi)) * tau[j] * sigma);
     }
 }
 //generated quantities {} // Used in Posterior predictive check"
@@ -228,8 +228,8 @@ fit1 <- stan(
     file = "model.stan",  # Stan program
     data = data.stan,    # named list of data
     chains = 1,             # number of Markov chains
-    warmup = 1000,          # number of warmup iterations per chain
-    iter = 2000,            # total number of iterations per chain
+    warmup = 5000,          # number of warmup iterations per chain
+    iter = 10000,            # total number of iterations per chain
     cores = 1,              # number of cores (could use one per chain)
     refresh = 1             # no progress shown
 )
@@ -237,7 +237,7 @@ fit1 <- stan(
 posterior <- extract(fit1)
 str(posterior)
 
-print(fit1, pars=c("alpha", "theta", "lambda1", "lp__"), probs=c(.1,.5,.9))
+print(fit1, pars=c("alpha", "gamma", "intercept", "theta", "lambda1", "lambda2","lp__"), probs=c(.1,.5,.9))
         # tau[j] ~ dgamma((psi+1)/2, (lambda.2^2)/2)
         # covm[1:psi, 1:psi, j] <- diag(psi) * tau.square[j] * sigma.square
         # gamma[1:psi, j] ~ dmnorm(zero, covm[1:psi, 1:psi, j])
