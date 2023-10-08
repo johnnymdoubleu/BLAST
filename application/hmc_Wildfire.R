@@ -15,7 +15,7 @@ library(ggmcmc)
 # suppressMessages(library(igraph))
 # library(mgcv)
 library(MCMCvis)
-
+library(cmdstanr)
 # library(ggplotify)
 # Structure of the FWI System
 #DSR : Dail Severity Rating
@@ -155,7 +155,7 @@ for(i in 1:p){
   bs.linear <- cbind(bs.linear, tps[,1:no.theta])
   bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])
 }
-# gsmooth[,j] <-  * gamma[,j];
+
 # // priors
 # lambda1 ~ gamma(1, 1.78);
 # intercept ~ double_exponential(0, lambda1);
@@ -166,7 +166,10 @@ for(i in 1:p){
 #     tau[j] ~ gamma(atau, square(lambda2));
 #     gamma[j] ~ multi_normal(rep_vector(0, psi), diag_matrix(rep_vector(1,psi)) * tau[j] * sigma);
 # }
-
+# // likelihood
+# for (i in 1:n){
+#     target += pareto_lpdf(y[i] | u, alpha[i]);
+# }
 
 write("// Stan model for simple linear regression
 data {
@@ -206,7 +209,7 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 1, 1.178);
+    target += gamma_lpdf(lambda1 | 1, 5);
     target += gamma_lpdf(lambda2 | 0.1, 0.1);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     target += double_exponential_lpdf(intercept | 0, lambda1);
@@ -223,27 +226,44 @@ data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi,
                     atau = ((psi+1)/2),
                     bsLinear = bs.linear, bsNonlinear = bs.nonlinear)
 
+set_cmdstan_path(path = NULL)
+#> CmdStan path set to: /Users/jgabry/.cmdstan/cmdstan-2.32.2
+
+# Create a CmdStanModel object from a Stan program,
+# here using the example model that comes with CmdStan
+file <- file.path(cmdstan_path(), "model.stan")
+
+# init.alpha <- function() list(list(gamma = matrix(0.02, nrow = psi, ncol=p), 
+#                                    theta = rep(0.01, p), intercept = 0.01),
+#                               list(gamma = matrix(0, nrow = psi, ncol=p),
+#                                     theta = rep(0, p), intercept = 0),
+#                               list(gamma = matrix(-0.01, nrow = psi, ncol=p),
+#                                     theta = rep(0.02, p), intercept = 0.03))
+
 # stanc("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/application/model1.stan")
 fit1 <- stan(
     file = "model.stan",  # Stan program
     data = data.stan,    # named list of data
-    chains = 1,             # number of Markov chains
-    warmup = 5000,          # number of warmup iterations per chain
-    iter = 10000,            # total number of iterations per chain
-    cores = 1,              # number of cores (could use one per chain)
+    # init = init.alpha,       #
+    chains = 2,             # number of Markov chains
+    warmup = 100,          # number of warmup iterations per chain
+    iter = 500,            # total number of iterations per chain
+    cores = 2,              # number of cores (could use one per chain)
     refresh = 1             # no progress shown
 )
 
 posterior <- extract(fit1)
 str(posterior)
 
-print(fit1, pars=c("alpha", "gamma", "intercept", "theta", "lambda1", "lambda2","lp__"), probs=c(.1,.5,.9))
-        # tau[j] ~ dgamma((psi+1)/2, (lambda.2^2)/2)
-        # covm[1:psi, 1:psi, j] <- diag(psi) * tau.square[j] * sigma.square
-        # gamma[1:psi, j] ~ dmnorm(zero, covm[1:psi, 1:psi, j])
-traceplot(fit1, pars = c("theta"), inc_warmup = TRUE, nrow = p)
-traceplot(fit1, pars = c("lambda1"), inc_warmup = TRUE, nrow = 1)
-###################### Custom Density assigned for Pareto Distribution
+# print(as.mcmc(fit1), pars=c("alpha", "gamma", "intercept", "theta", "lambda1", "lambda2","lp__"), probs=c(.05,.5,.95))
+plot(fit1, plotfun = "trace", pars = c("intercept", "theta"))
+plot(fit1, plotfun = "trace", pars = c("lambda1", "lambda2"))
+
+summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
+
+# traceplot(fit1, pars = c("theta"), nrow = (p))
+# traceplot(fit1, pars = c("lambda1", "lambda2"), inc_warmup = TRUE, nrow = 2)
+fit.v2 <- as.mcmc(fit1)
 
 alpha.summary <- fit.v2$summary$all.chains
 # saveRDS(alpha.summary, file=paste0("./BRSTIR/application/",Sys.Date(),"_allChains.rds"))
@@ -256,17 +276,17 @@ alpha.summary <- fit.v2$summary$all.chains
 # MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2,
 #             HPD = TRUE, xlab="gamma", offset = 0.5,
 #             horiz = FALSE, params = c("gamma"))
-gg.fit <- ggs(fit.v2$samples)
-lambda.p1 <- gg.fit %>% filter(Parameter == c("lambda.1", "lambda.2")) %>% 
-  ggs_traceplot() + theme_minimal(base_size = 20) + theme(, legend.position = "none")
-lambda.p2 <- gg.fit %>% filter(Parameter == c("lambda.1", "lambda.2")) %>% 
-  ggs_density() + theme_minimal(base_size = 20)
-grid.arrange(lambda.p1, lambda.p2, ncol=2)
-# MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2,
-#             HPD = TRUE, xlab="lambda", offset = 0.5,
-#             horiz = FALSE, params = c("lambda.1", "lambda.2"))            
-# print(alpha.summary)
-MCMCsummary(object = fit.v2$samples, round = 3)[((dim(alpha.summary)[1]-p-2-(psi*p)):dim(alpha.summary)[1]),]
+# gg.fit <- ggs(fit.v2$samples)
+# lambda.p1 <- gg.fit %>% filter(Parameter == c("lambda.1", "lambda.2")) %>% 
+#   ggs_traceplot() + theme_minimal(base_size = 20) + theme(, legend.position = "none")
+# lambda.p2 <- gg.fit %>% filter(Parameter == c("lambda.1", "lambda.2")) %>% 
+#   ggs_density() + theme_minimal(base_size = 20)
+# grid.arrange(lambda.p1, lambda.p2, ncol=2)
+# # MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2,
+# #             HPD = TRUE, xlab="lambda", offset = 0.5,
+# #             horiz = FALSE, params = c("lambda.1", "lambda.2"))            
+# # print(alpha.summary)
+# MCMCsummary(object = fit.v2$samples, round = 3)[((dim(alpha.summary)[1]-p-2-(psi*p)):dim(alpha.summary)[1]),]
 
 # print(MCMCtrace(object = fit.v2$samples,
 #           pdf = FALSE, # no export to PDF
@@ -282,17 +302,28 @@ MCMCsummary(object = fit.v2$samples, round = 3)[((dim(alpha.summary)[1]-p-2-(psi
 samples <- fit.v2$samples$chain1
 len <- dim(samples)[1]
 
-gamma.post.mean <- matrix(alpha.summary[(n+1):(n+(psi*p)),1], nrow = psi, ncol = p)
-gamma.q1 <- matrix(alpha.summary[(n+1):(n+(psi*p)),4], nrow = psi, ncol = p)
-gamma.q3 <- matrix(alpha.summary[(n+1):(n+(psi*p)),5], nrow = psi, ncol = p)
-theta.post.mean <- alpha.summary[(n+(psi*p)+2+1):(n+(psi*p)+2+p),1]
-theta.q1 <- alpha.summary[(n+(psi*p)+2+1):(n+(psi*p)+2+p),4]
-theta.q3 <- alpha.summary[(n+(psi*p)+2+1):(n+(psi*p)+2+p),5]
+
+theta0.samples <- summary(fit1, par=c("intercept"), probs = c(0.05,0.5, 0.95))$summary
+theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
+gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
+lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
+alpha.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
+
+gamma.post.mean <- gamma.samples[,1]
+gamma.q1 <- gamma.samples[,4]
+gamma.q3 <- gamma.samples[,6]
+theta.post.mean <- theta.samples[,1]
+theta.q1 <- theta.samples[,4]
+theta.q3 <- theta.samples[,6]
+
+
+# theta.samples <- data.frame(apply(posterior$theta, 2, summary))
+
 
 df.theta <- data.frame("seq" = seq(1, (p+1)),
-                        "m" = c(tail(alpha.summary, 1)[1], theta.post.mean),
-                        "l" = c(tail(alpha.summary, 1)[4], theta.q1),
-                        "u" = c(tail(alpha.summary, 1)[5], theta.q3))
+                        "m" = c(theta0.samples[1], theta.post.mean),
+                        "l" = c(theta0.samples[4], theta.q1),
+                        "u" = c(theta0.samples[6], theta.q3))
 df.theta$covariate <- factor(c("\u03b8",names(fwi.scaled)), levels = c("\u03b8",colnames(fwi.scaled)))
 df.theta$labels <- factor(c("\u03b8",colnames(fwi.scaled)))
 
@@ -368,20 +399,20 @@ g.nonlinear.q1 <- g.linear.q1 <- g.q1 <- g.nonlinear.q3 <- g.linear.q3 <- g.q3 <
 g.smooth.q1 <- g.smooth.q3 <- g.smooth.new <- alpha.new <- NULL
 for (j in 1:p){
   g.linear.new[,j] <- xholder.linear[,j] * theta.post.mean[j]
-  g.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.post.mean[,j] 
+  g.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.post.mean, nrow=psi)[,j] 
   g.new[1:n, j] <- g.linear.new[,j] + g.nonlinear.new[,j]
   g.linear.q1[,j] <- xholder.linear[,j] * theta.q1[j]
-  g.nonlinear.q1[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.q1[,j] 
+  g.nonlinear.q1[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.q1, nrow=psi)[,j] 
   g.q1[1:n, j] <- g.linear.q1[,j] + g.nonlinear.q1[,j]
   g.linear.q3[,j] <- xholder.linear[,j] * theta.q3[j]
-  g.nonlinear.q3[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.q3[,j] 
+  g.nonlinear.q3[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.q3, nrow=psi)[,j] 
   g.q3[1:n, j] <- g.linear.q3[,j] + g.nonlinear.q3[,j]
 }
 
 for(i in 1:n){
-  g.smooth.new[i] <- tail(alpha.summary, 1)[1] + sum(g.new[i,])
-  g.smooth.q1[i] <- tail(alpha.summary, 1)[4] + sum(g.q1[i,])
-  g.smooth.q3[i] <- tail(alpha.summary, 1)[5] + sum(g.q3[i,])
+  g.smooth.new[i] <- theta0.samples[1] + sum(g.new[i,])
+  g.smooth.q1[i] <- theta0.samples[4] + sum(g.q1[i,])
+  g.smooth.q3[i] <- theta0.samples[6] + sum(g.q3[i,])
 }
 
 ### Plotting linear and nonlinear components
@@ -467,20 +498,19 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_nonlinear.pdf"), width=12.5, height = 15)
+
 data.scenario <- data.frame("x" = c(1:n),
                             "constant" = newx,
-                            "post.mean" = sort(alpha.summary[1:n,1]),
-                            "q1" = sort(alpha.summary[1:n,4]),
-                            "q3" = sort(alpha.summary[1:n,5]),
-                            "chain1" = sort(fit.v2$summary$chain1[1:n,1]),
-                            "chain2" = sort(fit.v2$summary$chain2[1:n,1]))
+                            "post.mean" = sort(alpha.samples[,1]),
+                            "q1" = sort(alpha.samples[,4]),
+                            "q3" = sort(alpha.samples[,6]))
 
 ggplot(data.scenario, aes(x=x)) + 
   # geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab("Nonlinear Components") +
   geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
   geom_line(aes(y=post.mean, col = "Posterior Mean"), linewidth=2) + ylab(expression(alpha(x))) + ylim(0, 100) +
-  geom_line(aes(y=chain1, col = "Chain 1"), linetype=2) +
-  geom_line(aes(y=chain2, col = "Chian 2"), linetype=3) +
+  # geom_line(aes(y=chain1, col = "Chain 1"), linetype=2) +
+  # geom_line(aes(y=chain2, col = "Chian 2"), linetype=3) +
   # facet_grid(covariates ~ .) + 
   # scale_y_continuous(breaks=c(0)) + 
   scale_color_manual(values = c("red", "blue", "#e0b430"))+
