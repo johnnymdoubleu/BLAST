@@ -222,7 +222,7 @@ model {
     target += gamma_lpdf(lambda1 | 0.1, 0.1);
     target += gamma_lpdf(lambda2 | 0.1, 0.1);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
-    target += normal_lpdf(theta[1] | 0, 1);
+    target += normal_lpdf(theta[1] | 0, 10);
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, (square(lambda2)/2));
@@ -265,7 +265,7 @@ fit1 <- stan(
     # init_r = 1,
     chains = 3,             # number of Markov chains
     warmup = 1000,          # number of warmup iterations per chain
-    iter = 2000,            # total number of iterations per chain
+    iter = 5000,            # total number of iterations per chain
     cores = 4,              # number of cores (could use one per chain)
     refresh = 1             # no progress shown
 )
