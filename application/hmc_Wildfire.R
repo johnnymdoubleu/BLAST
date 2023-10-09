@@ -259,8 +259,8 @@ posterior <- extract(fit1)
 str(posterior)
 
 # print(as.mcmc(fit1), pars=c("alpha", "gamma", "intercept", "theta", "lambda1", "lambda2","lp__"), probs=c(.05,.5,.95))
-plot(fit1, plotfun = "trace", pars = c("intercept", "theta"))
-plot(fit1, plotfun = "trace", pars = c("lambda1", "lambda2"))
+plot(fit1, plotfun = "trace", pars = c("intercept", "theta"), nrow = (p+1))
+plot(fit1, plotfun = "trace", pars = c("lambda1", "lambda2"), nrow = 2)
 
 summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
 
@@ -268,7 +268,7 @@ summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
 # traceplot(fit1, pars = c("lambda1", "lambda2"), inc_warmup = TRUE, nrow = 2)
 fit.v2 <- as.mcmc(fit1)
 
-alpha.summary <- fit.v2$summary$all.chains
+# alpha.summary <- fit.v2$summary$all.chains
 # saveRDS(alpha.summary, file=paste0("./BRSTIR/application/",Sys.Date(),"_allChains.rds"))
 
 # alpha.summary[701:711,]
@@ -302,8 +302,8 @@ alpha.summary <- fit.v2$summary$all.chains
 #           n.eff = TRUE,# add eff sample size
 #           params = c("lambda.1", "lambda.2")))
 
-samples <- fit.v2$samples$chain1
-len <- dim(samples)[1]
+# samples <- fit.v2$samples$chain1
+# len <- dim(samples)[1]
 
 
 theta0.samples <- summary(fit1, par=c("intercept"), probs = c(0.05,0.5, 0.95))$summary
