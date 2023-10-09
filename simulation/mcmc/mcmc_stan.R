@@ -140,8 +140,6 @@ for(i in 1:p){
     bs.linear <- cbind(bs.linear, tps[,1:no.theta])
     bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])  
 }
-bs.linear <- cbind(rep(p,n), bs.linear)
-xholder.linear <- cbind(rep(p,n), xholder.linear)
 
 f.nonlinear.new <- f.linear.new <- f.new <- f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
@@ -215,10 +213,10 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 1, 5);
+    target += gamma_lpdf(lambda1 | 1, 1.78);
     target += gamma_lpdf(lambda2 | 0.1, 0.1);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
-    target += normal_lpdf(theta[1] | 0, 100);
+    target += normal_lpdf(theta[1] | 0, 0.001);
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, (square(lambda2)/2));
@@ -226,9 +224,9 @@ model {
     }
 }
 //generated quantities {} // Used in Posterior predictive check"
-, "model.stan")
+, "model_simulation.stan")
 
-data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, 
+data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, 
                     atau = ((psi+1)/2), newp = (p+1),
                     bsLinear = bs.linear, bsNonlinear = bs.nonlinear)
 
@@ -237,12 +235,12 @@ set_cmdstan_path(path = NULL)
 
 # Create a CmdStanModel object from a Stan program,
 # here using the example model that comes with CmdStan
-file <- file.path(cmdstan_path(), "model.stan")
+file <- file.path(cmdstan_path(), "model_simulation.stan")
 
 init.alpha <- list(list(gamma = array(rep(0,(psi*p)), dim=c(psi, p)),
                         theta = rep(0, (p+1)), 
                         tau = rep(0.01, p), sigma = 0.001, 
-                        lambda1 = 0.01, lambda2 = 30),
+                        lambda1 = 0.1, lambda2 = 0.1),
                   list(gamma = array(rep(0.02,(psi*p)), dim=c(psi, p)),
                         theta = rep(0.1, (p+1)), 
                         tau = rep(0.01, p), sigma = 0.001,
@@ -254,7 +252,7 @@ init.alpha <- list(list(gamma = array(rep(0,(psi*p)), dim=c(psi, p)),
 
 # stanc("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/application/model1.stan")
 fit1 <- stan(
-    file = "model.stan",  # Stan program
+    file = "model_simulation.stan",  # Stan program
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
     # init_r = 1,
