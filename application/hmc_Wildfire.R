@@ -196,7 +196,7 @@ parameters {
 transformed parameters {
     vector[n] alpha; // tail index
     matrix[n, p] gsmooth; // nonlinear component
-    
+    cov_matrix[psi] covmat; // covariance matrix
     for (j in 1:p){
         gsmooth[,j] <- bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
     }
@@ -217,7 +217,7 @@ model {
     for (j in 1:p){
         target += double_exponential_lpdf(theta[j] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, square(lambda2));
-        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1,psi)) * tau[j] * sigma);
+        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), );
     }
 }
 //generated quantities {} // Used in Posterior predictive check"
