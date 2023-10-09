@@ -196,6 +196,7 @@ parameters {
 transformed parameters {
     vector[n] alpha; // tail index
     matrix[n, p] gsmooth; // nonlinear component
+    
     for (j in 1:p){
         gsmooth[,j] <- bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
     }
@@ -233,21 +234,19 @@ set_cmdstan_path(path = NULL)
 # here using the example model that comes with CmdStan
 file <- file.path(cmdstan_path(), "model.stan")
 
-# init.alpha <- function() list(list(gamma = matrix(0.02, nrow = psi, ncol=p), 
-#                                    theta = rep(0.01, p), intercept = 0.01),
-#                               list(gamma = matrix(0, nrow = psi, ncol=p),
-#                                     theta = rep(0, p), intercept = 0),
-#                               list(gamma = matrix(-0.01, nrow = psi, ncol=p),
-#                                     theta = rep(0.02, p), intercept = 0.03))
+init.alpha <- list(list(gamma = array(rep(0,(psi*p)), dim=c(psi, p)),
+                                    theta = rep(0, p), intercept = 0),
+                  list(gamma = array(rep(0.02,(psi*p)), dim=c(psi, p)),
+                                    theta = rep(0.02, p), intercept = 0.03))
 
 # stanc("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/application/model1.stan")
 fit1 <- stan(
     file = "model.stan",  # Stan program
     data = data.stan,    # named list of data
-    # init = init.alpha,       #
+    init = init.alpha,      # initial value
     chains = 2,             # number of Markov chains
-    warmup = 100,          # number of warmup iterations per chain
-    iter = 500,            # total number of iterations per chain
+    warmup = 1000,          # number of warmup iterations per chain
+    iter = 2000,            # total number of iterations per chain
     cores = 2,              # number of cores (could use one per chain)
     refresh = 1             # no progress shown
 )
