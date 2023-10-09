@@ -190,6 +190,8 @@ for(i in 1:p){
 log.posterior <- function(beta, y.origin){
   theta <- beta[1:(p+1)]
   gamma <- matrix(beta[(p+2):(p+1+(psi*p))], ncol=p)
+  lambda.1 <- beta[length(beta)-1]
+  lambda.2 <- beta[length(beta)]
   g <- matrix(, nrow=n, ncol=p)
   lik <- first.lik <- second.lik <- NULL
   for(j in 1:p){
@@ -205,8 +207,6 @@ log.posterior <- function(beta, y.origin){
   }
   sum.lik <- sum(lik)
 
-  lambda.1 <- beta[length(beta)-1]
-  lambda.2 <- beta[length(beta)]
   # lambda.1 <- 10
   # lambda.2 <- 70
   prior <- first.prior <- second.prior <- NULL
@@ -218,8 +218,8 @@ log.posterior <- function(beta, y.origin){
   }
   sum.prior <- sum(prior) - (lambda.1 * abs(theta[1])) +
                 (p * log(lambda.1^2)) + (p * psi * log(lambda.2)) +
-                ((1-1)*log(lambda.1^2) - (1.78 * lambda.1^2)) + 
-                ((0.5-1)*log(lambda.2) - (0.5 * lambda.2))
+                ((1-1)*log(lambda.1^2) - (5 * lambda.1^2)) + 
+                ((0.1-1)*log(lambda.2) - (0.1 * lambda.2))
   # print(first.prior)
   return(sum.lik + sum.prior)
 }
@@ -280,14 +280,16 @@ log.posterior <- function(beta, y.origin){
 # -6445.875
 
 
-beta.emp <- c(rep(0, (p+1)), rep(0, p*psi), 1, 1)
+beta.emp <- c(rep(0, (p+1)), rep(0, p*psi), 1, 29.73088906)
 # beta.emp <- c(as.vector(theta.origin), as.vector(gamma.origin))
-beta.map <- optim(beta.emp, fn = log.posterior, #gr = grad.log.posterior, 
+beta.map <- optim(par = beta.emp, fn = log.posterior, 
                   y.origin = y,
+                  lower=c(-Inf, -Inf, 0, 0),
+                  upper=rep(Inf, 4),
                   method = "BFGS", 
                   # method = "CG",
                   # method = "SANN",
-                  control = list(fnscale = -1, maxit = 300))
+                  control = list(fnscale = -1, maxit = 500))
 # theta.map <- matrix(beta.map$par[1:(2*p)],nrow=2)
 theta.map <- beta.map$par[1:(p+1)]
 gamma.map <- beta.map$par[(p+1+1):(p+1+(psi*p))]

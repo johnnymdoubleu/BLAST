@@ -239,23 +239,26 @@ set_cmdstan_path(path = NULL)
 file <- file.path(cmdstan_path(), "model.stan")
 
 init.alpha <- list(list(gamma = array(rep(0,(psi*p)), dim=c(psi, p)),
-                                    theta = rep(0, p), intercept = 0),
+                        theta = rep(0, p), intercept = 0, tau = rep(0.01, p),
+                        lambda1 = 0.01, lambda2 = 30, sigam = 0.001),
                   list(gamma = array(rep(0.02,(psi*p)), dim=c(psi, p)),
-                                    theta = rep(0.02, p), intercept = 0.03))
+                        theta = rep(0.1, p), intercept = 0.1, tau = rep(0.01, p),
+                        lambda1 = 0.01, lambda2 = 30, sigam = 0.001))
 
 # stanc("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/application/model1.stan")
 fit1 <- stan(
     file = "model.stan",  # Stan program
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
+    # init_r = 1,
     chains = 2,             # number of Markov chains
-    warmup = 1000,          # number of warmup iterations per chain
-    iter = 2000,            # total number of iterations per chain
+    warmup = 2000,          # number of warmup iterations per chain
+    iter = 6000,            # total number of iterations per chain
     cores = 2,              # number of cores (could use one per chain)
     refresh = 1             # no progress shown
 )
 
-saveRDS(fit1, file=paste0("./BRSTIR/application/",Sys.Date(),"_stanfit.rds"))
+# saveRDS(fit1, file=paste0("./BRSTIR/application/",Sys.Date(),"_stanfit.rds"))
 posterior <- extract(fit1)
 str(posterior)
 
