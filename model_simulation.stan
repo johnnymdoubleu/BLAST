@@ -7,6 +7,8 @@ data {
     real <lower=0> u; // large threshold value
     matrix[n,p] bsLinear; // fwi dataset
     matrix[n, (psi*p)] bsNonlinear; // thin plate splines basis
+    matrix[n,p] xholderLinear; // fwi dataset
+    matrix[n, (psi*p)] xholderNonlinear; // thin plate splines basis    
     vector[n] y; // extreme response
     real <lower=0> atau;
 }
@@ -22,16 +24,20 @@ parameters {
 
 transformed parameters {
     vector[n] alpha; // tail index
+    vector[n] newalpha; // tail index
     matrix[n, p] gsmooth; // nonlinear component
+    matrix[n, p] newsmooth; // nonlinear component
     cov_matrix[psi] covmat[p]; // covariance
     for(j in 1:p){
         covmat[j] <- diag_matrix(rep_vector(1, psi)) * tau[j] * sigma;
     };
     for (j in 1:p){
         gsmooth[,j] <- bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
+        newsmooth[,j] <- xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
     };
     for (i in 1:n){
         alpha[i] <- exp(theta[1] + dot_product(bsLinear[i], theta[2:newp]) + (gsmooth[i,] *rep_vector(1, p)));
+        newalpha[i] <- exp(theta[1] + dot_product(xholderLinear[i], theta[2:newp]) + (gsmooth[i,] *rep_vector(1, p)));
     };
 }
 

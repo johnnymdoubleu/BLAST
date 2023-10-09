@@ -180,6 +180,8 @@ data {
     real <lower=0> u; // large threshold value
     matrix[n,p] bsLinear; // fwi dataset
     matrix[n, (psi*p)] bsNonlinear; // thin plate splines basis
+    matrix[n,p] xholderLinear; // fwi dataset
+    matrix[n, (psi*p)] xholderNonlinear; // thin plate splines basis    
     vector[n] y; // extreme response
     real <lower=0> atau;
 }
@@ -195,16 +197,20 @@ parameters {
 
 transformed parameters {
     vector[n] alpha; // tail index
+    vector[n] newalpha; // tail index
     matrix[n, p] gsmooth; // nonlinear component
+    matrix[n, p] newsmooth; // nonlinear component
     cov_matrix[psi] covmat[p]; // covariance
     for(j in 1:p){
         covmat[j] <- diag_matrix(rep_vector(1, psi)) * tau[j] * sigma;
     };
     for (j in 1:p){
         gsmooth[,j] <- bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
+        newsmooth[,j] <- xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
     };
     for (i in 1:n){
         alpha[i] <- exp(theta[1] + dot_product(bsLinear[i], theta[2:newp]) + (gsmooth[i,] *rep_vector(1, p)));
+        newalpha[i] <- exp(theta[1] + dot_product(xholderLinear[i], theta[2:newp]) + (gsmooth[i,] *rep_vector(1, p)));
     };
 }
 
@@ -228,7 +234,8 @@ model {
 
 data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, 
                     atau = ((psi+1)/2), newp = (p+1),
-                    bsLinear = bs.linear, bsNonlinear = bs.nonlinear)
+                    bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
+                    xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear)
 
 set_cmdstan_path(path = NULL)
 #> CmdStan path set to: /Users/jgabry/.cmdstan/cmdstan-2.32.2
@@ -269,52 +276,11 @@ str(posterior)
 
 # print(as.mcmc(fit1), pars=c("alpha", "gamma", "intercept", "theta", "lambda1", "lambda2","lp__"), probs=c(.05,.5,.95))
 plot(fit1, plotfun = "trace", pars = c("theta"), nrow = 3)
-# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_theta_trace.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./BRSTIR/simulation/results/",Sys.Date(),"_mcmc_theta_trace.pdf"), width=10, height = 7.78)
 plot(fit1, plotfun = "trace", pars = c("lambda1", "lambda2"), nrow = 2)
-# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_lambda.pdf"), width=10, height = 7.78)
-
-# traceplot(fit1, pars = c("theta"))
-# traceplot(fit1, pars = c("lambda1", "lambda2"), inc_warmup = TRUE, nrow = 2)
-fit.v2 <- as.mcmc(fit1)
-
-# alpha.summary <- fit.v2$summary$all.chains
-
-# alpha.summary[701:711,]
-
-# MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2,
-#             HPD = TRUE, xlab="theta", offset = 0.05, exact = TRUE,
-#             horiz = FALSE, params = c("theta0", "theta"))
-# MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2,
-#             HPD = TRUE, xlab="gamma", offset = 0.5,
-#             horiz = FALSE, params = c("gamma"))
-# gg.fit <- ggs(fit.v2$samples)
-# lambda.p1 <- gg.fit %>% filter(Parameter == c("lambda.1", "lambda.2")) %>% 
-#   ggs_traceplot() + theme_minimal(base_size = 20) + theme(, legend.position = "none")
-# lambda.p2 <- gg.fit %>% filter(Parameter == c("lambda.1", "lambda.2")) %>% 
-#   ggs_density() + theme_minimal(base_size = 20)
-# grid.arrange(lambda.p1, lambda.p2, ncol=2)
-# # MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2,
-# #             HPD = TRUE, xlab="lambda", offset = 0.5,
-# #             horiz = FALSE, params = c("lambda.1", "lambda.2"))            
-# # print(alpha.summary)
-# MCMCsummary(object = fit.v2$samples, round = 3)[((dim(alpha.summary)[1]-p-2-(psi*p)):dim(alpha.summary)[1]),]
-
-# print(MCMCtrace(object = fit.v2$samples,
-#           pdf = FALSE, # no export to PDF
-#           ind = TRUE, # separate density lines per chain
-#           n.eff = TRUE,# add eff sample size
-#           params = c("gamma")))
-# print(MCMCtrace(object = fit.v2$samples,
-#           pdf = FALSE, # no export to PDF
-#           ind = TRUE, # separate density lines per chain
-#           n.eff = TRUE,# add eff sample size
-#           params = c("lambda.1", "lambda.2")))
-
-# samples <- fit.v2$samples$chain1
-# len <- dim(samples)[1]
+# ggsave(paste0("./BRSTIR/simulation/results/",Sys.Date(),"_mcmc_lambda.pdf"), width=10, height = 7.78)
 
 
-theta0.samples <- summary(fit1, par=c("intercept"), probs = c(0.05,0.5, 0.95))$summary
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
 lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
@@ -332,25 +298,23 @@ theta.q3 <- theta.samples[,6]
 
 
 df.theta <- data.frame("seq" = seq(1, (p+1)),
-                        "m" = c(theta.post.mean),
-                        "l" = c(theta.q1),
-                        "u" = c(theta.q3))
-df.theta$covariate <- factor(c("\u03b8",names(fwi.scaled)), levels = c("\u03b8",colnames(fwi.scaled)))
-df.theta$labels <- factor(c("\u03b8",colnames(fwi.scaled)))
-
+                        "true" = theta.origin,
+                        "m" = theta.post.mean,
+                        "l" = theta.q1,
+                        "u" = theta.q3)
+df.theta$covariate <- factor(0:p)
+df.theta$labels <- factor(0:p)
 ggplot(df.theta, aes(x = covariate, y=m, color = covariate)) + ylab("") + xlab('') +
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  geom_point(size = 5) + 
+  geom_point(size = 5) + geom_point(aes(y = true), color="red", size = 4) +
   geom_errorbar(aes(ymin = l, ymax = u), width = 0.3, linewidth =1.2) + 
   scale_x_discrete(labels = c(expression(bold(theta[0])),
                               expression(bold(theta[1])),
                               expression(bold(theta[2])),
                               expression(bold(theta[3])),
                               expression(bold(theta[4])),
-                              expression(bold(theta[5])),
-                              expression(bold(theta[6])),
-                              expression(bold(theta[7])))) + 
-  scale_color_discrete(labels = c(expression(theta[0]),colnames(fwi.scaled))) + 
+                              expression(bold(theta[5])))) + 
+#   scale_color_discrete(labels = c(expression(theta[0]),colnames(fwi.scaled))) + 
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 20),
           legend.text.align = 0,
@@ -361,7 +325,8 @@ ggplot(df.theta, aes(x = covariate, y=m, color = covariate)) + ylab("") + xlab('
           plot.margin = margin(0,0,0,-20),
           axis.text.x = element_text(hjust=0.35),
           axis.text = element_text(size = 28))
-# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_theta.pdf"), width=10, height = 7.78)
+
+# ggsave(paste0("./BRSTIR/simulation/results/",Sys.Date(),"_mcmc_theta.pdf"), width=10, height = 7.78)
 
 # ggplot(data.frame(group = factor(1:(p+1)), m=theta.post.mean, l = theta.q1, u = theta.q3), 
 #        aes(group)) +
@@ -378,12 +343,12 @@ ggplot(df.theta, aes(x = covariate, y=m, color = covariate)) + ylab("") + xlab('
 #   theme(text = element_text(size = 30), 
 #         axis.text.x = element_text(angle = 0, hjust = 0.5))
 
-
 df.gamma <- data.frame("seq" = seq(1, (psi*p)), 
+                  "true" = as.vector(gamma.origin),
                   "m" = as.vector(gamma.post.mean),
                   "l" = as.vector(gamma.q1),
                   "u" = as.vector(gamma.q3))
-df.gamma$covariate <- factor(rep(names(fwi.scaled), each = psi, length.out = nrow(df.gamma)), levels = colnames(fwi.scaled))
+df.gamma$covariate <- factor(rep(seq(1, 1 + nrow(df.gamma) %/% psi), each = psi, length.out = nrow(df.gamma)))
 df.gamma$labels <- factor(1:(psi*p))
 ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) + 
   geom_point(size = 4) + ylab("") + xlab("" ) + #ylim(-15,15) +
@@ -391,9 +356,9 @@ ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) +
   geom_errorbar(aes(ymin = l, ymax = u), width = 4, linewidth = 1.2) + 
   geom_point(size = 4, color = "black") + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  scale_x_discrete(breaks=c(seq(0, (psi*p), psi)+10), 
+  scale_x_discrete(breaks=c(seq(0, (psi*p), psi)+7), 
                     label = c(expression(bold(gamma[1])), 
-                              expression(bold(gamma[2])), expression(bold(gamma[3])), expression(bold(gamma[4])), expression(bold(gamma[5])), expression(bold(gamma[6])), expression(bold(gamma[7]))),
+                              expression(bold(gamma[2])), expression(bold(gamma[3])), expression(bold(gamma[4])), expression(bold(gamma[5]))),
                     expand=c(0,3)) +
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 20),
@@ -409,21 +374,21 @@ ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) +
 g.nonlinear.q1 <- g.linear.q1 <- g.q1 <- g.nonlinear.q3 <- g.linear.q3 <- g.q3 <- g.nonlinear.new <- g.linear.new <- g.new <- matrix(, nrow = n, ncol=p)
 g.smooth.q1 <- g.smooth.q3 <- g.smooth.new <- alpha.new <- NULL
 for (j in 1:p){
-  g.linear.new[,j] <- xholder.linear[,j] * theta.post.mean[j]
+  g.linear.new[,j] <- xholder.linear[,j] * theta.post.mean[(j+1)]
   g.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.post.mean, nrow=psi)[,j] 
   g.new[1:n, j] <- g.linear.new[,j] + g.nonlinear.new[,j]
-  g.linear.q1[,j] <- xholder.linear[,j] * theta.q1[j]
+  g.linear.q1[,j] <- xholder.linear[,j] * theta.q1[(j+1)]
   g.nonlinear.q1[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.q1, nrow=psi)[,j] 
   g.q1[1:n, j] <- g.linear.q1[,j] + g.nonlinear.q1[,j]
-  g.linear.q3[,j] <- xholder.linear[,j] * theta.q3[j]
+  g.linear.q3[,j] <- xholder.linear[,j] * theta.q3[(j+1)]
   g.nonlinear.q3[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.q3, nrow=psi)[,j] 
   g.q3[1:n, j] <- g.linear.q3[,j] + g.nonlinear.q3[,j]
 }
 
 for(i in 1:n){
-  g.smooth.new[i] <- sum(g.new[i,])
-  g.smooth.q1[i] <- sum(g.q1[i,])
-  g.smooth.q3[i] <- sum(g.q3[i,])
+  g.smooth.new[i] <- theta.post.mean[1] + sum(g.new[i,])
+  g.smooth.q1[i] <- theta.q1[1] + sum(g.q1[i,])
+  g.smooth.q3[i] <- theta.q3[1] + sum(g.q3[i,])
 }
 
 ### Plotting linear and nonlinear components
@@ -439,11 +404,30 @@ equal_breaks <- function(n = 3, s = 0.1,...){
 }
 
 data.smooth <- data.frame("x"=c(1:n),
+                          "true" = as.vector(f.new),
                           "post.mean" = as.vector(g.new),
                           "q1" = as.vector(g.q1),
                           "q3" = as.vector(g.q3),
-                          "covariates" = gl(p, n, (p*n), labels = factor(names(fwi.scaled))),
+                          "covariates" = gl(p, n, (p*n)),
                           "replicate" = gl(2, n, (p*n)))
+ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) + 
+  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+#   geom_line(aes(y=true, colour = covariates, linetype = "True"), linewidth=2) + 
+  geom_line(aes(y=post.mean, colour = covariates, linetype = "Posterior Mean"), linewidth=2) + 
+  ylab("") + xlab ("Smooth Functions") +
+  # geom_point(aes(y=origin, shape = replicate)) + geom_point(aes(y=new, shape = replicate)) +
+  facet_grid(covariates ~ .) + ggtitle("Posterior Mean vs True for Smooth Functions") +
+  scale_linetype_manual("functions",values=c("Posterior Mean"=3,"true"=1)) +
+  scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + theme_minimal(base_size = 30) + 
+  theme(plot.title = element_text(hjust = 0.5, size = 30),
+        legend.position = "none",
+        plot.margin = margin(0,0,0,-10),
+        strip.text = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.text.y = element_text(size=33),
+        axis.title.x = element_text(size = 35))
+
 ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab("Smooth Functions") +
   # geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +

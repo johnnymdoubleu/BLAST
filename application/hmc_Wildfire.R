@@ -218,7 +218,7 @@ model {
     target += gamma_lpdf(lambda1 | 1, 5);
     target += gamma_lpdf(lambda2 | 0.1, 0.1);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
-    target += normal_lpdf(theta[1] | 0, 0.001);
+    target += normal_lpdf(theta[1] | 0, 1);
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, (square(lambda2)/2));
@@ -315,8 +315,6 @@ fit.v2 <- as.mcmc(fit1)
 # samples <- fit.v2$samples$chain1
 # len <- dim(samples)[1]
 
-
-
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
 lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
@@ -411,15 +409,15 @@ ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) +
 g.nonlinear.q1 <- g.linear.q1 <- g.q1 <- g.nonlinear.q3 <- g.linear.q3 <- g.q3 <- g.nonlinear.new <- g.linear.new <- g.new <- matrix(, nrow = n, ncol=p)
 g.smooth.q1 <- g.smooth.q3 <- g.smooth.new <- alpha.new <- NULL
 for (j in 1:p){
-  g.linear.new[,j] <- xholder.linear[,(j+1)] * theta.post.mean[(j+1)]
+  g.linear.new[,j] <- xholder.linear[,j] * theta.post.mean[(j+1)]
   g.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.post.mean, nrow=psi)[,j] 
-  g.new[1:n, j] <- g.linear.new[,(j+1)] + g.nonlinear.new[,j]
-  g.linear.q1[,j] <- xholder.linear[,(j+1)] * theta.q1[(j+1)]
+  g.new[1:n, j] <- g.linear.new[,j] + g.nonlinear.new[,j]
+  g.linear.q1[,j] <- xholder.linear[,j] * theta.q1[(j+1)]
   g.nonlinear.q1[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.q1, nrow=psi)[,j] 
-  g.q1[1:n, j] <- g.linear.q1[,(j+1)] + g.nonlinear.q1[,j]
-  g.linear.q3[,j] <- xholder.linear[,(j+1)] * theta.q3[(j+1)]
+  g.q1[1:n, j] <- g.linear.q1[,j] + g.nonlinear.q1[,j]
+  g.linear.q3[,j] <- xholder.linear[,j] * theta.q3[(j+1)]
   g.nonlinear.q3[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.q3, nrow=psi)[,j] 
-  g.q3[1:n, j] <- g.linear.q3[,(j+1)] + g.nonlinear.q3[,j]
+  g.q3[1:n, j] <- g.linear.q3[,j] + g.nonlinear.q3[,j]
 }
 
 for(i in 1:n){
@@ -596,6 +594,4 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
 # saveRDS(data.scenario, file=paste0("Simulation/BayesianPsplines/results/",date,"-",time, "_sc1_data_samp1.rds"))
 
 cat("sc1_Alp Done")
-
-alpha.summary[((dim(alpha.summary)[1]-p-2):(dim(alpha.summary)[1]-p-1)),] 
 
