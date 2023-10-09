@@ -255,7 +255,7 @@ fit1 <- stan(
     refresh = 1             # no progress shown
 )
 
-saveRDS(fi1, file=paste0("./BRSTIR/application/",Sys.Date(),"_stanfit.rds"))
+saveRDS(fit1, file=paste0("./BRSTIR/application/",Sys.Date(),"_stanfit.rds"))
 posterior <- extract(fit1)
 str(posterior)
 
@@ -505,21 +505,24 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
 data.scenario <- data.frame("x" = c(1:n),
                             "constant" = newx,
                             "post.mean" = sort(alpha.samples[,1]),
+                            "post.median" = sort(alpha.samples[,5]),
                             "q1" = sort(alpha.samples[,4]),
                             "q3" = sort(alpha.samples[,6]))
 
 ggplot(data.scenario, aes(x=x)) + 
   # geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab("Nonlinear Components") +
   geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
-  geom_line(aes(y=post.mean, col = "Posterior Mean"), linewidth=2) + ylab(expression(alpha(x))) + ylim(0, 100) +
-  # geom_line(aes(y=chain1, col = "Chain 1"), linetype=2) +
+  geom_line(aes(y=post.mean, col = "Posterior Mean"), linewidth=2) + ylab(expression(alpha(x))) + labs(col = "") + 
+  ylim(0, (max(data.scenario$post.mean)+10)) +
+  geom_line(aes(y=post.median, col = "Posterior Median"), linetype=2, linewidth=2) +
   # geom_line(aes(y=chain2, col = "Chian 2"), linetype=3) +
   # facet_grid(covariates ~ .) + 
   # scale_y_continuous(breaks=c(0)) + 
-  scale_color_manual(values = c("red", "blue", "#e0b430"))+
+  scale_color_manual(values = c("red", "#e0b430"))+
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 30),
-        legend.position = "none",
+        legend.position="top", 
+        legend.key.size = unit(1, 'cm'),
         plot.margin = margin(0,0,0,-10),
         strip.text = element_blank(),
         axis.text.x = element_blank(),
