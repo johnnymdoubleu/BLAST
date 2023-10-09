@@ -255,6 +255,7 @@ fit1 <- stan(
     refresh = 1             # no progress shown
 )
 
+saveRDS(fi1, file=paste0("./BRSTIR/application/",Sys.Date(),"_stanfit.rds"))
 posterior <- extract(fit1)
 str(posterior)
 
@@ -269,7 +270,6 @@ summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
 fit.v2 <- as.mcmc(fit1)
 
 # alpha.summary <- fit.v2$summary$all.chains
-# saveRDS(alpha.summary, file=paste0("./BRSTIR/application/",Sys.Date(),"_allChains.rds"))
 
 # alpha.summary[701:711,]
 
