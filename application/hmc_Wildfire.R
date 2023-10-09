@@ -156,6 +156,7 @@ for(i in 1:p){
   bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])
 }
 
+bs.linear <- cbind(rep(1,n), bs.linear)
 # // priors
 # lambda1 ~ gamma(1, 1.78);
 # intercept ~ double_exponential(0, lambda1);
@@ -175,21 +176,21 @@ write("// Stan model for simple linear regression
 data {
     int <lower=1> n; // Sample size
     int <lower=1> p; // regression coefficient size
+    int <lower=1> newp; 
     int <lower=1> psi; // splines coefficient size
     real <lower=0> u; // large threshold value
-    matrix[n,p] bsLinear; // fwi dataset
+    matrix[n,(p+1)] bsLinear; // fwi dataset
     matrix[n, (psi*p)] bsNonlinear; // thin plate splines basis
     vector[n] y; // extreme response
     real <lower=0> atau;
 }
 
 parameters {
-    vector[p] theta; // linear predictor
-    vector[psi] gamma[p];
-    real <lower=-1, upper = 1> sigma; //
+    vector[newp] theta; // linear predictor
+    vector[psi] gamma[p]; // splines coefficient
     real <lower=0> lambda1; // lasso penalty
     real <lower=0> lambda2; // group lasso penalty
-    real intercept; // intercept term
+    real <lower=-1, upper = 1> sigma; //
     vector[p] tau;
 }
 
@@ -199,14 +200,13 @@ transformed parameters {
     cov_matrix[psi] covmat[p]; // covariance
     for(j in 1:p){
         covmat[j] <- diag_matrix(rep_vector(1, psi)) * tau[j] * sigma;
-    }
-
+    };
     for (j in 1:p){
         gsmooth[,j] <- bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
-    }
+    };
     for (i in 1:n){
-        alpha[i] <- exp(intercept + dot_product(bsLinear[i], theta) + (gsmooth[i,] *rep_vector(1, p)));
-    }
+        alpha[i] <- exp(dot_product(bsLinear[i], theta) + (gsmooth[i,] *rep_vector(1, p)));
+    };
 }
 
 model {
@@ -217,9 +217,9 @@ model {
     target += gamma_lpdf(lambda1 | 1, 5);
     target += gamma_lpdf(lambda2 | 0.1, 0.1);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
-    target += double_exponential_lpdf(intercept | 0, lambda1);
+    target += normal_lpdf(theta[1] | 0, 0.001);
     for (j in 1:p){
-        target += double_exponential_lpdf(theta[j] | 0, lambda1);
+        target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, (square(lambda2)/2));
         target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), covmat[j]);
     }
@@ -228,7 +228,7 @@ model {
 , "model.stan")
 
 data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, 
-                    atau = ((psi+1)/2),
+                    atau = ((psi+1)/2), newp = (p+1),
                     bsLinear = bs.linear, bsNonlinear = bs.nonlinear)
 
 set_cmdstan_path(path = NULL)
@@ -239,11 +239,15 @@ set_cmdstan_path(path = NULL)
 file <- file.path(cmdstan_path(), "model.stan")
 
 init.alpha <- list(list(gamma = array(rep(0,(psi*p)), dim=c(psi, p)),
-                        theta = rep(0, p), intercept = 0, tau = rep(0.01, p),
-                        lambda1 = 0.01, lambda2 = 30, sigam = 0.001),
+                        theta = rep(0, (p+1)), tau = rep(0.01, p), sigma = 0.001, 
+                        lambda1 = 0.01, lambda2 = 30),
                   list(gamma = array(rep(0.02,(psi*p)), dim=c(psi, p)),
-                        theta = rep(0.1, p), intercept = 0.1, tau = rep(0.01, p),
-                        lambda1 = 0.01, lambda2 = 30, sigam = 0.001))
+                        theta = rep(0.1, (p+1)), tau = rep(0.01, p), sigma = 0.001,
+                        lambda1 = 0.01, lambda2 = 30),
+                  list(gamma = array(rep(-0.02, (psi*p)), dim=c(psi, p)),
+                        theta = rep(-0.2, (p+1)), tau = rep(0.01, p), sigma = 0.001,
+                        lambda1 = 0.01, lambda2 = 30)
+                        )
 
 # stanc("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/application/model1.stan")
 fit1 <- stan(
@@ -515,7 +519,8 @@ data.scenario <- data.frame("x" = c(1:n),
 ggplot(data.scenario, aes(x=x)) + 
   # geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab("Nonlinear Components") +
   geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
-  geom_line(aes(y=post.mean, col = "Posterior Mean"), linewidth=2) + ylab(expression(alpha(x))) + labs(col = "") + 
+  geom_line(aes(y=post.mean, col = "Posterior Mean"), linewidth=2) + 
+  ylab(expression(alpha(x))) + labs(col = "") + 
   ylim(0, (max(data.scenario$post.mean)+10)) +
   geom_line(aes(y=post.median, col = "Posterior Median"), linetype=2, linewidth=2) +
   # geom_line(aes(y=chain2, col = "Chian 2"), linetype=3) +
@@ -545,8 +550,8 @@ ggplot(data.scenario, aes(x=x)) +
 #   alpha.new[i] <- exp(tail(alpha.summary, 1)[1] + sum(f.old[i]))
 # }
 
-mcmc.alpha <- fit.v2$samples$chain1[,1:n]
-
+mcmc.alpha <- posterior$alpha
+len <- dim(mcmc.alpha)[1]
 r <- matrix(, nrow = n, ncol = 30)
 # beta <- as.matrix(mcmc[[1]])[, 1:7] 
 T <- 30

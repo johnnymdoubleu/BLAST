@@ -216,79 +216,26 @@ log.posterior <- function(beta, y.origin){
       second.prior[j] <- -1 * lambda.2 * sqrt(sum((gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)])^2))
       prior[j] <- first.prior[j] + second.prior[j]
   }
-  sum.prior <- sum(prior) - (lambda.1 * abs(theta[1])) +
+  sum.prior <- sum(prior) + (-0.5 * 0.001^2 * theta[1]^2) +
+                # - (lambda.1 * abs(theta[1])) +
                 (p * log(lambda.1)) + (p * psi * log(lambda.2)) +
-                ((1-1)*log(lambda.1) - (5 * lambda.1)) + 
+                ((0.1-1)*log(lambda.1) - (5 * lambda.1)) + 
                 ((0.1-1)*log(lambda.2) - (0.1 * lambda.2))
   # print(first.prior)
   return(sum.lik + sum.prior)
 }
-# log.posterior <- function(beta, y.origin){
-#     log.lik <- function(beta){
-#         exp.prime <- function(x, thres){
-#             if(x > thres){ans <- exp(thres) + exp(thres)*(x-thres)}
-#             else{ans <- exp(x)}
-#             return(ans)
-#         }
-#         # theta.0 <- beta[1]
-#         theta <- beta[1:(p+1)]
-#         gamma <- matrix(beta[-(1:(p+1))], ncol=p)
-#         g <- matrix(, nrow=n, ncol=p)
-#         term <- first.term <- second.term <- NULL
-#         for(j in 1:p){
-#             # coef <- as.matrix(gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)])
-#             linear.term <- bs.linear[,j] * theta[j+1]
-#             nonlinear.term <- bs.nonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma[,j]
-#             g[, j] <- linear.term + nonlinear.term
-#         }
-#         for(i in 1:n){
-#             first.term[i] <- theta[1] + sum(g[i,]) - log(y.origin[i])
-#             second.term[i] <- exp(theta[1] + sum(g[i,])) * log(y.origin[i]/u)
-#             term[i] <- first.term[i] - second.term[i]
-#         }
-#         return(sum(term))
-#     }
-#     log.prior <- function(beta){
-#         moreau.envelope <- function(w){
-#             if(w < -1){ans <- -0.5 - w}
-#             else if (1 < w){ans <- w - 0.5}
-#             else {ans <- (w^2) / 2}
-#             return(ans)
-#         }
-#         lambda.1 <- 20
-#         lambda.2 <- 0
-#         lambda.3 <- 10
-#         # theta.0 <- beta[1]
-#         theta <- beta.emp[1:(p+1)]
-#         gamma <- matrix(beta.emp[-(1:(p+1))], ncol=p)
-#         g.1 <- g.2 <- term <- third.term <- first.term <- second.term <- NULL
-#         for(j in 1:p){
-#             first.term[j] <- -1 * lambda.1 * sqrt(sum((gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)])^2))
-#             # first.term[j] <- -1 * lambda.1 * abs(sum(gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)]))
-#             second.term[j] <- -1 * lambda.2 * sum((gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)])^2)
-#             third.term[j] <- -1 * lambda.3 * sum(abs(theta[j+1]))
-#             term[j] <- first.term[j] + second.term[j] + third.term[j]
-#             # term[j] <- first.term[j] + second.term[j] - lambda.3 * sum(abs(beta))
-#         }
-#         # print(head(term))
-#         return((-1 * lambda.3 * abs(theta[1])) + sum(term))
-#     }
-#     return(log.lik(beta) + log.prior(beta))
-# }
-# -6529.937 
-# -6473.18
-# -6445.875
 
+# beta.emp <- c(rep(0, (p+1)), rep(0, p*psi))
 beta.emp <- c(rep(0, (p+1)), rep(0, p*psi), 0.1, 30)
 # beta.emp <- c(as.vector(theta.origin), as.vector(gamma.origin))
 beta.map <- optim(par = beta.emp, fn = log.posterior, 
                   y.origin = y,
-                  lower=c(rep(-Inf, (length(beta.emp)-2)), 0, 0),
+                  lower=c(rep(-Inf, (length(beta.emp)-2)), 0.0001, 0.0001),
                   upper=rep(Inf, length(beta.emp)),
-                  # method = "BFGS", 
-                  method = "CG",
+                  method = "L-BFGS-B", 
+                  # method = "CG",
                   # method = "SANN",
-                  control = list(fnscale = -1, maxit = 1000))
+                  control = list(trace = 3, fnscale = -1, maxit = 2000))
 # theta.map <- matrix(beta.map$par[1:(2*p)],nrow=2)
 theta.map <- beta.map$par[1:(p+1)]
 gamma.map <- beta.map$par[(p+1+1):(p+1+(psi*p))]
@@ -525,16 +472,14 @@ ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +
 
 data.scenario <- data.frame("x" = c(1:n),
                             "constant" = newx,
-                            "trueAlp" = sort(alp.origin),
                             "mapAlp" = sort(newalpha))
 ggplot(data = data.scenario, aes(x = constant)) + 
   ylab(expression(alpha(x))) + xlab("") +
-    geom_line(aes(y = trueAlp, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
-  geom_line(aes(y = mapAlp, col = "MAP Alpha"), linewidth = 2.5, linetype = 2) +
+  geom_line(aes(y = mapAlp, col = "MAP Alpha"), linewidth = 2.5) +
   labs(col = "") +
     theme(axis.title.y = element_text(size = rel(1.8), angle = 90)) +
     theme(axis.title.x = element_text(size = rel(1.8), angle = 00)) +
-    scale_color_manual(values = c("#e0b430", "red"))+
+    scale_color_manual(values = c("red"))+
     theme(text = element_text(size = 15),
             legend.position="bottom", legend.key.size = unit(1, 'cm'),
             axis.text = element_text(size = 20),
