@@ -523,7 +523,7 @@ ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +
         axis.title.x = element_text(size = 35))
 # ggsave(paste0("./BRSTIR/application/figures/",date,"_map_nonlinear.pdf"), width=12.5, height = 15)
 
-ata.scenario <- data.frame("x" = c(1:n),
+data.scenario <- data.frame("x" = c(1:n),
                             "constant" = newx,
                             "trueAlp" = sort(alp.origin),
                             "mapAlp" = sort(newalpha))
