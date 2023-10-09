@@ -1,4 +1,9 @@
 library(npreg)
+library(reshape2)
+library(splines2)
+library(scales)
+library(MASS)
+library(npreg)
 library(Pareto)
 suppressMessages(library(tidyverse))
 library(JOPS)
@@ -9,156 +14,151 @@ library(corrplot)
 library(ReIns)
 library(evir)
 library(rstan)
-suppressMessages(library(coda))
 library(ggmcmc)
-# library(R6)
-# suppressMessages(library(igraph))
-# library(mgcv)
 library(MCMCvis)
 library(cmdstanr)
 # library(ggplotify)
-# Structure of the FWI System
-#DSR : Dail Severity Rating
-#FWI : Fire Weather Index
-#BUI : Buildup Index
-#ISI : Initial Spread Index
-#FFMC : Fine FUel Moisture Code
-#DMC : Duff Moisture Code
-#DC : Drough Code
 
+#Scenario 1
+# set.seed(2)
 
-setwd("C:/Users/Johnny Lee/Documents/GitHub")
-df <- read_excel("./BRSTIR/application/AADiarioAnual.xlsx", col_types = c("date", rep("numeric",40)))
-df.long <- gather(df, condition, measurement, "1980":"2019", factor_key=TRUE)
-df.long
-head(df.long)
-tail(df.long)
-# View(df.long[is.na(df.long$measurement),])
-missing.values <- which(!is.na(df.long$measurement))
-df.long[which(is.na(df.long$measurement)),]
-df.long[which(is.na(df.long$...1))+1,]
-
-#NAs on Feb 29 most years, and Feb 14, 1999
-#considering the case of leap year, the missing values are the 29th of Feb
-#Thus, each year consist of 366 data with either 1 or 0 missing value.
-Y <- df.long$measurement[!is.na(df.long$measurement)]
-summary(Y) #total burnt area
-length(Y)
-threshold <- 0.95
-u <- quantile(Y, threshold)
-y <- Y[Y>u]
-# x.scale <- x.scale[which(y>quantile(y, threshold)),]
-# u <- quantile(y, threshold)
-
-multiplesheets <- function(fname) {
-    setwd("C:/Users/Johnny Lee/Documents/GitHub")
-    # getting info about all excel sheets
-    sheets <- excel_sheets(fname)
-    tibble <- lapply(sheets, function(x) read_excel(fname, sheet = x, col_types = c("date", rep("numeric", 41))))
-    # print(tibble)
-    data_frame <- lapply(tibble, as.data.frame)
-    # assigning names to data frames
-    names(data_frame) <- sheets
-    return(data_frame)
-}
-setwd("C:/Users/Johnny Lee/Documents/GitHub")
-path <- "./BRSTIR/application/DadosDiariosPT_FWI.xlsx"
-# importing fire weather index
-cov <- multiplesheets(path)
-fwi.scaled <- fwi.index <- data.frame(DSR = double(length(Y)),
-                                        FWI = double(length(Y)),
-                                        BUI = double(length(Y)),
-                                        ISI = double(length(Y)),
-                                        FFMC = double(length(Y)),
-                                        DMC = double(length(Y)),
-                                        DC = double(length(Y)),
-                                        stringsAsFactors = FALSE)
-# cov.long$ <- gather(cov$DSR[!is.na(df.long$measurement)][,1:41], )
-for(i in 1:length(cov)){
-    cov.long <- gather(cov[[i]][,1:41], condition, measurement, "1980":"2019", factor_key=TRUE)
-    # cov.long[which(is.na(cov.long$measurement)),]
-    # cov.long[which(is.na(cov.long$...1))+1,]
-    # cov.long[which(!is.na(df.long$measurement)),]
-    fwi.index[,i] <- cov.long$measurement[missing.values]
-    # fwi.scaled[,i] <- cov.long$measurement[missing.values]
-    fwi.scaled[,i] <- cov.long$measurement[missing.values]
-}
-fwi.index$date <- as.Date(substr(cov.long$...1[missing.values],1,10), "%Y-%m-%d")
-fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
-fwi.index$month <- factor(format(fwi.index$date,"%b"),
-                            levels = c("Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"))
-# as.Date(substr(cov.long$...1[missing.values],1,10))
-# fwi.index$day <- as.Date(substr(cov.long$...1[missing.values],9,10),"%d")
-# with(cov.long[missing.values], paste(substr[...1, 6, 10],month,day,sep="-"))
-
-fwi.scaled <- fwi.scaled[which(Y>u),]
-fwi.scaled <- as.data.frame(scale(fwi.scaled))
-# corrplot.mixed(cor(fwi.scaled),
-#                 upper = "circle",
-#                 lower = "number",
-#                 addgrid.col = "black")
-# ggsave("./Laboratory/Application/figures/correlation.pdf", width=15)
-# cov$date <- as.Date(with(cov, paste(year,month,day,sep="-")),"%Y-%m-%d")
-# cov$yearmon <- as.Date(with(cov, paste(year,month,sep="-")),"%Y-%m")
-# special <- gather(fwi.scaled, cols, value) |> spread(cols, value) |> select(colnames(fwi.scaled))
-# ggplot(gather(fwi.scaled, cols, value), aes(x = value)) + 
-#        geom_histogram(binwidth = 0.1) + facet_grid(cols~.)
-# ggplot(gather(fwi.index[which(Y>u),1:7], cols, value), aes(x = value)) + 
-#        geom_histogram(binwidth = 2) + facet_grid(cols~.)
-df.extreme <- cbind(y, fwi.scaled)
-# df.extreme <- cbind(date = cov$date[which(Y>u)], df.extreme)
-df.extreme <- as.data.frame(cbind(month = fwi.index$month[which(Y>u)], df.extreme))
-# ggplot(df.extreme, aes(x=month, y=y, color=month)) + geom_point(size=6) +
-#     theme(plot.title = element_text(hjust = 0.5, size = 20),
-#         legend.title = element_blank(),
-#         legend.text = element_text(size=20),
-#         # axis.ticks.x = element_blank(),
-#         axis.text.x = element_text(hjust=0.35),
-#         axis.text = element_text(size = 20),
-#         axis.title = element_text(size = 15))
-# # ggsave("./Laboratory/Application/figures/datavis.pdf", width=15)
-
-# # ggplot(as.data.frame(y),aes(x=y))+geom_histogram(aes(y=..density..), bins = 5)
-
-# ggplot(df.extreme, aes(x=y)) +
-#     geom_histogram(stat = "density", n=40, adjust=0.1, fill = "darkgrey") + 
-#     xlab("Area Burnt") + 
-#     # geom_histogram(aes(y=..density..), bins = 10^3) +
-#     # geom_density(aes(y=..density..)) +
-#     theme(plot.title = element_text(hjust = 0.5, size = 20),
-#       legend.title = element_blank(),
-#       legend.text = element_text(size=20),
-#       # axis.ticks.x = element_blank(),
-#       axis.text.x = element_text(hjust=0.35),
-#       axis.text = element_text(size = 25),
-#       axis.title = element_text(size = 30))
-
+n <- 5000
 psi <- 20
-n <- dim(fwi.scaled)[[1]]
-p <- dim(fwi.scaled)[[2]]
+threshold <- 0.90
+p <- 5
 no.theta <- 1
-newx <- seq(0, 1, length.out=n)
-xholder.linear <- xholder.nonlinear <- bs.linear <- bs.nonlinear <- matrix(,nrow=n, ncol=0)
-xholder <- matrix(nrow=n, ncol=p)
-for(i in 1:p){
-  # xholder[,i] <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n)
-  # test.knot <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
-  # splines <- basis.tps(seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n), test.knot, m=2, rk=FALSE, intercept = TRUE)
-  xholder[,i] <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n)
-  test.knot <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
-  splines <- basis.tps(xholder[,i], test.knot, m=2, rk=FALSE, intercept = FALSE)
-  xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
-  xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
-  knots <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
-  tps <- basis.tps(fwi.scaled[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
-  # tps <- mSpline(x.origin[,i], df=psi, Boundary.knots = range(x.origin[,i]), degree = 3, intercept=TRUE)
-  bs.linear <- cbind(bs.linear, tps[,1:no.theta])
-  bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])
+simul.no <- 50
+
+xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
+
+sample_meanvector <- runif(p,0,1)
+sample_covariance_matrix <- matrix(NA, nrow = p, ncol = p)
+diag(sample_covariance_matrix) <- 1
+# set.seed(666)
+
+mat_Sim <- matrix(data = NA, nrow = p, ncol = p)
+U <- runif(n = p) * 0.5
+
+for(i in 1 : p)
+{
+  if(i <= (p*1.3/2))
+  {
+    U_Star <- pmin(U + 0.25 * runif(n = p), 0.99999)
+    
+  }else
+  {
+    U_Star <- pmin(pmax(U + sample(c(0, 1), size = p, replace = TRUE) * runif(n = p), 0.00001), 0.99999)
+  }
+  
+  mat_Sim[, i] <- qnorm(U_Star)  
 }
 
-# bs.linear <- cbind(rep(1,n), bs.linear)
-# xholder.linear <- cbind(rep(1,n), xholder.linear)
-# // priors
+cor_Mat <- cor(mat_Sim)
+sample_covariance_matrix <- cor_Mat * (p/2)
+
+## create multivariate normal distribution
+x.origin <- mvrnorm(n = n, mu = sample_meanvector, Sigma = sample_covariance_matrix)
+
+
+# x.origin <- cbind(replicate(p, runif(n, 0, 1)))
+
+corrplot.mixed(cor(x.origin),
+                upper = "circle",
+                lower = "number",
+                addgrid.col = "black")
+for(i in 1:p){
+    knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)
+    tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
+    # tps <- bSpline(x = x.origin[,i], Boundary.knots = c(min(x.origin[,i]),max(x.origin[,i])), df = psi, intercept = TRUE)
+    # tps <- mSpline(x.origin[,i], df=psi, Boundary.knots = range(x.origin[,i]), degree = 3, intercept=TRUE)
+    #   bs.x <- cbind(bs.x, tps)
+    bs.linear <- cbind(bs.linear, tps[,1:no.theta])
+    bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])  
+}
+
+gamma.origin <- matrix(, nrow = psi, ncol = p)
+for(j in 1:p){
+    for (ps in 1:psi){
+        if(j %in% c(2,3,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
+        else if(j==7){
+            if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.01}
+            else{gamma.origin[ps, j] <- 0.01}
+        }
+        else {
+            if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.01}
+            else{gamma.origin[ps, j] <- 0.01}
+        }
+    }
+}
+
+# theta.origin <- matrix(, nrow = 2, ncol = p)
+# for(j in 1:p){
+#     for (k in 1:2){
+#         if(j %in% c(2,4,5,6,9,10)){theta.origin[k, j] <- 0}
+#         else if(j==7){
+#             if(k==1){theta.origin[k, j] <- 0.5}
+#             else{theta.origin[k, j] <- -0.3}
+#         }
+#         else {
+#             if(k==1){theta.origin[k,j] <- -0.2}
+#             else{theta.origin[k,j] <- 0.8}
+#         }
+#     }
+# }
+theta.origin <- c(0, 0.2, 0, 0, 0, 0)
+
+f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
+for(j in 1:p){
+    f.linear.origin[,j] <- bs.linear[, j] * theta.origin[j+1]
+    f.nonlinear.origin[,j] <- (bs.nonlinear[1:n,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j])
+    f.origin[, j] <- f.linear.origin[,j] + f.nonlinear.origin[,j]
+}
+
+alp.origin <- y.origin <- NULL
+for(i in 1:n){
+    alp.origin[i] <- exp((theta.origin[1]*p) + sum(f.origin[i,]))
+    y.origin[i] <- rPareto(1, 1, alpha = alp.origin[i])
+}
+
+u <- quantile(y.origin, threshold)
+x.origin <- x.origin[which(y.origin>u),]
+x.origin <- scale(x.origin)
+y.origin <- y.origin[y.origin > u]
+n <- length(y.origin)
+
+xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
+newx <- seq(0, 1, length.out=n)
+xholder <- bs.x <- matrix(, nrow = n, ncol = p)
+for(i in 1:p){
+    xholder[,i] <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = n)  
+    test.knot <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)  
+    splines <- basis.tps(newx, test.knot, m=2, rk=FALSE, intercept = FALSE)
+    xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
+    xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
+    knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)  
+    tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
+    bs.linear <- cbind(bs.linear, tps[,1:no.theta])
+    bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])  
+}
+bs.linear <- cbind(rep(p,n), bs.linear)
+xholder.linear <- cbind(rep(p,n), xholder.linear)
+
+f.nonlinear.new <- f.linear.new <- f.new <- f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
+for(j in 1:p){
+    f.linear.origin[,j] <- bs.linear[, j] * theta.origin[j+1]
+    f.nonlinear.origin[,j] <- bs.nonlinear[1:n,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
+    f.origin[, j] <- f.linear.origin[,j] + f.nonlinear.origin[,j]
+    f.linear.new[,j] <- xholder.linear[, j] * theta.origin[j+1]
+    f.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
+    f.new[,j] <- f.linear.new[,j] + f.nonlinear.new[,j]
+}
+
+true.alpha <- alp.new <- alp.origin <- NULL
+for(i in 1:n){
+    alp.origin[i] <- exp((p*theta.origin[1]) + sum(f.origin[i,]))
+    alp.new[i] <- exp((p*theta.origin[1]) + sum(f.new[i,]))
+}
+
 # lambda1 ~ gamma(1, 1.78);
 # intercept ~ double_exponential(0, lambda1);
 # lambda2 ~ gamma(0.1, 0.1);
@@ -218,7 +218,7 @@ model {
     target += gamma_lpdf(lambda1 | 1, 5);
     target += gamma_lpdf(lambda2 | 0.1, 0.1);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
-    target += normal_lpdf(theta[1] | 0, 0.001);
+    target += normal_lpdf(theta[1] | 0, 100);
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, (square(lambda2)/2));
@@ -259,8 +259,8 @@ fit1 <- stan(
     init = init.alpha,      # initial value
     # init_r = 1,
     chains = 3,             # number of Markov chains
-    warmup = 2000,          # number of warmup iterations per chain
-    iter = 6000,            # total number of iterations per chain
+    warmup = 1000,          # number of warmup iterations per chain
+    iter = 2000,            # total number of iterations per chain
     cores = 4,              # number of cores (could use one per chain)
     refresh = 1             # no progress shown
 )
@@ -316,7 +316,7 @@ fit.v2 <- as.mcmc(fit1)
 # len <- dim(samples)[1]
 
 
-
+theta0.samples <- summary(fit1, par=c("intercept"), probs = c(0.05,0.5, 0.95))$summary
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
 lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
@@ -411,21 +411,21 @@ ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) +
 g.nonlinear.q1 <- g.linear.q1 <- g.q1 <- g.nonlinear.q3 <- g.linear.q3 <- g.q3 <- g.nonlinear.new <- g.linear.new <- g.new <- matrix(, nrow = n, ncol=p)
 g.smooth.q1 <- g.smooth.q3 <- g.smooth.new <- alpha.new <- NULL
 for (j in 1:p){
-  g.linear.new[,j] <- xholder.linear[,(j+1)] * theta.post.mean[(j+1)]
+  g.linear.new[,j] <- xholder.linear[,j] * theta.post.mean[j]
   g.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.post.mean, nrow=psi)[,j] 
-  g.new[1:n, j] <- g.linear.new[,(j+1)] + g.nonlinear.new[,j]
-  g.linear.q1[,j] <- xholder.linear[,(j+1)] * theta.q1[(j+1)]
+  g.new[1:n, j] <- g.linear.new[,j] + g.nonlinear.new[,j]
+  g.linear.q1[,j] <- xholder.linear[,j] * theta.q1[j]
   g.nonlinear.q1[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.q1, nrow=psi)[,j] 
-  g.q1[1:n, j] <- g.linear.q1[,(j+1)] + g.nonlinear.q1[,j]
-  g.linear.q3[,j] <- xholder.linear[,(j+1)] * theta.q3[(j+1)]
+  g.q1[1:n, j] <- g.linear.q1[,j] + g.nonlinear.q1[,j]
+  g.linear.q3[,j] <- xholder.linear[,j] * theta.q3[j]
   g.nonlinear.q3[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.q3, nrow=psi)[,j] 
-  g.q3[1:n, j] <- g.linear.q3[,(j+1)] + g.nonlinear.q3[,j]
+  g.q3[1:n, j] <- g.linear.q3[,j] + g.nonlinear.q3[,j]
 }
 
 for(i in 1:n){
-  g.smooth.new[i] <- sum(theta.post.mean[1] + g.new[i,])
-  g.smooth.q1[i] <- sum(theta.q1[1] + g.q1[i,])
-  g.smooth.q3[i] <- sum(theta.q3[1] + g.q3[i,])
+  g.smooth.new[i] <- sum(g.new[i,])
+  g.smooth.q1[i] <- sum(g.q1[i,])
+  g.smooth.q3[i] <- sum(g.q3[i,])
 }
 
 ### Plotting linear and nonlinear components

@@ -196,8 +196,8 @@ beta.map <- optim(par = beta.emp, fn = log.posterior,
                   y.origin = y.origin,
                   lower=c(rep(-Inf, (length(beta.emp)-2)), 0.0001, 0.0001),
                   upper=rep(Inf, length(beta.emp)),
-                  method = "L-BFGS-B", 
-                  # method = "CG",
+                  # method = "L-BFGS-B", 
+                  method = "CG",
                   # method = "Nelder-Mead", hessian = T,
                   control = list(trace=3, fnscale = -1, maxit = 2000))
 theta.map <- beta.map$par[1:(p+1)]
