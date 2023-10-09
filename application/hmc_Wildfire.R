@@ -251,10 +251,10 @@ fit1 <- stan(
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
     # init_r = 1,
-    chains = 2,             # number of Markov chains
+    chains = 3,             # number of Markov chains
     warmup = 2000,          # number of warmup iterations per chain
     iter = 6000,            # total number of iterations per chain
-    cores = 2,              # number of cores (could use one per chain)
+    cores = 4,              # number of cores (could use one per chain)
     refresh = 1             # no progress shown
 )
 
