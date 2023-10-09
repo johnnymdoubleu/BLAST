@@ -402,7 +402,7 @@ for (j in 1:p){
 for(i in 1:n){
   # temp <- theta.map[1] + sum(f.new[i,])
   # newalpha[i] <- exp(temp)
-  alpha.new[i] <- exp(theta.map[1] + sum(f.new[i]))
+  alpha.new[i] <- exp(theta.map[1] + sum(f.new[i,]))
 }
 # cdf <- alpha.new <- NULL
 # for(i in 1:n){
@@ -523,6 +523,24 @@ ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
 # ggsave(paste0("./BRSTIR/application/figures/",date,"_map_nonlinear.pdf"), width=12.5, height = 15)
+
+ata.scenario <- data.frame("x" = c(1:n),
+                            "constant" = newx,
+                            "trueAlp" = sort(alp.origin),
+                            "mapAlp" = sort(newalpha))
+ggplot(data = data.scenario, aes(x = constant)) + 
+  ylab(expression(alpha(x))) + xlab("") +
+    geom_line(aes(y = trueAlp, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
+  geom_line(aes(y = mapAlp, col = "MAP Alpha"), linewidth = 2.5, linetype = 2) +
+  labs(col = "") +
+    theme(axis.title.y = element_text(size = rel(1.8), angle = 90)) +
+    theme(axis.title.x = element_text(size = rel(1.8), angle = 00)) +
+    scale_color_manual(values = c("#e0b430", "red"))+
+    theme(text = element_text(size = 15),
+            legend.position="bottom", legend.key.size = unit(1, 'cm'),
+            axis.text = element_text(size = 20),
+            legend.margin=margin(-15,-15,-15,-15),
+            legend.box.margin=margin(-25,0,20,0))
 
 
 # plot(sort(alp.origin))

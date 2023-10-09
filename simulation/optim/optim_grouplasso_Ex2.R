@@ -435,7 +435,7 @@ for (j in 1:p){
 # set.seed(100)
 for(i in 1:n){
   new.alpha[i] <- exp(theta.map[1] + sum(f.new[i,]))
-  true.alpha[i] <- exp(theta.origin[1] + sum(f.origin[i,]))
+  # true.alpha[i] <- exp(theta.origin[1] + sum(f.origin[i,]))
 }
 
 func.linear.new <- func.nonlinear.new <- func.linear.origin <- func.nonlinear.origin <- func.new <- func.origin <- matrix(, nrow=n, ncol=0)
