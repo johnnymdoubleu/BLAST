@@ -40,7 +40,7 @@ for(i in 1 : p)
     
   }else
   {
-    U_Star <- pmin(pmax(U + sample(c(-1, 1), size = p, replace = TRUE) * runif(n = p), 0.00001), 0.99999)
+    U_Star <- pmin(pmax(U + sample(c(0, 1), size = p, replace = TRUE) * runif(n = p), 0.00001), 0.99999)
   }
   
   mat_Sim[, i] <- qnorm(U_Star)  
@@ -72,7 +72,7 @@ for(i in 1:p){
 gamma.origin <- matrix(, nrow = psi, ncol = p)
 for(j in 1:p){
     for (ps in 1:psi){
-        if(j %in% c(2,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
+        if(j %in% c(2,3,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
         else if(j==7){
             if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.01}
             else{gamma.origin[ps, j] <- 0.01}
@@ -98,7 +98,7 @@ for(j in 1:p){
 #         }
 #     }
 # }
-theta.origin <- c(0.04, 0, 0, 0.4, 0, 0)
+theta.origin <- c(0, 0.2, 0, 0.2, 0, 0)
 
 f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
@@ -115,7 +115,7 @@ for(i in 1:n){
 
 u <- quantile(y.origin, threshold)
 x.origin <- x.origin[which(y.origin>u),]
-x.origin <- scale(x.origin)
+# x.origin <- scale(x.origin)
 y.origin <- y.origin[y.origin > u]
 n <- length(y.origin)
 
@@ -186,7 +186,7 @@ log.posterior <- function(beta, y.origin){
   }
   sum.prior <- sum(prior) + (-1 * lambda.1 * abs(theta[1])) +
                 (p * log(lambda.1)) + (p * psi * log(lambda.2)) +
-                ((1-1)*log(lambda.1) - (10 * lambda.1)) + 
+                ((1-1)*log(lambda.1) - (1.78 * lambda.1)) + 
                 ((0.1-1)*log(lambda.2) - (0.1 * lambda.2))
                 # ((1.1-1)*log(lambda.1 * lambda.2)) - (2 * (lambda.1 + lambda.2))
   # print(first.prior)
@@ -195,13 +195,16 @@ log.posterior <- function(beta, y.origin){
 
 
 # beta.emp <- c(as.vector(theta.origin), as.vector(gamma.origin), 1, 300)
-beta.emp <- c(rep(0, (p+1)), rep(0, p*psi), 1, 10)
-beta.map <- optim(beta.emp, fn = log.posterior, #gr = grad.log.posterior, 
+beta.emp <- c(rep(0, (p+1)), rep(0, p*psi), 0.1, 10)
+# beta.emp <- c(as.vector(theta.origin), as.vector(gamma.origin))
+beta.map <- optim(par = beta.emp, fn = log.posterior, 
                   y.origin = y.origin,
-                  method = "BFGS",
-                  # method = "CG",
+                  lower=c(rep(-Inf, (p+1+(psi*p))), 0, 0),
+                  upper=rep(Inf, length(beta.emp)),
+                  # method = "BFGS", 
+                  method = "CG",
                   # method = "SANN",
-                  control = list(fnscale = -1, maxit = 300))
+                  control = list(fnscale = -1, maxit = 500))
 # theta.map <- matrix(beta.map$par[1:(2*p)],nrow=2)
 theta.map <- beta.map$par[1:(p+1)]
 gamma.map <- beta.map$par[(p+1+1):(p+1+(psi*p))]
@@ -383,20 +386,33 @@ data.scenario <- data.frame("x" = c(1:n),
                             "constant" = newx,
                             "trueAlp" = sort(alp.origin),
                             "mapAlp" = sort(newalpha))
+ggplot(data = data.scenario, aes(x = constant)) + 
+  ylab(expression(alpha(x))) + xlab("") +
+    geom_line(aes(y = trueAlp, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
+  geom_line(aes(y = mapAlp, col = "MAP Alpha"), linewidth = 2.5, linetype = 2) +
+  labs(col = "") +
+    theme(axis.title.y = element_text(size = rel(1.8), angle = 90)) +
+    theme(axis.title.x = element_text(size = rel(1.8), angle = 00)) +
+    scale_color_manual(values = c("#e0b430", "red"))+
+    theme(text = element_text(size = 15),
+            legend.position="bottom", legend.key.size = unit(1, 'cm'),
+            axis.text = element_text(size = 20),
+            legend.margin=margin(-15,-15,-15,-15),
+            legend.box.margin=margin(-25,0,20,0))
 
-plt.samp <- ggplot(data = data.scenario, aes(x = constant)) + ylab(expression(alpha(x))) + xlab("")
-print(plt.samp + 
-      geom_line(aes(y = trueAlp, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
-      geom_line(aes(y = mapAlp, col = "MAP Alpha"), linewidth = 2.5, linetype = 2) +
-      labs(col = "") +
-        theme(axis.title.y = element_text(size = rel(1.8), angle = 90)) +
-        theme(axis.title.x = element_text(size = rel(1.8), angle = 00)) +
-        scale_color_manual(values = c("#e0b430", "red"))+
-        theme(text = element_text(size = 15),
-                legend.position="bottom", legend.key.size = unit(1, 'cm'),
-                axis.text = element_text(size = 20),
-                legend.margin=margin(-15,-15,-15,-15),
-                legend.box.margin=margin(-25,0,20,0)))
+# plt.samp <- ggplot(data = data.scenario, aes(x = constant)) + ylab(expression(alpha(x))) + xlab("")
+# print(plt.samp + 
+#       geom_line(aes(y = trueAlp, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
+#       geom_line(aes(y = mapAlp, col = "MAP Alpha"), linewidth = 2.5, linetype = 2) +
+#       labs(col = "") +
+#         theme(axis.title.y = element_text(size = rel(1.8), angle = 90)) +
+#         theme(axis.title.x = element_text(size = rel(1.8), angle = 00)) +
+#         scale_color_manual(values = c("#e0b430", "red"))+
+#         theme(text = element_text(size = 15),
+#                 legend.position="bottom", legend.key.size = unit(1, 'cm'),
+#                 axis.text = element_text(size = 20),
+#                 legend.margin=margin(-15,-15,-15,-15),
+#                 legend.box.margin=margin(-25,0,20,0)))
 
 # ggsave(paste0("../Laboratory/Simulation/BayesianFusedLasso/results/map_alpha_n1_train.pdf"), width=10)
 
@@ -418,8 +434,8 @@ for (j in 1:p){
 }
 # set.seed(100)
 for(i in 1:n){
-  true.alpha[i] <- exp(theta.map[1] + sum(f.origin[i,]))
-  new.alpha[i] <- exp(theta.origin[1] + sum(f.new[i,]))
+  new.alpha[i] <- exp(theta.map[1] + sum(f.new[i,]))
+  true.alpha[i] <- exp(theta.origin[1] + sum(f.origin[i,]))
 }
 
 func.linear.new <- func.nonlinear.new <- func.linear.origin <- func.nonlinear.origin <- func.new <- func.origin <- matrix(, nrow=n, ncol=0)
@@ -503,22 +519,22 @@ ggplot(func.df, aes(x=seq, group=interaction(covariates, replicate))) +
 
 data.scenario <- data.frame("x" = c(1:n),
                             "constant" = newx,
-                            "trueAlp" = sort(true.alpha),
+                            "trueAlp" = sort(alp.new),
                             "mapAlp" = sort(new.alpha))
 
-plt.samp <- ggplot(data = data.scenario, aes(x = constant)) + ylab(expression(alpha(x))) + xlab("")
-print(plt.samp + 
-      geom_line(aes(y = trueAlp, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
-      geom_line(aes(y = mapAlp, col = "MAP Alpha"), linewidth = 2.5, linetype = 2) +
-      labs(col = "") + ylim(0, 5)+
-        theme(axis.title.y = element_text(size = rel(1.8), angle = 90)) +
-        theme(axis.title.x = element_text(size = rel(1.8), angle = 00)) +
-        scale_color_manual(values = c("#e0b430", "red"))+
-        theme(text = element_text(size = 15),
-                legend.position="bottom", legend.key.size = unit(1, 'cm'),
-                axis.text = element_text(size = 20),
-                legend.margin=margin(-15,-15,-15,-15),
-                legend.box.margin=margin(-25,0,20,0)))
+ggplot(data = data.scenario, aes(x = constant)) + 
+  ylab(expression(alpha(x))) + xlab("") +
+  geom_line(aes(y = trueAlp, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
+  geom_line(aes(y = mapAlp, col = "MAP Alpha"), linewidth = 2.5, linetype = 2) +
+  labs(col = "") + ylim(0, 5) +
+  theme(axis.title.y = element_text(size = rel(1.8), angle = 90)) +
+  theme(axis.title.x = element_text(size = rel(1.8), angle = 00)) +
+  scale_color_manual(values = c("#e0b430", "red"))+
+  theme(text = element_text(size = 15),
+          legend.position="bottom", legend.key.size = unit(1, 'cm'),
+          axis.text = element_text(size = 20),
+          legend.margin=margin(-15,-15,-15,-15),
+          legend.box.margin=margin(-25,0,20,0))
 
 # ggsave(paste0("../Laboratory/Simulation/BayesianFusedLasso/results/map_alpha_n1_test.pdf"), width=10)
 

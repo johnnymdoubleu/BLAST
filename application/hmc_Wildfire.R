@@ -264,7 +264,9 @@ str(posterior)
 
 # print(as.mcmc(fit1), pars=c("alpha", "gamma", "intercept", "theta", "lambda1", "lambda2","lp__"), probs=c(.05,.5,.95))
 plot(fit1, plotfun = "trace", pars = c("intercept", "theta"), nrow = 3)
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_theta_trace.pdf"), width=10, height = 7.78)
 plot(fit1, plotfun = "trace", pars = c("lambda1", "lambda2"), nrow = 2)
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_lambda.pdf"), width=10, height = 7.78)
 
 # traceplot(fit1, pars = c("theta"))
 # traceplot(fit1, pars = c("lambda1", "lambda2"), inc_warmup = TRUE, nrow = 2)
