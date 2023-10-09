@@ -186,7 +186,7 @@ data {
 parameters {
     vector[p] theta; // linear predictor
     vector[psi] gamma[p];
-    real <lower=0> sigma; //
+    real <lower=-1, upper = 1> sigma; //
     real <lower=0> lambda1; // lasso penalty
     real <lower=0> lambda2; // group lasso penalty
     real intercept; // intercept term
@@ -196,7 +196,11 @@ parameters {
 transformed parameters {
     vector[n] alpha; // tail index
     matrix[n, p] gsmooth; // nonlinear component
-    cov_matrix[psi] covmat; // covariance matrix
+    cov_matrix[psi] covmat[p]; // covariance
+    for(j in 1:p){
+        covmat[j] <- diag_matrix(rep_vector(1, psi)) * tau[j] * sigma;
+    }
+
     for (j in 1:p){
         gsmooth[,j] <- bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
     }
@@ -216,8 +220,8 @@ model {
     target += double_exponential_lpdf(intercept | 0, lambda1);
     for (j in 1:p){
         target += double_exponential_lpdf(theta[j] | 0, lambda1);
-        target += gamma_lpdf(tau[j] | atau, square(lambda2));
-        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), );
+        target += gamma_lpdf(tau[j] | atau, (square(lambda2)/2));
+        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), covmat[j]);
     }
 }
 //generated quantities {} // Used in Posterior predictive check"
