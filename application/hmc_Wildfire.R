@@ -263,12 +263,10 @@ posterior <- extract(fit1)
 str(posterior)
 
 # print(as.mcmc(fit1), pars=c("alpha", "gamma", "intercept", "theta", "lambda1", "lambda2","lp__"), probs=c(.05,.5,.95))
-plot(fit1, plotfun = "trace", pars = c("intercept", "theta"), nrow = (p+1))
+plot(fit1, plotfun = "trace", pars = c("intercept", "theta"), nrow = 3)
 plot(fit1, plotfun = "trace", pars = c("lambda1", "lambda2"), nrow = 2)
 
-summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
-
-# traceplot(fit1, pars = c("theta"), nrow = (p))
+# traceplot(fit1, pars = c("theta"))
 # traceplot(fit1, pars = c("lambda1", "lambda2"), inc_warmup = TRUE, nrow = 2)
 fit.v2 <- as.mcmc(fit1)
 
