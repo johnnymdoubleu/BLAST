@@ -157,6 +157,7 @@ for(i in 1:p){
 }
 
 bs.linear <- cbind(rep(1,n), bs.linear)
+xholder.linear <- cbind(rep(1,n), xholder.linear)
 # // priors
 # lambda1 ~ gamma(1, 1.78);
 # intercept ~ double_exponential(0, lambda1);
@@ -217,7 +218,7 @@ model {
     target += gamma_lpdf(lambda1 | 1, 5);
     target += gamma_lpdf(lambda2 | 0.1, 0.1);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
-    target += normal_lpdf(theta[1] | 0, 0.001);
+    target += normal_lpdf(theta[1] | 0, 100);
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, (square(lambda2)/2));
@@ -239,15 +240,17 @@ set_cmdstan_path(path = NULL)
 file <- file.path(cmdstan_path(), "model.stan")
 
 init.alpha <- list(list(gamma = array(rep(0,(psi*p)), dim=c(psi, p)),
-                        theta = rep(0, (p+1)), tau = rep(0.01, p), sigma = 0.001, 
+                        theta = rep(0, (p+1)), 
+                        tau = rep(0.01, p), sigma = 0.001, 
                         lambda1 = 0.01, lambda2 = 30),
                   list(gamma = array(rep(0.02,(psi*p)), dim=c(psi, p)),
-                        theta = rep(0.1, (p+1)), tau = rep(0.01, p), sigma = 0.001,
+                        theta = rep(0.1, (p+1)), 
+                        tau = rep(0.01, p), sigma = 0.001,
                         lambda1 = 0.01, lambda2 = 30),
                   list(gamma = array(rep(-0.02, (psi*p)), dim=c(psi, p)),
-                        theta = rep(-0.2, (p+1)), tau = rep(0.01, p), sigma = 0.001,
-                        lambda1 = 0.01, lambda2 = 30)
-                        )
+                        theta = rep(-0.2, (p+1)), 
+                        tau = rep(0.01, p), sigma = 0.001,
+                        lambda1 = 0.01, lambda2 = 30))
 
 # stanc("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/application/model1.stan")
 fit1 <- stan(
@@ -267,7 +270,7 @@ posterior <- extract(fit1)
 str(posterior)
 
 # print(as.mcmc(fit1), pars=c("alpha", "gamma", "intercept", "theta", "lambda1", "lambda2","lp__"), probs=c(.05,.5,.95))
-plot(fit1, plotfun = "trace", pars = c("intercept", "theta"), nrow = 3)
+plot(fit1, plotfun = "trace", pars = c("theta"), nrow = 3)
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_theta_trace.pdf"), width=10, height = 7.78)
 plot(fit1, plotfun = "trace", pars = c("lambda1", "lambda2"), nrow = 2)
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_lambda.pdf"), width=10, height = 7.78)
@@ -331,9 +334,9 @@ theta.q3 <- theta.samples[,6]
 
 
 df.theta <- data.frame("seq" = seq(1, (p+1)),
-                        "m" = c(theta0.samples[1], theta.post.mean),
-                        "l" = c(theta0.samples[4], theta.q1),
-                        "u" = c(theta0.samples[6], theta.q3))
+                        "m" = c(theta.post.mean),
+                        "l" = c(theta.q1),
+                        "u" = c(theta.q3))
 df.theta$covariate <- factor(c("\u03b8",names(fwi.scaled)), levels = c("\u03b8",colnames(fwi.scaled)))
 df.theta$labels <- factor(c("\u03b8",colnames(fwi.scaled)))
 
@@ -420,9 +423,9 @@ for (j in 1:p){
 }
 
 for(i in 1:n){
-  g.smooth.new[i] <- theta0.samples[1] + sum(g.new[i,])
-  g.smooth.q1[i] <- theta0.samples[4] + sum(g.q1[i,])
-  g.smooth.q3[i] <- theta0.samples[6] + sum(g.q3[i,])
+  g.smooth.new[i] <- sum(g.new[i,])
+  g.smooth.q1[i] <- sum(g.q1[i,])
+  g.smooth.q3[i] <- sum(g.q3[i,])
 }
 
 ### Plotting linear and nonlinear components
