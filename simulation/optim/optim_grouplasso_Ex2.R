@@ -195,7 +195,7 @@ log.posterior <- function(beta, y.origin){
 
 
 # beta.emp <- c(as.vector(theta.origin), as.vector(gamma.origin), 1, 300)
-beta.emp <- c(rep(0, (p+1)), rep(0, p*psi), 0.1, 10)
+beta.emp <- c(rep(0, (p+1)), rep(0, p*psi), 0.1, 0.1)
 # beta.emp <- c(as.vector(theta.origin), as.vector(gamma.origin))
 beta.map <- optim(par = beta.emp, fn = log.posterior, 
                   y.origin = y.origin,
@@ -204,7 +204,7 @@ beta.map <- optim(par = beta.emp, fn = log.posterior,
                   # method = "BFGS", 
                   method = "CG",
                   # method = "SANN",
-                  control = list(fnscale = -1, maxit = 500))
+                  control = list(fnscale = -1, maxit = 1000))
 # theta.map <- matrix(beta.map$par[1:(2*p)],nrow=2)
 theta.map <- beta.map$par[1:(p+1)]
 gamma.map <- beta.map$par[(p+1+1):(p+1+(psi*p))]
@@ -526,7 +526,7 @@ ggplot(data = data.scenario, aes(x = constant)) +
   ylab(expression(alpha(x))) + xlab("") +
   geom_line(aes(y = trueAlp, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
   geom_line(aes(y = mapAlp, col = "MAP Alpha"), linewidth = 2.5, linetype = 2) +
-  labs(col = "") + ylim(0, 5) +
+  labs(col = "") + #ylim(0, 5) +
   theme(axis.title.y = element_text(size = rel(1.8), angle = 90)) +
   theme(axis.title.x = element_text(size = rel(1.8), angle = 00)) +
   scale_color_manual(values = c("#e0b430", "red"))+

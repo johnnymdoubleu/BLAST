@@ -284,10 +284,10 @@ beta.emp <- c(rep(0, (p+1)), rep(0, p*psi), 0.1, 30)
 # beta.emp <- c(as.vector(theta.origin), as.vector(gamma.origin))
 beta.map <- optim(par = beta.emp, fn = log.posterior, 
                   y.origin = y,
-                  lower=c(-Inf, -Inf, 0, 0),
-                  upper=rep(Inf, 4),
-                  method = "BFGS", 
-                  # method = "CG",
+                  lower=c(rep(-Inf, (p+1+(psi*p))), 0, 0),
+                  upper=rep(Inf, length(beta.emp)),
+                  # method = "BFGS", 
+                  method = "CG",
                   # method = "SANN",
                   control = list(fnscale = -1, maxit = 500))
 # theta.map <- matrix(beta.map$par[1:(2*p)],nrow=2)
