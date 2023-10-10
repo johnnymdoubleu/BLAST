@@ -210,7 +210,7 @@ transformed parameters {
     };
     for (i in 1:n){
         alpha[i] <- exp(theta[1] + dot_product(bsLinear[i], theta[2:newp]) + (gsmooth[i,] *rep_vector(1, p)));
-        newalpha[i] <- exp(theta[1] + dot_product(xholderLinear[i], theta[2:newp]) + (gsmooth[i,] *rep_vector(1, p)));
+        newalpha[i] <- exp(theta[1] + dot_product(xholderLinear[i], theta[2:newp]) + (newgsmooth[i,] *rep_vector(1, p)));
     };
 }
 
