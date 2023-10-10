@@ -524,10 +524,10 @@ gamma.container <- as.data.frame(matrix(NA, nrow = 20, ,ncol = 0))
 for(i in 1:(dim(mcmc.gamma)[1]/3)){
     gamma.container <- cbind(gamma.container, mcmc.gamma[i,1,])    
 }
-corrplot.mixed(cor(gamma.container),
-                upper = "circle",
-                lower = "number",
-                addgrid.col = "black")
+# corrplot.mixed(cor(gamma.container),
+#                 upper = "circle",
+#                 lower = "number",
+#                 addgrid.col = "black")
 
 mcmc.alpha <- posterior$alpha
 len <- dim(mcmc.alpha)[1]
