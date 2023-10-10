@@ -153,8 +153,8 @@ for(j in 1:p){
 
 true.alpha <- alp.new <- alp.origin <- NULL
 for(i in 1:n){
-    alp.origin[i] <- exp((p*theta.origin[1]) + sum(f.origin[i,]))
-    alp.new[i] <- exp((p*theta.origin[1]) + sum(f.new[i,]))
+    alp.origin[i] <- exp((theta.origin[1]) + sum(f.origin[i,]))
+    alp.new[i] <- exp((theta.origin[1]) + sum(f.new[i,]))
 }
 
 # lambda1 ~ gamma(1, 1.78);
