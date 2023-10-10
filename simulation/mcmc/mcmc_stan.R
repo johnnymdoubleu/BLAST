@@ -249,13 +249,13 @@ init.alpha <- list(list(gamma = array(rep(0,(psi*p)), dim=c(psi, p)),
                         tau = rep(0.01, p), sigma = 0.001, 
                         lambda1 = 0.1, lambda2 = 0.1),
                   list(gamma = array(rep(0.02,(psi*p)), dim=c(psi, p)),
-                        theta = rep(0.1, (p+1)), 
+                        theta = rep(0.001, (p+1)), 
                         tau = rep(0.01, p), sigma = 0.001,
-                        lambda1 = 0.01, lambda2 = 30),
+                        lambda1 = 0.1, lambda2 = 0.1),
                   list(gamma = array(rep(-0.02, (psi*p)), dim=c(psi, p)),
-                        theta = rep(-0.2, (p+1)), 
+                        theta = rep(-0.02, (p+1)), 
                         tau = rep(0.01, p), sigma = 0.001,
-                        lambda1 = 0.01, lambda2 = 30))
+                        lambda1 = 0.1, lambda2 = 0.1))
 
 # stanc("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/application/model1.stan")
 fit1 <- stan(
