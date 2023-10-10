@@ -519,16 +519,11 @@ ggplot(data.scenario, aes(x=x)) +
         axis.title.x = element_text(size = 35))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_alpha.pdf"), width=10, height = 7.78)
 
-# f.nonlinear.old <- f.linear.old <- f.old <- matrix(, nrow = n, ncol=p)
-# alpha.new <- NULL
-# for (j in 1:p){
-#   f.linear.old[,j] <- bs.linear[,j] * theta.post.mean[j]
-#   f.nonlinear.old[,j] <- bs.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.post.mean[, j]
-#   f.old[1:n, j] <- f.linear.old[,j] + f.nonlinear.old[,j]
-# }
-# for(i in 1:n){
-#   alpha.new[i] <- exp(tail(alpha.summary, 1)[1] + sum(f.old[i]))
-# }
+mcmc.gamma <- posterior$gamma
+gamma.container <- matrix(NA, nrow = 20, ,ncol = dim(mcmc.gamma)[1])
+for(i in 1:dim(mcmc.gamma)[1]){
+    
+}
 
 mcmc.alpha <- posterior$alpha
 len <- dim(mcmc.alpha)[1]
