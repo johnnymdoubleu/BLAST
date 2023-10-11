@@ -219,7 +219,7 @@ model {
     target += gamma_lpdf(lambda1 | 1, 5);
     target += gamma_lpdf(lambda2 | 0.1, 0.1);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
-    target += normal_lpdf(theta[1] | 0, 0.1);
+    target += double_exponential_lpdf(theta[1] | 0, lambda1); // target += normal_lpdf(theta[1] | 0, 0.1);
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, (square(lambda2)/2));
@@ -541,15 +541,15 @@ ggplot(data.scenario, aes(x=x)) +
         axis.title.x = element_text(size = 35))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_alpha.pdf"), width=10, height = 7.78)
 
-mcmc.gamma <- posterior$gamma
-gamma.container <- as.data.frame(matrix(NA, nrow = 20, ,ncol = 0))
-for(i in 5900:6000){
-    gamma.container <- cbind(gamma.container, mcmc.gamma[i,1,])    
-}
-corrplot.mixed(cor(gamma.container),
-                upper = "circle",
-                lower = "number",
-                addgrid.col = "black")
+# mcmc.gamma <- posterior$gamma
+# gamma.container <- as.data.frame(matrix(NA, nrow = 20, ,ncol = 0))
+# for(i in 5900:6000){
+#     gamma.container <- cbind(gamma.container, mcmc.gamma[i,1,])    
+# }
+# corrplot.mixed(cor(gamma.container),
+#                 upper = "circle",
+#                 lower = "number",
+#                 addgrid.col = "black")
 
 mcmc.alpha <- posterior$alpha
 len <- dim(mcmc.alpha)[1]
