@@ -612,10 +612,12 @@ print(paste("ELPD (brute force)=",round(sum(y),2)))
 # log.weights <- -posterior$log_lik - l.common.mix
 # y.mixis <- logSumExp(-l.common.mix) - rowLogSumExps(t(log.weights))
 plot(fwi.loo, label_points = TRUE)
+fwi.waic <- waic(posterior$log_lik)
+fwi.waic
 library(bayesplot)
 library(rstanarm)
+library(loo)
 
-waic(posterior$log_lik)
 
 
 
@@ -676,11 +678,22 @@ generated quantities {
 }
 "
 stanmodel <- stan_model(model_code = stancode)
-yrep <- posterior_predict(fit1)
+
+fit2 <- sampling(stanmodel, data = data.stan, 
+                  init = init.alpha,
+                  iter = 1000, 
+                  chains = 3, cores = 4, 
+                  refresh = 0)
+
+
+yrep <- posterior_predict(fit2)
 ppc_loo_pit_overlay(
     y = y,
     yrep = yrep,
     lw = weights(fwi.loo$psis_object)
 )
-fit2 <- sampling(stanmodel, data = data.stan, init = init.alpha, refresh = 0)
-log.pd <- extract_log_lik(fit2)
+gen <- gqs(stanmodel, draws = as.matrix(fit2), data = data.stan)
+# extract_log_lik(fit2)
+log.pd <- extract_log_lik(gen)
+loo(log.pd)
+waic(log.pd)
