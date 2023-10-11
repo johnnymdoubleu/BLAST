@@ -179,7 +179,7 @@ log.posterior <- function(beta, y.origin){
       second.prior[j] <-  -1 * lambda.2 * sqrt(sum((gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)])^2))
       prior[j] <- first.prior[j] + second.prior[j]
   }
-  sum.prior <- sum(prior) + (-0.5 * 0.001^2 * theta[1]^2) + 
+  sum.prior <- sum(prior) + #(-0.5 * 0.001^2 * theta[1]^2) + 
                 # - (lambda.1 * abs(theta[1])) +
                 (p * log(lambda.1)) + (p * psi * log(lambda.2)) +
                 ((1-1)*log(lambda.1) - (1.78 * lambda.1)) + 
@@ -194,15 +194,15 @@ log.posterior <- function(beta, y.origin){
 beta.emp <- c(rep(0, (p+1)), rep(0, p*psi), 1, 1)
 beta.map <- optim(par = beta.emp, fn = log.posterior, 
                   y.origin = y.origin,
-                  lower=c(rep(-Inf, (length(beta.emp)-2)), 0.0001, 0.0001),
-                  upper=rep(Inf, length(beta.emp)),
+                  # lower=c(rep(-Inf, (length(beta.emp)-2)), 0.0001, 0.0001),
+                  # upper=rep(Inf, length(beta.emp)),
                   # method = "L-BFGS-B", 
                   method = "CG",
                   # method = "Nelder-Mead", hessian = T,
                   control = list(trace=3, fnscale = -1, maxit = 2000))
 theta.map <- beta.map$par[1:(p+1)]
 gamma.map <- beta.map$par[(p+1+1):(p+1+(psi*p))]
-lambda.map <- beta.map$par[-c(-1,-2)]
+lambda.map <- beta.map$par[-c(1:(p+1+(psi*p)))]
 
 df.theta <- data.frame("seq" = seq(1, p+1),
                   theta.map,

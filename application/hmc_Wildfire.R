@@ -603,10 +603,19 @@ cat("sc1_Alp Done")
 
 
 fwi.loo <- loo(fit1)
+fwi.loo
 y.psis <- fwi.loo$pointwise[,1]
-print(paste("RMSE (PSIS) =",round( sqrt(mean((y-y.psis)^2)) ,2)))
+print(paste("RMSE (PSIS) =",round(sqrt(mean((y-y.psis)^2)) ,2)))
 print(paste("ELPD (PSIS)=",round(sum(y.psis),2)))
 print(paste("ELPD (brute force)=",round(sum(y),2)))
 # l.common.mix <- rowLogSumExps(-posterior$log_lik)
 # log.weights <- -posterior$log_lik - l.common.mix
 # y.mixis <- logSumExp(-l.common.mix) - rowLogSumExps(t(log.weights))
+
+library(bayesplot)
+yrep <- posterior_predict(fit1)
+ppc_loo_pit_overlay(
+    y = y,
+    yrep = yrep,
+    lw = weights(fwi.loo$psis_object)
+)
