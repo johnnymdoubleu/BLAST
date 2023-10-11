@@ -239,7 +239,7 @@ beta.map <- optim(par = beta.emp, fn = log.posterior,
 # theta.map <- matrix(beta.map$par[1:(2*p)],nrow=2)
 theta.map <- beta.map$par[1:(p+1)]
 gamma.map <- beta.map$par[(p+1+1):(p+1+(psi*p))]
-lambda.map <- beta.map$par[-c(-1,-2)]
+lambda.map <- beta.map$par[-c(1:(p+1+(psi*p)))]
 systime <- Sys.time()
 Sys.time()
 systime <- chartr(":","-",systime)

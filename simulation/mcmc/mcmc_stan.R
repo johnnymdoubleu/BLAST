@@ -79,7 +79,7 @@ for(i in 1:p){
 gamma.origin <- matrix(, nrow = psi, ncol = p)
 for(j in 1:p){
     for (ps in 1:psi){
-        if(j %in% c(2,3,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
+        if(j %in% c(3,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
         else if(j==7){
             if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.01}
             else{gamma.origin[ps, j] <- 0.01}
@@ -105,7 +105,7 @@ for(j in 1:p){
 #         }
 #     }
 # }
-theta.origin <- c(0, 0.04, 0, 0, 0, 0)
+theta.origin <- c(0, 0.02, 0.02, 0, 0, 0)
 
 f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
@@ -260,8 +260,8 @@ fit1 <- stan(
     init = init.alpha,      # initial value
     # init_r = 1,
     chains = 3,             # number of Markov chains
-    warmup = 5000,          # number of warmup iterations per chain
-    iter = 10000,            # total number of iterations per chain
+    warmup = 1000,          # number of warmup iterations per chain
+    iter = 2000,            # total number of iterations per chain
     cores = 4,              # number of cores (could use one per chain)
     refresh = 1             # no progress shown
 )
