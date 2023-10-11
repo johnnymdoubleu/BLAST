@@ -199,7 +199,7 @@ beta.map <- optim(par = beta.emp, fn = log.posterior,
                   # method = "L-BFGS-B", 
                   method = "CG",
                   # method = "Nelder-Mead", hessian = T,
-                  control = list(trace=2, fnscale = -1, maxit = 2000))
+                  control = list(trace=3, fnscale = -1, maxit = 2000))
 theta.map <- beta.map$par[1:(p+1)]
 gamma.map <- beta.map$par[(p+1+1):(p+1+(psi*p))]
 lambda.map <- beta.map$par[-c(-1,-2)]
