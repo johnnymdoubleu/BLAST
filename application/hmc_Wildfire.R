@@ -601,4 +601,7 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
 
 cat("sc1_Alp Done")
 
-loo1 <- loo(fit1)
+
+fwi.loo <- loo(fit1)
+y.psis <- fwi.loo$pointwise[,1]
+print(paste("RMSE(PSIS) =",round( sqrt(mean((y-y.psis)^2)) ,2)))
