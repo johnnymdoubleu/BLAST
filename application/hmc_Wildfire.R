@@ -266,8 +266,8 @@ fit1 <- stan(
     init = init.alpha,      # initial value
     # init_r = 1,
     chains = 3,             # number of Markov chains
-    warmup = 2000,          # number of warmup iterations per chain
-    iter = 6000,            # total number of iterations per chain
+    warmup = 1000,          # number of warmup iterations per chain
+    iter = 2000,            # total number of iterations per chain
     cores = 4,              # number of cores (could use one per chain)
     refresh = 1             # no progress shown
 )
@@ -611,8 +611,9 @@ print(paste("ELPD (brute force)=",round(sum(y),2)))
 # l.common.mix <- rowLogSumExps(-posterior$log_lik)
 # log.weights <- -posterior$log_lik - l.common.mix
 # y.mixis <- logSumExp(-l.common.mix) - rowLogSumExps(t(log.weights))
-
+plot(fwi.loo, label_points = TRUE)
 library(bayesplot)
+library(rstanarm)
 yrep <- posterior_predict(fit1)
 ppc_loo_pit_overlay(
     y = y,
