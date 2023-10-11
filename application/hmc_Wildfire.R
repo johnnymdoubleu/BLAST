@@ -202,7 +202,6 @@ parameters {
 transformed parameters {
     vector[n] alpha; // tail index
     matrix[n, p] gsmooth; // nonlinear component
-
     for (j in 1:p){
         gsmooth[,j] <- bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
     };
@@ -226,7 +225,14 @@ model {
         target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau[j] * sigma);
     }
 }
-//generated quantities {} // Used in Posterior predictive check"
+generated quantities {
+    // Used in Posterior predictive check
+    vector[n] log_lik;
+    for (i in 1:n) {
+        log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
+    }
+}
+"
 , "model.stan")
 
 data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, 
@@ -260,8 +266,8 @@ fit1 <- stan(
     init = init.alpha,      # initial value
     # init_r = 1,
     chains = 3,             # number of Markov chains
-    warmup = 2000,          # number of warmup iterations per chain
-    iter = 6000,            # total number of iterations per chain
+    warmup = 100,          # number of warmup iterations per chain
+    iter = 500,            # total number of iterations per chain
     cores = 4,              # number of cores (could use one per chain)
     refresh = 1             # no progress shown
 )
@@ -595,3 +601,4 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
 
 cat("sc1_Alp Done")
 
+loo1 <- loo(fit1)

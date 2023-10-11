@@ -72,7 +72,7 @@ for(i in 1:p){
 gamma.origin <- matrix(, nrow = psi, ncol = p)
 for(j in 1:p){
     for (ps in 1:psi){
-        if(j %in% c(2,3,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
+        if(j %in% c(3,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
         else if(j==7){
             if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.01}
             else{gamma.origin[ps, j] <- 0.01}
@@ -98,7 +98,7 @@ for(j in 1:p){
 #         }
 #     }
 # }
-theta.origin <- c(0, 0.2, 0, 0, 0, 0)
+theta.origin <- c(0, 0.2, 0.2, 0, 0, 0)
 
 f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){

@@ -11,6 +11,7 @@ library(evir)
 library(nimble, warn.conflicts = FALSE)
 suppressMessages(library(coda))
 library(ggmcmc)
+library(loo)
 # library(R6)
 # suppressMessages(library(igraph))
 # library(mgcv)
@@ -199,15 +200,15 @@ model.penalisation <- nimbleCode({
   #prior
   # lambda.1 ~ dunif(0, 1)
   # lambda.2 ~ dunif(50, 500)
-  lambda.1 ~ dgamma(1, 10) #gamma distribution prior for lambda
-  lambda.2 ~ dgamma(0.5, 0.5)
+  lambda.1 ~ dgamma(1, 5) #gamma distribution prior for lambda
+  lambda.2 ~ dgamma(0.01, 0.01)
   # omega0 ~ dexp((lambda.1^2)/2)
-  # theta0 ~ dnorm(0, omega0)
-  theta0 ~ ddexp(0, sqrt(lambda.1))
+  theta0 ~ dnorm(0, 0.001)
+  # theta0 ~ ddexp(0, sqrt(lambda.1))
   
   
   for (j in 1:p){
-    theta[j] ~ ddexp(0, sqrt(lambda.1))
+    theta[j] ~ ddexp(0, lambda.1)
     # omega[j] ~ dexp((lambda.1^2)/2)
     # theta[j] ~ dnorm(0, omega[j]*sigma.square)
     sigma.square ~ dinvgamma(0.01, 0.01)
@@ -243,10 +244,10 @@ init.alpha <- function() list(#list(gamma = matrix(0.02, nrow = psi, ncol=p),
                                 #    covm = array(0.5, dim = c(psi,psi, p))),
                               list(gamma = matrix(0, nrow = psi, ncol=p),
                                     theta = rep(0, p), theta0 = 0,
-                                    covm = array(1, dim = c(psi,psi, p))),
+                                    covm = array(rep(diag(psi)), dim=c(psi,psi,p))),
                               list(gamma = matrix(-0.01, nrow = psi, ncol=p),
                                     theta = rep(0.02, p), theta0 = 0.03,
-                                    covm = array(1, dim = c(psi,psi, p))))
+                                    covm = array(rep(diag(psi)), dim=c(psi,psi,p))))
                             #   list(gamma = matrix(1, nrow = psi, ncol=p)))
                               # y = as.vector(y),
 monitor.pred <- c("theta0", "theta", "gamma", "alpha",
@@ -265,8 +266,8 @@ fit.v2 <- nimbleMCMC(code = model.penalisation,
                   monitors = monitor.pred,
                   inits = init.alpha(),
                   # thin = 20,
-                  niter = 60000,
-                  nburnin = 50000,
+                  niter = 20000,
+                  nburnin = 10000,
                   # setSeed = 300,
                   nchains = 2,
                   # WAIC = TRUE,-

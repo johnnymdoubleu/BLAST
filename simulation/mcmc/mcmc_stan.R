@@ -200,10 +200,6 @@ transformed parameters {
     vector[n] newalpha; // tail index
     matrix[n, p] gsmooth; // nonlinear component
     matrix[n, p] newgsmooth; // nonlinear component
-    cov_matrix[psi] covmat[p]; // covariance
-    for(j in 1:p){
-        covmat[j] <- diag_matrix(rep_vector(1, psi)) * tau[j] * sigma;
-    };
     for (j in 1:p){
         gsmooth[,j] <- bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
         newgsmooth[,j] <- xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
@@ -220,13 +216,13 @@ model {
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += gamma_lpdf(lambda1 | 0.1, 2);
-    target += gamma_lpdf(lambda2 | 1, 1);
+    target += gamma_lpdf(lambda2 | 0.1, 1);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     target += normal_lpdf(theta[1] | 0, 0.01);
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, (square(lambda2)/2));
-        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), covmat[j]);
+        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), (diag_matrix(rep_vector(1, psi)) * tau[j] * sigma));
     }
 }
 //generated quantities {} // Used in Posterior predictive check"
@@ -246,15 +242,15 @@ file <- file.path(cmdstan_path(), "model_simulation.stan")
 
 init.alpha <- list(list(gamma = array(rep(0,(psi*p)), dim=c(psi, p)),
                         theta = rep(0, (p+1)), 
-                        tau = rep(0.01, p), sigma = 0.1, 
+                        tau = rep(1, p), sigma = 0.1, 
                         lambda1 = 0.01, lambda2 = 0.01),
                   list(gamma = array(rep(0.02,(psi*p)), dim=c(psi, p)),
-                        theta = rep(0.001, (p+1)), 
-                        tau = rep(0.01, p), sigma = 0.1,
+                        theta = rep(0.01, (p+1)), 
+                        tau = rep(1, p), sigma = 0.1,
                         lambda1 = 0.01, lambda2 = 0.01),
                   list(gamma = array(rep(-0.02, (psi*p)), dim=c(psi, p)),
                         theta = rep(-0.02, (p+1)), 
-                        tau = rep(0.01, p), sigma = 0.1,
+                        tau = rep(1, p), sigma = 0.1,
                         lambda1 = 0.01, lambda2 = 0.01))
 
 # stanc("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/application/model1.stan")
@@ -264,8 +260,8 @@ fit1 <- stan(
     init = init.alpha,      # initial value
     # init_r = 1,
     chains = 3,             # number of Markov chains
-    warmup = 2000,          # number of warmup iterations per chain
-    iter = 6000,            # total number of iterations per chain
+    warmup = 5000,          # number of warmup iterations per chain
+    iter = 10000,            # total number of iterations per chain
     cores = 4,              # number of cores (could use one per chain)
     refresh = 1             # no progress shown
 )
