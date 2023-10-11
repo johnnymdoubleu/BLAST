@@ -191,7 +191,7 @@ parameters {
     vector[psi] gamma[p]; // splines coefficient
     real <lower=0> lambda1; // lasso penalty
     real <lower=0> lambda2; // group lasso penalty
-    real <lower=-1, upper = 1> sigma; //
+    real sigma; //
     vector[p] tau;
 }
 
@@ -246,16 +246,16 @@ file <- file.path(cmdstan_path(), "model_simulation.stan")
 
 init.alpha <- list(list(gamma = array(rep(0,(psi*p)), dim=c(psi, p)),
                         theta = rep(0, (p+1)), 
-                        tau = rep(0.01, p), sigma = 0.001, 
-                        lambda1 = 0.1, lambda2 = 0.1),
+                        tau = rep(0.01, p), sigma = 0.1, 
+                        lambda1 = 0.01, lambda2 = 0.01),
                   list(gamma = array(rep(0.02,(psi*p)), dim=c(psi, p)),
                         theta = rep(0.001, (p+1)), 
-                        tau = rep(0.01, p), sigma = 0.001,
-                        lambda1 = 0.1, lambda2 = 0.1),
+                        tau = rep(0.01, p), sigma = 0.1,
+                        lambda1 = 0.01, lambda2 = 0.01),
                   list(gamma = array(rep(-0.02, (psi*p)), dim=c(psi, p)),
                         theta = rep(-0.02, (p+1)), 
-                        tau = rep(0.01, p), sigma = 0.001,
-                        lambda1 = 0.1, lambda2 = 0.1))
+                        tau = rep(0.01, p), sigma = 0.1,
+                        lambda1 = 0.01, lambda2 = 0.01))
 
 # stanc("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/application/model1.stan")
 fit1 <- stan(

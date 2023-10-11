@@ -637,17 +637,13 @@ ocode<-"
       vector[psi] gamma[p]; // splines coefficient
       real <lower=0> lambda1; // lasso penalty
       real <lower=0> lambda2; // group lasso penalty
-      real <lower=-1, upper = 1> sigma; //
+      real sigma; //
       vector[p] tau;
   }
 
   transformed parameters {
       vector[n] alp; // tail index
       matrix[n, p] gsmooth; // nonlinear component
-      cov_matrix[psi] covmat[p]; // covariance
-      for(j in 1:p){
-          covmat[j] <- diag_matrix(rep_vector(1, psi)) * tau[j] * sigma;
-      };
       for (j in 1:p){
           gsmooth[,j] <- bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
       };
@@ -668,7 +664,7 @@ ocode<-"
       for (j in 1:p){
           target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
           target += gamma_lpdf(tau[j] | atau, (square(lambda2)/2));
-          target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), covmat[j]);
+          target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau[j] * sigma);
       }
   }
 "
@@ -849,7 +845,7 @@ ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +
 
 data.scenario <- data.frame("x" = c(1:n),
                             "constant" = newx,
-                            "mapAlp" = sort(newalpha)
+                            "mapAlp" = sort(newalpha),
                             "optimAlp" = sort(alpha.optim))
 ggplot(data = data.scenario, aes(x = constant)) + 
   ylab(expression(alpha(x))) + xlab("") +

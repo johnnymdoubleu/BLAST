@@ -158,6 +158,10 @@ for(i in 1:p){
 
 # bs.linear <- cbind(rep(1,n), bs.linear)
 # xholder.linear <- cbind(rep(1,n), xholder.linear)
+# cov_matrix[psi] covmat[p]; // covariance
+# for(j in 1:p){
+#     covmat[j] <- diag_matrix(rep_vector(1, psi)) * tau[j] * sigma;
+# };
 # // priors
 # lambda1 ~ gamma(1, 1.78);
 # intercept ~ double_exponential(0, lambda1);
@@ -191,17 +195,14 @@ parameters {
     vector[psi] gamma[p]; // splines coefficient
     real <lower=0> lambda1; // lasso penalty
     real <lower=0> lambda2; // group lasso penalty
-    real <lower=-1, upper = 1> sigma; //
+    real sigma; //
     vector[p] tau;
 }
 
 transformed parameters {
     vector[n] alpha; // tail index
     matrix[n, p] gsmooth; // nonlinear component
-    cov_matrix[psi] covmat[p]; // covariance
-    for(j in 1:p){
-        covmat[j] <- diag_matrix(rep_vector(1, psi)) * tau[j] * sigma;
-    };
+
     for (j in 1:p){
         gsmooth[,j] <- bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
     };
@@ -222,7 +223,7 @@ model {
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, (square(lambda2)/2));
-        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), covmat[j]);
+        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau[j] * sigma);
     }
 }
 //generated quantities {} // Used in Posterior predictive check"
@@ -245,12 +246,12 @@ init.alpha <- list(list(gamma = array(rep(0,(psi*p)), dim=c(psi, p)),
                         lambda1 = 0.01, lambda2 = 30),
                   list(gamma = array(rep(0.02,(psi*p)), dim=c(psi, p)),
                         theta = rep(0.1, (p+1)), 
-                        tau = rep(0.01, p), sigma = 0.001,
+                        tau = rep(0.01, p), sigma = 1,
                         lambda1 = 0.01, lambda2 = 30),
                   list(gamma = array(rep(-0.02, (psi*p)), dim=c(psi, p)),
                         theta = rep(-0.2, (p+1)), 
-                        tau = rep(0.01, p), sigma = 0.001,
-                        lambda1 = 0.01, lambda2 = 30))
+                        tau = rep(0.01, p), sigma = 1,
+                        lambda1 = 0.07, lambda2 = 30))
 
 # stanc("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/application/model1.stan")
 fit1 <- stan(

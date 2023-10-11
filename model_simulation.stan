@@ -18,7 +18,7 @@ parameters {
     vector[psi] gamma[p]; // splines coefficient
     real <lower=0> lambda1; // lasso penalty
     real <lower=0> lambda2; // group lasso penalty
-    real <lower=-1, upper = 1> sigma; //
+    real sigma; //
     vector[p] tau;
 }
 
