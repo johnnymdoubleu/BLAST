@@ -72,7 +72,7 @@ for(i in 1:p){
 gamma.origin <- matrix(, nrow = psi, ncol = p)
 for(j in 1:p){
     for (ps in 1:psi){
-        if(j %in% c(3,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
+        if(j %in% c(1,3,5,6,9,10)){gamma.origin[ps, j] <- 0}
         else if(j==7){
             if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.01}
             else{gamma.origin[ps, j] <- 0.01}
@@ -98,7 +98,7 @@ for(j in 1:p){
 #         }
 #     }
 # }
-theta.origin <- c(0, 0.2, 0.2, 0, 0, 0)
+theta.origin <- c(-0.3, 0, 0.2, 0, 0.2, 0)
 
 f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
@@ -194,10 +194,10 @@ log.posterior <- function(beta, y.origin){
 beta.emp <- c(rep(0, (p+1)), rep(0, p*psi), 1, 1)
 beta.map <- optim(par = beta.emp, fn = log.posterior, 
                   y.origin = y.origin,
-                  # lower=c(rep(-Inf, (length(beta.emp)-2)), 0.0001, 0.0001),
-                  # upper=rep(Inf, length(beta.emp)),
-                  # method = "L-BFGS-B", 
-                  method = "CG",
+                  lower=c(rep(-Inf, (length(beta.emp)-2)), 0.0001, 0.0001),
+                  upper=rep(Inf, length(beta.emp)),
+                  method = "L-BFGS-B", 
+                  # method = "CG",
                   # method = "Nelder-Mead", hessian = T,
                   control = list(trace=3, fnscale = -1, maxit = 3000))
 theta.map <- beta.map$par[1:(p+1)]
