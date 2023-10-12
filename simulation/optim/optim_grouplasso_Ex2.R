@@ -182,8 +182,8 @@ log.posterior <- function(beta, y.origin){
   }
   sum.prior <- sum(prior) + first.prior[1] + #(-0.5 * 0.001^2 * theta[1]^2) + 
                 (p * log(lambda.1)) + (p * psi * log(lambda.2)) +
-                ((0.1-1)*log(lambda.1) - (5 * lambda.1)) + 
-                ((0.1-1)*log(lambda.2) - (0.1 * lambda.2))
+                ((0.1-1)*log(lambda.1) - (2 * lambda.1)) + 
+                ((0.1-1)*log(lambda.2) - (1 * lambda.2))
                 # ((1.1-1)*log(lambda.1 * lambda.2)) - (2 * (lambda.1 + lambda.2))
   # print(first.prior)
   return(sum.lik + sum.prior)
