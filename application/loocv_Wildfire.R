@@ -187,14 +187,15 @@ model {
 generated quantities {
     // Used in Posterior predictive check
     vector[n] log_lik;
-    vector[n] y_rep;
+    real y_rep[n] ~ pareto(u, alpha);
     for (i in 1:n) {
-        y_rep[i] ~ pareto(u, alpha[i]);
         log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
     }
 }
 "
-
+data.train <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, 
+                    atau = ((psi+1)/2), newp = (p+1),
+                    bsLinear = bs.linear, bsNonlinear = bs.nonlinear)
 data.train <- list(y = as.vector(y[-test.set]), u = u, p = p, 
                     n= (n-length(test.set)), psi = psi, 
                     atau = ((psi+1)/2), newp = (p+1),
@@ -232,11 +233,12 @@ color_scheme_set("brightblue") # check out ?bayesplot::color_scheme_set
 mcmc_areas(as.matrix(fit2, pars = c("lambda1")), prob = 0.8)
 mcmc_areas(as.matrix(fit2, pars = c("lambda2")), prob = 0.8)
 mcmc_areas(as.matrix(fit2, pars = "theta"), prob = 0.8)
-y.rep <- as.matrix(fit2, pars = "y")
+y.rep <- as.matrix(fit2, pars = "y_rep")
 ppc_dens_overlay(y, y_rep[1:50, ])
 
 gen <- gqs(stanmodel, draws = as.matrix(fit2), data = data.test)
 log.pd <- extract_log_lik(gen)
 
 loo(log.pd)
+plot(loo(log.pd),label_points = TRUE)
 waic(log.pd)

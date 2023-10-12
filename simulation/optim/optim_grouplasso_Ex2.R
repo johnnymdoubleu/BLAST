@@ -98,19 +98,19 @@ for(j in 1:p){
 #         }
 #     }
 # }
-theta.origin <- c(-0.3, 0, 0.8, 0, 0.2, 0)
+theta.origin <- c(0.5, 0, 0.8, 0, 0.2, 0)
 
 f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
     f.linear.origin[,j] <- bs.linear[, j] * theta.origin[j+1]
-    f.nonlinear.origin[,j] <- (bs.nonlinear[1:n,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j])
+    f.nonlinear.origin[,j] <- bs.nonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
     f.origin[, j] <- f.linear.origin[,j] + f.nonlinear.origin[,j]
 }
 
 alp.origin <- y.origin <- NULL
 for(i in 1:n){
     alp.origin[i] <- exp(theta.origin[1] + sum(f.origin[i,]))
-    y.origin[i] <- rPareto(1, 1, alpha = alp.origin[i])
+    y.origin[i] <- rPareto(1, u, alpha = alp.origin[i])
 }
 
 u <- quantile(y.origin, threshold)
