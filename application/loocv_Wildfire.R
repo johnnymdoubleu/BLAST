@@ -131,7 +131,9 @@ for(i in 1:p){
   bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])
 }
 
-
+seed <- 9547
+set.seed(seed)
+test.set <- sort(sample.int(n, n*0.2))
 
 stancode <- "// Stan model for simple linear regression
 data {
@@ -190,16 +192,16 @@ generated quantities {
 }
 "
 
-data.train <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, 
+data.train <- list(y = as.vector(y[-test.set]), u = u, p = p, 
+                    n= (n-length(test.set)), psi = psi, 
                     atau = ((psi+1)/2), newp = (p+1),
-                    bsLinear = bs.linear, bsNonlinear = bs.nonlinear)
-
-set_cmdstan_path(path = NULL)
-#> CmdStan path set to: /Users/jgabry/.cmdstan/cmdstan-2.32.2
-
-# Create a CmdStanModel object from a Stan program,
-# here using the example model that comes with CmdStan
-file <- file.path(cmdstan_path(), "model.stan")
+                    bsLinear = bs.linear[-test.set,], 
+                    bsNonlinear = bs.nonlinear[-test.set,])
+data.test <- list(y = as.vector(y[test.set]), u = u, p = p, 
+                    n= length(test.set), psi = psi, 
+                    atau = ((psi+1)/2), newp = (p+1),
+                    bsLinear = bs.linear[test.set, ], 
+                    bsNonlinear = bs.nonlinear[test.set,])  
 
 init.alpha <- list(list(gamma = array(rep(0,(psi*p)), dim=c(psi, p)),
                         theta = rep(0, (p+1)), 
@@ -216,21 +218,20 @@ init.alpha <- list(list(gamma = array(rep(0,(psi*p)), dim=c(psi, p)),
 
 stanmodel <- stan_model(model_code = stancode)
 
-fit2 <- sampling(stanmodel, data = data.stan, 
+fit2 <- sampling(stanmodel, data = data.train, 
                   init = init.alpha,
-                  iter = 1000, 
+                  iter = 4000, 
                   chains = 3, cores = 4, 
                   refresh = 0)
 
+color_scheme_set("brightblue") # check out ?bayesplot::color_scheme_set
+lambda.draws <- as.matrix(fit, pars = c("lambda1", "lambda2"))
+mcmc_areas(lambda.draws, prob = 0.8) # c                  
+y.rep <- as.matrix(fit, pars = "y")
+ppc_dens_overlay(y, y_rep[1:50, ])
 
-yrep <- posterior_predict(fit2)
-ppc_loo_pit_overlay(
-    y = y,
-    yrep = yrep,
-    lw = weights(fwi.loo$psis_object)
-)
 gen <- gqs(stanmodel, draws = as.matrix(fit2), data = data.test)
-# extract_log_lik(fit2)
 log.pd <- extract_log_lik(gen)
+
 loo(log.pd)
 waic(log.pd)
