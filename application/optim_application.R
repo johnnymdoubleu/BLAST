@@ -1,4 +1,165 @@
-sm <- "// Stan model for simple linear regression
+library(npreg)
+library(Pareto)
+suppressMessages(library(tidyverse))
+library(JOPS)
+library(readxl)
+library(gridExtra)
+library(colorspace)
+library(corrplot)
+# library(ReIns)
+library(evir)
+library(rstan)
+suppressMessages(library(coda))
+library(ggmcmc)
+library(loo)
+library(bayesplot)
+# library(R6)
+# suppressMessages(library(igraph))
+# library(mgcv)
+library(MCMCvis)
+library(cmdstanr)
+# library(ggplotify)
+# Structure of the FWI System
+#DSR : Dail Severity Rating
+#FWI : Fire Weather Index
+#BUI : Buildup Index
+#ISI : Initial Spread Index
+#FFMC : Fine FUel Moisture Code
+#DMC : Duff Moisture Code
+#DC : Drough Code
+
+
+setwd("C:/Users/Johnny Lee/Documents/GitHub")
+df <- read_excel("./BRSTIR/application/AADiarioAnual.xlsx", col_types = c("date", rep("numeric",40)))
+df.long <- gather(df, condition, measurement, "1980":"2019", factor_key=TRUE)
+df.long
+head(df.long)
+tail(df.long)
+# View(df.long[is.na(df.long$measurement),])
+missing.values <- which(!is.na(df.long$measurement))
+df.long[which(is.na(df.long$measurement)),]
+df.long[which(is.na(df.long$...1))+1,]
+
+#NAs on Feb 29 most years, and Feb 14, 1999
+#considering the case of leap year, the missing values are the 29th of Feb
+#Thus, each year consist of 366 data with either 1 or 0 missing value.
+Y <- df.long$measurement[!is.na(df.long$measurement)]
+summary(Y) #total burnt area
+length(Y)
+threshold <- 0.95
+u <- quantile(Y, threshold)
+y <- Y[Y>u]
+# x.scale <- x.scale[which(y>quantile(y, threshold)),]
+# u <- quantile(y, threshold)
+
+multiplesheets <- function(fname) {
+    setwd("C:/Users/Johnny Lee/Documents/GitHub")
+    # getting info about all excel sheets
+    sheets <- excel_sheets(fname)
+    tibble <- lapply(sheets, function(x) read_excel(fname, sheet = x, col_types = c("date", rep("numeric", 41))))
+    # print(tibble)
+    data_frame <- lapply(tibble, as.data.frame)
+    # assigning names to data frames
+    names(data_frame) <- sheets
+    return(data_frame)
+}
+setwd("C:/Users/Johnny Lee/Documents/GitHub")
+path <- "./BRSTIR/application/DadosDiariosPT_FWI.xlsx"
+# importing fire weather index
+cov <- multiplesheets(path)
+fwi.scaled <- fwi.index <- data.frame(DSR = double(length(Y)),
+                                        FWI = double(length(Y)),
+                                        BUI = double(length(Y)),
+                                        ISI = double(length(Y)),
+                                        FFMC = double(length(Y)),
+                                        DMC = double(length(Y)),
+                                        DC = double(length(Y)),
+                                        stringsAsFactors = FALSE)
+# cov.long$ <- gather(cov$DSR[!is.na(df.long$measurement)][,1:41], )
+for(i in 1:length(cov)){
+    cov.long <- gather(cov[[i]][,1:41], condition, measurement, "1980":"2019", factor_key=TRUE)
+    # cov.long[which(is.na(cov.long$measurement)),]
+    # cov.long[which(is.na(cov.long$...1))+1,]
+    # cov.long[which(!is.na(df.long$measurement)),]
+    fwi.index[,i] <- cov.long$measurement[missing.values]
+    # fwi.scaled[,i] <- cov.long$measurement[missing.values]
+    fwi.scaled[,i] <- cov.long$measurement[missing.values]
+}
+fwi.index$date <- as.Date(substr(cov.long$...1[missing.values],1,10), "%Y-%m-%d")
+fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
+fwi.index$month <- factor(format(fwi.index$date,"%b"),
+                            levels = c("Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"))
+# as.Date(substr(cov.long$...1[missing.values],1,10))
+# fwi.index$day <- as.Date(substr(cov.long$...1[missing.values],9,10),"%d")
+# with(cov.long[missing.values], paste(substr[...1, 6, 10],month,day,sep="-"))
+
+fwi.scaled <- fwi.scaled[which(Y>u),]
+fwi.scaled <- as.data.frame(scale(fwi.scaled))
+# corrplot.mixed(cor(fwi.scaled),
+#                 upper = "circle",
+#                 lower = "number",
+#                 addgrid.col = "black")
+# ggsave("./Laboratory/Application/figures/correlation.pdf", width=15)
+# cov$date <- as.Date(with(cov, paste(year,month,day,sep="-")),"%Y-%m-%d")
+# cov$yearmon <- as.Date(with(cov, paste(year,month,sep="-")),"%Y-%m")
+# special <- gather(fwi.scaled, cols, value) |> spread(cols, value) |> select(colnames(fwi.scaled))
+# ggplot(gather(fwi.scaled, cols, value), aes(x = value)) + 
+#        geom_histogram(binwidth = 0.1) + facet_grid(cols~.)
+# ggplot(gather(fwi.index[which(Y>u),1:7], cols, value), aes(x = value)) + 
+#        geom_histogram(binwidth = 2) + facet_grid(cols~.)
+df.extreme <- cbind(y, fwi.scaled)
+# df.extreme <- cbind(date = cov$date[which(Y>u)], df.extreme)
+df.extreme <- as.data.frame(cbind(month = fwi.index$month[which(Y>u)], df.extreme))
+# ggplot(df.extreme, aes(x=month, y=y, color=month)) + geom_point(size=6) +
+#     theme(plot.title = element_text(hjust = 0.5, size = 20),
+#         legend.title = element_blank(),
+#         legend.text = element_text(size=20),
+#         # axis.ticks.x = element_blank(),
+#         axis.text.x = element_text(hjust=0.35),
+#         axis.text = element_text(size = 20),
+#         axis.title = element_text(size = 15))
+# # ggsave("./Laboratory/Application/figures/datavis.pdf", width=15)
+
+# # ggplot(as.data.frame(y),aes(x=y))+geom_histogram(aes(y=..density..), bins = 5)
+
+# ggplot(df.extreme, aes(x=y)) +
+#     geom_histogram(stat = "density", n=40, adjust=0.1, fill = "darkgrey") + 
+#     xlab("Area Burnt") + 
+#     # geom_histogram(aes(y=..density..), bins = 10^3) +
+#     # geom_density(aes(y=..density..)) +
+#     theme(plot.title = element_text(hjust = 0.5, size = 20),
+#       legend.title = element_blank(),
+#       legend.text = element_text(size=20),
+#       # axis.ticks.x = element_blank(),
+#       axis.text.x = element_text(hjust=0.35),
+#       axis.text = element_text(size = 25),
+#       axis.title = element_text(size = 30))
+
+psi <- 20
+n <- dim(fwi.scaled)[[1]]
+p <- dim(fwi.scaled)[[2]]
+no.theta <- 1
+newx <- seq(0, 1, length.out=n)
+xholder.linear <- xholder.nonlinear <- bs.linear <- bs.nonlinear <- matrix(,nrow=n, ncol=0)
+xholder <- matrix(nrow=n, ncol=p)
+for(i in 1:p){
+  # xholder[,i] <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n)
+  # test.knot <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
+  # splines <- basis.tps(seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n), test.knot, m=2, rk=FALSE, intercept = TRUE)
+  xholder[,i] <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n)
+  test.knot <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
+  splines <- basis.tps(xholder[,i], test.knot, m=2, rk=FALSE, intercept = FALSE)
+  xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
+  xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
+  knots <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
+  tps <- basis.tps(fwi.scaled[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
+  # tps <- mSpline(x.origin[,i], df=psi, Boundary.knots = range(x.origin[,i]), degree = 3, intercept=TRUE)
+  bs.linear <- cbind(bs.linear, tps[,1:no.theta])
+  bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])
+}
+
+
+stan.code <- "// Stan model for simple linear regression
 data {
     int <lower=1> n; // Sample size
     int <lower=1> p; // regression coefficient size
@@ -36,10 +197,10 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 1, 5);
-    target += gamma_lpdf(lambda2 | 0.1, 0.1);
+    target += gamma_lpdf(lambda1 | 0.1, 0.1);
+    target += gamma_lpdf(lambda2 | 1, 0.1);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
-    target += double_exponential_lpdf(theta[1] | 0, lambda1); // target += normal_lpdf(theta[1] | 0, 0.1);
+    target += normal_lpdf(theta[1] | 0, 0.1);
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, (square(lambda2)/2));
@@ -55,14 +216,17 @@ generated quantities {
     }
 }
 "
-
+sm <- stan_model(model_code = stan.code)
 op1 <- optimizing(sm, data = list(y = as.vector(y), u = u, p = p, n= n, psi = psi, 
                     atau = ((psi+1)/2), newp = (p+1),
                     bsLinear = bs.linear, bsNonlinear = bs.nonlinear),
+            #   init = "random",
               init = list(gamma = array(rep(0,(psi*p)), dim=c(psi, p)),
                         theta = rep(0, (p+1)), 
                         tau = rep(1, p), sigma = 1, 
-                        lambda1 = 1, lambda2 = 1),
+                        lambda1 = 0.01, lambda2 = 30),
+              iter = 3500,
+              algorithm = "LBFGS",
               verbose = TRUE)
 
 theta.map <- op1$par[1:(p+1)]
@@ -248,3 +412,41 @@ ggplot(data = data.scenario, aes(x = constant)) +
             legend.margin=margin(-15,-15,-15,-15),
             legend.box.margin=margin(-25,0,20,0))
 # ggsave(paste0("./BRSTIR/application/figures/",date,"_map_nonlinear.pdf"), width=12.5, height = 15)
+
+r <- matrix(, nrow = n, ncol = 20)
+# beta <- as.matrix(mcmc[[1]])[, 1:7] 
+T <- 20
+for(i in 1:n){
+  for(t in 1:T){
+    r[i, t] <- qnorm(pPareto(y[i], u, alpha.optim[i]))
+  }
+}
+lgrid <- n
+grid <- qnorm(ppoints(lgrid))
+# qqnorm(r[, 1])
+# points(grid, quantile(r[, 1], ppoints(lgrid), type = 2), 
+#     xlim = c(-3, 3), col = "red")
+traj <- matrix(NA, nrow = T, ncol = lgrid)
+for (t in 1:T){
+  traj[t, ] <- quantile(r[, t], ppoints(lgrid), type = 2)
+}
+l.band <- apply(traj, 2, quantile, prob = 0.025)
+trajhat <- apply(traj, 2, quantile, prob = 0.5)
+u.band <- apply(traj, 2, quantile, prob = 0.975)
+
+ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat, 
+                         u.band = u.band)) + 
+  #geom_ribbon(aes(x = grid, ymin = l.band, ymax = u.band), 
+  #           color = "lightgrey", fill = "lightgrey",
+  #          alpha = 0.4, linetype = "dashed") + 
+  geom_ribbon(aes(x = grid, ymin = l.band, ymax = u.band), 
+              color = "lightgrey", fill = "lightgrey",
+              alpha = 0.4, linetype = "dashed") + 
+  geom_line(aes(x = grid, y = trajhat), linetype = "dashed", linewidth = 1.2) + 
+  geom_abline(intercept = 0, slope = 1, linewidth = 1.2) + 
+  labs(x = "Theoretical quantiles", y = "Sample quantiles") + 
+  theme_minimal(base_size = 20) +
+  theme(text = element_text(size = 20)) + 
+  coord_fixed(xlim = c(-3, 3),  
+              ylim = c(-3, 3))
+
