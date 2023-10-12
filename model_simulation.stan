@@ -27,10 +27,6 @@ transformed parameters {
     vector[n] newalpha; // tail index
     matrix[n, p] gsmooth; // nonlinear component
     matrix[n, p] newgsmooth; // nonlinear component
-    cov_matrix[psi] covmat[p]; // covariance
-    for(j in 1:p){
-        covmat[j] <- diag_matrix(rep_vector(1, psi)) * tau[j] * sigma;
-    };
     for (j in 1:p){
         gsmooth[,j] <- bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
         newgsmooth[,j] <- xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
@@ -46,14 +42,14 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 0.1, 2);
-    target += gamma_lpdf(lambda2 | 1, 1);
+    target += gamma_lpdf(lambda1 | 0.1, 0.1);
+    target += gamma_lpdf(lambda2 | 0.1, 0.01);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
-    target += normal_lpdf(theta[1] | 0, 0.01);
+    target += double_exponential_lpdf(theta[1] | 0, lambda1); // target += normal_lpdf(theta[1] | 0, 0.01);
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, (square(lambda2)/2));
-        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), covmat[j]);
+        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), (diag_matrix(rep_vector(1, psi)) * tau[j] * sigma));
     }
 }
 //generated quantities {} // Used in Posterior predictive check

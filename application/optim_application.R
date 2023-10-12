@@ -230,7 +230,8 @@ op1 <- optimizing(sm, data = list(y = as.vector(y), u = u, p = p, n= n, psi = ps
               verbose = TRUE)
 
 theta.map <- op1$par[1:(p+1)]
-gamma.map <- as.vector(t(op1$par[(p+1+1):(p+1+(psi*p))]))
+gamma.map <- as.vector(matrix(op1$par[(p+1+1):(p+1+(psi*p))]))
+gamma.map <- as.vector(t(matrix(gamma.map, nrow=7)))
 lambda.map <- op1$par[(p+2+(psi*p)):(p+3+(psi*p))]
 systime <- Sys.time()
 Sys.time()
@@ -275,12 +276,12 @@ ggplot(df, aes(x =labels , y = gamma.map, color = covariate)) +
   geom_point(size = 4) + ylab("") + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab("")+
   scale_x_discrete(breaks=c(seq(0, (psi*p), psi)+10), 
-                    label = c(expression(bold(gamma[1])), 
-                              expression(bold(gamma[2])), 
-                              expression(bold(gamma[3])), 
-                              expression(bold(gamma[4])), 
-                              expression(bold(gamma[5])), 
-                              expression(bold(gamma[6])), 
+                    label = c(expression(bold(gamma[1])),
+                              expression(bold(gamma[2])),
+                              expression(bold(gamma[3])),
+                              expression(bold(gamma[4])),
+                              expression(bold(gamma[5])),
+                              expression(bold(gamma[6])),
                               expression(bold(gamma[7]))), 
                     expand=c(0,3)) +
   theme_minimal(base_size = 30) +
