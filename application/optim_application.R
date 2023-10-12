@@ -224,13 +224,13 @@ op1 <- optimizing(sm, data = list(y = as.vector(y), u = u, p = p, n= n, psi = ps
               init = list(gamma = array(rep(0,(psi*p)), dim=c(psi, p)),
                         theta = rep(0, (p+1)), 
                         tau = rep(1, p), sigma = 0.1, 
-                        lambda1 = 0.01, lambda2 = 30),
+                        lambda1 = 0.05, lambda2 = 30),
               iter = 3500,
-              algorithm = "LBFGS",
+              algorithm = "BFGS",
               verbose = TRUE)
 
 theta.map <- op1$par[1:(p+1)]
-gamma.map <- as.vector((op1$par[(p+1+1):(p+1+(psi*p))]))
+gamma.map <- as.vector(t(op1$par[(p+1+1):(p+1+(psi*p))]))
 lambda.map <- op1$par[(p+2+(psi*p)):(p+3+(psi*p))]
 systime <- Sys.time()
 Sys.time()
