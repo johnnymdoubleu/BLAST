@@ -217,7 +217,7 @@ generated quantities {
 }
 "
 sm <- stan_model(model_code = stan.code)
-op1 <- optimizing(sm, data = list(y = as.vector(y), u = u, p = p, n= n, psi = psi, 
+op <- optimizing(sm, data = list(y = as.vector(y), u = u, p = p, n= n, psi = psi, 
                     atau = ((psi+1)/2), newp = (p+1),
                     bsLinear = bs.linear, bsNonlinear = bs.nonlinear),
             #   init = "random",
@@ -229,10 +229,10 @@ op1 <- optimizing(sm, data = list(y = as.vector(y), u = u, p = p, n= n, psi = ps
               algorithm = "BFGS",
               verbose = TRUE)
 
-theta.map <- op1$par[1:(p+1)]
-gamma.map <- as.vector(matrix(op1$par[(p+1+1):(p+1+(psi*p))]))
+theta.map <- op$par[1:(p+1)]
+gamma.map <- as.vector(matrix(op$par[(p+1+1):(p+1+(psi*p))]))
 gamma.map <- as.vector(t(matrix(gamma.map, nrow=7)))
-lambda.map <- op1$par[(p+2+(psi*p)):(p+3+(psi*p))]
+lambda.map <- op$par[(p+2+(psi*p)):(p+3+(psi*p))]
 systime <- Sys.time()
 Sys.time()
 systime <- chartr(":","-",systime)

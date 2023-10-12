@@ -81,12 +81,12 @@ for(j in 1:p){
     for (ps in 1:psi){
         if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
         else if(j==7){
-            if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.1}
-            else{gamma.origin[ps, j] <- 0.1}
+            if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.01}
+            else{gamma.origin[ps, j] <- 0.01}
         }
         else {
-            if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.1}
-            else{gamma.origin[ps, j] <- 0.1}
+            if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.01}
+            else{gamma.origin[ps, j] <- 0.01}
         }
     }
 }
@@ -215,8 +215,8 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 0.1, 0.1);
-    target += gamma_lpdf(lambda2 | 0.1, 0.01);
+    target += gamma_lpdf(lambda1 | 0.00001, 1);
+    target += gamma_lpdf(lambda2 | 0.00001, 1);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     target += double_exponential_lpdf(theta[1] | 0, lambda1); // target += normal_lpdf(theta[1] | 0, 0.01);
     for (j in 1:p){
@@ -259,7 +259,7 @@ init.alpha <- list(list(gamma = array(rep(0,(psi*p)), dim=c(psi, p)),
                   list(gamma = array(rep(0.05, (psi*p)), dim=c(psi, p)),
                         theta = rep(0.1, (p+1)), 
                         tau = rep(0.1, p), sigma = 0.001,
-                        lambda1 = 0.0001, lambda2 = 0.0001))
+                        lambda1 = 0.01, lambda2 = 0.01))
 
 # stanc("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/application/model1.stan")
 fit1 <- stan(
@@ -620,8 +620,8 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 0.1, 0.1);
-    target += gamma_lpdf(lambda2 | 0.1, 0.01);
+    target += gamma_lpdf(lambda1 | 0.00001, 1);
+    target += gamma_lpdf(lambda2 | 0.00001, 1);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     target += double_exponential_lpdf(theta[1] | 0, lambda1); // target += normal_lpdf(theta[1] | 0, 0.01);
     for (j in 1:p){
@@ -642,23 +642,27 @@ generated quantities {
 
 
 sm <- stan_model(model_code = stan.code)
-op1 <- optimizing(sm, data = list(y = as.vector(y), u = u, p = p, n= n, psi = psi, 
+op <- optimizing(sm, data = list(y = as.vector(y.origin), u = u, p = p, 
+                    n= n, psi = psi, 
                     atau = ((psi+1)/2), newp = (p+1),
-                    bsLinear = bs.linear, bsNonlinear = bs.nonlinear),
+                    bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
+                    xholderLinear = xholder.linear, 
+                    xholderNonlinear = xholder.nonlinear),
             #   init = "random",
-              init = list(gamma = array(rep(0,(psi*p)), dim=c(psi, p)),
-                        theta = rep(0, (p+1)), 
-                        tau = rep(1, p), sigma = 0.1, 
-                        lambda1 = 0.05, lambda2 = 30),
+              init = list(gamma = array(rep(0.05,(psi*p)), dim=c(psi, p)),
+                        theta = rep(0.5, (p+1)), 
+                        tau = rep(0.04, p), sigma = 0.1, 
+                        lambda1 = 0.1, lambda2 = 0.1),
               iter = 3500,
               algorithm = "LBFGS",
               verbose = TRUE)
+
 theta.map <- op$par[1:(p+1)]
-gamma.map <- as.vector(matrix(op1$par[(p+1+1):(p+1+(psi*p))]))
-gamma.map <- as.vector(t(matrix(gamma.map, nrow=7)))
+gamma.map <- as.vector(matrix(op$par[(p+1+1):(p+1+(psi*p))]))
+gamma.map <- as.vector(t(matrix(gamma.map, nrow=p)))
 lambda.map <- op$par[(p+2+(psi*p)):(p+3+(psi*p))]
-alpha.map <- op$par[(158+1):(158+n)]
-newalpha.map <- op$par[(158+1+n):(158+n+n)]
+alpha.map <- op$par[(p+p+5+(psi*p)):(p+p+4+n+(psi*p))]
+newalpha.map <- op$par[(p+p+5+n+(psi*p)):(p+p+4+n+n+(psi*p))]
 
 systime <- Sys.time()
 Sys.time()
@@ -704,7 +708,6 @@ df <- data.frame("seq" = seq(1, (psi*p)),
 df$covariate <- factor(rep(seq(1, 1 + nrow(df) %/% psi), each = psi, length.out = nrow(df)))
 df$labels <- factor(1:(psi*p))
 
-
 ggplot(df, aes(x =labels , y = gamma.map, col = covariate)) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab("")+
   geom_point(aes(y = gamma.true), color = "red", size=3) + 
@@ -734,20 +737,36 @@ ggplot(df, aes(x =labels , y = gamma.map, col = covariate)) +
           axis.text = element_text(size = 30),
           panel.grid.major.x = element_blank())
 
-f.nonlinear.new <- f.linear.new <- f.new <- matrix(, nrow = n, ncol=p)
-newalpha <- NULL
-for (j in 1:p){
-  f.linear.new[,j] <- bs.linear[,j] * theta.map[j+1]
-  f.nonlinear.new[,j] <- bs.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.map, ncol = p)[, j]
-  f.new[1:n, j] <- f.linear.new[,j] + f.nonlinear.new[,j]
+f.nonlinear.origin <- f.linear.origin <- f.origin <- f.nonlinear.new <- f.linear.new <- f.new <- matrix(, nrow = n, ncol=p)
+for(j in 1:p){
+    f.linear.origin[,j] <- bs.linear[, j] * theta.origin[j+1]
+    f.nonlinear.origin[,j] <- bs.nonlinear[1:n,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
+    f.origin[, j] <- f.linear.origin[,j] + f.nonlinear.origin[,j]
+    f.linear.new[,j] <- bs.linear[, j] * theta.map[j+1]
+    f.nonlinear.new[,j] <- bs.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.map,nrow =20)[,j]
+    f.new[,j] <- f.linear.new[,j] + f.nonlinear.new[,j]
 }
-new.y <- NULL
 
-# set.seed(100)
-for(i in 1:n){
-  newalpha[i] <- exp(theta.map[1] + sum(f.new[i,]))
-  # new.y[i] <- rPareto(1, 1, alpha = newalpha[i])
-}
+# true.alpha <- alp.new <- alp.origin <- NULL
+# for(i in 1:n){
+#     alp.origin[i] <- exp(theta.origin[1] + sum(f.origin[i,]))
+#     alp.new[i] <- exp((theta.origin[1]) + sum(f.new[i,]))
+# }
+
+
+# newalpha <- NULL
+# for (j in 1:p){
+#   f.linear.new[,j] <- bs.linear[,j] * theta.map[j+1]
+#   f.nonlinear.new[,j] <- bs.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.map, ncol = p)[, j]
+#   f.new[1:n, j] <- f.linear.new[,j] + f.nonlinear.new[,j]
+# }
+# new.y <- NULL
+
+# # set.seed(100)
+# for(i in 1:n){
+#   newalpha[i] <- exp(theta.map[1] + sum(f.new[i,]))
+#   # new.y[i] <- rPareto(1, 1, alpha = newalpha[i])
+# }
 
 func.linear.new <- func.nonlinear.new <- func.linear.origin <- func.nonlinear.origin <- func.new <- func.origin <- matrix(, nrow=n, ncol=0)
 for (j in 1:p){
@@ -763,8 +782,7 @@ for (j in 1:p){
 # }
 covariates <- gl(p, n, (p*n))
 replicate <- gl(2, n, (p*n))
-func.df <- data.frame(seq = seq(0,1,length.out = n),
-                        x = as.vector(apply(x.origin, 2, sort, method = "quick")),
+func.df <- data.frame(x = as.vector(apply(x.origin, 2, sort, method = "quick")),
                         origin=as.vector(func.origin),
                         origin.linear=as.vector(func.linear.origin),
                         origin.nonlinear=as.vector(func.nonlinear.origin), 
@@ -788,7 +806,7 @@ ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +
   geom_line(aes(y=new, colour = covariates, linetype = "MAP"), linewidth=2) + 
   ylab("") + xlab ("Smooth Functions") +
   # geom_point(aes(y=origin, shape = replicate)) + geom_point(aes(y=new, shape = replicate)) +
-  facet_grid(covariates ~ .) + ggtitle("MAP vs True for Smooth Functions") +
+  facet_grid(covariates ~ ., scale = "free_y") + 
   scale_linetype_manual("functions",values=c("MAP"=3,"true"=1)) +
   scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + theme_minimal(base_size = 30) + 
   theme(plot.title = element_text(hjust = 0.5, size = 30),
@@ -804,7 +822,7 @@ ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_line(aes(y=origin.linear, colour = covariates, linetype = "true"), linewidth=2) + 
   geom_line(aes(y=new.linear, colour = covariates, linetype = "MAP"), linewidth=2) + 
-  ylab ("") + facet_grid(covariates ~ .) + xlab("Linear Components") + 
+  ylab ("") + facet_grid(covariates ~ ., scale = "free_y") + xlab("Linear Components") + 
   # geom_point(aes(y=origin, shape = replicate)) + geom_point(aes(y=new, shape = replicate)) +
   scale_linetype_manual("functions",values=c("MAP"=3,"true"=1)) +
   scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + theme_minimal(base_size = 30) + 
@@ -822,7 +840,7 @@ ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_line(aes(y=origin.nonlinear, colour = covariates, linetype = "true"), linewidth=2) + 
   geom_line(aes(y=new.nonlinear, colour = covariates, linetype = "MAP"), linewidth=2) +
-  ylab ("") + facet_grid(covariates ~ .) + xlab("Nonlinear Components") +
+  ylab ("") + facet_grid(covariates ~ ., scale = "free_y") + xlab("Nonlinear Components") +
   # geom_point(aes(y=origin, shape = replicate)) + geom_point(aes(y=new, shape = replicate)) +
   scale_linetype_manual("functions",values=c("MAP"=3,"true"=1)) +
   scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + theme_minimal(base_size = 30) + 
@@ -882,6 +900,9 @@ ggplot(data = data.scenario, aes(x = constant)) +
 f.nonlinear.origin <- f.linear.origin <- f.origin <- f.nonlinear.new <- f.linear.new <- f.new <- matrix(, nrow = n, ncol=p)
 true.alpha <- new.alpha <- NULL
 for (j in 1:p){
+  f.linear.origin[,j] <- xholder.linear[,j] * theta.map[j+1]
+  f.nonlinear.origin[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.map, ncol = p)[, j]
+  f.origin[,j] <- f.linear.origin[,j] + f.nonlinear.origin[,j]
   f.linear.new[,j] <- xholder.linear[,j] * theta.map[j+1]
   f.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.map, ncol = p)[, j]
   f.new[,j] <- f.linear.new[,j] + f.nonlinear.new[,j]
@@ -903,7 +924,7 @@ for (j in 1:p){
 
 covariates <- gl(p, n, (p*n))
 replicate <- gl(2, n, (p*n))
-func.df <- data.frame(seq = seq(0,1,length.out = n),
+func.df <- data.frame(x = as.vector(apply(x.origin, 2, sort, method = "quick")),
                         origin=as.vector(func.origin),
                         origin.linear=as.vector(func.linear.origin),
                         origin.nonlinear=as.vector(func.nonlinear.origin), 
