@@ -105,7 +105,7 @@ for(j in 1:p){
 #         }
 #     }
 # }
-theta.origin <- c(0.5, 0, 0.2, 0.2, 0, 0)
+theta.origin <- c(1, 0, 0.2, 0.2, 0, 0)
 
 f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
@@ -216,7 +216,7 @@ model {
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += gamma_lpdf(lambda1 | 0.0001, 1);
-    target += gamma_lpdf(lambda2 | 0.0001, 1);
+    target += gamma_lpdf(lambda2 | 0.000001, 1);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     target += double_exponential_lpdf(theta[1] | 0, lambda1); // target += normal_lpdf(theta[1] | 0, 0.01);
     for (j in 1:p){
