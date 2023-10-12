@@ -522,11 +522,11 @@ ggplot(data.scenario, aes(x=x)) +
         axis.title.x = element_text(size = 35))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_alpha.pdf"), width=10, height = 7.78)
 
-mcmc.gamma <- posterior$gamma
-gamma.container <- as.data.frame(matrix(NA, nrow = 20, ,ncol = 0))
-for(i in 1:(dim(mcmc.gamma)[1]/3)){
-    gamma.container <- cbind(gamma.container, mcmc.gamma[i,1,])    
-}
+# mcmc.gamma <- posterior$gamma
+# gamma.container <- as.data.frame(matrix(NA, nrow = 20, ,ncol = 0))
+# for(i in 1:(dim(mcmc.gamma)[1]/3)){
+#     gamma.container <- cbind(gamma.container, mcmc.gamma[i,1,])    
+# }
 # corrplot.mixed(cor(gamma.container),
 #                 upper = "circle",
 #                 lower = "number",

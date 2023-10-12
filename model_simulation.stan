@@ -44,7 +44,7 @@ model {
     }
     target += gamma_lpdf(lambda1 | 0.00001, 1);
     target += gamma_lpdf(lambda2 | 0.00001, 1);
-    target += inv_gamma_lpdf(sigma | 0.01, 0.01);
+    target += inv_gamma_lpdf(sigma | 2, 0.5);
     target += double_exponential_lpdf(theta[1] | 0, lambda1); // target += normal_lpdf(theta[1] | 0, 0.01);
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
