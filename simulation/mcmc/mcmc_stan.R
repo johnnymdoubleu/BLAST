@@ -653,6 +653,19 @@ op1 <- optimizing(sm, data = list(y = as.vector(y), u = u, p = p, n= n, psi = ps
               iter = 3500,
               algorithm = "LBFGS",
               verbose = TRUE)
+theta.map <- op$par[1:(p+1)]
+gamma.map <- as.vector(matrix(op1$par[(p+1+1):(p+1+(psi*p))]))
+gamma.map <- as.vector(t(matrix(gamma.map, nrow=7)))
+lambda.map <- op$par[(p+2+(psi*p)):(p+3+(psi*p))]
+alpha.map <- op$par[(158+1):(158+n)]
+newalpha.map <- op$par[(158+1+n):(158+n+n)]
+
+systime <- Sys.time()
+Sys.time()
+systime <- chartr(":","-",systime)
+date <- gsub("-","", substr(systime, 1, 10))
+time <- substr(systime, 12, 20)
+
 
 df.theta <- data.frame("seq" = seq(1, p+1),
                   theta.map,
@@ -829,7 +842,7 @@ ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +
 data.scenario <- data.frame("x" = c(1:n),
                             "constant" = newx,
                             "trueAlp" = sort(alp.origin),
-                            "mapAlp" = sort(newalpha))
+                            "mapAlp" = sort(alpha.map))
 ggplot(data = data.scenario, aes(x = constant)) + 
   ylab(expression(alpha(x))) + xlab("") +
     geom_line(aes(y = trueAlp, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
@@ -872,14 +885,10 @@ for (j in 1:p){
   f.linear.new[,j] <- xholder.linear[,j] * theta.map[j+1]
   f.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.map, ncol = p)[, j]
   f.new[,j] <- f.linear.new[,j] + f.nonlinear.new[,j]
-  f.linear.origin[,j] <- xholder.linear[,j] * theta.origin[j+1]
-  f.nonlinear.origin[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
-  f.origin[,j] <- f.linear.origin[,j] + f.nonlinear.origin[,j]
 }
 # set.seed(100)
 for(i in 1:n){
   new.alpha[i] <- exp(theta.map[1] + sum(f.new[i,]))
-  # true.alpha[i] <- exp(theta.origin[1] + sum(f.origin[i,]))
 }
 
 func.linear.new <- func.nonlinear.new <- func.linear.origin <- func.nonlinear.origin <- func.new <- func.origin <- matrix(, nrow=n, ncol=0)
@@ -964,7 +973,7 @@ ggplot(func.df, aes(x=seq, group=interaction(covariates, replicate))) +
 data.scenario <- data.frame("x" = c(1:n),
                             "constant" = newx,
                             "trueAlp" = sort(alp.new),
-                            "mapAlp" = sort(new.alpha))
+                            "mapAlp" = sort(newalpha.map))
 
 ggplot(data = data.scenario, aes(x = constant)) + 
   ylab(expression(alpha(x))) + xlab("") +
