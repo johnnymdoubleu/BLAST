@@ -187,7 +187,7 @@ model {
 generated quantities {
     // Used in Posterior predictive check
     vector[n] log_lik;
-    real y_rep[n] ~ pareto(u, alpha);
+    real y_rep[n] = pareto_rng(u, alpha);
     for (i in 1:n) {
         log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
     }
@@ -234,7 +234,8 @@ mcmc_areas(as.matrix(fit2, pars = c("lambda1")), prob = 0.8)
 mcmc_areas(as.matrix(fit2, pars = c("lambda2")), prob = 0.8)
 mcmc_areas(as.matrix(fit2, pars = "theta"), prob = 0.8)
 y.rep <- as.matrix(fit2, pars = "y_rep")
-ppc_dens_overlay(y, y_rep[1:50, ])
+ppc_dens_overlay(y[-test.set], y.rep[1:50, ])
+
 
 gen <- gqs(stanmodel, draws = as.matrix(fit2), data = data.test)
 log.pd <- extract_log_lik(gen)
@@ -242,3 +243,4 @@ log.pd <- extract_log_lik(gen)
 loo(log.pd)
 plot(loo(log.pd),label_points = TRUE)
 waic(log.pd)
+mean(y.rep)

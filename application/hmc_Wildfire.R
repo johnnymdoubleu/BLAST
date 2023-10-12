@@ -11,6 +11,8 @@ library(evir)
 library(rstan)
 suppressMessages(library(coda))
 library(ggmcmc)
+library(loo)
+library(bayesplot)
 # library(R6)
 # suppressMessages(library(igraph))
 # library(mgcv)
@@ -601,7 +603,7 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
 # saveRDS(data.scenario, file=paste0("Simulation/BayesianPsplines/results/",date,"-",time, "_sc1_data_samp1.rds"))
 
 cat("sc1_Alp Done")
-library(loo)
+
 
 fwi.loo <- loo(fit1)
 fwi.loo
@@ -613,6 +615,14 @@ print(paste("ELPD (brute force)=",round(sum(y),2)))
 plot(fwi.loo, label_points = TRUE)
 fwi.waic <- waic(posterior$log_lik)
 fwi.waic
+
+y.rep <- as.matrix(fit1, pars = "y_rep")
+ppc_loo_pit_overlay(
+  y = y,
+  yrep = y.rep,
+  lw = weights(fwi.loo$psis_object)
+)
+# ppc_dens_overlay(y, y.rep[1:50, ])
 
 
 

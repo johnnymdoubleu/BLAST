@@ -98,7 +98,7 @@ for(j in 1:p){
 #         }
 #     }
 # }
-theta.origin <- c(0.5, 0, 0.8, 0, 0.2, 0)
+theta.origin <- c(0.5, 0, 0.2, 0, 0.2, 0)
 
 f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
@@ -182,7 +182,7 @@ log.posterior <- function(beta, y.origin){
   }
   sum.prior <- sum(prior) + first.prior[1] + #(-0.5 * 0.001^2 * theta[1]^2) + 
                 (p * log(lambda.1)) + (p * psi * log(lambda.2)) +
-                ((1-1)*log(lambda.1) - (1.78 * lambda.1)) + 
+                ((0.1-1)*log(lambda.1) - (5 * lambda.1)) + 
                 ((0.1-1)*log(lambda.2) - (0.1 * lambda.2))
                 # ((1.1-1)*log(lambda.1 * lambda.2)) - (2 * (lambda.1 + lambda.2))
   # print(first.prior)
@@ -194,8 +194,8 @@ log.posterior <- function(beta, y.origin){
 beta.emp <- c(rep(0, (p+1)), rep(0, p*psi), 1, 1)
 beta.map <- optim(par = beta.emp, fn = log.posterior, 
                   y.origin = y.origin,
-                  # lower=c(theta.origin[1], rep(-Inf, (length(beta.emp)-3)), 0.0001, 0.0001),
-                  # upper=c(-0.2, rep(Inf, (length(beta.emp)-1))),
+                  # lower=c(-0.01, rep(-Inf, (length(beta.emp)-3)), 0.0001, 0.0001),
+                  # upper=c(theta.origin[1], rep(Inf, (length(beta.emp)-1))),
                   # method = "L-BFGS-B", 
                   method = "CG",
                   # method = "Nelder-Mead", hessian = T,
