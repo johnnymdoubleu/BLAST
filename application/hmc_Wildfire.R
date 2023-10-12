@@ -548,6 +548,45 @@ ggplot(data.scenario, aes(x=x)) +
         axis.ticks.x = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
+
+
+r <- matrix(, nrow = n, ncol = 30)
+# beta <- as.matrix(mcmc[[1]])[, 1:7] 
+T <- 30
+for(i in 1:n){
+  for(t in 1:T){
+    r[i, t] <- qnorm(pPareto(y[i], u, alpha = posterior$alpha[round(runif(1,1,len)),i]))
+    # r[i, t] <- qnorm(pPareto(y[i], u, alpha = alpha.new[i]))
+  }
+}
+lgrid <- n
+grid <- qnorm(ppoints(lgrid))
+# qqnorm(r[, 1])
+# points(grid, quantile(r[, 1], ppoints(lgrid), type = 2), 
+#     xlim = c(-3, 3), col = "red")
+traj <- matrix(NA, nrow = T, ncol = lgrid)
+for (t in 1:T){
+  traj[t, ] <- quantile(r[, t], ppoints(lgrid), type = 2)
+}
+l.band <- apply(traj, 2, quantile, prob = 0.025)
+trajhat <- apply(traj, 2, quantile, prob = 0.5)
+u.band <- apply(traj, 2, quantile, prob = 0.975)
+
+ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat, 
+                         u.band = u.band)) + 
+  #geom_ribbon(aes(x = grid, ymin = l.band, ymax = u.band), 
+  #           color = "lightgrey", fill = "lightgrey",
+  #          alpha = 0.4, linetype = "dashed") + 
+  geom_ribbon(aes(x = grid, ymin = l.band, ymax = u.band), 
+              # color = "darkgrey", fill = "darkgrey",
+              alpha = 0.4, linetype = "dashed") + 
+  geom_line(aes(x = grid, y = trajhat), linetype = "dashed", linewidth = 1.2) + 
+  geom_abline(intercept = 0, slope = 1, linewidth = 1.2) + 
+  labs(x = "Theoretical quantiles", y = "Sample quantiles") + 
+  theme_minimal(base_size = 20) +
+  theme(text = element_text(size = 20)) + 
+  coord_fixed(xlim = c(-3, 3),  
+              ylim = c(-3, 3))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_alpha.pdf"), width=10, height = 7.78)
 
 # mcmc.gamma <- posterior$gamma
@@ -626,4 +665,6 @@ ppc_loo_pit_overlay(
 
 
 
-
+plot(xholder[,2], g.new[,c(2)])
+plot(xholder[,2], rowSums(g.new[,c(1,2,4)]))
+plot(xholder[,3], rowSums(g.new[,c(3,6)]))
