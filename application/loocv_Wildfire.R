@@ -230,9 +230,9 @@ fit2 <- sampling(stanmodel, data = data.train,
 
 color_scheme_set("brightblue") # check out ?bayesplot::color_scheme_set
 # lambda.draws <- as.matrix(fit2, pars = c("lambda2"))
-mcmc_areas(as.matrix(fit2, pars = c("lambda1")), prob = 0.8)
-mcmc_areas(as.matrix(fit2, pars = c("lambda2")), prob = 0.8)
-mcmc_areas(as.matrix(fit2, pars = "theta"), prob = 0.8)
+mcmc_areas(as.matrix(fit2, pars = c("lambda1")), prob = 0.5)
+mcmc_areas(as.matrix(fit2, pars = c("lambda2")), prob = 0.5)
+mcmc_areas(as.matrix(fit2, pars = "theta"), prob = 0.5)
 y.rep <- as.matrix(fit2, pars = "y_rep")
 ppc_dens_overlay(y[-test.set], y.rep[1:50, ])
 
