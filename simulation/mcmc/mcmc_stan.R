@@ -653,3 +653,368 @@ op1 <- optimizing(sm, data = list(y = as.vector(y), u = u, p = p, n= n, psi = ps
               iter = 3500,
               algorithm = "LBFGS",
               verbose = TRUE)
+
+df.theta <- data.frame("seq" = seq(1, p+1),
+                  theta.map,
+                  "theta.true" = theta.origin)
+# df.theta$covariate <- factor(rep(seq(1, 1 + nrow(df.theta) %/% no.theta), each = no.theta, length.out = nrow(df.theta)))
+df.theta$covariate <- factor(0:p)
+df.theta$labels <- factor(0:p)
+ggplot(df.theta, aes(x = labels)) + ylab("") + xlab("") +
+  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+  geom_point(aes(y = theta.map, col = covariate), size = 6) + 
+  geom_point(aes(y = theta.true), color="red", size = 4) +
+  # labs(title=expression("MAP vs True for"~theta)) + 
+  scale_x_discrete(labels = c(expression(bold(theta[0])),
+                              expression(bold(theta[1])),
+                              expression(bold(theta[2])),
+                              expression(bold(theta[3])),
+                              expression(bold(theta[4])),
+                              expression(bold(theta[5])),
+                              expression(bold(theta[6])),
+                              expression(bold(theta[7])),
+                              expression(bold(theta[8])),
+                              expression(bold(theta[9])),
+                              expression(bold(theta[10]))))+
+  theme_minimal(base_size = 30) + 
+  theme(plot.title = element_text(hjust = 0.5, size = 20),
+          legend.title = element_blank(),
+          legend.text = element_text(size=30),
+          # axis.ticks.x = element_blank(),
+          axis.text.x = element_text(hjust=0.3),
+          axis.text = element_text(size = 30),
+          panel.grid.minor.x = element_blank())
+    
+df <- data.frame("seq" = seq(1, (psi*p)), 
+                  gamma.map, 
+                  "gamma.true" = as.vector(gamma.origin))
+df$covariate <- factor(rep(seq(1, 1 + nrow(df) %/% psi), each = psi, length.out = nrow(df)))
+df$labels <- factor(1:(psi*p))
+
+
+ggplot(df, aes(x =labels , y = gamma.map, col = covariate)) + 
+  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab("")+
+  geom_point(aes(y = gamma.true), color = "red", size=3) + 
+  geom_point(size = 4) + ylab("") +
+  # geom_smooth(method="gam") +
+  # geom_line(aes(x = seq, y = true, color = "true"), linetype = 2) +
+  # labs(title=expression("MAP vs True for"~gamma)) + 
+  # ggtitle(expression(atop(paste("MAP vs True for ", bold(gamma))))) +
+#   annotate("text", x = seq(0, 330, length.out=10), y = -1, label = beta, colour = "red", size = 10) +
+  scale_x_discrete(breaks=c(seq(0, (psi*p), psi)+15), 
+                    label = c(expression(bold(gamma[1])), 
+                              expression(bold(gamma[2])), 
+                              expression(bold(gamma[3])), 
+                              expression(bold(gamma[4])), 
+                              expression(bold(gamma[5])), 
+                              expression(bold(gamma[6])),
+                              expression(bold(gamma[7])),
+                              expression(bold(gamma[8])),
+                              expression(bold(gamma[9])),
+                              expression(bold(gamma[10]))), 
+                    expand=c(0,5)) +
+  theme(plot.title = element_text(hjust = 0.5, size = 20),
+          legend.title = element_blank(),
+          legend.text = element_text(size=30),
+          axis.ticks.x = element_blank(),
+          axis.text.x = element_text(hjust=1),
+          axis.text = element_text(size = 30),
+          panel.grid.major.x = element_blank())
+
+f.nonlinear.new <- f.linear.new <- f.new <- matrix(, nrow = n, ncol=p)
+newalpha <- NULL
+for (j in 1:p){
+  f.linear.new[,j] <- bs.linear[,j] * theta.map[j+1]
+  f.nonlinear.new[,j] <- bs.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.map, ncol = p)[, j]
+  f.new[1:n, j] <- f.linear.new[,j] + f.nonlinear.new[,j]
+}
+new.y <- NULL
+
+# set.seed(100)
+for(i in 1:n){
+  newalpha[i] <- exp(theta.map[1] + sum(f.new[i,]))
+  # new.y[i] <- rPareto(1, 1, alpha = newalpha[i])
+}
+
+func.linear.new <- func.nonlinear.new <- func.linear.origin <- func.nonlinear.origin <- func.new <- func.origin <- matrix(, nrow=n, ncol=0)
+for (j in 1:p){
+  func.origin <- cbind(func.origin, sort(f.origin[,j]))
+  func.linear.origin <- cbind(func.linear.origin, sort(f.linear.origin[,j]))
+  func.nonlinear.origin <- cbind(func.nonlinear.origin, sort(f.nonlinear.origin[,j]))
+  func.new <- cbind(func.new, sort(f.new[,j]))
+  func.linear.new <- cbind(func.linear.new, sort(f.linear.new[,j]))
+  func.nonlinear.new <- cbind(func.nonlinear.new, sort(f.nonlinear.new[,j]))  
+}
+# for (j in 1:p){
+#   func.new <- cbind(func.new, sort(f.new[,j]))
+# }
+covariates <- gl(p, n, (p*n))
+replicate <- gl(2, n, (p*n))
+func.df <- data.frame(seq = seq(0,1,length.out = n),
+                        x = as.vector(apply(x.origin, 2, sort, method = "quick")),
+                        origin=as.vector(func.origin),
+                        origin.linear=as.vector(func.linear.origin),
+                        origin.nonlinear=as.vector(func.nonlinear.origin), 
+                        new=as.vector(func.new),
+                        new.linear=as.vector(func.linear.new),
+                        new.nonlinear=as.vector(func.nonlinear.new),
+                        covariates=covariates, 
+                        replicate=replicate)
+
+equal_breaks <- function(n = 3, s = 0.1,...){
+  function(x){
+    d <- s * diff(range(x)) / (1+2*s)
+    seq = seq(min(x)+d, max(x)-d, length=n)
+    round(seq, -floor(log10(abs(seq[2]-seq[1]))))
+  }
+}
+
+ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) + 
+  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+  geom_line(aes(y=origin, colour = covariates, linetype = "true"), linewidth=2) + 
+  geom_line(aes(y=new, colour = covariates, linetype = "MAP"), linewidth=2) + 
+  ylab("") + xlab ("Smooth Functions") +
+  # geom_point(aes(y=origin, shape = replicate)) + geom_point(aes(y=new, shape = replicate)) +
+  facet_grid(covariates ~ .) + ggtitle("MAP vs True for Smooth Functions") +
+  scale_linetype_manual("functions",values=c("MAP"=3,"true"=1)) +
+  scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + theme_minimal(base_size = 30) + 
+  theme(plot.title = element_text(hjust = 0.5, size = 30),
+        legend.position = "none",
+        plot.margin = margin(0,0,0,-10),
+        strip.text = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.text.y = element_text(size=33),
+        axis.title.x = element_text(size = 35))
+
+ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) + 
+  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+  geom_line(aes(y=origin.linear, colour = covariates, linetype = "true"), linewidth=2) + 
+  geom_line(aes(y=new.linear, colour = covariates, linetype = "MAP"), linewidth=2) + 
+  ylab ("") + facet_grid(covariates ~ .) + xlab("Linear Components") + 
+  # geom_point(aes(y=origin, shape = replicate)) + geom_point(aes(y=new, shape = replicate)) +
+  scale_linetype_manual("functions",values=c("MAP"=3,"true"=1)) +
+  scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + theme_minimal(base_size = 30) + 
+  theme(plot.title = element_text(hjust = 0.5, size = 15),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        # panel.grid.minor.y = element_blank(),
+        legend.position = "none",
+        plot.margin = margin(0,-20,0,-30),
+        strip.text = element_blank(),
+        axis.text.y = element_text(size=33),
+        axis.title.x = element_text(size = 35))
+
+ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) + 
+  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+  geom_line(aes(y=origin.nonlinear, colour = covariates, linetype = "true"), linewidth=2) + 
+  geom_line(aes(y=new.nonlinear, colour = covariates, linetype = "MAP"), linewidth=2) +
+  ylab ("") + facet_grid(covariates ~ .) + xlab("Nonlinear Components") +
+  # geom_point(aes(y=origin, shape = replicate)) + geom_point(aes(y=new, shape = replicate)) +
+  scale_linetype_manual("functions",values=c("MAP"=3,"true"=1)) +
+  scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + theme_minimal(base_size = 30) + 
+  theme(plot.title = element_text(hjust = 0.5, size = 15),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        legend.title = element_blank(),
+        legend.text = element_text(size=45),
+        legend.margin=margin(0,0,0,-10),
+        legend.box.margin=margin(-10,0,-10,0),
+        plot.margin = margin(0,0,0,-20),
+        strip.text = element_blank(),
+        axis.text.y = element_text(size=33),
+        axis.title.x = element_text(size = 35))
+
+
+data.scenario <- data.frame("x" = c(1:n),
+                            "constant" = newx,
+                            "trueAlp" = sort(alp.origin),
+                            "mapAlp" = sort(newalpha))
+ggplot(data = data.scenario, aes(x = constant)) + 
+  ylab(expression(alpha(x))) + xlab("") +
+    geom_line(aes(y = trueAlp, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
+  geom_line(aes(y = mapAlp, col = "MAP Alpha"), linewidth = 2.5, linetype = 2) +
+  labs(col = "") +
+    theme(axis.title.y = element_text(size = rel(1.8), angle = 90)) +
+    theme(axis.title.x = element_text(size = rel(1.8), angle = 00)) +
+    scale_color_manual(values = c("#e0b430", "red"))+
+    theme(text = element_text(size = 15),
+            legend.position="bottom", legend.key.size = unit(1, 'cm'),
+            axis.text = element_text(size = 20),
+            legend.margin=margin(-15,-15,-15,-15),
+            legend.box.margin=margin(-25,0,20,0))
+
+# plt.samp <- ggplot(data = data.scenario, aes(x = constant)) + ylab(expression(alpha(x))) + xlab("")
+# print(plt.samp + 
+#       geom_line(aes(y = trueAlp, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
+#       geom_line(aes(y = mapAlp, col = "MAP Alpha"), linewidth = 2.5, linetype = 2) +
+#       labs(col = "") +
+#         theme(axis.title.y = element_text(size = rel(1.8), angle = 90)) +
+#         theme(axis.title.x = element_text(size = rel(1.8), angle = 00)) +
+#         scale_color_manual(values = c("#e0b430", "red"))+
+#         theme(text = element_text(size = 15),
+#                 legend.position="bottom", legend.key.size = unit(1, 'cm'),
+#                 axis.text = element_text(size = 20),
+#                 legend.margin=margin(-15,-15,-15,-15),
+#                 legend.box.margin=margin(-25,0,20,0)))
+
+# ggsave(paste0("../Laboratory/Simulation/BayesianFusedLasso/results/map_alpha_n1_train.pdf"), width=10)
+
+# plot(sort(alp.origin))
+# plot(sort(new.y), sort(y.origin))
+# abline(a=0, b=1, col = "red", lty = 2)
+# rbind(matrix(theta.map, nrow = no.theta, ncol = p), matrix(gamma.map, nrow = psi, ncol = p))
+
+#### Test Set
+f.nonlinear.origin <- f.linear.origin <- f.origin <- f.nonlinear.new <- f.linear.new <- f.new <- matrix(, nrow = n, ncol=p)
+true.alpha <- new.alpha <- NULL
+for (j in 1:p){
+  f.linear.new[,j] <- xholder.linear[,j] * theta.map[j+1]
+  f.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.map, ncol = p)[, j]
+  f.new[,j] <- f.linear.new[,j] + f.nonlinear.new[,j]
+  f.linear.origin[,j] <- xholder.linear[,j] * theta.origin[j+1]
+  f.nonlinear.origin[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
+  f.origin[,j] <- f.linear.origin[,j] + f.nonlinear.origin[,j]
+}
+# set.seed(100)
+for(i in 1:n){
+  new.alpha[i] <- exp(theta.map[1] + sum(f.new[i,]))
+  # true.alpha[i] <- exp(theta.origin[1] + sum(f.origin[i,]))
+}
+
+func.linear.new <- func.nonlinear.new <- func.linear.origin <- func.nonlinear.origin <- func.new <- func.origin <- matrix(, nrow=n, ncol=0)
+for (j in 1:p){
+  func.origin <- cbind(func.origin, f.origin[,j])
+  func.linear.origin <- cbind(func.linear.origin, f.linear.origin[,j])
+  func.nonlinear.origin <- cbind(func.nonlinear.origin, f.nonlinear.origin[,j])
+  func.new <- cbind(func.new, f.new[,j])
+  func.linear.new <- cbind(func.linear.new, f.linear.new[,j])
+  func.nonlinear.new <- cbind(func.nonlinear.new, f.nonlinear.new[,j])
+}
+
+covariates <- gl(p, n, (p*n))
+replicate <- gl(2, n, (p*n))
+func.df <- data.frame(seq = seq(0,1,length.out = n),
+                        origin=as.vector(func.origin),
+                        origin.linear=as.vector(func.linear.origin),
+                        origin.nonlinear=as.vector(func.nonlinear.origin), 
+                        new=as.vector(func.new),
+                        new.linear=as.vector(func.linear.new),
+                        new.nonlinear=as.vector(func.nonlinear.new),
+                        covariates=covariates, 
+                        replicate=replicate)
+
+ggplot(func.df, aes(x=seq, group=interaction(covariates, replicate))) + 
+  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+  geom_line(aes(y=origin, colour = covariates, linetype = "true"), linewidth = 2) + 
+  geom_line(aes(y=new, colour = covariates, linetype = "MAP"), linewidth = 2) + 
+  ylab ("") + facet_grid(covariates ~ .) + xlab("Smooth Functions") +
+  scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + theme_minimal(base_size = 30) + 
+  theme(plot.title = element_text(hjust = 0.5, size = 30),
+        legend.position = "none",
+        plot.margin = margin(0,0,0,-10),
+        strip.text = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.text.y = element_text(size=33),
+        axis.title.x = element_text(size = 35))
+# ggsave("../Laboratory/Simulation/BayesianFusedLasso/results/map_smooth_n1.pdf", width=10.5, height = 15)
+
+ggplot(func.df, aes(x=seq, group=interaction(covariates, replicate))) +  
+  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+  geom_line(aes(y=origin.linear, colour = covariates, linetype = "true"), linewidth = 2) + 
+  geom_line(aes(y=new.linear, colour = covariates, linetype = "MAP"), linewidth = 2) + 
+  facet_grid(covariates ~ .) + xlab("Linear Component") + ylab ("") +
+  scale_linetype_manual("functions",values=c("MAP"=3,"true"=1)) +
+  scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + theme_minimal(base_size = 30) + 
+  theme(plot.title = element_text(hjust = 0.5, size = 15),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        # panel.grid.minor.y = element_blank(),
+        legend.position = "none",
+        plot.margin = margin(0,-20,0,-30),
+        strip.text = element_blank(),
+        axis.text.y = element_text(size=33),
+        axis.title.x = element_text(size = 35))
+# ggsave("../Laboratory/Simulation/BayesianFusedLasso/results/map_linear_n1.pdf", width=10, height = 15)
+
+ggplot(func.df, aes(x=seq, group=interaction(covariates, replicate))) + 
+  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+  geom_line(aes(y=origin.nonlinear, colour = covariates, linetype = "true"), linewidth = 2) + 
+  geom_line(aes(y=new.nonlinear, colour = covariates, linetype = "MAP"), linewidth=2) + ylab ("") + xlab("Nonlinear Component") + facet_grid(covariates ~ .) + 
+  scale_linetype_manual("functions",values=c("MAP"=3,"true"=1)) +
+  scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + theme_minimal(base_size = 30) + 
+  theme(plot.title = element_text(hjust = 0.5, size = 15),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        legend.title = element_blank(),
+        legend.text = element_text(size=45),
+        legend.margin=margin(0,0,0,-10),
+        legend.box.margin=margin(-10,0,-10,0),
+        plot.margin = margin(0,0,0,-20),
+        strip.text = element_blank(),
+        axis.text.y = element_text(size=33),
+        axis.title.x = element_text(size = 35))
+# ggsave("../Laboratory/Simulation/BayesianFusedLasso/results/map_nonlinear_n1.pdf", width=12, height = 15)
+
+
+data.scenario <- data.frame("x" = c(1:n),
+                            "constant" = newx,
+                            "trueAlp" = sort(alp.new),
+                            "mapAlp" = sort(new.alpha))
+
+ggplot(data = data.scenario, aes(x = constant)) + 
+  ylab(expression(alpha(x))) + xlab("") +
+  geom_line(aes(y = trueAlp, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
+  geom_line(aes(y = mapAlp, col = "MAP Alpha"), linewidth = 2.5, linetype = 2) +
+  labs(col = "") + #ylim(0, 5) +
+  theme(axis.title.y = element_text(size = rel(1.8), angle = 90)) +
+  theme(axis.title.x = element_text(size = rel(1.8), angle = 00)) +
+  scale_color_manual(values = c("#e0b430", "red"))+
+  theme(text = element_text(size = 15),
+          legend.position="bottom", legend.key.size = unit(1, 'cm'),
+          axis.text = element_text(size = 20),
+          legend.margin=margin(-15,-15,-15,-15),
+          legend.box.margin=margin(-25,0,20,0))
+
+# ggsave(paste0("../Laboratory/Simulation/BayesianFusedLasso/results/map_alpha_n1_test.pdf"), width=10)
+
+# Randomized quantile residuals
+r <- matrix(NA, nrow = n, ncol = 20)
+# beta <- as.matrix(mcmc[[1]])[, 1:7] 
+T <- 20
+for(i in 1:n){
+  for(t in 1:T){
+    r[i, t] <- qnorm(pPareto(y.origin[i], u, alpha = newalpha[i]))
+  }
+}
+lgrid <- n
+grid <- qnorm(ppoints(lgrid))
+# qqnorm(r[, 1])
+# points(grid, quantile(r[, 1], ppoints(lgrid), type = 2), 
+#     xlim = c(-3, 3), col = "red")
+traj <- matrix(NA, nrow = T, ncol = lgrid)
+for (t in 1:T){
+  traj[t, ] <- quantile(r[, t], ppoints(lgrid), type = 2)
+}
+l.band <- apply(traj, 2, quantile, prob = 0.025)
+trajhat <- apply(traj, 2, quantile, prob = 0.5)
+u.band <- apply(traj, 2, quantile, prob = 0.975)
+
+ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat, 
+                         u.band = u.band)) + 
+  #geom_ribbon(aes(x = grid, ymin = l.band, ymax = u.band), 
+  #           color = "lightgrey", fill = "lightgrey",
+  #          alpha = 0.4, linetype = "dashed") + 
+  geom_ribbon(aes(x = grid, ymin = l.band, ymax = u.band), 
+              color = "lightgrey", fill = "lightgrey",
+              alpha = 0.4, linetype = "dashed") + 
+  geom_line(aes(x = grid, y = trajhat), linetype = "dashed", linewidth = 1.2) + 
+  geom_abline(intercept = 0, slope = 1, linewidth = 1.2) + 
+  labs(x = "Theoretical quantiles", y = "Sample quantiles") + 
+  theme(text = element_text(size = 30)) + 
+  coord_fixed(xlim = c(-3, 3),  
+              ylim = c(-3, 3))
