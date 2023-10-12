@@ -267,7 +267,7 @@ fit1 <- stan(
     # init_r = 1,
     chains = 3,             # number of Markov chains
     warmup = 1000,          # number of warmup iterations per chain
-    iter = 3000,            # total number of iterations per chain
+    iter = 5000,            # total number of iterations per chain
     cores = 4,              # number of cores (could use one per chain)
     refresh = 1             # no progress shown
 )
@@ -600,7 +600,7 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
 # saveRDS(data.scenario, file=paste0("Simulation/BayesianPsplines/results/",date,"-",time, "_sc1_data_samp1.rds"))
 
 cat("sc1_Alp Done")
-
+library(loo)
 
 fwi.loo <- loo(fit1)
 fwi.loo
@@ -608,14 +608,11 @@ y.psis <- fwi.loo$pointwise[,1]
 print(paste("RMSE (PSIS) =",round(sqrt(mean((y-y.psis)^2)) ,2)))
 print(paste("ELPD (PSIS)=",round(sum(y.psis),2)))
 print(paste("ELPD (brute force)=",round(sum(y),2)))
-# l.common.mix <- rowLogSumExps(-posterior$log_lik)
-# log.weights <- -posterior$log_lik - l.common.mix
-# y.mixis <- logSumExp(-l.common.mix) - rowLogSumExps(t(log.weights))
+
 plot(fwi.loo, label_points = TRUE)
 fwi.waic <- waic(posterior$log_lik)
 fwi.waic
-library(bayesplot)
-library(rstanarm)
-library(loo)
+
+
 
 
