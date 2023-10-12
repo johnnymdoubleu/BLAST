@@ -197,10 +197,10 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 0.1, 0.1);
-    target += gamma_lpdf(lambda2 | 1, 0.1);
+    target += gamma_lpdf(lambda1 | 1, 2);
+    target += gamma_lpdf(lambda2 | 0.1, 0.1);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
-    target += normal_lpdf(theta[1] | 0, 0.1);
+    target += double_exponential_lpdf(theta[1] | 0, lambda1); // target += normal_lpdf(theta[1] | 0, 0.1);
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, (square(lambda2)/2));
@@ -223,14 +223,14 @@ op1 <- optimizing(sm, data = list(y = as.vector(y), u = u, p = p, n= n, psi = ps
             #   init = "random",
               init = list(gamma = array(rep(0,(psi*p)), dim=c(psi, p)),
                         theta = rep(0, (p+1)), 
-                        tau = rep(1, p), sigma = 1, 
+                        tau = rep(1, p), sigma = 0.1, 
                         lambda1 = 0.01, lambda2 = 30),
               iter = 3500,
               algorithm = "LBFGS",
               verbose = TRUE)
 
 theta.map <- op1$par[1:(p+1)]
-gamma.map <- op1$par[(p+1+1):(p+1+(psi*p))]
+gamma.map <- as.vector((op1$par[(p+1+1):(p+1+(psi*p))]))
 lambda.map <- op1$par[(p+2+(psi*p)):(p+3+(psi*p))]
 systime <- Sys.time()
 Sys.time()
@@ -400,12 +400,12 @@ data.scenario <- data.frame("x" = c(1:n),
                             "optimAlp" = sort(alpha.optim))
 ggplot(data = data.scenario, aes(x = constant)) + 
   ylab(expression(alpha(x))) + xlab("") +
-  geom_line(aes(y = mapAlp, col = "MAP Alpha"), linewidth = 2.5) +
-  geom_line(aes(y = optimAlp, col = "Optim Alpha"),linetype=2, linewidth = 2.5) +
+#   geom_line(aes(y = mapAlp, col = "MAP Alpha"), linewidth = 2.5) +
+  geom_line(aes(y = optimAlp, col = "Optim Alpha"), linewidth = 2.5) +
   labs(col = "") +
     theme(axis.title.y = element_text(size = rel(1.8), angle = 90)) +
     theme(axis.title.x = element_text(size = rel(1.8), angle = 00)) +
-    scale_color_manual(values = c("red", "green"))+
+    scale_color_manual(values = c("red"))+
     theme(text = element_text(size = 15),
             legend.position="bottom", legend.key.size = unit(1, 'cm'),
             axis.text = element_text(size = 20),
@@ -449,4 +449,3 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
   theme(text = element_text(size = 20)) + 
   coord_fixed(xlim = c(-3, 3),  
               ylim = c(-3, 3))
-
