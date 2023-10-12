@@ -41,9 +41,9 @@ U <- runif(n = p) * 0.5
 
 for(i in 1 : p)
 {
-  if(i <= (p*1.3/2))
+  if(i <= (p/2))
   {
-    U_Star <- pmin(U + 0.25 * runif(n = p), 0.99999)
+    U_Star <- pmin(U + 0.2 * runif(n = p), 0.99999)
     
   }else
   {
@@ -79,14 +79,14 @@ for(i in 1:p){
 gamma.origin <- matrix(, nrow = psi, ncol = p)
 for(j in 1:p){
     for (ps in 1:psi){
-        if(j %in% c(3,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
+        if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
         else if(j==7){
-            if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.01}
-            else{gamma.origin[ps, j] <- 0.01}
+            if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.1}
+            else{gamma.origin[ps, j] <- 0.1}
         }
         else {
-            if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.01}
-            else{gamma.origin[ps, j] <- 0.01}
+            if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.1}
+            else{gamma.origin[ps, j] <- 0.1}
         }
     }
 }
@@ -105,7 +105,7 @@ for(j in 1:p){
 #         }
 #     }
 # }
-theta.origin <- c(0, 0.02, 0.02, 0, 0, 0)
+theta.origin <- c(0.5, 0, 0.2, 0.2, 0, 0)
 
 f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
@@ -153,7 +153,7 @@ for(j in 1:p){
 
 true.alpha <- alp.new <- alp.origin <- NULL
 for(i in 1:n){
-    alp.origin[i] <- exp((theta.origin[1]) + sum(f.origin[i,]))
+    alp.origin[i] <- exp(theta.origin[1] + sum(f.origin[i,]))
     alp.new[i] <- exp((theta.origin[1]) + sum(f.new[i,]))
 }
 
@@ -250,16 +250,16 @@ file <- file.path(cmdstan_path(), "model_simulation.stan")
 
 init.alpha <- list(list(gamma = array(rep(0,(psi*p)), dim=c(psi, p)),
                         theta = rep(0, (p+1)), 
-                        tau = rep(1, p), sigma = 0.1, 
+                        tau = rep(0.1, p), sigma = 0.001, 
                         lambda1 = 0.01, lambda2 = 0.01),
                   list(gamma = array(rep(0.02,(psi*p)), dim=c(psi, p)),
                         theta = rep(0.01, (p+1)), 
-                        tau = rep(1, p), sigma = 0.1,
+                        tau = rep(0.1, p), sigma = 0.001,
                         lambda1 = 0.01, lambda2 = 0.01),
-                  list(gamma = array(rep(-0.02, (psi*p)), dim=c(psi, p)),
-                        theta = rep(-0.02, (p+1)), 
-                        tau = rep(1, p), sigma = 0.1,
-                        lambda1 = 0.01, lambda2 = 0.01))
+                  list(gamma = array(rep(0.05, (psi*p)), dim=c(psi, p)),
+                        theta = rep(0.1, (p+1)), 
+                        tau = rep(0.1, p), sigma = 0.001,
+                        lambda1 = 0.0001, lambda2 = 0.0001))
 
 # stanc("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/application/model1.stan")
 fit1 <- stan(
