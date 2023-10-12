@@ -194,10 +194,10 @@ log.posterior <- function(beta, y.origin){
 beta.emp <- c(rep(0, (p+1)), rep(0, p*psi), 1, 1)
 beta.map <- optim(par = beta.emp, fn = log.posterior, 
                   y.origin = y.origin,
-                  lower=c(-0.01, rep(-Inf, (length(beta.emp)-3)), 0.0001, 0.0001),
-                  upper=c(0.01, rep(Inf, (length(beta.emp)-1))),
-                  method = "L-BFGS-B", 
-                  # method = "CG",
+                  # lower=c(theta.origin[1], rep(-Inf, (length(beta.emp)-3)), 0.0001, 0.0001),
+                  # upper=c(-0.2, rep(Inf, (length(beta.emp)-1))),
+                  # method = "L-BFGS-B", 
+                  method = "CG",
                   # method = "Nelder-Mead", hessian = T,
                   control = list(trace=3, fnscale = -1, maxit = 3500))
 theta.map <- beta.map$par[1:(p+1)]

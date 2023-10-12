@@ -12,6 +12,7 @@ library(rstan)
 suppressMessages(library(coda))
 library(ggmcmc)
 library(loo)
+library(bayesplot)
 # library(R6)
 # suppressMessages(library(igraph))
 # library(mgcv)
@@ -186,7 +187,9 @@ model {
 generated quantities {
     // Used in Posterior predictive check
     vector[n] log_lik;
+    vector[n] y_rep;
     for (i in 1:n) {
+        y_rep[i] ~ pareto(u, alpha[i]);
         log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
     }
 }
@@ -225,9 +228,11 @@ fit2 <- sampling(stanmodel, data = data.train,
                   refresh = 0)
 
 color_scheme_set("brightblue") # check out ?bayesplot::color_scheme_set
-lambda.draws <- as.matrix(fit, pars = c("lambda1", "lambda2"))
-mcmc_areas(lambda.draws, prob = 0.8) # c                  
-y.rep <- as.matrix(fit, pars = "y")
+# lambda.draws <- as.matrix(fit2, pars = c("lambda2"))
+mcmc_areas(as.matrix(fit2, pars = c("lambda1")), prob = 0.8)
+mcmc_areas(as.matrix(fit2, pars = c("lambda2")), prob = 0.8)
+mcmc_areas(as.matrix(fit2, pars = "theta"), prob = 0.8)
+y.rep <- as.matrix(fit2, pars = "y")
 ppc_dens_overlay(y, y_rep[1:50, ])
 
 gen <- gqs(stanmodel, draws = as.matrix(fit2), data = data.test)
