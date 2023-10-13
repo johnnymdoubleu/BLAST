@@ -15,25 +15,25 @@ data {
 
 parameters {
     vector[newp] theta; // linear predictor
-    vector[psi] gamma[p]; // splines coefficient
+    array[p] vector[psi] gamma; // splines coefficient
     real <lower=0> lambda1; // lasso penalty
     real <lower=0> lambda2; // group lasso penalty
-    real sigma; //
-    vector[p] tau;
+    real <lower=0> sigma; //
+    array[p] real <lower=0> tau;
 }
 
 transformed parameters {
-    vector[n] alpha; // tail index
+    array[n] real <lower=0> alpha; // tail index
     matrix[n, p] gsmooth; // nonlinear component
-    vector[n] newalpha; // tail index
-    matrix[n, p] newgsmooth; // nonlinear component    
+    array[n] real <lower=0> newalpha; // tail index
+    matrix[n, p] newgsmooth; // nonlinear component
     for (j in 1:p){
-        gsmooth[,j] <- bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
-        newgsmooth[,j] <- xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
+        gsmooth[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
+        newgsmooth[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
     };
     for (i in 1:n){
-        alpha[i] <- exp(theta[1] + dot_product(bsLinear[i], theta[2:newp]) + (gsmooth[i,] * rep_vector(1, p)));
-        newalpha[i] <- exp(theta[1] + dot_product(xholderLinear[i], theta[2:newp]) + (newgsmooth[i,] * rep_vector(1, p)));        
+        alpha[i] = exp(theta[1] + dot_product(bsLinear[i], theta[2:newp]) + (gsmooth[i,] * rep_vector(1, p)));
+        newalpha[i] = exp(theta[1] + dot_product(xholderLinear[i], theta[2:newp]) + (newgsmooth[i,] * rep_vector(1, p)));        
     };
 }
 
@@ -55,7 +55,7 @@ model {
 generated quantities {
     // Used in Posterior predictive check
     vector[n] log_lik;
-    real y_rep[n] = pareto_rng(u, alpha);
+    array[n] real y_rep = pareto_rng(u, alpha);
     for (i in 1:n) {
         log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
     }
