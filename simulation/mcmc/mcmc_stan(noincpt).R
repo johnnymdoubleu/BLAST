@@ -255,7 +255,7 @@ model {
     target += gamma_lpdf(lambda2 | 0.01, 0.01);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     for (j in 1:p){
-        target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
+        target += double_exponential_lpdf(theta[j] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, (square(lambda2)/2));
         target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau[j] * sigma);
     };
@@ -704,7 +704,7 @@ model {
     target += gamma_lpdf(lambda2 | 0.01, 0.01);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     for (j in 1:p){
-        target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
+        target += double_exponential_lpdf(theta[j] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, (square(lambda2)/2));
         target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau[j] * sigma);
     };
@@ -712,15 +712,16 @@ model {
 generated quantities {
     // Used in Posterior predictive check
     vector[n] log_lik;
-    array[n] real y_rep = pareto_rng(u, alpha);
+    array[n] real y_rep = pareto_rng(rep_vector(u, n), alpha);
     for (i in 1:n) {
         log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
     }
 }
 "
-, "model_simulation.stan")
+, "C:/Users/Johnny Lee/Documents/.cmdstan/cmdstan-2.33.1/model_simulation.stan")
+file <- file.path(cmdstan_path(), "model_simulation.stan")
+mod <- cmdstan_model(file)
 
-mod <- cmdstan_model("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/model_simulation.stan")
 op <- mod$optimize(
   data = list(y = as.vector(y.origin), u = u, p = p, 
                       n= n, psi = psi, atau = ((psi+1)/2), newp = (p+1),

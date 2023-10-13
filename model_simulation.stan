@@ -46,7 +46,7 @@ model {
     target += gamma_lpdf(lambda2 | 0.01, 0.01);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     for (j in 1:p){
-        target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
+        target += double_exponential_lpdf(theta[j] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, (square(lambda2)/2));
         target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau[j] * sigma);
     };
