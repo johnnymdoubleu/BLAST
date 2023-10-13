@@ -25,51 +25,15 @@ library(cmdstanr)
 n <- 5000
 psi <- 20
 threshold <- 0.90
-p <- 5
+p <- 10
 no.theta <- 1
 simul.no <- 50
 
 xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
-
-sample_meanvector <- runif(p,0,1)
-sample_covariance_matrix <- matrix(NA, nrow = p, ncol = p)
-diag(sample_covariance_matrix) <- 1
-# set.seed(666)
-
-mat_Sim <- matrix(data = NA, nrow = p, ncol = p)
-U <- runif(n = p) * 0.5
-
-for(i in 1 : p)
-{
-  if(i <= (p/2))
-  {
-    U_Star <- pmin(U + 0.2 * runif(n = p), 0.99999)
-    
-  }else
-  {
-    U_Star <- pmin(pmax(U + sample(c(0, 1), size = p, replace = TRUE) * runif(n = p), 0.00001), 0.99999)
-  }
-  
-  mat_Sim[, i] <- qnorm(U_Star)  
-}
-
-cor_Mat <- cor(mat_Sim)
-sample_covariance_matrix <- cor_Mat * (p/2)
-
-## create multivariate normal distribution
-x.origin <- mvrnorm(n = n, mu = sample_meanvector, Sigma = sample_covariance_matrix)
-
-
-# x.origin <- cbind(replicate(p, runif(n, 0, 1)))
-
-corrplot.mixed(cor(x.origin),
-                upper = "circle",
-                lower = "number",
-                addgrid.col = "black")
+x.origin <- cbind(replicate(p, runif(n, 0, 1)))
 for(i in 1:p){
-    knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)
+    knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)  
     tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
-    # tps <- bSpline(x = x.origin[,i], Boundary.knots = c(min(x.origin[,i]),max(x.origin[,i])), df = psi, intercept = TRUE)
     # tps <- mSpline(x.origin[,i], df=psi, Boundary.knots = range(x.origin[,i]), degree = 3, intercept=TRUE)
     #   bs.x <- cbind(bs.x, tps)
     bs.linear <- cbind(bs.linear, tps[,1:no.theta])
@@ -79,14 +43,14 @@ for(i in 1:p){
 gamma.origin <- matrix(, nrow = psi, ncol = p)
 for(j in 1:p){
     for (ps in 1:psi){
-        if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
+        if(j %in% c(2,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
         else if(j==7){
-            if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.01}
-            else{gamma.origin[ps, j] <- 0.01}
+            if(ps <= (psi/2)){gamma.origin[ps, j] <- 1}
+            else{gamma.origin[ps, j] <- 1}
         }
         else {
-            if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.01}
-            else{gamma.origin[ps, j] <- 0.01}
+            if(ps <= (psi/2)){gamma.origin[ps, j] <- 1}
+            else{gamma.origin[ps, j] <- 1}
         }
     }
 }
@@ -105,7 +69,79 @@ for(j in 1:p){
 #         }
 #     }
 # }
-theta.origin <- c(0.5, 0, 0.2, 0.2, 0, 0)
+theta.origin <- c(-0.1, 0.8, 0, 0.8, 0, 0, 0, -0.3, 0.8, 0, 0)
+
+
+# n <- 5000
+# psi <- 20
+# threshold <- 0.90
+# p <- 5
+# no.theta <- 1
+# simul.no <- 50
+
+# xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
+
+# sample_meanvector <- runif(p,0,1)
+# sample_covariance_matrix <- matrix(NA, nrow = p, ncol = p)
+# diag(sample_covariance_matrix) <- 1
+# # set.seed(666)
+
+# mat_Sim <- matrix(data = NA, nrow = p, ncol = p)
+# U <- runif(n = p) * 0.5
+
+# for(i in 1 : p)
+# {
+#   if(i <= (p/2))
+#   {
+#     U_Star <- pmin(U + 0.2 * runif(n = p), 0.99999)
+    
+#   }else
+#   {
+#     U_Star <- pmin(pmax(U + sample(c(0, 1), size = p, replace = TRUE) * runif(n = p), 0.00001), 0.99999)
+#   }
+  
+#   mat_Sim[, i] <- qnorm(U_Star)  
+# }
+
+# cor_Mat <- cor(mat_Sim)
+# sample_covariance_matrix <- cor_Mat * (p/2)
+
+# ## create multivariate normal distribution
+# x.origin <- mvrnorm(n = n, mu = sample_meanvector, Sigma = sample_covariance_matrix)
+
+
+# # x.origin <- cbind(replicate(p, runif(n, 0, 1)))
+
+# corrplot.mixed(cor(x.origin),
+#                 upper = "circle",
+#                 lower = "number",
+#                 addgrid.col = "black")
+# for(i in 1:p){
+#     knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)
+#     tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
+#     # tps <- bSpline(x = x.origin[,i], Boundary.knots = c(min(x.origin[,i]),max(x.origin[,i])), df = psi, intercept = TRUE)
+#     # tps <- mSpline(x.origin[,i], df=psi, Boundary.knots = range(x.origin[,i]), degree = 3, intercept=TRUE)
+#     #   bs.x <- cbind(bs.x, tps)
+#     bs.linear <- cbind(bs.linear, tps[,1:no.theta])
+#     bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])  
+# }
+
+# gamma.origin <- matrix(, nrow = psi, ncol = p)
+# for(j in 1:p){
+#     for (ps in 1:psi){
+#         if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
+#         else if(j==7){
+#             if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.01}
+#             else{gamma.origin[ps, j] <- 0.01}
+#         }
+#         else {
+#             if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.01}
+#             else{gamma.origin[ps, j] <- 0.01}
+#         }
+#     }
+# }
+
+# theta.origin <- c(0.5, 0, 0.2, 0.2, 0, 0)
 
 f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
@@ -268,9 +304,9 @@ fit1 <- stan(
     init = init.alpha,      # initial value
     chains = 3,             # number of Markov chains
     warmup = 1000,          # number of warmup iterations per chain
-    iter = 3000,            # total number of iterations per chain
+    iter = 2000,            # total number of iterations per chain
     cores = 4,              # number of cores (could use one per chain)
-    refresh = 1             # no progress shown
+    refresh = 500             # no progress shown
 )
 
 # saveRDS(fit1, file=paste0("./BRSTIR/application/",Sys.Date(),"_stanfit.rds"))
@@ -669,7 +705,7 @@ op <- optimizing(sm, data = list(y = as.vector(y.origin), u = u, p = p,
                     # xholderLinear = xholder.linear, 
                     # xholderNonlinear = xholder.nonlinear),
               init = list(gamma = array(rep(0.01, (psi*p)), dim=c(psi, p)),
-                        theta = rep(0, (p+1)), 
+                        theta = rep(0.1, (p+1)), 
                         tau = rep(0.1, p), sigma = 0.1, 
                         lambda1 = 1, lambda2 = 1),
               iter = 3500,
@@ -680,8 +716,8 @@ theta.map <- op$par[1:(p+1)]
 gamma.map <- as.vector(matrix(op$par[(p+1+1):(p+1+(psi*p))]))
 gamma.map <- as.vector(t(matrix(gamma.map, nrow=p)))
 lambda.map <- op$par[(p+2+(psi*p)):(p+3+(psi*p))]
-alpha.map <- op$par[(p+p+5+(psi*p)):(p+p+4+n+(psi*p))]
-newalpha.map <- op$par[(p+p+5+n+(psi*p)):(p+p+4+n+n+(psi*p))]
+# alpha.map <- op$par[(p+p+5+(psi*p)):(p+p+4+n+(psi*p))]
+# newalpha.map <- op$par[(p+p+5+n+(psi*p)):(p+p+4+n+n+(psi*p))]
 
 systime <- Sys.time()
 Sys.time()

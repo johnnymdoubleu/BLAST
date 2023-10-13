@@ -34,9 +34,9 @@ U <- runif(n = p) * 0.5
 
 for(i in 1 : p)
 {
-  if(i <= (p*1.3/2))
+  if(i <= (p/2))
   {
-    U_Star <- pmin(U + 0.25 * runif(n = p), 0.99999)
+    U_Star <- pmin(U + 0.2 * runif(n = p), 0.99999)
     
   }else
   {
@@ -72,7 +72,7 @@ for(i in 1:p){
 gamma.origin <- matrix(, nrow = psi, ncol = p)
 for(j in 1:p){
     for (ps in 1:psi){
-        if(j %in% c(1,3,5,6,9,10)){gamma.origin[ps, j] <- 0}
+        if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
         else if(j==7){
             if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.01}
             else{gamma.origin[ps, j] <- 0.01}
@@ -98,7 +98,7 @@ for(j in 1:p){
 #         }
 #     }
 # }
-theta.origin <- c(0.5, 0, 0.2, 0, 0.2, 0)
+theta.origin <- c(0.5, 0, 0.2, 0.2, 0, 0)
 
 f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
@@ -110,7 +110,7 @@ for(j in 1:p){
 alp.origin <- y.origin <- NULL
 for(i in 1:n){
     alp.origin[i] <- exp(theta.origin[1] + sum(f.origin[i,]))
-    y.origin[i] <- rPareto(1, u, alpha = alp.origin[i])
+    y.origin[i] <- rPareto(1, 1, alpha = alp.origin[i])
 }
 
 u <- quantile(y.origin, threshold)
@@ -182,8 +182,8 @@ log.posterior <- function(beta, y.origin){
   }
   sum.prior <- sum(prior) + first.prior[1] + #(-0.5 * 0.001^2 * theta[1]^2) + 
                 (p * log(lambda.1)) + (p * psi * log(lambda.2)) +
-                ((0.1-1)*log(lambda.1) - (2 * lambda.1)) + 
-                ((0.1-1)*log(lambda.2) - (1 * lambda.2))
+                ((0.01-1)*log(lambda.1) - (0.5 * lambda.1)) + 
+                ((0.01-1)*log(lambda.2) - (0.1 * lambda.2))
                 # ((1.1-1)*log(lambda.1 * lambda.2)) - (2 * (lambda.1 + lambda.2))
   # print(first.prior)
   return(sum.lik + sum.prior)
@@ -191,7 +191,7 @@ log.posterior <- function(beta, y.origin){
 
 
 # beta.emp <- c(as.vector(theta.origin), as.vector(gamma.origin), 1, 300)
-beta.emp <- c(rep(0, (p+1)), rep(0, p*psi), 1, 1)
+beta.emp <- c(rep(0.1, (p+1)), rep(0.01, p*psi), 0.01, 0.01)
 beta.map <- optim(par = beta.emp, fn = log.posterior, 
                   y.origin = y.origin,
                   # lower=c(-0.01, rep(-Inf, (length(beta.emp)-3)), 0.0001, 0.0001),

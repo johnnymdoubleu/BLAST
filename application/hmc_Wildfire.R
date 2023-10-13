@@ -272,7 +272,7 @@ fit1 <- stan(
     warmup = 1000,          # number of warmup iterations per chain
     iter = 5000,            # total number of iterations per chain
     cores = 4,              # number of cores (could use one per chain)
-    refresh = 1             # no progress shown
+    refresh = 500           # no progress shown
 )
 
 # saveRDS(fit1, file=paste0("./BRSTIR/application/",Sys.Date(),"_stanfit.rds"))
