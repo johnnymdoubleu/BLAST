@@ -115,6 +115,7 @@ for(i in 1:n){
 
 u <- quantile(y.origin, threshold)
 x.origin <- x.origin[which(y.origin>u),]
+x.bs <- x.origin
 x.origin <- scale(x.origin)
 y.origin <- y.origin[y.origin > u]
 n <- length(y.origin)
@@ -123,8 +124,8 @@ xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow
 newx <- seq(0, 1, length.out=n)
 xholder <- bs.x <- matrix(, nrow = n, ncol = p)
 for(i in 1:p){
-    xholder[,i] <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = n)  
-    test.knot <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)  
+    xholder[,i] <- seq(min(x.bs[,i]), max(x.bs[,i]), length.out = n)  
+    test.knot <- seq(min(x.bs[,i]), max(x.bs[,i]), length.out = psi)  
     splines <- basis.tps(newx, test.knot, m=2, rk=FALSE, intercept = FALSE)
     xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
     xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
