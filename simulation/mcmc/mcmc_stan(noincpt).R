@@ -20,7 +20,7 @@ library(MCMCvis)
 # library(ggplotify)
 
 #Scenario 1
-# set.seed(2)
+set.seed(2)
 
 n <- 5000
 psi <- 20
@@ -166,8 +166,8 @@ xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow
 newx <- seq(0, 1, length.out=n)
 xholder <- bs.x <- matrix(, nrow = n, ncol = p)
 for(i in 1:p){
-    xholder[,i] <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = n)  
-    test.knot <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)  
+    xholder[,i] <- seq(0, 1, length.out = n)  
+    test.knot <- seq(0, 1, length.out = psi)  
     splines <- basis.tps(newx, test.knot, m=2, rk=FALSE, intercept = FALSE)
     xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
     xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
@@ -700,8 +700,8 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     };
-    target += gamma_lpdf(lambda1 | 0.01, 0.01);
-    target += gamma_lpdf(lambda2 | 0.01, 0.01);
+    target += gamma_lpdf(lambda1 | 0.0001, 1);
+    target += gamma_lpdf(lambda2 | 0.0001, 1);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     for (j in 1:p){
         target += double_exponential_lpdf(theta[j] | 0, lambda1);
