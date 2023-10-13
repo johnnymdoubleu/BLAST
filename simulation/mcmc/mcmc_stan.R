@@ -251,10 +251,10 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 0.01, 0.5);
-    target += gamma_lpdf(lambda2 | 0.01, 0.1);
+    target += gamma_lpdf(lambda1 | 1, 5);
+    target += gamma_lpdf(lambda2 | 0.01, 0.01);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
-    target += double_exponential_lpdf(theta[1] | 0, lambda1); // target += normal_lpdf(theta[1] | 0, 0.1);
+    target += normal_lpdf(theta[1] | 0, 0.001);
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, (square(lambda2)/2));
@@ -650,52 +650,6 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
 #     alpha[i] <- exp(theta[1] + dot_product(bsLinear[i], theta[2:newp]) + (gsmooth[i,] * rep_vector(1, p)));    
 # };
 cat("sc1_Alp Done")
-
-stan.code <- "// Stan model for simple linear regression
-data {
-    int <lower=1> n; // Sample size
-    int <lower=1> p; // regression coefficient size
-    int <lower=1> newp; 
-    int <lower=1> psi; // splines coefficient size
-    real <lower=0> u; // large threshold value
-    matrix[n,p] bsLinear; // fwi dataset
-    matrix[n, (psi*p)] bsNonlinear; // thin plate splines basis 
-    vector[n] y; // extreme response
-    real <lower=0> atau;
-}
-
-parameters {
-    vector[newp] theta; // linear predictor
-    vector[psi] gamma[p]; // splines coefficient
-    real <lower=0> lambda1; // lasso penalty
-    real <lower=0> lambda2; // group lasso penalty
-    real <lower = 0> sigma; //
-    real <lower = 0> tau[p];
-}
-
-transformed parameters {
-    matrix[n, p] gsmooth; // nonlinear component // real <lower = 0> alpha[n]; // tail index
-    for (j in 1:p){
-        gsmooth[,j] <- bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
-    };
-}
-
-model {
-    // likelihood
-    for (i in 1:n){
-        target += pareto_lpdf(y[i] | u, exp(theta[1] + dot_product(bsLinear[i], theta[2:newp]) + (gsmooth[i,] * rep_vector(1, p))));
-    }
-    target += gamma_lpdf(lambda1 | 0.1, 5);
-    target += gamma_lpdf(lambda2 | 0.1, 0.1);
-    target += inv_gamma_lpdf(sigma | 0.01, 0.01);
-    target += double_exponential_lpdf(theta[1] | 0, lambda1); // target += normal_lpdf(theta[1] | 0, 0.0001);
-    for (j in 1:p){
-        target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
-        target += gamma_lpdf(tau[j] | atau, (square(lambda2)/2));
-        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau[j] * sigma);
-    }
-}
-"
 # set_cmdstan_path(path = NULL)
 # file <- file.path(cmdstan_path(), "model_simulation")
 mod <- cmdstan_model("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/model_simulation.stan")
@@ -708,11 +662,12 @@ op <- mod$optimize(
   init = list(list(gamma = array(rep(0.01, (psi*p)), dim=c(p, psi)),
                   theta = rep(0.1, (p+1)), 
                   tau = rep(0.1, p), sigma = 0.1, 
-                  lambda1 = 1, lambda2 = 1)),
+                  lambda1 = 0.01, lambda2 = 0.01)),
   iter = 3500,
   algorithm = "lbfgs",
   refresh = 50
 )
+
 
 # sm <- stan_model(model_code = stan.code)
 # op <- optimizing(sm, data = list(y = as.vector(y.origin), u = u, p = p, 
@@ -728,10 +683,15 @@ op <- mod$optimize(
 #               algorithm = "LBFGS",
 #               verbose = TRUE)
 
-theta.map <- op$par[1:(p+1)]
-gamma.map <- as.vector(matrix(op$par[(p+1+1):(p+1+(psi*p))]))
-gamma.map <- as.vector(t(matrix(gamma.map, nrow=p)))
-lambda.map <- op$par[(p+2+(psi*p)):(p+3+(psi*p))]
+
+# theta.map <- op$par[1:(p+1)]
+# gamma.map <- as.vector(matrix(op$par[(p+1+1):(p+1+(psi*p))]))
+# gamma.map <- as.vector(t(matrix(gamma.map, nrow=p)))
+# lambda.map <- op$par[(p+2+(psi*p)):(p+3+(psi*p))]
+theta.map <- as.vector(op$draws(variables = "theta"))
+gamma.map <- as.vector(t(matrix(op$draws(variables = "gamma"), nrow = p)))
+lambda.map <- as.vector(op$draws(variables = c("lambda1", "lambda2")))
+
 # alpha.map <- op$par[(p+p+5+(psi*p)):(p+p+4+n+(psi*p))]
 # newalpha.map <- op$par[(p+p+5+n+(psi*p)):(p+p+4+n+n+(psi*p))]
 

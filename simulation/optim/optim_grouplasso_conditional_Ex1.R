@@ -146,7 +146,7 @@ log.posterior <- function(beta, y.origin){
       prior[j] <- first.prior[j] + second.prior[j]
   }
   sum.prior <- sum(prior) - (lambda.1 * abs(theta[1])) +
-                (p * log(lambda.1)) + (p * psi * log(lambda.2)) +
+                ((p+1) * log(lambda.1)) + (p * psi * log(lambda.2)) +
                 ((0.1-1)*log(lambda.1) - (2 * lambda.1)) + 
                 ((0.1-1)*log(lambda.2) - (1 * lambda.2))
   # print(first.prior)
