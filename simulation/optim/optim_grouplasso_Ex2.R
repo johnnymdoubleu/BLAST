@@ -98,7 +98,7 @@ for(j in 1:p){
 #         }
 #     }
 # }
-theta.origin <- c(0.5, 0, 0.2, 0.2, 0, 0)
+theta.origin <- c(0, 0, 0.2, 0.2, 0, 0)
 
 f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){

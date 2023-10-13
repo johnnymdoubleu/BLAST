@@ -14,7 +14,7 @@ data {
 }
 
 parameters {
-    vector[newp] theta; // linear predictor
+    vector[p] theta; // linear predictor
     array[p] vector[psi] gamma; // splines coefficient
     real <lower=0> lambda1; // lasso penalty
     real <lower=0> lambda2; // group lasso penalty
@@ -32,8 +32,8 @@ transformed parameters {
         newgsmooth[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
     };
     for (i in 1:n){
-        alpha[i] = exp(theta[1] + dot_product(bsLinear[i], theta[2:newp]) + (gsmooth[i,] * rep_vector(1, p)));
-        newalpha[i] = exp(theta[1] + dot_product(xholderLinear[i], theta[2:newp]) + (newgsmooth[i,] * rep_vector(1, p)));        
+        alpha[i] = exp(dot_product(bsLinear[i], theta[1:p]) + (gsmooth[i,] * rep_vector(1, p)));
+        newalpha[i] = exp(dot_product(xholderLinear[i], theta[1:p]) + (newgsmooth[i,] * rep_vector(1, p)));        
     };
 }
 
@@ -42,10 +42,9 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 1, 5);
+    target += gamma_lpdf(lambda1 | 0.01, 0.01);
     target += gamma_lpdf(lambda2 | 0.01, 0.01);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
-    target += normal_lpdf(theta[1] | 0, 0.001);
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, (square(lambda2)/2));
