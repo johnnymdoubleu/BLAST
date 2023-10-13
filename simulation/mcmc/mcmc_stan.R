@@ -110,7 +110,7 @@ theta.origin <- c(0.5, 0, 0.2, 0.2, 0, 0)
 f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
     f.linear.origin[,j] <- bs.linear[, j] * theta.origin[j+1]
-    f.nonlinear.origin[,j] <- (bs.nonlinear[1:n,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j])
+    f.nonlinear.origin[,j] <- bs.nonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
     f.origin[, j] <- f.linear.origin[,j] + f.nonlinear.origin[,j]
 }
 
@@ -197,16 +197,16 @@ parameters {
 
 transformed parameters {
     vector[n] alpha; // tail index
-    vector[n] newalpha; // tail index
     matrix[n, p] gsmooth; // nonlinear component
-    matrix[n, p] newgsmooth; // nonlinear component
+    vector[n] newalpha; // tail index
+    matrix[n, p] newgsmooth; // nonlinear component    
     for (j in 1:p){
         gsmooth[,j] <- bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
         newgsmooth[,j] <- xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
     };
     for (i in 1:n){
-        alpha[i] <- exp(theta[1] + dot_product(bsLinear[i], theta[2:newp]) + (gsmooth[i,] *rep_vector(1, p)));
-        newalpha[i] <- exp(theta[1] + dot_product(xholderLinear[i], theta[2:newp]) + (newgsmooth[i,] *rep_vector(1, p)));
+        alpha[i] <- exp(theta[1] + dot_product(bsLinear[i], theta[2:newp]) + (gsmooth[i,] * rep_vector(1, p)));
+        newalpha[i] <- exp(theta[1] + dot_product(xholderLinear[i], theta[2:newp]) + (newgsmooth[i,] * rep_vector(1, p)));        
     };
 }
 
@@ -215,14 +215,14 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 0.0001, 1);
-    target += gamma_lpdf(lambda2 | 0.000001, 1);
+    target += gamma_lpdf(lambda1 | 0.01, 0.5);
+    target += gamma_lpdf(lambda2 | 0.01, 0.1);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
-    target += double_exponential_lpdf(theta[1] | 0, lambda1); // target += normal_lpdf(theta[1] | 0, 0.01);
+    target += double_exponential_lpdf(theta[1] | 0, lambda1); // target += normal_lpdf(theta[1] | 0, 0.1);
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, (square(lambda2)/2));
-        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), (diag_matrix(rep_vector(1, psi)) * tau[j] * sigma));
+        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau[j] * sigma);
     }
 }
 generated quantities {
@@ -239,34 +239,33 @@ generated quantities {
 data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, 
                     atau = ((psi+1)/2), newp = (p+1),
                     bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
-                    xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear)
+                    xholderLinear = xholder.linear, 
+                    xholderNonlinear = xholder.nonlinear)
 
-set_cmdstan_path(path = NULL)
+# set_cmdstan_path(path = NULL)
 #> CmdStan path set to: /Users/jgabry/.cmdstan/cmdstan-2.32.2
 
 # Create a CmdStanModel object from a Stan program,
 # here using the example model that comes with CmdStan
-file <- file.path(cmdstan_path(), "model_simulation.stan")
+# file <- file.path(cmdstan_path(), "model_simulation.stan")
 
-init.alpha <- list(list(gamma = array(rep(0,(psi*p)), dim=c(psi, p)),
+init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
                         theta = rep(0, (p+1)), 
-                        tau = rep(0.1, p), sigma = 0.001, 
+                        tau = rep(0.01, p), sigma = 0.001, 
                         lambda1 = 0.001, lambda2 = 0.001),
-                  list(gamma = array(rep(0.02,(psi*p)), dim=c(psi, p)),
+                  list(gamma = array(rep(0.02, (psi*p)), dim=c(psi, p)),
                         theta = rep(0.01, (p+1)), 
-                        tau = rep(0.1, p), sigma = 0.001,
+                        tau = rep(0.01, p), sigma = 0.001,
                         lambda1 = 0.001, lambda2 = 0.001),
-                  list(gamma = array(rep(0.05, (psi*p)), dim=c(psi, p)),
-                        theta = rep(0.1, (p+1)), 
-                        tau = rep(0.1, p), sigma = 0.001,
+                  list(gamma = array(rep(0.01, (psi*p)), dim=c(psi, p)),
+                        theta = rep(-0.02, (p+1)), 
+                        tau = rep(0.01, p), sigma = 0.001,
                         lambda1 = 0.001, lambda2 = 0.001))
 
-# stanc("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/application/model1.stan")
 fit1 <- stan(
     file = "model_simulation.stan",  # Stan program
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
-    # init_r = 1,
     chains = 3,             # number of Markov chains
     warmup = 1000,          # number of warmup iterations per chain
     iter = 3000,            # total number of iterations per chain
@@ -355,14 +354,17 @@ df.gamma <- data.frame("seq" = seq(1, (psi*p)),
 df.gamma$covariate <- factor(rep(seq(1, 1 + nrow(df.gamma) %/% psi), each = psi, length.out = nrow(df.gamma)))
 df.gamma$labels <- factor(1:(psi*p))
 ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) + 
+  geom_point(aes(y=true), size =4, color ="red")+
   geom_point(size = 4) + ylab("") + xlab("" ) + #ylim(-15,15) +
   # geom_ribbon(aes(ymin = l, ymax = u)) +
   geom_errorbar(aes(ymin = l, ymax = u), width = 4, linewidth = 1.2) + 
-  geom_point(size = 4, color = "black") + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   scale_x_discrete(breaks=c(seq(0, (psi*p), psi)+7), 
                     label = c(expression(bold(gamma[1])), 
-                              expression(bold(gamma[2])), expression(bold(gamma[3])), expression(bold(gamma[4])), expression(bold(gamma[5]))),
+                              expression(bold(gamma[2])), 
+                              expression(bold(gamma[3])), 
+                              expression(bold(gamma[4])), 
+                              expression(bold(gamma[5]))),
                     expand=c(0,3)) +
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 20),
@@ -376,7 +378,7 @@ ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) +
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_gamma.pdf"), width=10, height = 7.78)
 
 g.nonlinear.q1 <- g.linear.q1 <- g.q1 <- g.nonlinear.q3 <- g.linear.q3 <- g.q3 <- g.nonlinear.new <- g.linear.new <- g.new <- matrix(, nrow = n, ncol=p)
-g.smooth.q1 <- g.smooth.q3 <- g.smooth.new <- alpha.new <- NULL
+alpha.smooth.q1 <- alpha.smooth.q3 <- alpha.smooth.new <- alpha.new <- NULL
 for (j in 1:p){
   g.linear.new[,j] <- xholder.linear[,j] * theta.post.mean[(j+1)]
   g.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.post.mean, nrow=psi)[,j] 
@@ -390,9 +392,9 @@ for (j in 1:p){
 }
 
 for(i in 1:n){
-  g.smooth.new[i] <- theta.post.mean[1] + sum(g.new[i,])
-  g.smooth.q1[i] <- theta.q1[1] + sum(g.q1[i,])
-  g.smooth.q3[i] <- theta.q3[1] + sum(g.q3[i,])
+  alpha.smooth.new[i] <- exp(theta.post.mean[1] + sum(g.new[i,]))
+  alpha.smooth.q1[i] <- exp(theta.q1[1] + sum(g.q1[i,]))
+  alpha.smooth.q3[i] <- exp(theta.q3[1] + sum(g.q3[i,]))
 }
 
 ### Plotting linear and nonlinear components
@@ -490,6 +492,36 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_nonlinear.pdf"), width=12.5, height = 15)
+data.scenario <- data.frame("x" = c(1:n),
+                            "constant" = newx,
+                            "true" = sort(alp.origin),
+                            "post.mean" = sort(alpha.samples[,1]),
+                            "post.median" = sort(alpha.samples[,5]),
+                            "q1" = sort(alpha.samples[,4]),
+                            "q3" = sort(alpha.samples[,6]))
+
+ggplot(data.scenario, aes(x=x)) + 
+  ylab(expression(alpha(x))) + xlab(expression(x)) + labs(col = "") + 
+  geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
+  geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
+  geom_line(aes(y=post.mean, col = "Posterior Mean"), linewidth=2, linetype = 2) + 
+  ylim(0, (max(data.scenario$post.mean)+10)) +
+  geom_line(aes(y=post.median, col = "Posterior Median"), linetype=2, linewidth=2) +
+  # geom_line(aes(y=chain2, col = "Chian 2"), linetype=3) +
+  # facet_grid(covariates ~ .) + 
+  # scale_y_continuous(breaks=c(0)) + 
+  scale_color_manual(values = c("blue","#e0b430","red"))+
+  theme_minimal(base_size = 30) +
+  theme(plot.title = element_text(hjust = 0.5, size = 30),
+        legend.position="top", 
+        legend.key.size = unit(1, 'cm'),
+        plot.margin = margin(0,0,0,-10),
+        strip.text = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.text.y = element_text(size=33),
+        axis.title.x = element_text(size = 35))
+
 
 data.scenario <- data.frame("x" = c(1:n),
                             "constant" = newx,
@@ -498,6 +530,10 @@ data.scenario <- data.frame("x" = c(1:n),
                             "post.median" = sort(newalpha.samples[,5]),
                             "q1" = sort(newalpha.samples[,4]),
                             "q3" = sort(newalpha.samples[,6]))
+                            # "post.mean" = sort(alpha.smooth.new),
+                            # "post.median" = sort(newalpha.samples[,5]),
+                            # "q1" = sort(alpha.smooth.q1),
+                            # "q3" = sort(alpha.smooth.q3))                            
 
 ggplot(data.scenario, aes(x=x)) + 
   ylab(expression(alpha(x))) + xlab(expression(x)) + labs(col = "") + 
@@ -574,6 +610,9 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_qqplot.pdf"), width=10, height = 7.78)              
 # saveRDS(data.scenario, file=paste0("Simulation/BayesianPsplines/results/",date,"-",time, "_sc1_data_samp1.rds"))
 
+# for (i in 1:n){
+#     alpha[i] <- exp(theta[1] + dot_product(bsLinear[i], theta[2:newp]) + (gsmooth[i,] * rep_vector(1, p)));    
+# };
 cat("sc1_Alp Done")
 
 stan.code <- "// Stan model for simple linear regression
@@ -584,9 +623,7 @@ data {
     int <lower=1> psi; // splines coefficient size
     real <lower=0> u; // large threshold value
     matrix[n,p] bsLinear; // fwi dataset
-    matrix[n, (psi*p)] bsNonlinear; // thin plate splines basis
-    matrix[n,p] xholderLinear; // fwi dataset
-    matrix[n, (psi*p)] xholderNonlinear; // thin plate splines basis    
+    matrix[n, (psi*p)] bsNonlinear; // thin plate splines basis 
     vector[n] y; // extreme response
     real <lower=0> atau;
 }
@@ -596,46 +633,30 @@ parameters {
     vector[psi] gamma[p]; // splines coefficient
     real <lower=0> lambda1; // lasso penalty
     real <lower=0> lambda2; // group lasso penalty
-    real sigma; //
-    vector[p] tau;
+    real <lower = 0> sigma; //
+    real <lower = 0> tau[p];
 }
 
 transformed parameters {
-    vector[n] alpha; // tail index
-    vector[n] newalpha; // tail index
-    matrix[n, p] gsmooth; // nonlinear component
-    matrix[n, p] newgsmooth; // nonlinear component
+    matrix[n, p] gsmooth; // nonlinear component // real <lower = 0> alpha[n]; // tail index
     for (j in 1:p){
         gsmooth[,j] <- bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
-        newgsmooth[,j] <- xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
-    };
-    for (i in 1:n){
-        alpha[i] <- exp(theta[1] + dot_product(bsLinear[i], theta[2:newp]) + (gsmooth[i,] *rep_vector(1, p)));
-        newalpha[i] <- exp(theta[1] + dot_product(xholderLinear[i], theta[2:newp]) + (newgsmooth[i,] *rep_vector(1, p)));
     };
 }
 
 model {
     // likelihood
     for (i in 1:n){
-        target += pareto_lpdf(y[i] | u, alpha[i]);
+        target += pareto_lpdf(y[i] | u, exp(theta[1] + dot_product(bsLinear[i], theta[2:newp]) + (gsmooth[i,] * rep_vector(1, p))));
     }
-    target += gamma_lpdf(lambda1 | 0.00001, 1);
-    target += gamma_lpdf(lambda2 | 0.00001, 1);
+    target += gamma_lpdf(lambda1 | 0.1, 5);
+    target += gamma_lpdf(lambda2 | 0.1, 0.1);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
-    target += double_exponential_lpdf(theta[1] | 0, lambda1); // target += normal_lpdf(theta[1] | 0, 0.01);
+    target += double_exponential_lpdf(theta[1] | 0, lambda1); // target += normal_lpdf(theta[1] | 0, 0.0001);
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, (square(lambda2)/2));
-        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), (diag_matrix(rep_vector(1, psi)) * tau[j] * sigma));
-    }
-}
-generated quantities {
-    // Used in Posterior predictive check
-    vector[n] log_lik;
-    real y_rep[n] = pareto_rng(u, alpha);
-    for (i in 1:n) {
-        log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
+        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau[j] * sigma);
     }
 }
 "
@@ -643,16 +664,14 @@ generated quantities {
 
 sm <- stan_model(model_code = stan.code)
 op <- optimizing(sm, data = list(y = as.vector(y.origin), u = u, p = p, 
-                    n= n, psi = psi, 
-                    atau = ((psi+1)/2), newp = (p+1),
-                    bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
-                    xholderLinear = xholder.linear, 
-                    xholderNonlinear = xholder.nonlinear),
-            #   init = "random",
-              init = list(gamma = array(rep(0.05,(psi*p)), dim=c(psi, p)),
-                        theta = rep(0.5, (p+1)), 
-                        tau = rep(0.04, p), sigma = 0.1, 
-                        lambda1 = 0.1, lambda2 = 0.1),
+                    n= n, psi = psi, atau = ((psi+1)/2), newp = (p+1),
+                    bsLinear = bs.linear, bsNonlinear = bs.nonlinear),
+                    # xholderLinear = xholder.linear, 
+                    # xholderNonlinear = xholder.nonlinear),
+              init = list(gamma = array(rep(0.01, (psi*p)), dim=c(psi, p)),
+                        theta = rep(0, (p+1)), 
+                        tau = rep(0.1, p), sigma = 0.1, 
+                        lambda1 = 1, lambda2 = 1),
               iter = 3500,
               algorithm = "LBFGS",
               verbose = TRUE)
@@ -747,27 +766,6 @@ for(j in 1:p){
     f.new[,j] <- f.linear.new[,j] + f.nonlinear.new[,j]
 }
 
-# true.alpha <- alp.new <- alp.origin <- NULL
-# for(i in 1:n){
-#     alp.origin[i] <- exp(theta.origin[1] + sum(f.origin[i,]))
-#     alp.new[i] <- exp((theta.origin[1]) + sum(f.new[i,]))
-# }
-
-
-# newalpha <- NULL
-# for (j in 1:p){
-#   f.linear.new[,j] <- bs.linear[,j] * theta.map[j+1]
-#   f.nonlinear.new[,j] <- bs.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.map, ncol = p)[, j]
-#   f.new[1:n, j] <- f.linear.new[,j] + f.nonlinear.new[,j]
-# }
-# new.y <- NULL
-
-# # set.seed(100)
-# for(i in 1:n){
-#   newalpha[i] <- exp(theta.map[1] + sum(f.new[i,]))
-#   # new.y[i] <- rPareto(1, 1, alpha = newalpha[i])
-# }
-
 func.linear.new <- func.nonlinear.new <- func.linear.origin <- func.nonlinear.origin <- func.new <- func.origin <- matrix(, nrow=n, ncol=0)
 for (j in 1:p){
   func.origin <- cbind(func.origin, sort(f.origin[,j]))
@@ -777,9 +775,8 @@ for (j in 1:p){
   func.linear.new <- cbind(func.linear.new, sort(f.linear.new[,j]))
   func.nonlinear.new <- cbind(func.nonlinear.new, sort(f.nonlinear.new[,j]))  
 }
-# for (j in 1:p){
-#   func.new <- cbind(func.new, sort(f.new[,j]))
-# }
+
+
 covariates <- gl(p, n, (p*n))
 replicate <- gl(2, n, (p*n))
 func.df <- data.frame(x = as.vector(apply(x.origin, 2, sort, method = "quick")),
@@ -994,7 +991,7 @@ ggplot(func.df, aes(x=seq, group=interaction(covariates, replicate))) +
 data.scenario <- data.frame("x" = c(1:n),
                             "constant" = newx,
                             "trueAlp" = sort(alp.new),
-                            "mapAlp" = sort(newalpha.map))
+                            "mapAlp" = sort(new.alpha))
 
 ggplot(data = data.scenario, aes(x = constant)) + 
   ylab(expression(alpha(x))) + xlab("") +
