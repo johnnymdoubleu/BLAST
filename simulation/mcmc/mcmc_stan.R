@@ -305,8 +305,8 @@ fit1 <- stan(
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
     chains = 3,             # number of Markov chains
-    warmup = 1000,          # number of warmup iterations per chain
-    iter = 2000,            # total number of iterations per chain
+    warmup = 500,          # number of warmup iterations per chain
+    iter = 1500,            # total number of iterations per chain
     cores = 4,              # number of cores (could use one per chain)
     refresh = 500             # no progress shown
 )
@@ -653,7 +653,72 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
 # };
 cat("sc1_Alp Done")
 # set_cmdstan_path(path = NULL)
-file <- file.path(cmdstan_path(), "model_simulation.stan")
+write("// Stan model for simple linear regression
+data {
+    int <lower=1> n; // Sample size
+    int <lower=1> p; // regression coefficient size
+    int <lower=1> newp; 
+    int <lower=1> psi; // splines coefficient size
+    real <lower=0> u; // large threshold value
+    matrix[n,p] bsLinear; // fwi dataset
+    matrix[n, (psi*p)] bsNonlinear; // thin plate splines basis
+    matrix[n,p] xholderLinear; // fwi dataset
+    matrix[n, (psi*p)] xholderNonlinear; // thin plate splines basis    
+    vector[n] y; // extreme response
+    real <lower=0> atau;
+}
+
+parameters {
+    vector[newp] theta; // linear predictor
+    array[p] vector[psi] gamma; // splines coefficient
+    real <lower=0> lambda1; // lasso penalty
+    real <lower=0> lambda2; // group lasso penalty
+    real <lower=0> sigma; //
+    array[p] real <lower=0> tau;
+}
+
+transformed parameters {
+    array[n] real <lower=0> alpha; // tail index
+    matrix[n, p] gsmooth; // nonlinear component
+    array[n] real <lower=0> newalpha; // tail index
+    matrix[n, p] newgsmooth; // nonlinear component
+    for (j in 1:p){
+        gsmooth[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
+        newgsmooth[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
+    };
+    for (i in 1:n){
+        alpha[i] = exp(theta[1] + dot_product(bsLinear[i], theta[2:newp]) + (gsmooth[i,] * rep_vector(1, p)));
+        newalpha[i] = exp(theta[1] + dot_product(xholderLinear[i], theta[2:newp]) + (newgsmooth[i,] * rep_vector(1, p)));        
+    };
+}
+
+model {
+    // likelihood
+    for (i in 1:n){
+        target += pareto_lpdf(y[i] | u, alpha[i]);
+    }
+    target += gamma_lpdf(lambda1 | 0.1, 0.5);
+    target += gamma_lpdf(lambda2 | 0.01, 0.01);
+    target += inv_gamma_lpdf(sigma | 0.01, 0.01);
+    target += double_exponential_lpdf(theta[1] | 0, lambda1); // target += normal_lpdf(theta[1] | 0, 0.001);
+    for (j in 1:p){
+        target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
+        target += gamma_lpdf(tau[j] | atau, (square(lambda2)/2));
+        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau[j] * sigma);
+    }
+}
+generated quantities {
+    // Used in Posterior predictive check
+    vector[n] log_lik;
+    array[n] real y_rep = pareto_rng(u, alpha);
+    for (i in 1:n) {
+        log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
+    }
+}
+"
+, "C:/Users/Johnny Lee/Documents/.cmdstan/cmdstan-2.33.1/examples/model_simulation_sc3.stan")
+
+file <- file.path(cmdstan_path(), "examples/model_simulation_sc3.stan")
 mod <- cmdstan_model(file)
 op <- mod$optimize(
   data = list(y = as.vector(y.origin), u = u, p = p, 
@@ -661,10 +726,10 @@ op <- mod$optimize(
                       bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
                       xholderLinear = xholder.linear, 
                       xholderNonlinear = xholder.nonlinear),
-  init = list(list(gamma = array(rep(0.01, (psi*p)), dim=c(p, psi)),
-                  theta = rep(0.1, (p+1)), 
-                  tau = rep(0.1, p), sigma = 0.1, 
-                  lambda1 = 0.01, lambda2 = 0.01)),
+  # init = list(list(gamma = array(rep(0.01, (psi*p)), dim=c(p, psi)),
+  #                 theta = rep(0.1, (p+1)), 
+  #                 tau = rep(0.1, p), sigma = 0.1, 
+  #                 lambda1 = 0.01, lambda2 = 0.01)),
   iter = 3500,
   algorithm = "lbfgs",
   refresh = 50
