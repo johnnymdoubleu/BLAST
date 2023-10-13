@@ -158,7 +158,7 @@ for(i in 1:n){
 
 u <- quantile(y.origin, threshold)
 x.origin <- x.origin[which(y.origin>u),]
-x.origin <- scale(x.origin)
+# x.origin <- scale(x.origin)
 y.origin <- y.origin[y.origin > u]
 n <- length(y.origin)
 
@@ -700,8 +700,8 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     };
-    target += gamma_lpdf(lambda1 | 0.0001, 1);
-    target += gamma_lpdf(lambda2 | 0.0001, 1);
+    target += gamma_lpdf(lambda1 | 0.01, 0.5);
+    target += gamma_lpdf(lambda2 | 0.1, 0.1);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     for (j in 1:p){
         target += double_exponential_lpdf(theta[j] | 0, lambda1);
@@ -728,10 +728,10 @@ op <- mod$optimize(
                       bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
                       xholderLinear = xholder.linear, 
                       xholderNonlinear = xholder.nonlinear),
-  init = list(list(gamma = array(rep(0.01, (psi*p)), dim=c(p, psi)),
-                  theta = rep(0.1, p), 
-                  tau = rep(0.1, p), sigma = 0.1, 
-                  lambda1 = 0.01, lambda2 = 0.01)),
+  # init = list(list(gamma = array(rep(0.01, (psi*p)), dim=c(p, psi)),
+  #                 theta = rep(0.1, p), 
+  #                 tau = rep(0.1, p), sigma = 0.1, 
+  #                 lambda1 = 0.01, lambda2 = 0.01)),
   iter = 3500,
   algorithm = "lbfgs",
   refresh = 50
@@ -760,9 +760,9 @@ op <- mod$optimize(
 theta.map <- as.vector(op$draws(variables = "theta"))
 gamma.map <- as.vector(t(matrix(op$draws(variables = "gamma"), nrow = p)))
 lambda.map <- as.vector(op$draws(variables = c("lambda1", "lambda2")))
+alpha.map <- as.vector(op$draws(variables = "alpha"))
+newalpha.map <- as.vector(op$draws(variables = "newalpha"))
 
-# alpha.map <- op$par[(p+p+5+(psi*p)):(p+p+4+n+(psi*p))]
-# newalpha.map <- op$par[(p+p+5+n+(psi*p)):(p+p+4+n+n+(psi*p))]
 
 systime <- Sys.time()
 Sys.time()
@@ -771,19 +771,18 @@ date <- gsub("-","", substr(systime, 1, 10))
 time <- substr(systime, 12, 20)
 
 
-df.theta <- data.frame("seq" = seq(1, p+1),
+df.theta <- data.frame("seq" = seq(1, p),
                   theta.map,
                   "theta.true" = theta.origin)
 # df.theta$covariate <- factor(rep(seq(1, 1 + nrow(df.theta) %/% no.theta), each = no.theta, length.out = nrow(df.theta)))
-df.theta$covariate <- factor(0:p)
-df.theta$labels <- factor(0:p)
+df.theta$covariate <- factor(1:p)
+df.theta$labels <- factor(1:p)
 ggplot(df.theta, aes(x = labels)) + ylab("") + xlab("") +
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_point(aes(y = theta.map, col = covariate), size = 6) + 
   geom_point(aes(y = theta.true), color="red", size = 4) +
   # labs(title=expression("MAP vs True for"~theta)) + 
-  scale_x_discrete(labels = c(expression(bold(theta[0])),
-                              expression(bold(theta[1])),
+  scale_x_discrete(labels = c(expression(bold(theta[1])),
                               expression(bold(theta[2])),
                               expression(bold(theta[3])),
                               expression(bold(theta[4])),
@@ -839,10 +838,10 @@ ggplot(df, aes(x =labels , y = gamma.map, col = covariate)) +
 
 f.nonlinear.origin <- f.linear.origin <- f.origin <- f.nonlinear.new <- f.linear.new <- f.new <- matrix(, nrow = n, ncol=p)
 for(j in 1:p){
-    f.linear.origin[,j] <- bs.linear[, j] * theta.origin[j+1]
+    f.linear.origin[,j] <- bs.linear[, j] * theta.origin[j]
     f.nonlinear.origin[,j] <- bs.nonlinear[1:n,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
     f.origin[, j] <- f.linear.origin[,j] + f.nonlinear.origin[,j]
-    f.linear.new[,j] <- bs.linear[, j] * theta.map[j+1]
+    f.linear.new[,j] <- bs.linear[, j] * theta.map[j]
     f.nonlinear.new[,j] <- bs.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.map,nrow =20)[,j]
     f.new[,j] <- f.linear.new[,j] + f.nonlinear.new[,j]
 }
@@ -978,16 +977,16 @@ ggplot(data = data.scenario, aes(x = constant)) +
 f.nonlinear.origin <- f.linear.origin <- f.origin <- f.nonlinear.new <- f.linear.new <- f.new <- matrix(, nrow = n, ncol=p)
 true.alpha <- new.alpha <- NULL
 for (j in 1:p){
-  f.linear.origin[,j] <- xholder.linear[,j] * theta.map[j+1]
+  f.linear.origin[,j] <- xholder.linear[,j] * theta.map[j]
   f.nonlinear.origin[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.map, ncol = p)[, j]
   f.origin[,j] <- f.linear.origin[,j] + f.nonlinear.origin[,j]
-  f.linear.new[,j] <- xholder.linear[,j] * theta.map[j+1]
+  f.linear.new[,j] <- xholder.linear[,j] * theta.map[j]
   f.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.map, ncol = p)[, j]
   f.new[,j] <- f.linear.new[,j] + f.nonlinear.new[,j]
 }
 # set.seed(100)
 for(i in 1:n){
-  new.alpha[i] <- exp(theta.map[1] + sum(f.new[i,]))
+  new.alpha[i] <- exp(sum(f.new[i,]))
 }
 
 func.linear.new <- func.nonlinear.new <- func.linear.origin <- func.nonlinear.origin <- func.new <- func.origin <- matrix(, nrow=n, ncol=0)
@@ -1012,7 +1011,7 @@ func.df <- data.frame(x = as.vector(apply(x.origin, 2, sort, method = "quick")),
                         covariates=covariates, 
                         replicate=replicate)
 
-ggplot(func.df, aes(x=seq, group=interaction(covariates, replicate))) + 
+ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_line(aes(y=origin, colour = covariates, linetype = "true"), linewidth = 2) + 
@@ -1029,7 +1028,7 @@ ggplot(func.df, aes(x=seq, group=interaction(covariates, replicate))) +
         axis.title.x = element_text(size = 35))
 # ggsave("../Laboratory/Simulation/BayesianFusedLasso/results/map_smooth_n1.pdf", width=10.5, height = 15)
 
-ggplot(func.df, aes(x=seq, group=interaction(covariates, replicate))) +  
+ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +  
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_line(aes(y=origin.linear, colour = covariates, linetype = "true"), linewidth = 2) + 
@@ -1048,7 +1047,7 @@ ggplot(func.df, aes(x=seq, group=interaction(covariates, replicate))) +
         axis.title.x = element_text(size = 35))
 # ggsave("../Laboratory/Simulation/BayesianFusedLasso/results/map_linear_n1.pdf", width=10, height = 15)
 
-ggplot(func.df, aes(x=seq, group=interaction(covariates, replicate))) + 
+ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_line(aes(y=origin.nonlinear, colour = covariates, linetype = "true"), linewidth = 2) + 
@@ -1072,7 +1071,8 @@ ggplot(func.df, aes(x=seq, group=interaction(covariates, replicate))) +
 data.scenario <- data.frame("x" = c(1:n),
                             "constant" = newx,
                             "trueAlp" = sort(alp.new),
-                            "mapAlp" = sort(new.alpha))
+                            "mapAlp" = sort(new.alpha),
+                            "optimAlp" = sort(newalpha.map))
 
 ggplot(data = data.scenario, aes(x = constant)) + 
   ylab(expression(alpha(x))) + xlab("") +
@@ -1096,7 +1096,7 @@ r <- matrix(NA, nrow = n, ncol = 20)
 T <- 20
 for(i in 1:n){
   for(t in 1:T){
-    r[i, t] <- qnorm(pPareto(y.origin[i], u, alpha = newalpha[i]))
+    r[i, t] <- qnorm(pPareto(y.origin[i], u, alpha = newalpha.map[i]))
   }
 }
 lgrid <- n

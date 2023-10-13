@@ -107,7 +107,7 @@ cor_Mat <- cor(mat_Sim)
 sample_covariance_matrix <- cor_Mat * (p/2)
 
 ## create multivariate normal distribution
-x.origin <- mvrnorm(n = n, mu = sample_meanvector, Sigma = sample_covariance_matrix)
+x.origin <- mvrnorm(n = n, mu = rep(0,p), Sigma = sample_covariance_matrix)
 
 
 # x.origin <- cbind(replicate(p, runif(n, 0, 1)))
@@ -158,7 +158,7 @@ for(i in 1:n){
 
 u <- quantile(y.origin, threshold)
 x.origin <- x.origin[which(y.origin>u),]
-x.origin <- scale(x.origin)
+# x.origin <- scale(x.origin)
 y.origin <- y.origin[y.origin > u]
 n <- length(y.origin)
 
@@ -254,7 +254,7 @@ model {
     target += gamma_lpdf(lambda1 | 1, 5);
     target += gamma_lpdf(lambda2 | 0.01, 0.01);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
-    target += normal_lpdf(theta[1] | 0, 0.001);
+    target += double_exponential_lpdf(theta[1] | 0, lambda1); // target += normal_lpdf(theta[1] | 0, 0.001);
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, (square(lambda2)/2));
@@ -270,7 +270,7 @@ generated quantities {
     }
 }
 "
-, "model_simulation.stan")
+, "model_simulation_sc3.stan")
 
 data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, 
                     atau = ((psi+1)/2), newp = (p+1),
@@ -299,7 +299,7 @@ init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
                         lambda1 = 0.001, lambda2 = 0.001))
 
 fit1 <- stan(
-    file = "model_simulation.stan",  # Stan program
+    file = "model_simulation_sc3.stan",  # Stan program
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
     chains = 3,             # number of Markov chains
@@ -651,8 +651,8 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
 # };
 cat("sc1_Alp Done")
 # set_cmdstan_path(path = NULL)
-# file <- file.path(cmdstan_path(), "model_simulation")
-mod <- cmdstan_model("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/model_simulation.stan")
+file <- file.path(cmdstan_path(), "model_simulation.stan")
+mod <- cmdstan_model(file)
 op <- mod$optimize(
   data = list(y = as.vector(y.origin), u = u, p = p, 
                       n= n, psi = psi, atau = ((psi+1)/2), newp = (p+1),
