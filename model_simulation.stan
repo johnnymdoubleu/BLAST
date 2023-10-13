@@ -15,17 +15,17 @@ data {
 
 parameters {
     vector[p] theta; // linear predictor
-    array[p] vector[psi] gamma; // splines coefficient
+    vector[psi] gamma[p]; // splines coefficient
     real <lower=0> lambda1; // lasso penalty
     real <lower=0> lambda2; // group lasso penalty
     real <lower=0> sigma; //
-    array[p] real <lower=0> tau;
+    vector<lower=0>[p] tau;
 }
 
 transformed parameters {
-    array[n] real <lower=0> alpha; // tail index
+    vector<lower=0>[n] alpha; // tail index
     matrix[n, p] gsmooth; // nonlinear component
-    array[n] real <lower=0> newalpha; // tail index
+    vector<lower=0>[n] newalpha; // tail index
     matrix[n, p] newgsmooth; // nonlinear component
     for (j in 1:p){
         gsmooth[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
@@ -54,7 +54,7 @@ model {
 generated quantities {
     // Used in Posterior predictive check
     vector[n] log_lik;
-    array[n] real y_rep = pareto_rng(u, alpha);
+    real y_rep[n] = pareto_rng(rep_vector(u, n), alpha);
     for (i in 1:n) {
         log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
     }

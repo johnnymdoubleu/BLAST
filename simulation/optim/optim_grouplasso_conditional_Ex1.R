@@ -148,7 +148,7 @@ log.posterior <- function(beta, y.origin){
   sum.prior <- sum(prior) - (lambda.1 * abs(theta[1])) +
                 ((p+1) * log(lambda.1)) + (p * psi * log(lambda.2)) +
                 ((0.1-1)*log(lambda.1) - (2 * lambda.1)) + 
-                ((0.1-1)*log(lambda.2) - (1 * lambda.2))
+                ((0.01-1)*log(lambda.2) - (0.01 * lambda.2))
   # print(first.prior)
   return(sum.lik + sum.prior)
 }
@@ -208,7 +208,7 @@ beta.map <- optim(beta.emp, fn = log.posterior, #gr = grad.log.posterior,
                   # method = "BFGS",
                   method = "CG",
                   # method = "SANN",
-                  control = list(fnscale = -1, maxit = 1000))
+                  control = list(trace=2, fnscale = -1, maxit = 1000))
 # theta.map <- matrix(beta.map$par[1:(2*p)],nrow=2)
 theta.map <- beta.map$par[1:(p+1)]
 gamma.map <- beta.map$par[(p+1+1):(p+1+(psi*p))]
