@@ -105,7 +105,7 @@ for(j in 1:p){
 #         }
 #     }
 # }
-theta.origin <- c(1, 0, 0.2, 0.2, 0, 0)
+theta.origin <- c(0.5, 0, 0.2, 0.2, 0, 0)
 
 f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
@@ -116,7 +116,7 @@ for(j in 1:p){
 
 alp.origin <- y.origin <- NULL
 for(i in 1:n){
-    alp.origin[i] <- exp((theta.origin[1]*p) + sum(f.origin[i,]))
+    alp.origin[i] <- exp(theta.origin[1] + sum(f.origin[i,]))
     y.origin[i] <- rPareto(1, 1, alpha = alp.origin[i])
 }
 
@@ -154,7 +154,7 @@ for(j in 1:p){
 true.alpha <- alp.new <- alp.origin <- NULL
 for(i in 1:n){
     alp.origin[i] <- exp(theta.origin[1] + sum(f.origin[i,]))
-    alp.new[i] <- exp((theta.origin[1]) + sum(f.new[i,]))
+    alp.new[i] <- exp(theta.origin[1] + sum(f.new[i,]))
 }
 
 # lambda1 ~ gamma(1, 1.78);
