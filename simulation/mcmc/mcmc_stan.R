@@ -1,4 +1,5 @@
 library(npreg)
+library(tmvnsim)
 library(reshape2)
 library(splines2)
 library(scales)
@@ -107,8 +108,8 @@ cor_Mat <- cor(mat_Sim)
 sample_covariance_matrix <- cor_Mat * (p/2)
 
 ## create multivariate normal distribution
-x.origin <- mvrnorm(n = n, mu = rep(0,p), Sigma = sample_covariance_matrix)
-
+# x.origin <- mvrnorm(n = n, mu = rep(0,p), Sigma = sample_covariance_matrix)
+x.origin <- tmvnsim(n = n, k = p, lower = rep(0, p), means = rep(0, p), sigma = sample_covariance_matrix)$samp
 
 # x.origin <- cbind(replicate(p, runif(n, 0, 1)))
 
@@ -158,7 +159,8 @@ for(i in 1:n){
 
 u <- quantile(y.origin, threshold)
 x.origin <- x.origin[which(y.origin>u),]
-# x.origin <- scale(x.origin)
+# x.bs <- x.origin
+x.origin <- scale(x.origin)
 y.origin <- y.origin[y.origin > u]
 n <- length(y.origin)
 
@@ -168,7 +170,7 @@ xholder <- bs.x <- matrix(, nrow = n, ncol = p)
 for(i in 1:p){
     xholder[,i] <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = n)  
     test.knot <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)  
-    splines <- basis.tps(newx, test.knot, m=2, rk=FALSE, intercept = FALSE)
+    splines <- basis.tps(xholder[,i], test.knot, m=2, rk=FALSE, intercept = FALSE)
     xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
     xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
     knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)  

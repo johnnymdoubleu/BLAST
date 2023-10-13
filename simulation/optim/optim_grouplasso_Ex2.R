@@ -1,4 +1,5 @@
 library(JOPS)
+library(tmvnsim)
 library(Pareto)
 library(npreg)
 library(gridExtra)
@@ -50,8 +51,8 @@ cor_Mat <- cor(mat_Sim)
 sample_covariance_matrix <- cor_Mat * (p/2)
 
 ## create multivariate normal distribution
-x.origin <- mvrnorm(n = n, mu = sample_meanvector, Sigma = sample_covariance_matrix)
-
+# x.origin <- mvrnorm(n = n, mu = sample_meanvector, Sigma = sample_covariance_matrix)
+x.origin <- tmvnsim(n = n, k = p, lower = rep(0, p), means = rep(0, p), sigma = sample_covariance_matrix)$samp
 
 # x.origin <- cbind(replicate(p, runif(n, 0, 1)))
 
@@ -124,15 +125,15 @@ xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow
 newx <- seq(0, 1, length.out=n)
 xholder <- bs.x <- matrix(, nrow = n, ncol = p)
 for(i in 1:p){
-    xholder[,i] <- seq(min(x.bs[,i]), max(x.bs[,i]), length.out = n)  
-    test.knot <- seq(min(x.bs[,i]), max(x.bs[,i]), length.out = psi)  
-    splines <- basis.tps(newx, test.knot, m=2, rk=FALSE, intercept = FALSE)
+    xholder[,i] <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = n)  
+    test.knot <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)  
+    splines <- basis.tps(xholder[,i], test.knot, m=2, rk=FALSE, intercept = FALSE)
     xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
     xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
     knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)  
     tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
     bs.linear <- cbind(bs.linear, tps[,1:no.theta])
-    bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])  
+    bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])
 }
 
 f.nonlinear.new <- f.linear.new <- f.new <- f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
@@ -183,24 +184,24 @@ log.posterior <- function(beta, y.origin){
   }
   sum.prior <- sum(prior) + first.prior[1] + #(-0.5 * 0.001^2 * theta[1]^2) + 
                 ((p+1) * log(lambda.1)) + (p * psi * log(lambda.2)) +
-                ((0.01-1)*log(lambda.1) - (0.5 * lambda.1)) + 
-                ((0.01-1)*log(lambda.2) - (0.1 * lambda.2))
+                ((1-1)*log(lambda.1) - (5 * lambda.1)) + 
+                ((0.01-1)*log(lambda.2) - (0.01 * lambda.2))
                 # ((1.1-1)*log(lambda.1 * lambda.2)) - (2 * (lambda.1 + lambda.2))
   # print(first.prior)
   return(sum.lik + sum.prior)
 }
 
 
-beta.emp <- c(as.vector(theta.origin), as.vector(gamma.origin), 0.01, 0.01)
-# beta.emp <- c(rep(0.1, (p+1)), rep(0.01, p*psi), 0.01, 0.01)
+# beta.emp <- c(as.vector(theta.origin), as.vector(gamma.origin), 0.01, 0.01)
+beta.emp <- c(rep(0, (p+1)), rep(0, p*psi), 1, 1)
 beta.map <- optim(par = beta.emp, fn = log.posterior, 
                   y.origin = y.origin,
-                  # lower=c(-0.01, rep(-Inf, (length(beta.emp)-3)), 0.0001, 0.0001),
-                  # upper=c(theta.origin[1], rep(Inf, (length(beta.emp)-1))),
+                  # lower=c(rep(-Inf, (length(beta.emp)-2)), 0, 0),
+                  # upper=c(rep(Inf, length(beta.emp))),
                   # method = "L-BFGS-B", 
                   method = "CG",
                   # method = "Nelder-Mead", hessian = T,
-                  control = list(trace=3, fnscale = -1, maxit = 3500))
+                  control = list(trace=3, fnscale = -1, maxit = 1000))
 theta.map <- beta.map$par[1:(p+1)]
 gamma.map <- beta.map$par[(p+1+1):(p+1+(psi*p))]
 lambda.map <- beta.map$par[-c(1:(p+1+(psi*p)))]
