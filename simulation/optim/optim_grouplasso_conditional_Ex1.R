@@ -145,10 +145,10 @@ log.posterior <- function(beta, y.origin){
       second.prior[j] <- -1 * lambda.2 * sqrt(sum((gamma[(((j-1)*psi)+1):(((j-1)*psi)+psi)])^2))
       prior[j] <- first.prior[j] + second.prior[j]
   }
-  sum.prior <- sum(prior) - (lambda.1 * abs(theta[1])) +
-                ((p+1) * log(lambda.1)) + (p * psi * log(lambda.2)) +
-                ((0.1-1)*log(lambda.1) - (5 * lambda.1)) + 
-                ((0.01-1)*log(lambda.2) - (0.01 * lambda.2))
+  sum.prior <- sum(prior) - (lambda.1 * abs(theta[1])) #+
+                # ((p+1) * log(lambda.1)) + (p * psi * log(lambda.2)) +
+                # ((0.1-1)*log(lambda.1) - (5 * lambda.1)) + 
+                # ((0.01-1)*log(lambda.2) - (0.01 * lambda.2))
   # print(first.prior)
   return(sum.lik + sum.prior)
 }
