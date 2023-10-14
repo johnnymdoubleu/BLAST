@@ -22,7 +22,7 @@ library(cmdstanr)
 
 #Scenario 1
 # set.seed(2)
-set.seed(533)
+set.seed(233)
 
 n <- 5000
 psi <- 20
@@ -71,7 +71,6 @@ xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow
 sample_meanvector <- runif(p,0,1)
 sample_covariance_matrix <- matrix(NA, nrow = p, ncol = p)
 diag(sample_covariance_matrix) <- 1
-# set.seed(666)
 
 mat_Sim <- matrix(data = NA, nrow = p, ncol = p)
 U <- runif(n = p) * 0.5
@@ -705,8 +704,8 @@ op <- mod$optimize(
                       bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
                       xholderLinear = xholder.linear, 
                       xholderNonlinear = xholder.nonlinear,
-                      tau = rep(3500, p),
-                      lambda1 = 0.1, lambda2 = 0.001, sigma = 0.003),
+                      tau = rep(1000, p),
+                      lambda1 = 0.0001, lambda2 = 0.001, sigma = 0.000001),
   # init = 0,
   init = list(list(gamma = t(gamma.origin),
                     theta = theta.origin)),
