@@ -483,7 +483,7 @@ ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) +
         axis.ticks.x = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
-ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_linear.pdf"), width=10.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_linear.pdf"), width=10.5, height = 15)
 # post.mean <- as.vector(apply(as.data.frame(matrix(alpha.summary[((n+(n*p))+1):(n+(2*n*p)),1], nrow = n, ncol = p)), 2, sort, decreasing=F))
 # q1 <- as.vector(apply(as.data.frame(matrix(alpha.summary[((n+(n*p))+1):(n+(2*n*p)),4], nrow = n, ncol = p)), 2, sort, decreasing=F))
 # q3 <- as.vector(apply(as.data.frame(matrix(alpha.summary[((n+(n*p))+1):(n+(2*n*p)),5], nrow = n, ncol = p)), 2, sort, decreasing=F))
