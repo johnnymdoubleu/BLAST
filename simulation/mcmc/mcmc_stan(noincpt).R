@@ -1,4 +1,5 @@
 library(npreg)
+library(tmvnsim)
 library(reshape2)
 library(splines2)
 library(scales)
@@ -20,56 +21,56 @@ library(MCMCvis)
 # library(ggplotify)
 
 #Scenario 1
-set.seed(3)
+set.seed(533)
 
-# n <- 5000
-# psi <- 20
-# threshold <- 0.90
-# p <- 10
-# no.theta <- 1
-# simul.no <- 50
+n <- 5000
+psi <- 20
+threshold <- 0.90
+p <- 10
+no.theta <- 1
+simul.no <- 50
 
-# xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
-# x.origin <- cbind(replicate(p, runif(n, 0, 1)))
-# for(i in 1:p){
-#     knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)  
-#     tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
-#     # tps <- mSpline(x.origin[,i], df=psi, Boundary.knots = range(x.origin[,i]), degree = 3, intercept=TRUE)
-#     #   bs.x <- cbind(bs.x, tps)
-#     bs.linear <- cbind(bs.linear, tps[,1:no.theta])
-#     bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])  
-# }
+xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
+x.origin <- cbind(replicate(p, runif(n, 0, 1)))
+for(i in 1:p){
+    knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)  
+    tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
+    # tps <- mSpline(x.origin[,i], df=psi, Boundary.knots = range(x.origin[,i]), degree = 3, intercept=TRUE)
+    #   bs.x <- cbind(bs.x, tps)
+    bs.linear <- cbind(bs.linear, tps[,1:no.theta])
+    bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])  
+}
 
-# gamma.origin <- matrix(, nrow = psi, ncol = p)
+gamma.origin <- matrix(, nrow = psi, ncol = p)
+for(j in 1:p){
+    for (ps in 1:psi){
+        if(j %in% c(2,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
+        else if(j==7){
+            if(ps <= (psi/2)){gamma.origin[ps, j] <- 1}
+            else{gamma.origin[ps, j] <- 1}
+        }
+        else {
+            if(ps <= (psi/2)){gamma.origin[ps, j] <- 1}
+            else{gamma.origin[ps, j] <- 1}
+        }
+    }
+}
+
+# theta.origin <- matrix(, nrow = 2, ncol = p)
 # for(j in 1:p){
-#     for (ps in 1:psi){
-#         if(j %in% c(2,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
+#     for (k in 1:2){
+#         if(j %in% c(2,4,5,6,9,10)){theta.origin[k, j] <- 0}
 #         else if(j==7){
-#             if(ps <= (psi/2)){gamma.origin[ps, j] <- 1}
-#             else{gamma.origin[ps, j] <- 1}
+#             if(k==1){theta.origin[k, j] <- 0.5}
+#             else{theta.origin[k, j] <- -0.3}
 #         }
 #         else {
-#             if(ps <= (psi/2)){gamma.origin[ps, j] <- 1}
-#             else{gamma.origin[ps, j] <- 1}
+#             if(k==1){theta.origin[k,j] <- -0.2}
+#             else{theta.origin[k,j] <- 0.8}
 #         }
 #     }
 # }
-
-# # theta.origin <- matrix(, nrow = 2, ncol = p)
-# # for(j in 1:p){
-# #     for (k in 1:2){
-# #         if(j %in% c(2,4,5,6,9,10)){theta.origin[k, j] <- 0}
-# #         else if(j==7){
-# #             if(k==1){theta.origin[k, j] <- 0.5}
-# #             else{theta.origin[k, j] <- -0.3}
-# #         }
-# #         else {
-# #             if(k==1){theta.origin[k,j] <- -0.2}
-# #             else{theta.origin[k,j] <- 0.8}
-# #         }
-# #     }
-# # }
-# theta.origin <- c(0.8, 0, 0.8, 0, 0, 0, -0.3, 0.8, 0, 0)
+theta.origin <- c(0.8, 0, 0.8, 0, 0, 0, -0.3, 0.8, 0, 0)
 
 
 n <- 5000
@@ -107,8 +108,8 @@ cor_Mat <- cor(mat_Sim)
 sample_covariance_matrix <- cor_Mat * (p/2)
 
 ## create multivariate normal distribution
-x.origin <- mvrnorm(n = n, mu = sample_meanvector, Sigma = sample_covariance_matrix)
-
+# x.origin <- mvrnorm(n = n, mu = sample_meanvector, Sigma = sample_covariance_matrix)
+x.origin <- tmvnsim(n = n, k = p, lower = rep(0, p), means = rep(0, p), sigma = sample_covariance_matrix)$samp
 
 # x.origin <- cbind(replicate(p, runif(n, 0, 1)))
 
@@ -251,7 +252,7 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     };
-    target += gamma_lpdf(lambda1 | 1, 50);
+    target += gamma_lpdf(lambda1 | 1, 5);
     target += gamma_lpdf(lambda2 | 1, 50);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     for (j in 1:p){
@@ -269,7 +270,7 @@ generated quantities {
     }
 }
 "
-, "model_simulation.stan")
+, "model_simulation_sc2.stan")
 
 data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, 
                     atau = ((psi+1)/2), newp = (p+1),
@@ -292,7 +293,7 @@ init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
                         lambda1 = 0.001, lambda2 = 0.001))
 
 fit1 <- stan(
-    file = "model_simulation.stan",  # Stan program
+    file = "model_simulation_sc2.stan",  # Stan program
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
     chains = 3,             # number of Markov chains

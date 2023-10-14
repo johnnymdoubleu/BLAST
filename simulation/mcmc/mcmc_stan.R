@@ -21,57 +21,42 @@ library(cmdstanr)
 # library(ggplotify)
 
 #Scenario 1
-# set.seed(2)
+set.seed(2)
 
-# n <- 5000
-# psi <- 20
-# threshold <- 0.90
-# p <- 10
-# no.theta <- 1
-# simul.no <- 50
+n <- 5000
+psi <- 20
+threshold <- 0.90
+p <- 10
+no.theta <- 1
+simul.no <- 50
 
-# xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
-# x.origin <- cbind(replicate(p, runif(n, 0, 1)))
-# for(i in 1:p){
-#     knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)  
-#     tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
-#     # tps <- mSpline(x.origin[,i], df=psi, Boundary.knots = range(x.origin[,i]), degree = 3, intercept=TRUE)
-#     #   bs.x <- cbind(bs.x, tps)
-#     bs.linear <- cbind(bs.linear, tps[,1:no.theta])
-#     bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])  
-# }
+xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
+x.origin <- cbind(replicate(p, runif(n, 0, 1)))
+for(i in 1:p){
+    knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)  
+    tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
+    # tps <- mSpline(x.origin[,i], df=psi, Boundary.knots = range(x.origin[,i]), degree = 3, intercept=TRUE)
+    #   bs.x <- cbind(bs.x, tps)
+    bs.linear <- cbind(bs.linear, tps[,1:no.theta])
+    bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])  
+}
 
-# gamma.origin <- matrix(, nrow = psi, ncol = p)
-# for(j in 1:p){
-#     for (ps in 1:psi){
-#         if(j %in% c(2,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
-#         else if(j==7){
-#             if(ps <= (psi/2)){gamma.origin[ps, j] <- 1}
-#             else{gamma.origin[ps, j] <- 1}
-#         }
-#         else {
-#             if(ps <= (psi/2)){gamma.origin[ps, j] <- 1}
-#             else{gamma.origin[ps, j] <- 1}
-#         }
-#     }
-# }
+gamma.origin <- matrix(, nrow = psi, ncol = p)
+for(j in 1:p){
+    for (ps in 1:psi){
+        if(j %in% c(2,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
+        else if(j==7){
+            if(ps <= (psi/2)){gamma.origin[ps, j] <- 1}
+            else{gamma.origin[ps, j] <- 1}
+        }
+        else {
+            if(ps <= (psi/2)){gamma.origin[ps, j] <- 1}
+            else{gamma.origin[ps, j] <- 1}
+        }
+    }
+}
 
-# # theta.origin <- matrix(, nrow = 2, ncol = p)
-# # for(j in 1:p){
-# #     for (k in 1:2){
-# #         if(j %in% c(2,4,5,6,9,10)){theta.origin[k, j] <- 0}
-# #         else if(j==7){
-# #             if(k==1){theta.origin[k, j] <- 0.5}
-# #             else{theta.origin[k, j] <- -0.3}
-# #         }
-# #         else {
-# #             if(k==1){theta.origin[k,j] <- -0.2}
-# #             else{theta.origin[k,j] <- 0.8}
-# #         }
-# #     }
-# # }
-# theta.origin <- c(-0.1, 0.8, 0, 0.8, 0, 0, 0, -0.3, 0.8, 0, 0)
-
+theta.origin <- c(-0.1, 0.8, 0, 0.8, 0, 0, 0, -0.3, 0.8, 0, 0)
 
 n <- 5000
 psi <- 20
@@ -111,7 +96,6 @@ sample_covariance_matrix <- cor_Mat * (p/2)
 # x.origin <- mvrnorm(n = n, mu = rep(0,p), Sigma = sample_covariance_matrix)
 x.origin <- tmvnsim(n = n, k = p, lower = rep(0, p), means = rep(0, p), sigma = sample_covariance_matrix)$samp
 
-# x.origin <- cbind(replicate(p, runif(n, 0, 1)))
 
 corrplot.mixed(cor(x.origin),
                 upper = "circle",
@@ -120,9 +104,6 @@ corrplot.mixed(cor(x.origin),
 for(i in 1:p){
     knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)
     tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
-    # tps <- bSpline(x = x.origin[,i], Boundary.knots = c(min(x.origin[,i]),max(x.origin[,i])), df = psi, intercept = TRUE)
-    # tps <- mSpline(x.origin[,i], df=psi, Boundary.knots = range(x.origin[,i]), degree = 3, intercept=TRUE)
-    #   bs.x <- cbind(bs.x, tps)
     bs.linear <- cbind(bs.linear, tps[,1:no.theta])
     bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])  
 }
@@ -160,7 +141,7 @@ for(i in 1:n){
 u <- quantile(y.origin, threshold)
 x.origin <- x.origin[which(y.origin>u),]
 # x.bs <- x.origin
-x.origin <- scale(x.origin)
+# x.origin <- scale(x.origin)
 y.origin <- y.origin[y.origin > u]
 n <- length(y.origin)
 
@@ -305,8 +286,8 @@ fit1 <- stan(
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
     chains = 3,             # number of Markov chains
-    warmup = 2000,          # number of warmup iterations per chain
-    iter = 6000,            # total number of iterations per chain
+    warmup = 1000,          # number of warmup iterations per chain
+    iter = 2000,            # total number of iterations per chain
     cores = 4,              # number of cores (could use one per chain)
     refresh = 500             # no progress shown
 )
@@ -316,9 +297,11 @@ posterior <- extract(fit1)
 str(posterior)
 
 plot(fit1, plotfun = "trace", pars = c("theta"), nrow = 3)
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_theta_trace.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_theta_trace_sc2-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_theta_trace_sc3-wi.pdf"), width=10, height = 7.78)
 plot(fit1, plotfun = "trace", pars = c("lambda1", "lambda2"), nrow = 2)
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_lambda.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_lambda_sc2-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_lambda_sc3-wi.pdf"), width=10, height = 7.78)
 
 
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
@@ -367,7 +350,8 @@ ggplot(df.theta, aes(x = covariate, y=m, color = covariate)) + ylab("") + xlab('
           axis.text.x = element_text(hjust=0.35),
           axis.text = element_text(size = 28))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_theta.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_theta_sc2-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_theta_sc3-wi.pdf"), width=10, height = 7.78)
 
 df.gamma <- data.frame("seq" = seq(1, (psi*p)), 
                   "true" = as.vector(gamma.origin),
@@ -378,16 +362,21 @@ df.gamma$covariate <- factor(rep(seq(1, 1 + nrow(df.gamma) %/% psi), each = psi,
 df.gamma$labels <- factor(1:(psi*p))
 ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) + 
   geom_point(aes(y=true), size =4, color ="red")+
+  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_point(size = 4) + ylab("") + xlab("" ) + #ylim(-15,15) +
   # geom_ribbon(aes(ymin = l, ymax = u)) +
   geom_errorbar(aes(ymin = l, ymax = u), width = 4, linewidth = 1.2) + 
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   scale_x_discrete(breaks=c(seq(0, (psi*p), psi)+7), 
                     label = c(expression(bold(gamma[1])), 
                               expression(bold(gamma[2])), 
                               expression(bold(gamma[3])), 
                               expression(bold(gamma[4])), 
-                              expression(bold(gamma[5]))),
+                              expression(bold(gamma[5])), 
+                              expression(bold(gamma[6])), 
+                              expression(bold(gamma[7])), 
+                              expression(bold(gamma[8])), 
+                              expression(bold(gamma[9])), 
+                              expression(bold(gamma[10]))),
                     expand=c(0,3)) +
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 20),
@@ -398,7 +387,8 @@ ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) +
           plot.margin = margin(0,0,0,-20),
           axis.text.x = element_text(hjust=0.5),
           axis.text = element_text(size = 28))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_gamma.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_gamma_sc2-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_gamma_sc3-wi.pdf"), width=10, height = 7.78)
 
 g.nonlinear.q1 <- g.linear.q1 <- g.q1 <- g.nonlinear.q3 <- g.linear.q3 <- g.q3 <- g.nonlinear.new <- g.linear.new <- g.new <- matrix(, nrow = n, ncol=p)
 alpha.smooth.q1 <- alpha.smooth.q3 <- alpha.smooth.new <- alpha.new <- NULL
@@ -441,7 +431,7 @@ data.smooth <- data.frame("x"=c(1:n),
                           "replicate" = gl(2, n, (p*n)))
 ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
+  # geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
   geom_line(aes(y=true, colour = covariates, linetype = "True"), linewidth=2) + 
   geom_line(aes(y=post.mean, colour = covariates, linetype = "Posterior Mean"), linewidth=2) + 
   ylab("") + xlab ("Smooth Functions") +
@@ -458,7 +448,8 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_smooth.pdf"), width=10.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_smooth_sc2-wi.pdf"), width=10.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_smooth_sc3-wi.pdf"), width=10.5, height = 15)
 data.linear <- data.frame("x"=c(1:n),
                           "true" = as.vector(f.linear.new),
                           "post.mean" = as.vector(g.linear.new),
@@ -468,7 +459,7 @@ data.linear <- data.frame("x"=c(1:n),
                           "replicate" = gl(2, n, (p*n)))
 ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
+  # geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
   geom_line(aes(y=true, colour = covariates, linetype = "True"), linewidth=2) + 
   geom_line(aes(y=post.mean, colour = covariates, linetype = "Posterior Mean"), linewidth=2) + xlab("Linear Components") + ylab("") +
   facet_grid(covariates ~ ., scales = "free_y") + 
@@ -497,7 +488,7 @@ data.nonlinear <- data.frame("x"=c(1:n),
                           "replicate" = gl(2, n, (p*n)))
 ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
+  # geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
   geom_line(aes(y=true, colour = covariates, linetype = "True"), linewidth=2) + 
   geom_line(aes(y=post.mean, colour = covariates, linetype = "MCMC"), linewidth=2) + xlab("Nonlinear Components") + ylab("") +
   facet_grid(covariates ~ ., scales = "free_y") + 
@@ -544,7 +535,8 @@ ggplot(data.scenario, aes(x=x)) +
         axis.ticks.x = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_alpha_train.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_alpha_train_sc2-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_alpha_train_sc3-wi.pdf"), width=10, height = 7.78)
 
 data.scenario <- data.frame("x" = c(1:n),
                             "constant" = newx,
@@ -563,7 +555,7 @@ ggplot(data.scenario, aes(x=x)) +
   geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
   geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
   geom_line(aes(y=post.mean, col = "Posterior Mean"), linewidth=2, linetype = 2) + 
-  ylim(0, (max(data.scenario$post.mean)+10)) +
+  ylim(0, (max(data.scenario$q3)+10)) +
   geom_line(aes(y=post.median, col = "Posterior Median"), linetype=2, linewidth=2) +
   # geom_line(aes(y=chain2, col = "Chian 2"), linetype=3) +
   # facet_grid(covariates ~ .) + 
@@ -579,8 +571,8 @@ ggplot(data.scenario, aes(x=x)) +
         axis.ticks.x = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_alpha_test.pdf"), width=10, height = 7.78)
-
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_alpha_test_sc2-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_alpha_test_sc3-wi.pdf"), width=10, height = 7.78)
 # mcmc.gamma <- posterior$gamma
 # gamma.container <- as.data.frame(matrix(NA, nrow = 20, ,ncol = 0))
 # for(i in 1:(dim(mcmc.gamma)[1]/3)){
