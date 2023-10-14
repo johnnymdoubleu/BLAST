@@ -474,7 +474,8 @@ ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) +
         axis.ticks.x = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_linear.pdf"), width=10.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_linear_sc2-wi.pdf"), width=10.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_linear_sc3-wi.pdf"), width=10.5, height = 15)
 # post.mean <- as.vector(apply(as.data.frame(matrix(alpha.summary[((n+(n*p))+1):(n+(2*n*p)),1], nrow = n, ncol = p)), 2, sort, decreasing=F))
 # q1 <- as.vector(apply(as.data.frame(matrix(alpha.summary[((n+(n*p))+1):(n+(2*n*p)),4], nrow = n, ncol = p)), 2, sort, decreasing=F))
 # q3 <- as.vector(apply(as.data.frame(matrix(alpha.summary[((n+(n*p))+1):(n+(2*n*p)),5], nrow = n, ncol = p)), 2, sort, decreasing=F))
@@ -629,6 +630,9 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
 # for (i in 1:n){
 #     alpha[i] <- exp(theta[1] + dot_product(bsLinear[i], theta[2:newp]) + (gsmooth[i,] * rep_vector(1, p)));    
 # };
+
+# target += gamma_lpdf(lambda1 | 1, 10);
+# target += gamma_lpdf(lambda2 | 1, 100);
 cat("sc1_Alp Done")
 # set_cmdstan_path(path = NULL)
 write("// Stan model for simple linear regression
@@ -644,15 +648,15 @@ data {
     matrix[n, (psi*p)] xholderNonlinear; // thin plate splines basis    
     vector[n] y; // extreme response
     real <lower=0> atau;
+    real <lower=0> lambda1; // lasso penalty
+    real <lower=0> lambda2; // group lasso penalty
+    real <lower=0> sigma; //
+    vector[p] tau;
 }
 
 parameters {
     vector[newp] theta; // linear predictor
-    array[p] vector[psi] gamma; // splines coefficient
-    real <lower=0> lambda1; // lasso penalty
-    real <lower=0> lambda2; // group lasso penalty
-    real <lower=0> sigma; //
-    array[p] real <lower=0> tau;
+    array[p] vector[psi] gamma; // splines coefficient array[p] real <lower=0> tau;
 }
 
 transformed parameters {
@@ -675,20 +679,16 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 1,5);
-    target += gamma_lpdf(lambda2 | 1,5);
-    target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     target += double_exponential_lpdf(theta[1] | 0, lambda1); // target += normal_lpdf(theta[1] | 0, 0.001);
     for (j in 1:p){
-        target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
-        target += gamma_lpdf(tau[j] | atau, (square(lambda2)/2));
+        target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1); // target += gamma_lpdf(tau[j] | atau, (square(lambda2)/2));
         target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau[j] * sigma);
     }
 }
 generated quantities {
     // Used in Posterior predictive check
     vector[n] log_lik;
-    array[n] real y_rep = pareto_rng(u, alpha);
+    array[n] real y_rep = pareto_rng(rep_vector(u, n), alpha);
     for (i in 1:n) {
         log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
     }
@@ -703,7 +703,12 @@ op <- mod$optimize(
                       n= n, psi = psi, atau = ((psi+1)/2), newp = (p+1),
                       bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
                       xholderLinear = xholder.linear, 
-                      xholderNonlinear = xholder.nonlinear),
+                      xholderNonlinear = xholder.nonlinear,
+                      tau = rep(3500, p),
+                      lambda1 = 0.1, lambda2 = 0.001, sigma = 0.003),
+  # init = 0,
+  init = list(list(gamma = t(gamma.origin),
+                    theta = theta.origin)),
   # init = list(list(gamma = array(rep(0.01, (psi*p)), dim=c(p, psi)),
   #                 theta = rep(0.1, (p+1)), 
   #                 tau = rep(0.1, p), sigma = 0.1, 
@@ -735,8 +740,9 @@ op <- mod$optimize(
 # lambda.map <- op$par[(p+2+(psi*p)):(p+3+(psi*p))]
 theta.map <- as.vector(op$draws(variables = "theta"))
 gamma.map <- as.vector(t(matrix(op$draws(variables = "gamma"), nrow = p)))
-lambda.map <- as.vector(op$draws(variables = c("lambda1", "lambda2")))
-
+# lambda.map <- as.vector(op$draws(variables = c("lambda1", "lambda2")))
+alpha.map <- as.vector(op$draws(variables = "alpha"))
+newalpha.map <- as.vector(op$draws(variables = "newalpha"))
 # alpha.map <- op$par[(p+p+5+(psi*p)):(p+p+4+n+(psi*p))]
 # newalpha.map <- op$par[(p+p+5+n+(psi*p)):(p+p+4+n+n+(psi*p))]
 
@@ -777,7 +783,9 @@ ggplot(df.theta, aes(x = labels)) + ylab("") + xlab("") +
           axis.text.x = element_text(hjust=0.3),
           axis.text = element_text(size = 30),
           panel.grid.minor.x = element_blank())
-    
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_theta_sc2-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_theta_sc3-wi.pdf"), width=10, height = 7.78)
+
 df <- data.frame("seq" = seq(1, (psi*p)), 
                   gamma.map, 
                   "gamma.true" = as.vector(gamma.origin))
@@ -788,11 +796,6 @@ ggplot(df, aes(x =labels , y = gamma.map, col = covariate)) +
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab("")+
   geom_point(aes(y = gamma.true), color = "red", size=3) + 
   geom_point(size = 4) + ylab("") +
-  # geom_smooth(method="gam") +
-  # geom_line(aes(x = seq, y = true, color = "true"), linetype = 2) +
-  # labs(title=expression("MAP vs True for"~gamma)) + 
-  # ggtitle(expression(atop(paste("MAP vs True for ", bold(gamma))))) +
-#   annotate("text", x = seq(0, 330, length.out=10), y = -1, label = beta, colour = "red", size = 10) +
   scale_x_discrete(breaks=c(seq(0, (psi*p), psi)+15), 
                     label = c(expression(bold(gamma[1])), 
                               expression(bold(gamma[2])), 
@@ -812,6 +815,9 @@ ggplot(df, aes(x =labels , y = gamma.map, col = covariate)) +
           axis.text.x = element_text(hjust=1),
           axis.text = element_text(size = 30),
           panel.grid.major.x = element_blank())
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_gamma_sc2-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_gamma_sc3-wi.pdf"), width=10, height = 7.78)
+
 
 f.nonlinear.origin <- f.linear.origin <- f.origin <- f.nonlinear.new <- f.linear.new <- f.new <- matrix(, nrow = n, ncol=p)
 for(j in 1:p){
@@ -909,15 +915,19 @@ ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +
         strip.text = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
-
+old.alpha <- NULL
+for(i in 1:n){
+  old.alpha[i] <- exp(theta.map[1] + sum(f.new))
+}
 
 data.scenario <- data.frame("x" = c(1:n),
                             "constant" = newx,
                             "trueAlp" = sort(alp.origin),
-                            "mapAlp" = sort(alpha.map))
+                            "mapAlp" = sort(alpha.map),
+                            "optimAlp" = sort(old.alpha))
 ggplot(data = data.scenario, aes(x = constant)) + 
   ylab(expression(alpha(x))) + xlab("") +
-    geom_line(aes(y = trueAlp, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
+  geom_line(aes(y = trueAlp, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
   geom_line(aes(y = mapAlp, col = "MAP Alpha"), linewidth = 2.5, linetype = 2) +
   labs(col = "") +
     theme(axis.title.y = element_text(size = rel(1.8), angle = 90)) +
@@ -928,40 +938,20 @@ ggplot(data = data.scenario, aes(x = constant)) +
             axis.text = element_text(size = 20),
             legend.margin=margin(-15,-15,-15,-15),
             legend.box.margin=margin(-25,0,20,0))
-
-# plt.samp <- ggplot(data = data.scenario, aes(x = constant)) + ylab(expression(alpha(x))) + xlab("")
-# print(plt.samp + 
-#       geom_line(aes(y = trueAlp, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
-#       geom_line(aes(y = mapAlp, col = "MAP Alpha"), linewidth = 2.5, linetype = 2) +
-#       labs(col = "") +
-#         theme(axis.title.y = element_text(size = rel(1.8), angle = 90)) +
-#         theme(axis.title.x = element_text(size = rel(1.8), angle = 00)) +
-#         scale_color_manual(values = c("#e0b430", "red"))+
-#         theme(text = element_text(size = 15),
-#                 legend.position="bottom", legend.key.size = unit(1, 'cm'),
-#                 axis.text = element_text(size = 20),
-#                 legend.margin=margin(-15,-15,-15,-15),
-#                 legend.box.margin=margin(-25,0,20,0)))
-
-# ggsave(paste0("../Laboratory/Simulation/BayesianFusedLasso/results/map_alpha_n1_train.pdf"), width=10)
-
-# plot(sort(alp.origin))
-# plot(sort(new.y), sort(y.origin))
-# abline(a=0, b=1, col = "red", lty = 2)
-# rbind(matrix(theta.map, nrow = no.theta, ncol = p), matrix(gamma.map, nrow = psi, ncol = p))
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_alpha_train_sc2-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_alpha_train_sc3-wi.pdf"), width=10, height = 7.78)
 
 #### Test Set
 f.nonlinear.origin <- f.linear.origin <- f.origin <- f.nonlinear.new <- f.linear.new <- f.new <- matrix(, nrow = n, ncol=p)
 true.alpha <- new.alpha <- NULL
 for (j in 1:p){
-  f.linear.origin[,j] <- xholder.linear[,j] * theta.map[j+1]
-  f.nonlinear.origin[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.map, ncol = p)[, j]
+  f.linear.origin[,j] <- xholder.linear[,j] * theta.origin[j+1]
+  f.nonlinear.origin[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[, j]
   f.origin[,j] <- f.linear.origin[,j] + f.nonlinear.origin[,j]
   f.linear.new[,j] <- xholder.linear[,j] * theta.map[j+1]
   f.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.map, ncol = p)[, j]
   f.new[,j] <- f.linear.new[,j] + f.nonlinear.new[,j]
 }
-# set.seed(100)
 for(i in 1:n){
   new.alpha[i] <- exp(theta.map[1] + sum(f.new[i,]))
 }
@@ -988,8 +978,7 @@ func.df <- data.frame(x = as.vector(apply(x.origin, 2, sort, method = "quick")),
                         covariates=covariates, 
                         replicate=replicate)
 
-ggplot(func.df, aes(x=seq, group=interaction(covariates, replicate))) + 
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_line(aes(y=origin, colour = covariates, linetype = "true"), linewidth = 2) + 
   geom_line(aes(y=new, colour = covariates, linetype = "MAP"), linewidth = 2) + 
@@ -1003,11 +992,11 @@ ggplot(func.df, aes(x=seq, group=interaction(covariates, replicate))) +
         axis.ticks.x = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
-# ggsave("../Laboratory/Simulation/BayesianFusedLasso/results/map_smooth_n1.pdf", width=10.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_smooth_sc2-wi.pdf"), width=10.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_smooth_sc3-wi.pdf"), width=10.5, height = 15)
 
-ggplot(func.df, aes(x=seq, group=interaction(covariates, replicate))) +  
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +  
+  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) +  
   geom_line(aes(y=origin.linear, colour = covariates, linetype = "true"), linewidth = 2) + 
   geom_line(aes(y=new.linear, colour = covariates, linetype = "MAP"), linewidth = 2) + 
   facet_grid(covariates ~ .) + xlab("Linear Component") + ylab ("") +
@@ -1022,10 +1011,10 @@ ggplot(func.df, aes(x=seq, group=interaction(covariates, replicate))) +
         strip.text = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
-# ggsave("../Laboratory/Simulation/BayesianFusedLasso/results/map_linear_n1.pdf", width=10, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_linear_sc2-wi.pdf"), width=10, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_linear_sc3-wi.pdf"), width=10, height = 15)
 
-ggplot(func.df, aes(x=seq, group=interaction(covariates, replicate))) + 
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_line(aes(y=origin.nonlinear, colour = covariates, linetype = "true"), linewidth = 2) + 
   geom_line(aes(y=new.nonlinear, colour = covariates, linetype = "MAP"), linewidth=2) + ylab ("") + xlab("Nonlinear Component") + facet_grid(covariates ~ .) + 
@@ -1042,13 +1031,14 @@ ggplot(func.df, aes(x=seq, group=interaction(covariates, replicate))) +
         strip.text = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
-# ggsave("../Laboratory/Simulation/BayesianFusedLasso/results/map_nonlinear_n1.pdf", width=12, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_nonlinear_sc2-wi.pdf"), width=12, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_nonlinear_sc3-wi.pdf"), width=12, height = 15)
 
 
 data.scenario <- data.frame("x" = c(1:n),
                             "constant" = newx,
                             "trueAlp" = sort(alp.new),
-                            "mapAlp" = sort(new.alpha))
+                            "mapAlp" = sort(newalpha.map))
 
 ggplot(data = data.scenario, aes(x = constant)) + 
   ylab(expression(alpha(x))) + xlab("") +
@@ -1063,8 +1053,8 @@ ggplot(data = data.scenario, aes(x = constant)) +
           axis.text = element_text(size = 20),
           legend.margin=margin(-15,-15,-15,-15),
           legend.box.margin=margin(-25,0,20,0))
-
-# ggsave(paste0("../Laboratory/Simulation/BayesianFusedLasso/results/map_alpha_n1_test.pdf"), width=10)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_alpha_test_sc2-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_alpha_test_sc3-wi.pdf"), width=10, height = 7.78)
 
 # Randomized quantile residuals
 r <- matrix(NA, nrow = n, ncol = 20)
@@ -1072,7 +1062,7 @@ r <- matrix(NA, nrow = n, ncol = 20)
 T <- 20
 for(i in 1:n){
   for(t in 1:T){
-    r[i, t] <- qnorm(pPareto(y.origin[i], u, alpha = newalpha[i]))
+    r[i, t] <- qnorm(pPareto(y.origin[i], u, alpha = alpha.map[i]))
   }
 }
 lgrid <- n
@@ -1102,3 +1092,4 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
   theme(text = element_text(size = 30)) + 
   coord_fixed(xlim = c(-3, 3),  
               ylim = c(-3, 3))
+
