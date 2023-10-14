@@ -21,7 +21,8 @@ library(cmdstanr)
 # library(ggplotify)
 
 #Scenario 1
-set.seed(2)
+# set.seed(2)
+set.seed(533)
 
 n <- 5000
 psi <- 20
@@ -75,9 +76,9 @@ diag(sample_covariance_matrix) <- 1
 mat_Sim <- matrix(data = NA, nrow = p, ncol = p)
 U <- runif(n = p) * 0.5
 
-for(i in 1 : p)
+for(i in 1:p)
 {
-  if(i <= (p/2))
+  if(i %in% c(2,3))
   {
     U_Star <- pmin(U + 0.2 * runif(n = p), 0.99999)
     
