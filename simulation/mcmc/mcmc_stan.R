@@ -622,7 +622,8 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
   theme(text = element_text(size = 20)) + 
   coord_fixed(xlim = c(-3, 3),  
               ylim = c(-3, 3))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_qqplot.pdf"), width=10, height = 7.78)              
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_qqplot_sc2-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_qqplot_sc3-wi.pdf"), width=10, height = 7.78)           
 # saveRDS(data.scenario, file=paste0("Simulation/BayesianPsplines/results/",date,"-",time, "_sc1_data_samp1.rds"))
 
 # for (i in 1:n){
