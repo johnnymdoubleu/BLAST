@@ -247,7 +247,7 @@ model {
 generated quantities {
     // Used in Posterior predictive check
     vector[n] log_lik;
-    array[n] real y_rep = pareto_rng(u, alpha);
+    array[n] real y_rep = pareto_rng(rep_vector(u, n), alpha);
     for (i in 1:n) {
         log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
     }
@@ -286,8 +286,8 @@ fit1 <- stan(
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
     chains = 3,             # number of Markov chains
-    warmup = 1000,          # number of warmup iterations per chain
-    iter = 2000,            # total number of iterations per chain
+    warmup = 1500,          # number of warmup iterations per chain
+    iter = 3000,            # total number of iterations per chain
     cores = 4,              # number of cores (could use one per chain)
     refresh = 500             # no progress shown
 )
@@ -705,7 +705,7 @@ op <- mod$optimize(
                       xholderLinear = xholder.linear, 
                       xholderNonlinear = xholder.nonlinear,
                       tau = rep(1000, p),
-                      lambda1 = 0.0001, lambda2 = 0.001, sigma = 1),
+                      lambda1 = 1, lambda2 = 0.00001, sigma = 1),
   # init = 0,
   init = list(list(gamma = t(gamma.origin),
                     theta = theta.origin)),

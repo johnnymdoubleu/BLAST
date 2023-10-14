@@ -55,7 +55,7 @@ model {
 generated quantities {
     // Used in Posterior predictive check
     vector[n] log_lik;
-    array[n] real y_rep = pareto_rng(u, alpha);
+    array[n] real y_rep = pareto_rng(rep_vector(u, n), alpha);
     for (i in 1:n) {
         log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
     }
