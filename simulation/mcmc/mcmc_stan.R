@@ -1093,3 +1093,5 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
   coord_fixed(xlim = c(-3, 3),  
               ylim = c(-3, 3))
 
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_qqplot_sc2-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_qqplot_sc3-wi.pdf"), width=10, height = 7.78)
