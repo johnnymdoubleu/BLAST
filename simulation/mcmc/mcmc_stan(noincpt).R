@@ -20,7 +20,7 @@ library(MCMCvis)
 # library(ggplotify)
 
 #Scenario 1
-set.seed(2)
+set.seed(107)
 
 n <- 5000
 psi <- 20
@@ -72,76 +72,76 @@ for(j in 1:p){
 theta.origin <- c(0.8, 0, 0.8, 0, 0, 0, -0.3, 0.8, 0, 0)
 
 
-# n <- 5000
-# psi <- 20
-# threshold <- 0.90
-# p <- 5
-# no.theta <- 1
-# simul.no <- 50
+n <- 5000
+psi <- 20
+threshold <- 0.90
+p <- 5
+no.theta <- 1
+simul.no <- 50
 
-# xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
+xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
 
-# sample_meanvector <- runif(p,0,1)
-# sample_covariance_matrix <- matrix(NA, nrow = p, ncol = p)
-# diag(sample_covariance_matrix) <- 1
-# # set.seed(666)
+sample_meanvector <- runif(p,0,1)
+sample_covariance_matrix <- matrix(NA, nrow = p, ncol = p)
+diag(sample_covariance_matrix) <- 1
+# set.seed(666)
 
-# mat_Sim <- matrix(data = NA, nrow = p, ncol = p)
-# U <- runif(n = p) * 0.5
+mat_Sim <- matrix(data = NA, nrow = p, ncol = p)
+U <- runif(n = p) * 0.5
 
-# for(i in 1 : p)
-# {
-#   if(i <= (p/2))
-#   {
-#     U_Star <- pmin(U + 0.2 * runif(n = p), 0.99999)
+for(i in 1 : p)
+{
+  if(i <= (p/2))
+  {
+    U_Star <- pmin(U + 0.2 * runif(n = p), 0.99999)
     
-#   }else
-#   {
-#     U_Star <- pmin(pmax(U + sample(c(0, 1), size = p, replace = TRUE) * runif(n = p), 0.00001), 0.99999)
-#   }
+  }else
+  {
+    U_Star <- pmin(pmax(U + sample(c(0, 1), size = p, replace = TRUE) * runif(n = p), 0.00001), 0.99999)
+  }
   
-#   mat_Sim[, i] <- qnorm(U_Star)  
-# }
+  mat_Sim[, i] <- qnorm(U_Star)  
+}
 
-# cor_Mat <- cor(mat_Sim)
-# sample_covariance_matrix <- cor_Mat * (p/2)
+cor_Mat <- cor(mat_Sim)
+sample_covariance_matrix <- cor_Mat * (p/2)
 
-# ## create multivariate normal distribution
-# x.origin <- mvrnorm(n = n, mu = sample_meanvector, Sigma = sample_covariance_matrix)
+## create multivariate normal distribution
+x.origin <- mvrnorm(n = n, mu = sample_meanvector, Sigma = sample_covariance_matrix)
 
 
-# # x.origin <- cbind(replicate(p, runif(n, 0, 1)))
+# x.origin <- cbind(replicate(p, runif(n, 0, 1)))
 
-# corrplot.mixed(cor(x.origin),
-#                 upper = "circle",
-#                 lower = "number",
-#                 addgrid.col = "black")
-# for(i in 1:p){
-#     knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)
-#     tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
-#     # tps <- bSpline(x = x.origin[,i], Boundary.knots = c(min(x.origin[,i]),max(x.origin[,i])), df = psi, intercept = TRUE)
-#     # tps <- mSpline(x.origin[,i], df=psi, Boundary.knots = range(x.origin[,i]), degree = 3, intercept=TRUE)
-#     #   bs.x <- cbind(bs.x, tps)
-#     bs.linear <- cbind(bs.linear, tps[,1:no.theta])
-#     bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])  
-# }
+corrplot.mixed(cor(x.origin),
+                upper = "circle",
+                lower = "number",
+                addgrid.col = "black")
+for(i in 1:p){
+    knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)
+    tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
+    # tps <- bSpline(x = x.origin[,i], Boundary.knots = c(min(x.origin[,i]),max(x.origin[,i])), df = psi, intercept = TRUE)
+    # tps <- mSpline(x.origin[,i], df=psi, Boundary.knots = range(x.origin[,i]), degree = 3, intercept=TRUE)
+    #   bs.x <- cbind(bs.x, tps)
+    bs.linear <- cbind(bs.linear, tps[,1:no.theta])
+    bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])  
+}
 
-# gamma.origin <- matrix(, nrow = psi, ncol = p)
-# for(j in 1:p){
-#     for (ps in 1:psi){
-#         if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
-#         else if(j==7){
-#             if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.01}
-#             else{gamma.origin[ps, j] <- 0.01}
-#         }
-#         else {
-#             if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.01}
-#             else{gamma.origin[ps, j] <- 0.01}
-#         }
-#     }
-# }
+gamma.origin <- matrix(, nrow = psi, ncol = p)
+for(j in 1:p){
+    for (ps in 1:psi){
+        if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
+        else if(j==7){
+            if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.01}
+            else{gamma.origin[ps, j] <- 0.01}
+        }
+        else {
+            if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.01}
+            else{gamma.origin[ps, j] <- 0.01}
+        }
+    }
+}
 
-# theta.origin <- c(0.5, 0, 0.2, 0.2, 0, 0)
+theta.origin <- c(0, 0.2, 0.2, 0, 0)
 
 f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
@@ -166,9 +166,9 @@ xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow
 newx <- seq(0, 1, length.out=n)
 xholder <- bs.x <- matrix(, nrow = n, ncol = p)
 for(i in 1:p){
-    xholder[,i] <- seq(0, 1, length.out = n)  
-    test.knot <- seq(0, 1, length.out = psi)  
-    splines <- basis.tps(newx, test.knot, m=2, rk=FALSE, intercept = FALSE)
+    xholder[,i] <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = n)  
+    test.knot <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)  
+    splines <- basis.tps(xholder[,i], test.knot, m=2, rk=FALSE, intercept = FALSE)
     xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
     xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
     knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)  
@@ -251,8 +251,8 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     };
-    target += gamma_lpdf(lambda1 | 0.01, 0.5);
-    target += gamma_lpdf(lambda2 | 0.01, 0.1);
+    target += gamma_lpdf(lambda1 | 1, 5);
+    target += gamma_lpdf(lambda2 | 1, 5);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     for (j in 1:p){
         target += double_exponential_lpdf(theta[j] | 0, lambda1);
@@ -307,9 +307,9 @@ posterior <- extract(fit1)
 str(posterior)
 
 plot(fit1, plotfun = "trace", pars = c("theta"), nrow = 3)
-# ggsave(paste0("./BRSTIR/simulation/results/",Sys.Date(),"_mcmc_theta_trace.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_theta_trace_sc2.pdf"), width=10, height = 7.78)
 plot(fit1, plotfun = "trace", pars = c("lambda1", "lambda2"), nrow = 2)
-# ggsave(paste0("./BRSTIR/simulation/results/",Sys.Date(),"_mcmc_lambda.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_lambda_sc2.pdf"), width=10, height = 7.78)
 
 
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
@@ -362,7 +362,7 @@ ggplot(df.theta, aes(x = covariate, y=m, color = covariate)) + ylab("") + xlab('
           axis.text.x = element_text(hjust=0.35),
           axis.text = element_text(size = 28))
 
-# ggsave(paste0("./BRSTIR/simulation/results/",Sys.Date(),"_mcmc_theta.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_theta_sc2.pdf"), width=10, height = 7.78)
 
 # ggplot(data.frame(group = factor(1:(p+1)), m=theta.post.mean, l = theta.q1, u = theta.q3), 
 #        aes(group)) +
@@ -413,7 +413,7 @@ ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) +
           plot.margin = margin(0,0,0,-20),
           axis.text.x = element_text(hjust=0.5),
           axis.text = element_text(size = 28))
-# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_gamma.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_gamma_sc2.pdf"), width=10, height = 7.78)
 
 g.nonlinear.q1 <- g.linear.q1 <- g.q1 <- g.nonlinear.q3 <- g.linear.q3 <- g.q3 <- g.nonlinear.new <- g.linear.new <- g.new <- matrix(, nrow = n, ncol=p)
 alpha.smooth.q1 <- alpha.smooth.q3 <- alpha.smooth.new <- alpha.new <- NULL
@@ -456,7 +456,7 @@ data.smooth <- data.frame("x"=c(1:n),
                           "replicate" = gl(2, n, (p*n)))
 ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
+  # geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
   geom_line(aes(y=true, colour = covariates, linetype = "True"), linewidth=2) + 
   geom_line(aes(y=post.mean, colour = covariates, linetype = "Posterior Mean"), linewidth=2) + 
   ylab("") + xlab ("Smooth Functions") +
@@ -473,7 +473,7 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
 
-# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_smooth.pdf"), width=10.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_smooth_sc2.pdf"), width=10.5, height = 15)
 data.linear <- data.frame("x"=c(1:n),
                           "true" = as.vector(f.linear.new),
                           "post.mean" = as.vector(g.linear.new),
@@ -483,7 +483,7 @@ data.linear <- data.frame("x"=c(1:n),
                           "replicate" = gl(2, n, (p*n)))
 ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
+  # geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
   geom_line(aes(y=true, colour = covariates, linetype = "True"), linewidth=2) + 
   geom_line(aes(y=post.mean, colour = covariates, linetype = "Posterior Mean"), linewidth=2) + xlab("Linear Components") + ylab("") +
   facet_grid(covariates ~ ., scales = "free_y") + 
@@ -498,7 +498,7 @@ ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) +
         axis.ticks.x = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
-# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_linear.pdf"), width=10.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_linear_sc2.pdf"), width=10.5, height = 15)
 # post.mean <- as.vector(apply(as.data.frame(matrix(alpha.summary[((n+(n*p))+1):(n+(2*n*p)),1], nrow = n, ncol = p)), 2, sort, decreasing=F))
 # q1 <- as.vector(apply(as.data.frame(matrix(alpha.summary[((n+(n*p))+1):(n+(2*n*p)),4], nrow = n, ncol = p)), 2, sort, decreasing=F))
 # q3 <- as.vector(apply(as.data.frame(matrix(alpha.summary[((n+(n*p))+1):(n+(2*n*p)),5], nrow = n, ncol = p)), 2, sort, decreasing=F))
@@ -512,7 +512,7 @@ data.nonlinear <- data.frame("x"=c(1:n),
                           "replicate" = gl(2, n, (p*n)))
 ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
+  # geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
   geom_line(aes(y=true, colour = covariates, linetype = "True"), linewidth=2) + 
   geom_line(aes(y=post.mean, colour = covariates, linetype = "MCMC"), linewidth=2) + xlab("Nonlinear Components") + ylab("") +
   facet_grid(covariates ~ ., scales = "free_y") + 
@@ -529,7 +529,7 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
         axis.text.x = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
-# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_nonlinear.pdf"), width=12.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_nonlinear_sc2.pdf"), width=12.5, height = 15)
 data.scenario <- data.frame("x" = c(1:n),
                             "constant" = newx,
                             "true" = sort(alp.origin),
@@ -559,7 +559,7 @@ ggplot(data.scenario, aes(x=x)) +
         axis.ticks.x = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
-
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_alpha_train_sc2.pdf"), width=10, height = 7.78)
 
 data.scenario <- data.frame("x" = c(1:n),
                             "constant" = newx,
@@ -594,7 +594,7 @@ ggplot(data.scenario, aes(x=x)) +
         axis.ticks.x = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
-# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_alpha.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_alpha_test_sc2.pdf"), width=10, height = 7.78)
 
 # mcmc.gamma <- posterior$gamma
 # gamma.container <- as.data.frame(matrix(NA, nrow = 20, ,ncol = 0))
@@ -645,7 +645,7 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
   theme(text = element_text(size = 20)) + 
   coord_fixed(xlim = c(-3, 3),  
               ylim = c(-3, 3))
-# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_qqplot.pdf"), width=10, height = 7.78)              
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_qqplot_sc2.pdf"), width=10, height = 7.78)              
 # saveRDS(data.scenario, file=paste0("Simulation/BayesianPsplines/results/",date,"-",time, "_sc1_data_samp1.rds"))
 
 # for (i in 1:n){
@@ -700,8 +700,8 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     };
-    target += gamma_lpdf(lambda1 | 0.01, 0.5);
-    target += gamma_lpdf(lambda2 | 0.1, 0.1);
+    target += gamma_lpdf(lambda1 | 1, 5);
+    target += gamma_lpdf(lambda2 | 1, 5);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     for (j in 1:p){
         target += double_exponential_lpdf(theta[j] | 0, lambda1);
