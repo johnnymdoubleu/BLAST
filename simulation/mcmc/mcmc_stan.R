@@ -705,7 +705,7 @@ op <- mod$optimize(
                       xholderLinear = xholder.linear, 
                       xholderNonlinear = xholder.nonlinear,
                       tau = rep(1000, p),
-                      lambda1 = 0.0001, lambda2 = 0.001, sigma = 0.000001),
+                      lambda1 = 0.0001, lambda2 = 0.001, sigma = 1),
   # init = 0,
   init = list(list(gamma = t(gamma.origin),
                     theta = theta.origin)),
