@@ -18,6 +18,7 @@ library(rstan)
 library(ggmcmc)
 library(MCMCvis)
 library(cmdstanr)
+library(simstudy)
 # library(ggplotify)
 
 #Scenario 1
@@ -91,11 +92,19 @@ for(i in 1:p)
 
 cor_Mat <- cor(mat_Sim)
 sample_covariance_matrix <- cor_Mat * (p/2)
-
+# diag(sample_covariance_matrix) <- 1
 ## create multivariate normal distribution
 # x.origin <- mvrnorm(n = n, mu = rep(0,p), Sigma = sample_covariance_matrix)
-x.origin <- tmvnsim(n = n, k = p, lower = rep(0, p), means = rep(0, p), sigma = sample_covariance_matrix)$samp
 
+C <- matrix(c(1, 0.3, 0.5, 0.3, 0.3,
+              0.3, 1, 0.8, 0.4, 0.4, 
+              0.5, 0.8, 1, 0.5, 0.1,
+              0.3, 0.4, 0.5 , 1, 0.5,
+              0.3, 0.4, 0.5, 0.5, 1), nrow = p)
+x.origin <- tmvnsim(n = n, k = p, lower = rep(0, p), means = rep(0, p), sigma = C)$samp
+
+
+# x.origin <- as.data.frame(genCorData(n, mu = rep(0, p), sigma = c(1, 1, 1, 1, 1), corMatrix = C)[,2:(p+1)])
 
 corrplot.mixed(cor(x.origin),
                 upper = "circle",
@@ -141,7 +150,7 @@ for(i in 1:n){
 u <- quantile(y.origin, threshold)
 x.origin <- x.origin[which(y.origin>u),]
 # x.bs <- x.origin
-# x.origin <- scale(x.origin)
+x.origin <- scale(x.origin)
 y.origin <- y.origin[y.origin > u]
 n <- length(y.origin)
 
@@ -234,8 +243,8 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 0.1, 20);
-    target += gamma_lpdf(lambda2 | 0.01, 0.01);
+    target += gamma_lpdf(lambda1 | 0.5, 10);
+    target += gamma_lpdf(lambda2 | 0.1, 0.1);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     target += double_exponential_lpdf(theta[1] | 0, lambda1); //target += normal_lpdf(theta[1] | 0, 0.1); 
     for (j in 1:p){
