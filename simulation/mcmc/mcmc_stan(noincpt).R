@@ -132,12 +132,12 @@ for(j in 1:p){
     for (ps in 1:psi){
         if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
         else if(j==7){
-            if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.01}
-            else{gamma.origin[ps, j] <- 0.01}
+            if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.1}
+            else{gamma.origin[ps, j] <- 0.1}
         }
         else {
-            if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.01}
-            else{gamma.origin[ps, j] <- 0.01}
+            if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.1}
+            else{gamma.origin[ps, j] <- 0.1}
         }
     }
 }
@@ -253,7 +253,7 @@ model {
         target += pareto_lpdf(y[i] | u, alpha[i]);
     };
     target += gamma_lpdf(lambda1 | 1, 5);
-    target += gamma_lpdf(lambda2 | 1, 50);
+    target += gamma_lpdf(lambda2 | 1, 10);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     for (j in 1:p){
         target += double_exponential_lpdf(theta[j] | 0, lambda1);
@@ -297,8 +297,8 @@ fit1 <- stan(
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
     chains = 3,             # number of Markov chains
-    warmup = 1000,          # number of warmup iterations per chain
-    iter = 2000,            # total number of iterations per chain
+    warmup = 1500,          # number of warmup iterations per chain
+    iter = 3000,            # total number of iterations per chain
     cores = 4,              # number of cores (could use one per chain)
     refresh = 500             # no progress shown
 )
@@ -391,7 +391,7 @@ ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) +
   geom_point(aes(y=true), size =4, color ="red")+
   geom_point(size = 4) + ylab("") + xlab("" ) + #ylim(-15,15) +
   # geom_ribbon(aes(ymin = l, ymax = u)) +
-  geom_errorbar(aes(ymin = l, ymax = u), width = 4, linewidth = 1.2) + 
+  # geom_errorbar(aes(ymin = l, ymax = u), width = 4, linewidth = 1.2) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   scale_x_discrete(breaks=c(seq(0, (psi*p), psi)+10), 
                     label = c(expression(bold(gamma[1])), 
