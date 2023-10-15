@@ -22,7 +22,7 @@ library(cmdstanr)
 # library(ggplotify)
 
 #Scenario 1
-set.seed(2)
+# set.seed(2)
 # set.seed(233)
 
 n <- 5000
