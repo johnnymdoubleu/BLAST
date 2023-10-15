@@ -23,7 +23,7 @@ library(cmdstanr)
 
 #Scenario 1
 # set.seed(2)
-# set.seed(233)
+set.seed(458)
 
 n <- 5000
 psi <- 20
@@ -97,7 +97,7 @@ sample_covariance_matrix <- cor_Mat * (p/2)
 # x.origin <- mvrnorm(n = n, mu = rep(0,p), Sigma = sample_covariance_matrix)
 
 C <- matrix(c(1, 0.3, 0.5, 0.3, 0.3,
-              0.3, 1, 0.95, 0.4, 0.4, 
+              0.3, 1, 0.95, 0.4, 0.4,
               0.5, 0.95, 1, 0.5, 0.1,
               0.3, 0.4, 0.5 , 1, 0.5,
               0.3, 0.4, 0.5, 0.5, 1), nrow = p)
@@ -244,7 +244,7 @@ model {
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += gamma_lpdf(lambda1 | 1, 5);
-    target += gamma_lpdf(lambda2 | 1, 0.5);
+    target += gamma_lpdf(lambda2 | 1, 1);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     target += double_exponential_lpdf(theta[1] | 0, lambda1); //target += normal_lpdf(theta[1] | 0, 0.1); 
     for (j in 1:p){
@@ -515,7 +515,8 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
         axis.text.x = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_nonlinear.pdf"), width=12.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_nonlinear_sc2-wi.pdf"), width=12.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_nonlinear_sc3-wi.pdf"), width=12.5, height = 15)
 data.scenario <- data.frame("x" = c(1:n),
                             "constant" = newx,
                             "true" = sort(alp.origin),
@@ -714,7 +715,7 @@ op <- mod$optimize(
                       xholderLinear = xholder.linear, 
                       xholderNonlinear = xholder.nonlinear,
                       tau = rep(0.3, p),
-                      lambda1 = 0.2, lambda2 = 10, sigma = 0.007),
+                      lambda1 = 0.2, lambda2 = 9.5, sigma = 0.009),
   # init = 0,
   init = list(list(gamma = t(gamma.origin),
                     theta = theta.origin)),
