@@ -1097,7 +1097,7 @@ r <- matrix(NA, nrow = n, ncol = 20)
 T <- 20
 for(i in 1:n){
   for(t in 1:T){
-    r[i, t] <- qnorm(pPareto(y.origin[i], u, alpha = newalpha.map[i]))
+    r[i, t] <- qnorm(pPareto(y.origin[i], u, alpha = alpha.map[i]))
   }
 }
 lgrid <- n

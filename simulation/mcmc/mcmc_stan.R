@@ -23,7 +23,7 @@ library(cmdstanr)
 
 #Scenario 1
 # set.seed(2)
-set.seed(458)
+set.seed(50)
 
 n <- 5000
 psi <- 20
@@ -243,8 +243,8 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 1, 5);
-    target += gamma_lpdf(lambda2 | 1, 1);
+    target += gamma_lpdf(lambda1 | 1, 7);
+    target += gamma_lpdf(lambda2 | 0.1, 0.1);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     target += double_exponential_lpdf(theta[1] | 0, lambda1); //target += normal_lpdf(theta[1] | 0, 0.1); 
     for (j in 1:p){
@@ -715,10 +715,10 @@ op <- mod$optimize(
                       xholderLinear = xholder.linear, 
                       xholderNonlinear = xholder.nonlinear,
                       tau = rep(0.3, p),
-                      lambda1 = 0.2, lambda2 = 9.5, sigma = 0.009),
-  # init = 0,
-  init = list(list(gamma = t(gamma.origin),
-                    theta = theta.origin)),
+                      lambda1 = 0.01, lambda2 = 1, sigma = 0.015),
+  init = 0,
+  # init = list(list(gamma = t(gamma.origin),
+  #                   theta = theta.origin)),
   # init = list(list(gamma = array(rep(0.01, (psi*p)), dim=c(p, psi)),
   #                 theta = rep(0.1, (p+1)), 
   #                 tau = rep(0.1, p), sigma = 0.1, 
