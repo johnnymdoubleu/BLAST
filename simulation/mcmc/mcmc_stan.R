@@ -748,6 +748,7 @@ op <- mod$optimize(
 # gamma.map <- as.vector(matrix(op$par[(p+1+1):(p+1+(psi*p))]))
 # gamma.map <- as.vector(t(matrix(gamma.map, nrow=p)))
 # lambda.map <- op$par[(p+2+(psi*p)):(p+3+(psi*p))]
+
 theta.map <- as.vector(op$draws(variables = "theta"))
 gamma.map <- as.vector(t(matrix(op$draws(variables = "gamma"), nrow = p)))
 # lambda.map <- as.vector(op$draws(variables = c("lambda1", "lambda2")))
