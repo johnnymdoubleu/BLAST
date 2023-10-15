@@ -18,12 +18,12 @@ library(rstan)
 library(ggmcmc)
 library(MCMCvis)
 library(cmdstanr)
-library(simstudy)
+# library(simstudy)
 # library(ggplotify)
 
 #Scenario 1
-# set.seed(2)
-set.seed(233)
+set.seed(2)
+# set.seed(233)
 
 n <- 5000
 psi <- 20
@@ -243,8 +243,8 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 0.5, 10);
-    target += gamma_lpdf(lambda2 | 0.1, 0.1);
+    target += gamma_lpdf(lambda1 | 1, 5);
+    target += gamma_lpdf(lambda2 | 0.01, 0.01);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     target += double_exponential_lpdf(theta[1] | 0, lambda1); //target += normal_lpdf(theta[1] | 0, 0.1); 
     for (j in 1:p){
@@ -295,8 +295,8 @@ fit1 <- stan(
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
     chains = 3,             # number of Markov chains
-    warmup = 1500,          # number of warmup iterations per chain
-    iter = 3000,            # total number of iterations per chain
+    warmup = 1000,          # number of warmup iterations per chain
+    iter = 2000,            # total number of iterations per chain
     cores = 4,              # number of cores (could use one per chain)
     refresh = 500             # no progress shown
 )
