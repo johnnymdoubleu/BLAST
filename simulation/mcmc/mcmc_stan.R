@@ -530,7 +530,7 @@ ggplot(data.scenario, aes(x=x)) +
   geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
   geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
   geom_line(aes(y=post.mean, col = "Posterior Mean"), linewidth=2, linetype = 2) + 
-  ylim(0, (max(data.scenario$post.mean)+10)) +
+  # ylim(0, (max(data.scenario$post.mean)+10)) +
   geom_line(aes(y=post.median, col = "Posterior Median"), linetype=2, linewidth=2) +
   # geom_line(aes(y=chain2, col = "Chian 2"), linetype=3) +
   # facet_grid(covariates ~ .) + 
@@ -566,7 +566,7 @@ ggplot(data.scenario, aes(x=x)) +
   geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
   geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
   geom_line(aes(y=post.mean, col = "Posterior Mean"), linewidth=2, linetype = 2) + 
-  ylim(0, (max(data.scenario$q3)+10)) +
+  # ylim(0, (max(data.scenario$q3)+10)) +
   geom_line(aes(y=post.median, col = "Posterior Median"), linetype=2, linewidth=2) +
   # geom_line(aes(y=chain2, col = "Chian 2"), linetype=3) +
   # facet_grid(covariates ~ .) + 
