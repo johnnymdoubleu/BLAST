@@ -97,8 +97,8 @@ sample_covariance_matrix <- cor_Mat * (p/2)
 # x.origin <- mvrnorm(n = n, mu = rep(0,p), Sigma = sample_covariance_matrix)
 
 C <- matrix(c(1, 0.3, 0.5, 0.3, 0.3,
-              0.3, 1, 0.8, 0.4, 0.4, 
-              0.5, 0.8, 1, 0.5, 0.1,
+              0.3, 1, 0.95, 0.4, 0.4, 
+              0.5, 0.95, 1, 0.5, 0.1,
               0.3, 0.4, 0.5 , 1, 0.5,
               0.3, 0.4, 0.5, 0.5, 1), nrow = p)
 x.origin <- tmvnsim(n = n, k = p, lower = rep(0, p), means = rep(0, p), sigma = C)$samp
@@ -244,7 +244,7 @@ model {
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += gamma_lpdf(lambda1 | 1, 5);
-    target += gamma_lpdf(lambda2 | 1, 5);
+    target += gamma_lpdf(lambda2 | 1, 1.5);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     target += double_exponential_lpdf(theta[1] | 0, lambda1); //target += normal_lpdf(theta[1] | 0, 0.1); 
     for (j in 1:p){
