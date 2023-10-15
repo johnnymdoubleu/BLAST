@@ -714,8 +714,8 @@ op <- mod$optimize(
                       bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
                       xholderLinear = xholder.linear, 
                       xholderNonlinear = xholder.nonlinear,
-                      tau = rep(0.3, p),
-                      lambda1 = 0.01, lambda2 = 1, sigma = 0.015),
+                      tau = rep(3.3, p),
+                      lambda1 = 1, lambda2 = 0.00001, sigma = 0.015),
   init = 0,
   # init = list(list(gamma = t(gamma.origin),
   #                   theta = theta.origin)),
@@ -888,6 +888,8 @@ ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +
         axis.ticks.x = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_linear_train_sc2-wi.pdf"), width=10.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_linear_train_sc3-wi.pdf"), width=10.5, height = 15)
 
 ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
@@ -906,6 +908,9 @@ ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +
         strip.text = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_linear_train_sc2-wi.pdf"), width=10.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_linear_train_sc3-wi.pdf"), width=10.5, height = 15)
+
 
 ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
@@ -926,6 +931,10 @@ ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +
         strip.text = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
+
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_nonlinear_train_sc2-wi.pdf"), width=12.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_nonlinear_train_sc3-wi.pdf"), width=12.5, height = 15)
+
 old.alpha <- NULL
 for(i in 1:n){
   old.alpha[i] <- exp(theta.map[1] + sum(f.new))
@@ -1003,8 +1012,8 @@ ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +
         axis.ticks.x = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_smooth_sc2-wi.pdf"), width=10.5, height = 15)
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_smooth_sc3-wi.pdf"), width=10.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_smooth_test_sc2-wi.pdf"), width=10.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_smooth_test_sc3-wi.pdf"), width=10.5, height = 15)
 
 ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +  
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) +  
@@ -1022,8 +1031,8 @@ ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +
         strip.text = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_linear_sc2-wi.pdf"), width=10, height = 15)
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_linear_sc3-wi.pdf"), width=10, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_linear_test_sc2-wi.pdf"), width=10, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_linear_test_sc3-wi.pdf"), width=10, height = 15)
 
 ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
@@ -1042,8 +1051,8 @@ ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +
         strip.text = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_nonlinear_sc2-wi.pdf"), width=12, height = 15)
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_nonlinear_sc3-wi.pdf"), width=12, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_nonlinear_test_sc2-wi.pdf"), width=12, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_nonlinear_test_sc3-wi.pdf"), width=12, height = 15)
 
 
 data.scenario <- data.frame("x" = c(1:n),
