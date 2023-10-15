@@ -150,7 +150,7 @@ for(i in 1:n){
 u <- quantile(y.origin, threshold)
 x.origin <- x.origin[which(y.origin>u),]
 # x.bs <- x.origin
-x.origin <- scale(x.origin)
+# x.origin <- scale(x.origin)
 y.origin <- y.origin[y.origin > u]
 n <- length(y.origin)
 
