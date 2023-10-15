@@ -688,7 +688,7 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += double_exponential_lpdf(theta[1] | 0, lambda1); // target += normal_lpdf(theta[1] | 0, 0.001);
+    target += double_exponential_lpdf(theta[1] | 0, lambda1); // 
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1); // target += gamma_lpdf(tau[j] | atau, (square(lambda2)/2));
         target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau[j] * sigma);
@@ -713,8 +713,8 @@ op <- mod$optimize(
                       bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
                       xholderLinear = xholder.linear, 
                       xholderNonlinear = xholder.nonlinear,
-                      tau = rep(1280, p),
-                      lambda1 = 0.1, lambda2 = 0.1, sigma = 0.002),
+                      tau = rep(0.3, p),
+                      lambda1 = 0.2, lambda2 = 10, sigma = 0.007),
   # init = 0,
   init = list(list(gamma = t(gamma.origin),
                     theta = theta.origin)),
