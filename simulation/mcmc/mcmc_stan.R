@@ -243,7 +243,7 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 1, 15);
+    target += gamma_lpdf(lambda1 | 1, 30);
     target += gamma_lpdf(lambda2 | 1, 100);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     target += double_exponential_lpdf(theta[1] | 0, lambda1); //target += normal_lpdf(theta[1] | 0, 0.1); 
@@ -490,9 +490,6 @@ ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) +
         axis.title.x = element_text(size = 35))
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_linear_sc2-wi.pdf"), width=10.5, height = 15)
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_linear_sc3-wi.pdf"), width=10.5, height = 15)
-# post.mean <- as.vector(apply(as.data.frame(matrix(alpha.summary[((n+(n*p))+1):(n+(2*n*p)),1], nrow = n, ncol = p)), 2, sort, decreasing=F))
-# q1 <- as.vector(apply(as.data.frame(matrix(alpha.summary[((n+(n*p))+1):(n+(2*n*p)),4], nrow = n, ncol = p)), 2, sort, decreasing=F))
-# q3 <- as.vector(apply(as.data.frame(matrix(alpha.summary[((n+(n*p))+1):(n+(2*n*p)),5], nrow = n, ncol = p)), 2, sort, decreasing=F))
 
 data.nonlinear <- data.frame("x"=c(1:n),
                           "true" = as.vector(f.nonlinear.new),
@@ -532,9 +529,9 @@ data.scenario <- data.frame("x" = c(1:n),
 
 ggplot(data.scenario, aes(x=x)) + 
   ylab(expression(alpha(x))) + xlab(expression(x)) + labs(col = "") + 
-  geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
   geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
-  geom_line(aes(y=post.mean, col = "Posterior Mean"), linewidth=2, linetype = 2) + 
+  geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
+  geom_line(aes(y=post.mean, col = "Posterior Mean"), linewidth=2, linetype = 2) +
   # ylim(0, (max(data.scenario$post.mean)+10)) +
   geom_line(aes(y=post.median, col = "Posterior Median"), linetype=2, linewidth=2) +
   # geom_line(aes(y=chain2, col = "Chian 2"), linetype=3) +
@@ -568,8 +565,8 @@ data.scenario <- data.frame("x" = c(1:n),
 
 ggplot(data.scenario, aes(x=x)) + 
   ylab(expression(alpha(x))) + xlab(expression(x)) + labs(col = "") + 
-  geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
   geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
+  geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
   geom_line(aes(y=post.mean, col = "Posterior Mean"), linewidth=2, linetype = 2) + 
   # ylim(0, (max(data.scenario$q3)+10)) +
   geom_line(aes(y=post.median, col = "Posterior Median"), linetype=2, linewidth=2) +
