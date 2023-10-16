@@ -243,7 +243,7 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 1, 2.5);
+    target += gamma_lpdf(lambda1 | 1, 25);
     target += gamma_lpdf(lambda2 | 1, 50);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     target += double_exponential_lpdf(theta[1] | 0, lambda1); //target += normal_lpdf(theta[1] | 0, 0.1); 
@@ -375,11 +375,11 @@ df.gamma <- data.frame("seq" = seq(1, (psi*p)),
 df.gamma$covariate <- factor(rep(seq(1, 1 + nrow(df.gamma) %/% psi), each = psi, length.out = nrow(df.gamma)))
 df.gamma$labels <- factor(1:(psi*p))
 ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) + 
+  geom_errorbar(aes(ymin = l, ymax = u),alpha = 0.4, width = 4, linewidth = 1.2) +
   geom_point(aes(y=true), size =4, color ="red")+
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_point(size = 4) + ylab("") + xlab("" ) + #ylim(-15,15) +
   # geom_ribbon(aes(ymin = l, ymax = u)) +
-  geom_errorbar(aes(ymin = l, ymax = u), width = 4, linewidth = 1.2) + 
   scale_x_discrete(breaks=c(seq(0, (psi*p), psi)+7), 
                     label = c(expression(bold(gamma[1])), 
                               expression(bold(gamma[2])), 
