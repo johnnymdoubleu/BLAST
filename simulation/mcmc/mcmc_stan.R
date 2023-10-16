@@ -243,8 +243,8 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 1, 30);
-    target += gamma_lpdf(lambda2 | 1, 100);
+    target += gamma_lpdf(lambda1 | 1, 2.5);
+    target += gamma_lpdf(lambda2 | 1, 50);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     target += double_exponential_lpdf(theta[1] | 0, lambda1); //target += normal_lpdf(theta[1] | 0, 0.1); 
     for (j in 1:p){
@@ -710,14 +710,15 @@ generated quantities {
 
 file <- file.path(cmdstan_path(), "examples/model_simulation_sc3.stan")
 mod <- cmdstan_model(file)
+
 op <- mod$optimize(
   data = list(y = as.vector(y.origin), u = u, p = p, 
                       n= n, psi = psi, atau = ((psi+1)/2), newp = (p+1),
                       bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
                       xholderLinear = xholder.linear, 
                       xholderNonlinear = xholder.nonlinear,
-                      tau = rep(3.3, p),
-                      lambda1 = 1, lambda2 = 0.00001, sigma = 0.015),
+                      tau = rep(4100, p),
+                      lambda1 = 0.14, lambda2 = 0.077, sigma = 0.0035),
   init = 0,
   # init = list(list(gamma = t(gamma.origin),
   #                   theta = theta.origin)),
