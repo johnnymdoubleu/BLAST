@@ -217,7 +217,7 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 1, 5.5);
+    target += gamma_lpdf(lambda1 | 1, 7.5);
     target += gamma_lpdf(lambda2 | 0.1, 0.1);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     target += double_exponential_lpdf(theta[1] | 0, lambda1); // target += normal_lpdf(theta[1] | 0, 0.1);
@@ -269,8 +269,8 @@ fit1 <- stan(
     init = init.alpha,      # initial value
     # init_r = 1,
     chains = 3,             # number of Markov chains
-    warmup = 1000,          # number of warmup iterations per chain
-    iter = 2000,            # total number of iterations per chain
+    warmup = 1500,          # number of warmup iterations per chain
+    iter = 3000,            # total number of iterations per chain
     cores = 4,              # number of cores (could use one per chain)
     refresh = 500           # no progress shown
 )
