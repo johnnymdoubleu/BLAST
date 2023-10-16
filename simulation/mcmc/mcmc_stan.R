@@ -148,7 +148,7 @@ for(i in 1:n){
 u <- quantile(y.origin, threshold)
 x.origin <- x.origin[which(y.origin>u),]
 # x.bs <- x.origin
-# x.origin <- scale(x.origin)
+x.origin <- scale(x.origin)
 y.origin <- y.origin[y.origin > u]
 n <- length(y.origin)
 
@@ -241,7 +241,7 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 1, 7.5);
+    target += gamma_lpdf(lambda1 | 0.1, 1);
     target += gamma_lpdf(lambda2 | 0.1, 1);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     target += double_exponential_lpdf(theta[1] | 0, lambda1); //target += normal_lpdf(theta[1] | 0, 0.1); 
@@ -715,8 +715,8 @@ op <- mod$optimize(
                       bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
                       xholderLinear = xholder.linear, 
                       xholderNonlinear = xholder.nonlinear,
-                      tau = rep(4100, p),
-                      lambda1 = 0.14, lambda2 = 0.077, sigma = 0.0035),
+                      tau = rep(100, p),
+                      lambda1 = 1, lambda2 = 0.01, sigma = 0.077),
   init = 0,
   # init = list(list(gamma = t(gamma.origin),
   #                   theta = theta.origin)),
