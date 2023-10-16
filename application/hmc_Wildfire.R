@@ -400,14 +400,19 @@ df.gamma$covariate <- factor(rep(names(fwi.scaled), each = psi, length.out = nro
 df.gamma$labels <- factor(1:(psi*p))
 ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) + 
   geom_errorbar(aes(ymin = l, ymax = u), alpha = 0.4, width = 4, linewidth = 1.2) +
-  geom_point(size = 4) + ylab("") + xlab("" ) + #ylim(-15,15) +
+  geom_point(size = 4) + ylab("") + xlab("" ) + #xlim(1,(psi*p)) +
   # geom_ribbon(aes(ymin = l, ymax = u)) +
   # geom_point(size = 4, color = "black") + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   scale_x_discrete(breaks=c(seq(0, (psi*p), psi)+10), 
                     label = c(expression(bold(gamma[1])), 
-                              expression(bold(gamma[2])), expression(bold(gamma[3])), expression(bold(gamma[4])), expression(bold(gamma[5])), expression(bold(gamma[6])), expression(bold(gamma[7]))),
-                    expand=c(0,3)) +
+                              expression(bold(gamma[2])), 
+                              expression(bold(gamma[3])), 
+                              expression(bold(gamma[4])), 
+                              expression(bold(gamma[5])), 
+                              expression(bold(gamma[6])), 
+                              expression(bold(gamma[7]))),
+                    expand=c(0,10)) +
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 20),
           legend.title = element_blank(),
@@ -590,7 +595,7 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
   theme(text = element_text(size = 20)) + 
   coord_fixed(xlim = c(-3, 3),  
               ylim = c(-3, 3))
-# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_alpha.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_qqplot.pdf"), width=10, height = 7.78)
 
 # mcmc.gamma <- posterior$gamma
 # gamma.container <- as.data.frame(matrix(NA, nrow = 20, ,ncol = 0))

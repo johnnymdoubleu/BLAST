@@ -42,8 +42,8 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 1, 5);
-    target += gamma_lpdf(lambda2 | 1, 50);
+    target += gamma_lpdf(lambda1 | 1, 7.5);
+    target += gamma_lpdf(lambda2 | 0.1, 1);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     target += double_exponential_lpdf(theta[1] | 0, lambda1); //target += normal_lpdf(theta[1] | 0, 0.1); 
     for (j in 1:p){
