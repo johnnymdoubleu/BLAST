@@ -95,11 +95,14 @@ fwi.index$month <- factor(format(fwi.index$date,"%b"),
 
 fwi.scaled <- fwi.scaled[which(Y>u),]
 fwi.scaled <- as.data.frame(scale(fwi.scaled))
+
+# pdf(file = "./BRSTIR/application/figures/correlation.pdf")
 # corrplot.mixed(cor(fwi.scaled),
 #                 upper = "circle",
 #                 lower = "number",
 #                 addgrid.col = "black")
-# ggsave("./Laboratory/Application/figures/correlation.pdf", width=15)
+# dev.off()
+# ggsave("./BRSTIR/application/figures/correlation.pdf", plot = replayPlot(p1), width=10, height = 7.78)
 # cov$date <- as.Date(with(cov, paste(year,month,day,sep="-")),"%Y-%m-%d")
 # cov$yearmon <- as.Date(with(cov, paste(year,month,sep="-")),"%Y-%m")
 # special <- gather(fwi.scaled, cols, value) |> spread(cols, value) |> select(colnames(fwi.scaled))
@@ -217,7 +220,7 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 1, 2.5);
+    target += gamma_lpdf(lambda1 | 1, 5);
     target += gamma_lpdf(lambda2 | 0.1, 0.1);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     target += double_exponential_lpdf(theta[1] | 0, lambda1); // target += normal_lpdf(theta[1] | 0, 0.1);
