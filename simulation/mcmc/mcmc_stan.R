@@ -241,10 +241,11 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 0.1, 1);
-    target += gamma_lpdf(lambda2 | 0.1, 1);
-    target += inv_gamma_lpdf(sigma | 0.01, 0.01);
-    target += double_exponential_lpdf(theta[1] | 0, lambda1); //target += normal_lpdf(theta[1] | 0, 0.1); 
+    target += gamma_lpdf(lambda1 | 1, 10);
+    target += gamma_lpdf(lambda2 | 1, 10);
+    target += normal_lpdf(theta[1] | 0, square(100));
+    target += inv_gamma_lpdf(sigma | 0.01, 0.01); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
+    target += (p * log(lambda1) + (p*psi) * log(lambda2));
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, (square(lambda2)/2));
@@ -284,8 +285,8 @@ init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
                         tau = rep(0.01, p), sigma = 0.001,
                         lambda1 = 0.001, lambda2 = 0.001),
                   list(gamma = array(rep(0.01, (psi*p)), dim=c(psi, p)),
-                        theta = rep(-0.02, (p+1)), 
-                        tau = rep(0.01, p), sigma = 0.001,
+                        theta = rep(0.05, (p+1)), 
+                        tau = rep(0.01, p), sigma = 0.01,
                         lambda1 = 0.001, lambda2 = 0.001))
 
 fit1 <- stan(
@@ -658,15 +659,15 @@ data {
     matrix[n, (psi*p)] xholderNonlinear; // thin plate splines basis    
     vector[n] y; // extreme response
     real <lower=0> atau;
-    real <lower=0> lambda1; // lasso penalty
-    real <lower=0> lambda2; // group lasso penalty
-    real <lower=0> sigma; //
-    vector[p] tau;
 }
 
 parameters {
     vector[newp] theta; // linear predictor
-    array[p] vector[psi] gamma; // splines coefficient array[p] real <lower=0> tau;
+    array[p] vector[psi] gamma; // splines coefficient array[p] real <lower=0> tau
+    real <lower=0> lambda1; // lasso penalty
+    real <lower=0> lambda2; // group lasso penalty
+    real <lower=0> sigma; //
+    array[p] real <lower=0> tau;
 }
 
 transformed parameters {
@@ -689,9 +690,14 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += double_exponential_lpdf(theta[1] | 0, lambda1); // 
+    target += gamma_lpdf(lambda1 | 0.1, 0.01);
+    target += gamma_lpdf(lambda2 | 0.1, 0.01);
+    target += normal_lpdf(theta[1] | 0, square(100));
+    target += inv_gamma_lpdf(sigma | 0.01, 0.01); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
+    target += (p * log(lambda1) + (p*psi) * log(lambda2));
     for (j in 1:p){
-        target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1); // target += gamma_lpdf(tau[j] | atau, (square(lambda2)/2));
+        target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
+        target += gamma_lpdf(tau[j] | atau, (square(lambda2)/2));
         target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau[j] * sigma);
     }
 }
@@ -714,9 +720,7 @@ op <- mod$optimize(
                       n= n, psi = psi, atau = ((psi+1)/2), newp = (p+1),
                       bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
                       xholderLinear = xholder.linear, 
-                      xholderNonlinear = xholder.nonlinear,
-                      tau = rep(100, p),
-                      lambda1 = 1, lambda2 = 0.01, sigma = 0.077),
+                      xholderNonlinear = xholder.nonlinear),
   init = 0,
   # init = list(list(gamma = t(gamma.origin),
   #                   theta = theta.origin)),
@@ -725,7 +729,7 @@ op <- mod$optimize(
   #                 tau = rep(0.1, p), sigma = 0.1, 
   #                 lambda1 = 0.01, lambda2 = 0.01)),
   iter = 3500,
-  algorithm = "lbfgs",
+  algorithm = "newton",
   refresh = 50
 )
 
@@ -752,7 +756,7 @@ op <- mod$optimize(
 
 theta.map <- as.vector(op$draws(variables = "theta"))
 gamma.map <- as.vector(t(matrix(op$draws(variables = "gamma"), nrow = p)))
-# lambda.map <- as.vector(op$draws(variables = c("lambda1", "lambda2")))
+lambda.map <- as.vector(op$draws(variables = c("lambda1", "lambda2")))
 alpha.map <- as.vector(op$draws(variables = "alpha"))
 newalpha.map <- as.vector(op$draws(variables = "newalpha"))
 # alpha.map <- op$par[(p+p+5+(psi*p)):(p+p+4+n+(psi*p))]
