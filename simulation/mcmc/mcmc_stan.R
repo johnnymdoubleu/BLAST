@@ -60,7 +60,7 @@ for(j in 1:p){
 
 theta.origin <- c(-0.1, 0.8, 0, 0.8, 0, 0, 0, -0.3, 0.8, 0, 0)
 
-n <- 5000
+n <- 50000
 psi <- 20
 threshold <- 0.90
 p <- 5
@@ -79,7 +79,7 @@ U <- runif(n = p) * 0.5
 for(i in 1:p)
 {
   if(i %in% c(2,3))
-  {
+  {z
     U_Star <- pmin(U + 0.2 * runif(n = p), 0.99999)
     
   }else
