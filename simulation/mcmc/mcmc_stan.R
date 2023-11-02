@@ -22,8 +22,8 @@ library(cmdstanr)
 # library(ggplotify)
 
 #Scenario 1
-set.seed(2)
-# set.seed(50)
+# set.seed(2)
+set.seed(50)
 
 n <- 5000
 psi <- 20
@@ -79,7 +79,7 @@ U <- runif(n = p) * 0.5
 for(i in 1:p)
 {
   if(i %in% c(2,3))
-  {z
+  {
     U_Star <- pmin(U + 0.2 * runif(n = p), 0.99999)
     
   }else
