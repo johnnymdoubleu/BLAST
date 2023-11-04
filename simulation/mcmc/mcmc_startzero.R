@@ -60,7 +60,7 @@ set.seed(2)
 
 # theta.origin <- c(-0.1, 0.8, 0, 0.8, 0, 0, 0, -0.3, 0.8, 0, 0)
 
-n <- 50000
+n <- 5000
 psi <- 20
 threshold <- 0.90
 p <- 5
@@ -120,12 +120,12 @@ for(j in 1:p){
     for (ps in 1:psi){
         if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
         else if(j==7){
-            if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.03}
-            else{gamma.origin[ps, j] <- 0.03}
+            if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.01}
+            else{gamma.origin[ps, j] <- 0.01}
         }
         else {
-            if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.03}
-            else{gamma.origin[ps, j] <- 0.03}
+            if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.01}
+            else{gamma.origin[ps, j] <- 0.01}
         }
     }
 }
@@ -201,7 +201,7 @@ write("// Stan model for simple linear regression
 data {
     int <lower=1> n; // Sample size
     int <lower=1> p; // regression coefficient size
-    int <lower=1> newp; 
+    int <lower=1> newp; //parameter and the intercept
     int <lower=1> psi; // splines coefficient size
     real <lower=0> u; // large threshold value
     matrix[n,p] bsLinear; // fwi dataset
