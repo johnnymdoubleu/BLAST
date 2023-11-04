@@ -31,7 +31,7 @@ transformed parameters {
     array[p] vector[psi] gammasc; // splines coefficient with soft constrained
 
     for (i in 1:p){
-        gammasc[j] = append_row(0, gamma[j])
+        gammasc[i] = append_row(0, gamma[i]);
     }
     for (j in 1:p){
         gsmooth[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gammasc[j];
