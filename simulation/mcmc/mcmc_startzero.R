@@ -203,6 +203,7 @@ data {
     int <lower=1> p; // regression coefficient size
     int <lower=1> newp; //parameter and the intercept
     int <lower=1> psi; // splines coefficient size
+    int <lower=1> sc; // soft constrained parameter size
     real <lower=0> u; // large threshold value
     matrix[n,p] bsLinear; // fwi dataset
     matrix[n, (psi*p)] bsNonlinear; // thin plate splines basis
@@ -214,7 +215,7 @@ data {
 
 parameters {
     vector[newp] theta; // linear predictor
-    array[p] vector[psi] gamma; // splines coefficient
+    array[p] vector[sc] gamma; // splines coefficient
     real <lower=0> lambda1; // lasso penalty
     real <lower=0> lambda2; // group lasso penalty
     real <lower=0> sigma; //
@@ -226,9 +227,14 @@ transformed parameters {
     matrix[n, p] gsmooth; // nonlinear component
     array[n] real <lower=0> newalpha; // tail index
     matrix[n, p] newgsmooth; // nonlinear component
+    array[p] vector[psi] gammasc; // splines coefficient with soft constrained
+
+    for (i in 1:p){
+        gammasc[j] = append_row(0, gamma[j])
+    }
     for (j in 1:p){
-        gsmooth[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
-        newgsmooth[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
+        gsmooth[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gammasc[j];
+        newgsmooth[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gammasc[j];
     };
     for (i in 1:n){
         alpha[i] = exp(theta[1] + dot_product(bsLinear[i], theta[2:newp]) + (gsmooth[i,] * rep_vector(1, p)));
@@ -249,7 +255,7 @@ model {
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, (square(lambda2)/2));
-        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau[j] * sigma);
+        target += multi_normal_lpdf(gamma[j] | rep_vector(0, sc), diag_matrix(rep_vector(1, sc)) * tau[j] * sigma);
     }
 }
 generated quantities {
@@ -264,7 +270,7 @@ generated quantities {
 , "model_simulation_sc3.stan")
 
 data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, 
-                    atau = ((psi+1)/2), newp = (p+1),
+                    atau = ((psi+1)/2), newp = (p+1), sc = (psi-1),
                     bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
                     xholderLinear = xholder.linear, 
                     xholderNonlinear = xholder.nonlinear)
@@ -276,15 +282,15 @@ data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi,
 # here using the example model that comes with CmdStan
 # file <- file.path(cmdstan_path(), "model_simulation.stan")
 
-init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
+init.alpha <- list(list(gamma = array(rep(0, ((psi-1)*p)), dim=c((psi-1), p)),
                         theta = rep(0, (p+1)), 
                         tau = rep(0.01, p), sigma = 0.001, 
                         lambda1 = 0.001, lambda2 = 0.001),
-                  list(gamma = array(rep(0.02, (psi*p)), dim=c(psi, p)),
+                  list(gamma = array(rep(0.02, ((psi-1)*p)), dim=c((psi-1), p)),
                         theta = rep(0.01, (p+1)), 
                         tau = rep(0.01, p), sigma = 0.001,
                         lambda1 = 0.001, lambda2 = 0.001),
-                  list(gamma = array(rep(0.01, (psi*p)), dim=c(psi, p)),
+                  list(gamma = array(rep(0.01, ((psi-1)*p)), dim=c((psi-1), p)),
                         theta = rep(0.05, (p+1)), 
                         tau = rep(0.01, p), sigma = 0.01,
                         lambda1 = 0.001, lambda2 = 0.001))
@@ -313,7 +319,7 @@ plot(fit1, plotfun = "trace", pars = c("lambda1", "lambda2"), nrow = 2)
 
 
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
-gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
+gamma.samples <- summary(fit1, par=c("gammasc"), probs = c(0.05,0.5, 0.95))$summary
 lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
 alpha.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
 newalpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
