@@ -251,7 +251,7 @@ model {
     target += gamma_lpdf(lambda2 | 1, 1);
     target += normal_lpdf(theta[1] | 0, square(100));
     target += inv_gamma_lpdf(sigma | 0.01, 0.01); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
-    target += ((p+1) * log(lambda1) + (p*sc) * log(lambda2));
+    target += ((newp) * log(lambda1) + (p*sc) * log(lambda2));
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, (square(lambda2)/2));
@@ -292,7 +292,7 @@ init.alpha <- list(list(gamma = array(rep(0, ((psi-2)*p)), dim=c((psi-2), p)),
                         lambda1 = 0.001, lambda2 = 0.001),
                   list(gamma = array(rep(0.01, ((psi-2)*p)), dim=c((psi-2), p)),
                         theta = rep(0.05, (p+1)), 
-                        tau = rep(0.01, p), sigma = 0.01,
+                        tau = rep(0.01, p), sigma = 0.001,
                         lambda1 = 0.001, lambda2 = 0.001))
 
 fit1 <- stan(
