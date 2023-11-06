@@ -120,12 +120,12 @@ for(j in 1:p){
     for (ps in 1:psi){
         if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
         else if(j==7){
-            if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.02}
-            else{gamma.origin[ps, j] <- 0.02}
+            if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.015}
+            else{gamma.origin[ps, j] <- 0.015}
         }
         else {
-            if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.02}
-            else{gamma.origin[ps, j] <- 0.02}
+            if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.015}
+            else{gamma.origin[ps, j] <- 0.015}
         }
     }
 }
