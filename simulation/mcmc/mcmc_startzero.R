@@ -230,11 +230,11 @@ transformed parameters {
     array[p] vector[psi] gammasc; // splines coefficient with soft constrained
 
     for (i in 1:p){
-        gammasc[i] =  append_row(append_row(0, gamma[i]),0);
+        gammasc[i] =  append_row(gamma[i], -sum(gamma[i]));
     }
     for (j in 1:p){
-        gsmooth[,j] = bsNonlinear[,(((j-1)*sc)+2):(((j-1)*sc)+psi-1)] * gamma[j];
-        newgsmooth[,j] = xholderNonlinear[,(((j-1)*sc)+2):(((j-1)*sc)+psi-1)] * gamma[j];
+        gsmooth[,j] = bsNonlinear[,(((j-1)*sc)+2):(((j-1)*sc)+psi)] * gammasc[j];
+        newgsmooth[,j] = xholderNonlinear[,(((j-1)*sc)+2):(((j-1)*sc)+psi)] * gammasc[j];
     };
     for (i in 1:n){
         alpha[i] = exp(theta[1] + dot_product(bsLinear[i], theta[2:newp]) + (gsmooth[i,] * rep_vector(1, p)));
@@ -270,7 +270,7 @@ generated quantities {
 , "model_simulation_sc3.stan")
 
 data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, 
-                    atau = ((psi+1)/2), newp = (p+1), sc = (psi-2),
+                    atau = ((psi+1)/2), newp = (p+1), sc = (psi-1),
                     bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
                     xholderLinear = xholder.linear, 
                     xholderNonlinear = xholder.nonlinear)
