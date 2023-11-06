@@ -233,8 +233,8 @@ transformed parameters {
         gammasc[i] =  append_row(append_row(0, gamma[i]),0);
     }
     for (j in 1:p){
-        gsmooth[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gammasc[j];
-        newgsmooth[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gammasc[j];
+        gsmooth[,j] = bsNonlinear[,(((j-1)*sc)+2):(((j-1)*sc)+psi-1)] * gamma[j];
+        newgsmooth[,j] = xholderNonlinear[,(((j-1)*sc)+2):(((j-1)*sc)+psi-1)] * gamma[j];
     };
     for (i in 1:n){
         alpha[i] = exp(theta[1] + dot_product(bsLinear[i], theta[2:newp]) + (gsmooth[i,] * rep_vector(1, p)));
@@ -247,8 +247,8 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 1, 25);
-    target += gamma_lpdf(lambda2 | 1, 1);
+    target += gamma_lpdf(lambda1 | 1, 10);
+    target += gamma_lpdf(lambda2 | 0.1, 1);
     target += normal_lpdf(theta[1] | 0, square(100));
     target += inv_gamma_lpdf(sigma | 0.01, 0.01); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
     target += ((newp) * log(lambda1) + (p*sc) * log(lambda2));
