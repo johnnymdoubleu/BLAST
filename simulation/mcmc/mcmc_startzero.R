@@ -248,8 +248,8 @@ model {
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += gamma_lpdf(lambda1 | 1, 10);
-    target += gamma_lpdf(lambda2 | 0.1, 0.01);
-    target += normal_lpdf(theta[1] | 0, square(10));
+    target += gamma_lpdf(lambda2 | 0.1, 1);
+    target += normal_lpdf(theta[1] | 0, square(50));
     target += inv_gamma_lpdf(sigma | 0.01, 0.01); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
     target += ((newp) * log(lambda1) + (p*sc) * log(lambda2));
     for (j in 1:p){
@@ -319,7 +319,7 @@ plot(fit1, plotfun = "trace", pars = c("lambda1", "lambda2"), nrow = 2)
 
 
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
-gamma.samples <- summary(fit1, par=c("gammasc"), probs = c(0.05,0.5, 0.95))$summary
+gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
 lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
 alpha.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
 newalpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
