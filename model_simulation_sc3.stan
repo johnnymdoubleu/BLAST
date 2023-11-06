@@ -52,8 +52,8 @@ model {
     target += ((newp) * log(lambda1) + (p*psi) * log(lambda2));
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
-        target += gamma_lpdf(tau[j] | atau, (square(lambda2)/2));
-        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau[j] * sigma); 
+        target += gamma_lpdf(tau[j] | atau, (lambda2/sqrt(2)));
+        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * sqrt(tau[j]) * sqrt(sigma)); 
         if (j < 2 && j > 3) {target += normal_lpdf(sum(gamma[j]) | 0, 0.001*psi);}
     }
 }
