@@ -22,8 +22,8 @@ library(cmdstanr)
 # library(ggplotify)
 
 #Scenario 1
-set.seed(2)
-# set.seed(50)
+# set.seed(2)
+set.seed(50)
 
 # n <- 5000
 # psi <- 20
@@ -232,7 +232,7 @@ transformed parameters {
     };
     for (i in 1:n){
         alpha[i] = exp(theta[1] + dot_product(bsLinear[i], theta[2:newp]) + (gsmooth[i,] * rep_vector(1, p)));
-        newalpha[i] = exp(theta[1] + dot_product(xholderLinear[i], theta[2:newp]) + (newgsmooth[i,] * rep_vector(1, p)));        
+        newalpha[i] = exp(theta[1] + dot_product(xholderLinear[i], theta[2:newp]) + (newgsmooth[i,] * rep_vector(1, p)));
     };
 }
 
@@ -249,7 +249,7 @@ model {
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, (square(lambda2)/2));
-        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau[j] * sigma);
+        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau[j] * sigma); // if (j < 2 && j > 3) {target += normal_lpdf(sum(gamma[j]) | 0, 0.01*psi)}
     }
 }
 generated quantities {
@@ -295,7 +295,7 @@ fit1 <- stan(
     init = init.alpha,      # initial value
     chains = 3,             # number of Markov chains
     warmup = 1000,          # number of warmup iterations per chain
-    iter = 3000,            # total number of iterations per chain
+    iter = 2000,            # total number of iterations per chain
     cores = 4,              # number of cores (could use one per chain)
     refresh = 500             # no progress shown
 )
