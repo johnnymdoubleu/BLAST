@@ -31,7 +31,7 @@ transformed parameters {
     array[p] vector[psi] gammasc; // splines coefficient with soft constrained
 
     for (i in 1:p){
-        gammasc[i] = append_row(append_row(0, gamma[i]),0);
+        gammasc[i] = append_row(gamma[i],0);
     }
     for (j in 1:p){
         gsmooth[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gammasc[j];
@@ -49,7 +49,7 @@ model {
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += gamma_lpdf(lambda1 | 1, 10);
-    target += gamma_lpdf(lambda2 | 0.1, 0.1);
+    target += gamma_lpdf(lambda2 | 0.1, 10);
     target += normal_lpdf(theta[1] | 0, square(100));
     target += inv_gamma_lpdf(sigma | 0.01, 0.01); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
     target += (p * log(lambda1) + (p*psi) * log(lambda2));
