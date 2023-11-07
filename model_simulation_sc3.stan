@@ -29,18 +29,14 @@ transformed parameters {
     array[n] real <lower=0> newalpha; // tail index
     matrix[n, p] newgsmooth; // nonlinear component
     array[2] vector[p] gammasc; // simplex scaled
-    array[p] vector[psi] fullgamma;
     for (i in 1:p){
-        gammasc[1, i] = gamma[i, 1];
-        gammasc[2, i] = gamma[i, psi];
+        gammasc[1, i] = bsNonlinear[,(((j-1)*psi)+1)] * gamma[j, 1];
+        gammasc[2, i] = bsNonlinear[,(((j-1)*psi)+psi)] * gamma[j, psi];
     };
 
     for (j in 1:p){
-        fullgamma[j] = gamma[j];
-        fullgamma[j, 1] = gammasc[1, j];
-        fullgamma[j, psi] = gammasc[2, j];
-        gsmooth[,j] = bsNonlinear[,(((j-1)*psi)+2):(((j-1)*psi)+psi-1)] * gamma[j, 2:(psi-1)] + (bsNonlinear[,(((j-1)*psi)+1)] * gammasc[1, j]) + (bsNonlinear[,(((j-1)*psi)+psi)] * gammasc[2, j]);
-        newgsmooth[,j] = xholderNonlinear[,(((j-1)*psi)+2):(((j-1)*psi)+psi-1)] * gamma[j, 2:(psi-1)] + (xholderNonlinear[,(((j-1)*psi)+1)] * gammasc[1, j]) + (xholderNonlinear[,(((j-1)*psi)+psi)] * gammasc[2, j]);
+        gsmooth[,j] = bsNonlinear[,(((j-1)*psi)+2):(((j-1)*psi)+psi-1)] * gamma[j, 2:(psi-1)] + gammasc[1, j] + gammasc[2, j];
+        newgsmooth[,j] = xholderNonlinear[,(((j-1)*psi)+2):(((j-1)*psi)+psi-1)] * gamma[j, 2:(psi-1)] + gammasc[1, j] + gammasc[2, j];
     };
     for (i in 1:n){
         alpha[i] = exp(theta[1] + dot_product(bsLinear[i], theta[2:newp]) + (gsmooth[i,] * rep_vector(1, p)));
@@ -54,7 +50,7 @@ model {
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += gamma_lpdf(lambda1 | 0.1, 1);
-    target += gamma_lpdf(lambda2 | 0.01, 0.1);
+    target += gamma_lpdf(lambda2 | 0.1, 1);
     target += normal_lpdf(theta[1] | 0, 10);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
     target += (p * log(lambda1) + (p * psi * log(lambda2)));
