@@ -257,7 +257,7 @@ model {
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, (lambda2/sqrt(2)));
-        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * sqrt(tau[j]) * sqrt(sigma)); //if (j < 2 && j > 3) {target += normal_lpdf(sum(gamma[j]) | 0, 0.001*psi)}
+        target += multi_normal_lpdf(gamma[j] | rep_vector(0, sc), diag_matrix(rep_vector(1, sc)) * sqrt(tau[j]) * sqrt(sigma)); //if (j < 2 && j > 3) {target += normal_lpdf(sum(gamma[j]) | 0, 0.001*psi)}
     }
 }
 generated quantities {
@@ -284,15 +284,15 @@ data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi,
 # here using the example model that comes with CmdStan
 # file <- file.path(cmdstan_path(), "model_simulation.stan")
 
-init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
+init.alpha <- list(list(gamma = array(rep(0, ((psi-2)*p)), dim=c((psi-2), p)),
                         theta = rep(0, (p+1)), 
                         tau = rep(0.01, p), sigma = 0.001, 
                         lambda1 = 0.001, lambda2 = 0.001),
-                  list(gamma = array(rep(0.02, (psi*p)), dim=c(psi, p)),
+                  list(gamma = array(rep(0.02, ((psi-2)*p)), dim=c((psi-2), p)),
                         theta = rep(0.01, (p+1)), 
                         tau = rep(0.01, p), sigma = 0.001,
                         lambda1 = 0.001, lambda2 = 0.001),
-                  list(gamma = array(rep(0.01, (psi*p)), dim=c(psi, p)),
+                  list(gamma = array(rep(0.01, ((psi-2)*p)), dim=c((psi-2), p)),
                         theta = rep(0.05, (p+1)), 
                         tau = rep(0.01, p), sigma = 0.001,
                         lambda1 = 0.001, lambda2 = 0.001))
