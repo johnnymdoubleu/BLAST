@@ -28,7 +28,6 @@ transformed parameters {
     matrix[n, p] gsmooth; // nonlinear component
     array[n] real <lower=0> newalpha; // tail index
     matrix[n, p] newgsmooth; // nonlinear component
-    array[p] vector[psi] gammasc; // splines coefficient with soft constrained
 
     for (j in 1:p){
         gsmooth[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
@@ -45,9 +44,9 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 1, 10);
-    target += gamma_lpdf(lambda2 | 10, 100);
-    target += normal_lpdf(theta[1] | 0, 100);
+    target += gamma_lpdf(lambda1 | 0.1, 1);
+    target += gamma_lpdf(lambda2 | 0.01, 0.001);
+    target += normal_lpdf(theta[1] | 0, 10);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
     target += (p * log(lambda1) + (p * psi * log(lambda2)));
     for (j in 1:p){
