@@ -32,9 +32,11 @@ transformed parameters {
     for (i in 1:p){
         gammasc[1, i] = gamma[i, 1];
         gammasc[2, i] = gamma[i, psi];
-    }
+    };
 
     for (j in 1:p){
+        gamma[j, 1] = gammasc[1, j];
+        gamma[j, psi] = gammasc[2, j];
         gsmooth[,j] = bsNonlinear[,(((j-1)*psi)+2):(((j-1)*psi)+psi-1)] * gamma[j, 2:(psi-1)] + (bsNonlinear[,(((j-1)*psi)+1)] * gammasc[1, j]) + (bsNonlinear[,(((j-1)*psi)+psi)] * gammasc[2, j]);
         newgsmooth[,j] = xholderNonlinear[,(((j-1)*psi)+2):(((j-1)*psi)+psi-1)] * gamma[j, 2:(psi-1)] + (xholderNonlinear[,(((j-1)*psi)+1)] * gammasc[1, j]) + (xholderNonlinear[,(((j-1)*psi)+psi)] * gammasc[2, j]);
     };
