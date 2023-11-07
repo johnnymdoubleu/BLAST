@@ -16,7 +16,7 @@ data {
 
 parameters {
     vector[newp] theta; // linear predictor
-    array[p] vector[psi] gamma; // splines coefficient
+    array[p] vector[sc] gamma; // splines coefficient
     real <lower=0> lambda1; // lasso penalty
     real <lower=0> lambda2; // group lasso penalty
     real <lower=0> sigma; //
@@ -28,15 +28,19 @@ transformed parameters {
     matrix[n, p] gsmooth; // nonlinear component
     array[n] real <lower=0> newalpha; // tail index
     matrix[n, p] newgsmooth; // nonlinear component
+    array[p] vector[psi] gammasc; // simplex scaled
 
     for (j in 1:p){
-        gsmooth[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
+        gsmooth[,j] = bsNonlinear[,(((j-1)*psi)+2):(((j-1)*psi)+psi-1)] * gamma[j];
         newgsmooth[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
     };
     for (i in 1:n){
         alpha[i] = exp(theta[1] + dot_product(bsLinear[i], theta[2:newp]) + (gsmooth[i,] * rep_vector(1, p)));
         newalpha[i] = exp(theta[1] + dot_product(xholderLinear[i], theta[2:newp]) + (newgsmooth[i,] * rep_vector(1, p)));        
     };
+    for (j in 1:p){
+        gammasc[j] = append_row(0, append_row(gamma[j], 0));
+    }
 }
 
 model {
@@ -52,7 +56,7 @@ model {
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, (lambda2/sqrt(2)));
-        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * sqrt(tau[j]) * sqrt(sigma)); //if (j < 2 && j > 3) {target += normal_lpdf(sum(gamma[j]) | 0, 0.001*psi)}
+        target += multi_normal_lpdf(gamma[j] | rep_vector(0, sc), diag_matrix(rep_vector(1, sc)) * sqrt(tau[j]) * sqrt(sigma)); //if (j < 2 && j > 3) {target += normal_lpdf(sum(gamma[j]) | 0, 0.001*psi)}
     }
 }
 generated quantities {
