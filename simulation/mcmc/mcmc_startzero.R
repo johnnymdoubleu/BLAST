@@ -230,14 +230,16 @@ transformed parameters {
     array[n] real <lower=0> newalpha; // tail index
     matrix[n, p] newgsmooth; // nonlinear component
     array[2] vector[p] gammasc; // simplex scaled
+    array[p] vector[psi] fullgamma;
     for (i in 1:p){
         gammasc[1, i] = gamma[i, 1];
         gammasc[2, i] = gamma[i, psi];
     };
 
     for (j in 1:p){
-        gamma[j, 1] = gammasc[1, j];
-        gamma[j, psi] = gammasc[2, j];
+        fullgamma[j] = gamma[j];
+        fullgamma[j, 1] = gammasc[1, j];
+        fullgamma[j, psi] = gammasc[2, j];
         gsmooth[,j] = bsNonlinear[,(((j-1)*psi)+2):(((j-1)*psi)+psi-1)] * gamma[j, 2:(psi-1)] + (bsNonlinear[,(((j-1)*psi)+1)] * gammasc[1, j]) + (bsNonlinear[,(((j-1)*psi)+psi)] * gammasc[2, j]);
         newgsmooth[,j] = xholderNonlinear[,(((j-1)*psi)+2):(((j-1)*psi)+psi-1)] * gamma[j, 2:(psi-1)] + (xholderNonlinear[,(((j-1)*psi)+1)] * gammasc[1, j]) + (xholderNonlinear[,(((j-1)*psi)+psi)] * gammasc[2, j]);
     };
@@ -325,7 +327,7 @@ plot(fit1, plotfun = "trace", pars = c("lambda1", "lambda2"), nrow = 2)
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_lambda_sc2-wi.pdf"), width=10, height = 7.78)
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_lambda_sc3-wi.pdf"), width=10, height = 7.78)
 
-summary(fit1, par=c("gammasc"), probs = c(0.05,0.5, 0.95))$summary
+summary(fit1, par=c("fullgamma"), probs = c(0.05,0.5, 0.95))$summary
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
 lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
