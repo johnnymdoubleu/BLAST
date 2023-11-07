@@ -30,13 +30,13 @@ transformed parameters {
     matrix[n, p] newgsmooth; // nonlinear component
     array[2] vector[p] gammasc; // simplex scaled
     for (i in 1:p){
-        gammasc[1, i] = bsNonlinear[,(((j-1)*psi)+1)] * gamma[j, 1];
-        gammasc[2, i] = bsNonlinear[,(((j-1)*psi)+psi)] * gamma[j, psi];
+        gammasc[1, i] = sum(bsNonlinear[,(((i-1)*psi)+1)] * gamma[i, 1]);
+        gammasc[2, i] = sum(bsNonlinear[,(((i-1)*psi)+psi)] * gamma[i, psi]);
     };
 
     for (j in 1:p){
-        gsmooth[,j] = bsNonlinear[,(((j-1)*psi)+2):(((j-1)*psi)+psi-1)] * gamma[j, 2:(psi-1)] + gammasc[1, j] + gammasc[2, j];
-        newgsmooth[,j] = xholderNonlinear[,(((j-1)*psi)+2):(((j-1)*psi)+psi-1)] * gamma[j, 2:(psi-1)] + gammasc[1, j] + gammasc[2, j];
+        gsmooth[,j] = bsNonlinear[,(((j-1)*psi)+2):(((j-1)*psi)+psi-1)] * gamma[j, 2:(psi-1)] + (bsNonlinear[,(((j-1)*psi)+1)] * gamma[1, j]) + (bsNonlinear[,(((j-1)*psi)+1)] * gamma[2, j]);
+        newgsmooth[,j] = xholderNonlinear[,(((j-1)*psi)+2):(((j-1)*psi)+psi-1)] * gamma[j, 2:(psi-1)] + (xholderNonlinear[,(((j-1)*psi)+1)] * gamma[1, j]) + (xholderNonlinear[,(((j-1)*psi)+1)] * gamma[2, j]);
     };
     for (i in 1:n){
         alpha[i] = exp(theta[1] + dot_product(bsLinear[i], theta[2:newp]) + (gsmooth[i,] * rep_vector(1, p)));
