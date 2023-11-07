@@ -16,7 +16,7 @@ data {
 
 parameters {
     vector[newp] theta; // linear predictor
-    array[p] vector[sc] gamma; // splines coefficient
+    array[p] vector[psi] gamma; // splines coefficient
     real <lower=0> lambda1; // lasso penalty
     real <lower=0> lambda2; // group lasso penalty
     real <lower=0> sigma; //
@@ -28,19 +28,20 @@ transformed parameters {
     matrix[n, p] gsmooth; // nonlinear component
     array[n] real <lower=0> newalpha; // tail index
     matrix[n, p] newgsmooth; // nonlinear component
-    array[p] vector[psi] gammasc; // simplex scaled
+    array[2] vector[p] gammasc; // simplex scaled
+    for (i in 1:p){
+        gammasc[1, i] = gamma[i, 1];
+        gammasc[2, i] = gamma[i, psi];
+    }
 
     for (j in 1:p){
-        gsmooth[,j] = bsNonlinear[,(((j-1)*psi)+2):(((j-1)*psi)+psi-1)] * gamma[j];
-        newgsmooth[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
+        gsmooth[,j] = bsNonlinear[,(((j-1)*psi)+2):(((j-1)*psi)+psi-1)] * gamma[j, 2:(psi-1)] + (bsNonlinear[,(((j-1)*psi)+1)] * gammasc[1, j]) + (bsNonlinear[,(((j-1)*psi)+psi)] * gammasc[2, j]);
+        newgsmooth[,j] = xholderNonlinear[,(((j-1)*psi)+2):(((j-1)*psi)+psi-1)] * gamma[j, 2:(psi-1)] + (xholderNonlinear[,(((j-1)*psi)+1)] * gammasc[1, j]) + (xholderNonlinear[,(((j-1)*psi)+psi)] * gammasc[2, j]);
     };
     for (i in 1:n){
         alpha[i] = exp(theta[1] + dot_product(bsLinear[i], theta[2:newp]) + (gsmooth[i,] * rep_vector(1, p)));
         newalpha[i] = exp(theta[1] + dot_product(xholderLinear[i], theta[2:newp]) + (newgsmooth[i,] * rep_vector(1, p)));        
     };
-    for (j in 1:p){
-        gammasc[j] = append_row(0, append_row(gamma[j], 0));
-    }
 }
 
 model {
@@ -53,10 +54,13 @@ model {
     target += normal_lpdf(theta[1] | 0, 10);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
     target += (p * log(lambda1) + (p * psi * log(lambda2)));
+    for (i in 1:2){
+        target += normal_lpdf(sum(gammasc[i]) | 0, 0.001*p);
+    }
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, (lambda2/sqrt(2)));
-        target += multi_normal_lpdf(gamma[j] | rep_vector(0, sc), diag_matrix(rep_vector(1, sc)) * sqrt(tau[j]) * sqrt(sigma)); //if (j < 2 && j > 3) {target += normal_lpdf(sum(gamma[j]) | 0, 0.001*psi)}
+        target += multi_normal_lpdf(gamma[j] | rep_vector(0, sc), diag_matrix(rep_vector(1, sc)) * sqrt(tau[j]) * sqrt(sigma)); //if (j < 2 && j > 3) {targpsiet += normal_lpdf(sum(gamma[j]) | 0, 0.001*psi)}
     }
 }
 generated quantities {

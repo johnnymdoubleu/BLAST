@@ -217,7 +217,7 @@ data {
 
 parameters {
     vector[newp] theta; // linear predictor
-    array[p] vector[sc] gamma; // splines coefficient
+    array[p] vector[psi] gamma; // splines coefficient
     real <lower=0> lambda1; // lasso penalty
     real <lower=0> lambda2; // group lasso penalty
     real <lower=0> sigma; //
@@ -229,19 +229,20 @@ transformed parameters {
     matrix[n, p] gsmooth; // nonlinear component
     array[n] real <lower=0> newalpha; // tail index
     matrix[n, p] newgsmooth; // nonlinear component
-    array[p] vector[psi] gammasc; // simplex scaled
+    array[2] vector[p] gammasc; // simplex scaled
+    for (i in 1:p){
+        gammasc[1, i] = gamma[i, 1];
+        gammasc[2, i] = gamma[i, psi];
+    }
 
     for (j in 1:p){
-        gsmooth[,j] = bsNonlinear[,(((j-1)*psi)+2):(((j-1)*psi)+psi-1)] * gamma[j];
-        newgsmooth[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
+        gsmooth[,j] = bsNonlinear[,(((j-1)*psi)+2):(((j-1)*psi)+psi-1)] * gamma[j, 2:(psi-1)] + (bsNonlinear[,(((j-1)*psi)+1)] * gammasc[1, j]) + (bsNonlinear[,(((j-1)*psi)+psi)] * gammasc[2, j]);
+        newgsmooth[,j] = xholderNonlinear[,(((j-1)*psi)+2):(((j-1)*psi)+psi-1)] * gamma[j, 2:(psi-1)] + (xholderNonlinear[,(((j-1)*psi)+1)] * gammasc[1, j]) + (xholderNonlinear[,(((j-1)*psi)+psi)] * gammasc[2, j]);
     };
     for (i in 1:n){
         alpha[i] = exp(theta[1] + dot_product(bsLinear[i], theta[2:newp]) + (gsmooth[i,] * rep_vector(1, p)));
         newalpha[i] = exp(theta[1] + dot_product(xholderLinear[i], theta[2:newp]) + (newgsmooth[i,] * rep_vector(1, p)));        
     };
-    for (j in 1:p){
-        gammasc[j] = append_row(0, append_row(gamma[j], 0));
-    }
 }
 
 model {
@@ -254,10 +255,13 @@ model {
     target += normal_lpdf(theta[1] | 0, 10);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
     target += (p * log(lambda1) + (p * psi * log(lambda2)));
+    for (i in 1:2){
+        target += normal_lpdf(sum(gammasc[i]) | 0, 0.001*p);
+    }
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, (lambda2/sqrt(2)));
-        target += multi_normal_lpdf(gamma[j] | rep_vector(0, sc), diag_matrix(rep_vector(1, sc)) * sqrt(tau[j]) * sqrt(sigma)); //if (j < 2 && j > 3) {target += normal_lpdf(sum(gamma[j]) | 0, 0.001*psi)}
+        target += multi_normal_lpdf(gamma[j] | rep_vector(0, sc), diag_matrix(rep_vector(1, sc)) * sqrt(tau[j]) * sqrt(sigma)); //if (j < 2 && j > 3) {targpsiet += normal_lpdf(sum(gamma[j]) | 0, 0.001*psi)}
     }
 }
 generated quantities {
@@ -272,7 +276,7 @@ generated quantities {
 , "model_simulation_sc3.stan")
 
 data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, 
-                    atau = ((psi+1)/2), newp = (p+1), sc = (psi-2),
+                    atau = ((psi+1)/2), newp = (p+1), sc = psi,
                     bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
                     xholderLinear = xholder.linear, 
                     xholderNonlinear = xholder.nonlinear)
@@ -284,15 +288,15 @@ data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi,
 # here using the example model that comes with CmdStan
 # file <- file.path(cmdstan_path(), "model_simulation.stan")
 
-init.alpha <- list(list(gamma = array(rep(0, ((psi-2)*p)), dim=c((psi-2), p)),
+init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
                         theta = rep(0, (p+1)), 
                         tau = rep(0.01, p), sigma = 0.001, 
                         lambda1 = 0.001, lambda2 = 0.001),
-                  list(gamma = array(rep(0.02, ((psi-2)*p)), dim=c((psi-2), p)),
+                  list(gamma = array(rep(0.02, (psi*p)), dim=c(psi, p)),
                         theta = rep(0.01, (p+1)), 
                         tau = rep(0.01, p), sigma = 0.001,
                         lambda1 = 0.001, lambda2 = 0.001),
-                  list(gamma = array(rep(0.01, ((psi-2)*p)), dim=c((psi-2), p)),
+                  list(gamma = array(rep(0.01, (psi*p)), dim=c(psi, p)),
                         theta = rep(0.05, (p+1)), 
                         tau = rep(0.01, p), sigma = 0.001,
                         lambda1 = 0.001, lambda2 = 0.001))
@@ -321,7 +325,7 @@ plot(fit1, plotfun = "trace", pars = c("lambda1", "lambda2"), nrow = 2)
 
 
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
-gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
+gamma.samples <- summary(fit1, par=c("gammasc"), probs = c(0.05,0.5, 0.95))$summary
 lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
 alpha.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
 newalpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
