@@ -236,8 +236,8 @@ transformed parameters {
     };
 
     for (j in 1:p){
-        gsmooth[,j] = bsNonlinear[,(((j-1)*psi)+2):(((j-1)*psi)+psi-1)] * gamma[j, 2:(psi-1)] + (bsNonlinear[,(((j-1)*psi)+1)] * gamma[1, j]) + (bsNonlinear[,(((j-1)*psi)+1)] * gamma[2, j]);
-        newgsmooth[,j] = xholderNonlinear[,(((j-1)*psi)+2):(((j-1)*psi)+psi-1)] * gamma[j, 2:(psi-1)] + (xholderNonlinear[,(((j-1)*psi)+1)] * gamma[1, j]) + (xholderNonlinear[,(((j-1)*psi)+1)] * gamma[2, j]);
+        gsmooth[,j] = bsNonlinear[,(((j-1)*psi)+2):(((j-1)*psi)+psi-1)] * gamma[j, 2:(psi-1)] + (bsNonlinear[,(((j-1)*psi)+1)] * gamma[j, 1]) + (bsNonlinear[,(((j-1)*psi)+1)] * gamma[j, psi]);
+        newgsmooth[,j] = xholderNonlinear[,(((j-1)*psi)+2):(((j-1)*psi)+psi-1)] * gamma[j, 2:(psi-1)] + (xholderNonlinear[,(((j-1)*psi)+1)] * gamma[j, 1]) + (xholderNonlinear[,(((j-1)*psi)+1)] * gamma[j, psi]);
     };
     for (i in 1:n){
         alpha[i] = exp(theta[1] + dot_product(bsLinear[i], theta[2:newp]) + (gsmooth[i,] * rep_vector(1, p)));
