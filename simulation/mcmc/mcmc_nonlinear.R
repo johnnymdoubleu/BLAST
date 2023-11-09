@@ -22,7 +22,7 @@ library(cmdstanr)
 # library(ggplotify)
 
 #Scenario 1
-set.seed(2)
+set.seed(4)
 # set.seed(50)
 
 n <- 5000
@@ -269,11 +269,11 @@ data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi,
 # file <- file.path(cmdstan_path(), "model_simulation.stan")
 
 init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
-                        tau = rep(0.01, p), sigma = 0.001, lambda = 0.1),
+                        tau = rep(0.01, p), sigma = 0.001, lambda = 1),
                   list(gamma = array(rep(0.02, (psi*p)), dim=c(psi, p)),
-                        tau = rep(0.01, p), sigma = 0.001, lambda = 0.1),
+                        tau = rep(0.01, p), sigma = 0.001, lambda = 1),
                   list(gamma = array(rep(0.01, (psi*p)), dim=c(psi, p)),
-                        tau = rep(0.01, p), sigma = 0.01, lambda = 0.1))
+                        tau = rep(0.01, p), sigma = 0.01, lambda = 1))
 
 fit1 <- stan(
     file = "model_simulation_sc3.stan",  # Stan program
