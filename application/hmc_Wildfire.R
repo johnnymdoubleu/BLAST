@@ -220,9 +220,9 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 1, 5);
-    target += gamma_lpdf(lambda2 | 0.1, 0.1);
-    target += normal_lpdf(theta[1] | 0, 10);
+    target += gamma_lpdf(lambda1 | 1, 10);
+    target += gamma_lpdf(lambda2 | 1, 10);
+    target += normal_lpdf(theta[1] | 0, 1);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
     target += (p * log(lambda1) + (p * psi * log(lambda2)));
     for (j in 1:p){
@@ -255,16 +255,16 @@ file <- file.path(cmdstan_path(), "model.stan")
 
 init.alpha <- list(list(gamma = array(rep(0,(psi*p)), dim=c(psi, p)),
                         theta = rep(0, (p+1)), 
-                        tau = rep(0.01, p), sigma = 0.001, 
-                        lambda1 = 0.01, lambda2 = 30),
+                        tau = rep(0.01, p), sigma = 0.1, 
+                        lambda1 = 0.1, lambda2 = 100),
                   list(gamma = array(rep(0.02,(psi*p)), dim=c(psi, p)),
                         theta = rep(0.1, (p+1)), 
                         tau = rep(0.01, p), sigma = 1,
-                        lambda1 = 0.01, lambda2 = 30),
-                  list(gamma = array(rep(-0.02, (psi*p)), dim=c(psi, p)),
+                        lambda1 = 0.1, lambda2 = 100),
+                  list(gamma = array(rep(-0.2, (psi*p)), dim=c(psi, p)),
                         theta = rep(-0.2, (p+1)), 
                         tau = rep(0.01, p), sigma = 1,
-                        lambda1 = 0.07, lambda2 = 30))
+                        lambda1 = 0.7, lambda2 = 100))
 
 # stanc("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/application/model1.stan")
 fit1 <- stan(
@@ -333,6 +333,8 @@ theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summar
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
 lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
 alpha.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
+summary(fit1, par=c("sigma"), probs = c(0.05,0.5, 0.95))$summary
+summary(fit1, par=c("tau"), probs = c(0.05,0.5, 0.95))$summary
 
 gamma.post.mean <- gamma.samples[,1]
 gamma.q1 <- gamma.samples[,4]
