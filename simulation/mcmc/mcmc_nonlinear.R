@@ -22,7 +22,7 @@ library(cmdstanr)
 # library(ggplotify)
 
 #Scenario 1
-set.seed(4)
+set.seed(58901)
 # set.seed(50)
 
 n <- 5000
@@ -415,7 +415,7 @@ data.nonlinear <- data.frame("x"=c(1:n),
                           "replicate" = gl(2, n, (p*n)))
 ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  # geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
+  geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
   geom_line(aes(y=true, colour = covariates, linetype = "True"), linewidth=2) + 
   geom_line(aes(y=post.mean, colour = covariates, linetype = "MCMC"), linewidth=2) + xlab("Nonlinear Components") + ylab("") +
   facet_grid(covariates ~ ., scales = "free_y") + 
