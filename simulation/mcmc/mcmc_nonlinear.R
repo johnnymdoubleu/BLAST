@@ -204,9 +204,7 @@ data {
     int <lower=1> newp; 
     int <lower=1> psi; // splines coefficient size
     real <lower=0> u; // large threshold value
-    matrix[n,p] bsLinear; // fwi dataset
     matrix[n, (psi*p)] bsNonlinear; // thin plate splines basis
-    matrix[n,p] xholderLinear; // fwi dataset
     matrix[n, (psi*p)] xholderNonlinear; // thin plate splines basis    
     vector[n] y; // extreme response
     real <lower=0> atau;
@@ -239,7 +237,7 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda | 0.1, 0.1);
+    target += gamma_lpdf(lambda | 1, 1);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     target += (p * psi * log(lambda));
     for (j in 1:p){
@@ -260,8 +258,7 @@ generated quantities {
 
 data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, 
                     atau = ((psi+1)/2), newp = (p+1),
-                    bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
-                    xholderLinear = xholder.linear, 
+                    bsNonlinear = bs.nonlinear,
                     xholderNonlinear = xholder.nonlinear)
 
 # set_cmdstan_path(path = NULL)
@@ -272,11 +269,11 @@ data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi,
 # file <- file.path(cmdstan_path(), "model_simulation.stan")
 
 init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
-                        tau = rep(0.01, p), sigma = 0.001, lambda = 0.001),
+                        tau = rep(0.01, p), sigma = 0.001, lambda = 0.1),
                   list(gamma = array(rep(0.02, (psi*p)), dim=c(psi, p)),
-                        tau = rep(0.01, p), sigma = 0.001, lambda = 0.001),
+                        tau = rep(0.01, p), sigma = 0.001, lambda = 0.1),
                   list(gamma = array(rep(0.01, (psi*p)), dim=c(psi, p)),
-                        tau = rep(0.01, p), sigma = 0.01, lambda = 0.001))
+                        tau = rep(0.01, p), sigma = 0.01, lambda = 0.1))
 
 fit1 <- stan(
     file = "model_simulation_sc3.stan",  # Stan program
@@ -380,31 +377,31 @@ equal_breaks <- function(n = 3, s = 0.1,...){
   }
 }
 
-data.smooth <- data.frame("x"=c(1:n),
-                          "true" = as.vector(f.new),
-                          "post.mean" = as.vector(g.new),
-                          "q1" = as.vector(g.q1),
-                          "q3" = as.vector(g.q3),
-                          "covariates" = gl(p, n, (p*n)),
-                          "replicate" = gl(2, n, (p*n)))
-ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) + 
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
-  geom_line(aes(y=true, colour = covariates, linetype = "True"), linewidth=2) + 
-  geom_line(aes(y=post.mean, colour = covariates, linetype = "Posterior Mean"), linewidth=2) + 
-  ylab("") + xlab ("Smooth Functions") +
-  # geom_point(aes(y=origin, shape = replicate)) + geom_point(aes(y=new, shape = replicate)) +
-  facet_grid(covariates ~ .) +
-  scale_linetype_manual("functions",values=c("Posterior Mean"=3,"True"=1)) +
-  scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + theme_minimal(base_size = 30) + 
-  theme(plot.title = element_text(hjust = 0.5, size = 30),
-        legend.position = "none",
-        plot.margin = margin(0,0,0,-10),
-        strip.text = element_blank(),
-        axis.text.x = element_blank(),
-        axis.ticks.x = element_blank(),
-        axis.text.y = element_text(size=33),
-        axis.title.x = element_text(size = 35))
+# data.smooth <- data.frame("x"=c(1:n),
+#                           "true" = as.vector(f.new),
+#                           "post.mean" = as.vector(g.nonlinear.new),
+#                           "q1" = as.vector(g.nonlinear.q1),
+#                           "q3" = as.vector(g.nonlinear.q3),
+#                           "covariates" = gl(p, n, (p*n)),
+#                           "replicate" = gl(2, n, (p*n)))
+# ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) + 
+#   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+#   geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
+#   geom_line(aes(y=true, colour = covariates, linetype = "True"), linewidth=2) + 
+#   geom_line(aes(y=post.mean, colour = covariates, linetype = "Posterior Mean"), linewidth=2) + 
+#   ylab("") + xlab ("Smooth Functions") +
+#   # geom_point(aes(y=origin, shape = replicate)) + geom_point(aes(y=new, shape = replicate)) +
+#   facet_grid(covariates ~ .) +
+#   scale_linetype_manual("functions",values=c("Posterior Mean"=3,"True"=1)) +
+#   scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + theme_minimal(base_size = 30) + 
+#   theme(plot.title = element_text(hjust = 0.5, size = 30),
+#         legend.position = "none",
+#         plot.margin = margin(0,0,0,-10),
+#         strip.text = element_blank(),
+#         axis.text.x = element_blank(),
+#         axis.ticks.x = element_blank(),
+#         axis.text.y = element_text(size=33),
+#         axis.title.x = element_text(size = 35))
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_smooth_sc2-wi.pdf"), width=10.5, height = 15)
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_smooth_sc3-wi.pdf"), width=10.5, height = 15)
