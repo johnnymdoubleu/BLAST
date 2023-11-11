@@ -56,7 +56,7 @@ threshold <- 0.95
 #   xholder <- cbind(xholder, newx)
 # }
 
-n <- 1000
+n <- 5000
 xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
 psi <- 20
 p <- 10
