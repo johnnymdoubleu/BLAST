@@ -187,16 +187,20 @@ ggplot(df.theta, aes(x = labels)) + ylab("") + xlab("") +
                               expression(bold(theta[7])),
                               expression(bold(theta[8])),
                               expression(bold(theta[9])),
-                              expression(bold(theta[10]))))+
-  theme_minimal(base_size = 30) + 
+                              expression(bold(theta[10])))) + 
+#   scale_color_discrete(labels = c(expression(theta[0]),colnames(fwi.scaled))) + 
+  theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 20),
+          legend.text.align = 0,
           legend.title = element_blank(),
-          legend.text = element_text(size=30),
-          # axis.ticks.x = element_blank(),
-          axis.text.x = element_text(hjust=0.3),
-          axis.text = element_text(size = 30),
-          panel.grid.minor.x = element_blank())
+          legend.text = element_text(size=25),
+          legend.margin=margin(0,0,0,-10),
+          legend.box.margin=margin(-10,0,-10,0),
+          plot.margin = margin(0,0,0,-20),
+          axis.text.x = element_text(hjust=0.35),
+          axis.text = element_text(size = 28))
     
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_theta_sc3-wi.pdf"), width=10, height = 7.78)
 df <- data.frame("seq" = seq(1, (psi*p)), 
                   gamma.map, 
                   "gamma.true" = as.vector(gamma.origin))
@@ -213,25 +217,28 @@ ggplot(df, aes(x =labels , y = gamma.map, col = covariate)) +
   # labs(title=expression("MAP vs True for"~gamma)) + 
   # ggtitle(expression(atop(paste("MAP vs True for ", bold(gamma))))) +
 #   annotate("text", x = seq(0, 330, length.out=10), y = -1, label = beta, colour = "red", size = 10) +
-  scale_x_discrete(breaks=c(seq(0, (psi*p), psi)+15), 
+  scale_x_discrete(breaks=c(seq(0, (psi*p), psi)+7), 
                     label = c(expression(bold(gamma[1])), 
                               expression(bold(gamma[2])), 
                               expression(bold(gamma[3])), 
                               expression(bold(gamma[4])), 
                               expression(bold(gamma[5])), 
-                              expression(bold(gamma[6])),
-                              expression(bold(gamma[7])),
-                              expression(bold(gamma[8])),
-                              expression(bold(gamma[9])),
-                              expression(bold(gamma[10]))), 
-                    expand=c(0,5)) +
+                              expression(bold(gamma[6])), 
+                              expression(bold(gamma[7])), 
+                              expression(bold(gamma[8])), 
+                              expression(bold(gamma[9])), 
+                              expression(bold(gamma[10]))),
+                    expand=c(0,3)) +
+  theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 20),
           legend.title = element_blank(),
-          legend.text = element_text(size=30),
-          axis.ticks.x = element_blank(),
-          axis.text.x = element_text(hjust=1),
-          axis.text = element_text(size = 30),
-          panel.grid.major.x = element_blank())
+          legend.text = element_text(size=25),
+          legend.margin=margin(0,0,0,-10),
+          legend.box.margin=margin(-10,0,-10,0),
+          plot.margin = margin(0,0,0,-20),
+          axis.text.x = element_text(hjust=0.5),
+          axis.text = element_text(size = 28))
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_gamma_sc3-wi.pdf"), width=10, height = 7.78)
 
 f.nonlinear.new <- f.linear.new <- f.new <- matrix(, nrow = n, ncol=p)
 newalpha <- NULL
@@ -343,18 +350,26 @@ data.scenario <- data.frame("x" = c(1:n),
                             "trueAlp" = sort(alp.origin),
                             "mapAlp" = sort(newalpha))
 ggplot(data = data.scenario, aes(x = constant)) + 
-  ylab(expression(alpha(x))) + xlab("") +
-    geom_line(aes(y = trueAlp, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
-  geom_line(aes(y = mapAlp, col = "MAP Alpha"), linewidth = 2.5, linetype = 2) +
-  labs(col = "") +
+  ylab(expression(alpha(x))) + xlab(expression(x)) +
+    geom_line(aes(y = trueAlp, col = paste0("True alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
+  geom_line(aes(y = mapAlp, col = "MAP alpha"), linewidth = 2.5, linetype = 2) +
+  labs(col = "") + 
     theme(axis.title.y = element_text(size = rel(1.8), angle = 90)) +
     theme(axis.title.x = element_text(size = rel(1.8), angle = 00)) +
     scale_color_manual(values = c("#e0b430", "red"))+
-    theme(text = element_text(size = 15),
-            legend.position="bottom", legend.key.size = unit(1, 'cm'),
-            axis.text = element_text(size = 20),
-            legend.margin=margin(-15,-15,-15,-15),
-            legend.box.margin=margin(-25,0,20,0))
+    theme_minimal(base_size = 30) +
+    theme(plot.title = element_text(hjust = 0.5, size = 30),
+          legend.position="top", 
+          legend.key.size = unit(1, 'cm'),
+          legend.text = element_text(size=25),
+          plot.margin = margin(0,0,0,-10),
+          strip.text = element_blank(),
+          axis.text.x = element_blank(),
+          axis.ticks.x = element_blank(),
+          axis.text.y = element_text(size=33),
+          axis.title.x = element_text(size = 35))
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_alpha_train_sc3-wi.pdf"), width=10, height = 7.78)
+
 
 # plt.samp <- ggplot(data = data.scenario, aes(x = constant)) + ylab(expression(alpha(x))) + xlab("")
 # print(plt.samp + 
@@ -418,10 +433,10 @@ func.df <- data.frame(seq = seq(0,1,length.out = n),
 
 ggplot(func.df, aes(x=seq, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_line(aes(y=origin, colour = covariates, linetype = "true"), linewidth = 2) + 
   geom_line(aes(y=new, colour = covariates, linetype = "MAP"), linewidth = 2) + 
   ylab ("") + facet_grid(covariates ~ .) + xlab("Smooth Functions") +
+  scale_linetype_manual("functions",values=c("MAP"=3,"true"=1)) +
   scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + theme_minimal(base_size = 30) + 
   theme(plot.title = element_text(hjust = 0.5, size = 30),
         legend.position = "none",
@@ -431,47 +446,46 @@ ggplot(func.df, aes(x=seq, group=interaction(covariates, replicate))) +
         axis.ticks.x = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
-# ggsave("../Laboratory/Simulation/BayesianFusedLasso/results/map_smooth_n1.pdf", width=10.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_smooth_sc3-wi.pdf"), width=10.5, height = 15)
 
 ggplot(func.df, aes(x=seq, group=interaction(covariates, replicate))) +  
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_line(aes(y=origin.linear, colour = covariates, linetype = "true"), linewidth = 2) + 
   geom_line(aes(y=new.linear, colour = covariates, linetype = "MAP"), linewidth = 2) + 
-  facet_grid(covariates ~ .) + xlab("Linear Component") + ylab ("") +
+  facet_grid(covariates ~ ., scales = "free_y") + xlab("Linear Component") + ylab ("") +
   scale_linetype_manual("functions",values=c("MAP"=3,"true"=1)) +
-  scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + theme_minimal(base_size = 30) + 
-  theme(plot.title = element_text(hjust = 0.5, size = 15),
+  scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) +
+  theme_minimal(base_size = 30) +
+  theme(plot.title = element_text(hjust = 0.5, size = 30),
+        legend.position = "none",
+        plot.margin = margin(0,0,0,-10),
+        strip.text = element_blank(),
         axis.text.x = element_blank(),
         axis.ticks.x = element_blank(),
-        # panel.grid.minor.y = element_blank(),
-        legend.position = "none",
-        plot.margin = margin(0,-20,0,-30),
-        strip.text = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
-# ggsave("../Laboratory/Simulation/BayesianFusedLasso/results/map_linear_n1.pdf", width=10, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_linear_sc3-wi.pdf"), width=10, height = 15)
 
 ggplot(func.df, aes(x=seq, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_line(aes(y=origin.nonlinear, colour = covariates, linetype = "true"), linewidth = 2) + 
-  geom_line(aes(y=new.nonlinear, colour = covariates, linetype = "MAP"), linewidth=2) + ylab ("") + xlab("Nonlinear Component") + facet_grid(covariates ~ .) + 
+  geom_line(aes(y=new.nonlinear, colour = covariates, linetype = "MAP"), linewidth=2) + ylab ("") + xlab("Nonlinear Component") + facet_grid(covariates ~ ., scales = "free_y") + 
   scale_linetype_manual("functions",values=c("MAP"=3,"true"=1)) +
-  scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + theme_minimal(base_size = 30) + 
+  scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 15),
-        axis.text.x = element_blank(),
-        axis.ticks.x = element_blank(),
+        axis.ticks = element_blank(),
         legend.title = element_blank(),
         legend.text = element_text(size=45),
         legend.margin=margin(0,0,0,-10),
         legend.box.margin=margin(-10,0,-10,0),
         plot.margin = margin(0,0,0,-20),
         strip.text = element_blank(),
+        axis.text.x = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
-# ggsave("../Laboratory/Simulation/BayesianFusedLasso/results/map_nonlinear_n1.pdf", width=12, height = 15)
-
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_nonlineawr_sc3-wi.pdf"), width=12, height = 15)
 
 data.scenario <- data.frame("x" = c(1:n),
                             "constant" = newx,
@@ -479,20 +493,26 @@ data.scenario <- data.frame("x" = c(1:n),
                             "mapAlp" = sort(new.alpha))
 
 ggplot(data = data.scenario, aes(x = constant)) + 
-  ylab(expression(alpha(x))) + xlab("") +
+  ylab(expression(alpha(x))) + xlab(expression(x)) +
   geom_line(aes(y = trueAlp, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
   geom_line(aes(y = mapAlp, col = "MAP Alpha"), linewidth = 2.5, linetype = 2) +
   labs(col = "") + #ylim(0, 5) +
   theme(axis.title.y = element_text(size = rel(1.8), angle = 90)) +
   theme(axis.title.x = element_text(size = rel(1.8), angle = 00)) +
   scale_color_manual(values = c("#e0b430", "red"))+
-  theme(text = element_text(size = 15),
-          legend.position="bottom", legend.key.size = unit(1, 'cm'),
-          axis.text = element_text(size = 20),
-          legend.margin=margin(-15,-15,-15,-15),
-          legend.box.margin=margin(-25,0,20,0))
+  theme_minimal(base_size = 30) +
+  theme(plot.title = element_text(hjust = 0.5, size = 30),
+        legend.position="top", 
+        legend.key.size = unit(1, 'cm'),
+        legend.text = element_text(size=25),
+        plot.margin = margin(0,0,0,-10),
+        strip.text = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.text.y = element_text(size=33),
+        axis.title.x = element_text(size = 35))
 
-# ggsave(paste0("../Laboratory/Simulation/BayesianFusedLasso/results/map_alpha_n1_test.pdf"), width=10)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_alpha_test_sc3-wi.pdf"), width=10, height = 7.78)
 
 # Randomized quantile residuals
 r <- matrix(NA, nrow = n, ncol = 20)

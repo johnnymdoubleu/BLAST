@@ -578,6 +578,7 @@ ggplot(data.scenario, aes(x=x)) +
   theme(plot.title = element_text(hjust = 0.5, size = 30),
         legend.position="top", 
         legend.key.size = unit(1, 'cm'),
+        legend.text = element_text(size=25),
         plot.margin = margin(0,0,0,-10),
         strip.text = element_blank(),
         axis.text.x = element_blank(),
