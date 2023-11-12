@@ -25,33 +25,6 @@ simul.no <- 50
 
 xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
 
-sample_meanvector <- runif(p,0,1)
-sample_covariance_matrix <- matrix(NA, nrow = p, ncol = p)
-diag(sample_covariance_matrix) <- 1
-
-mat_Sim <- matrix(data = NA, nrow = p, ncol = p)
-U <- runif(n = p) * 0.5
-
-for(i in 1:p)
-{
-  if(i %in% c(2,3))
-  {
-    U_Star <- pmin(U + 0.2 * runif(n = p), 0.99999)
-    
-  }else
-  {
-    U_Star <- pmin(pmax(U + sample(c(0, 1), size = p, replace = TRUE) * runif(n = p), 0.00001), 0.99999)
-  }
-  
-  mat_Sim[, i] <- qnorm(U_Star)  
-}
-
-cor_Mat <- cor(mat_Sim)
-sample_covariance_matrix <- cor_Mat * (p/2)
-# diag(sample_covariance_matrix) <- 1
-## create multivariate normal distribution
-# x.origin <- mvrnorm(n = n, mu = rep(0,p), Sigma = sample_covariance_matrix)
-
 C <- matrix(c(1, 0.3, 0.5, 0.3, 0.3,
               0.3, 1, 0.95, 0.4, 0.4,
               0.5, 0.95, 1, 0.5, 0.1,

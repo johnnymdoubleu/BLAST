@@ -19,7 +19,7 @@ library(MCMCvis)
 # library(ggplotify)
 
 #Scenario 1
-set.seed(2)
+set.seed(3)
 # n <- 1000
 # # beta <- c(0.2, 0.7)
 # beta <- c(0.2, 0, 0.8, 0, 0, -0.1, 0, 0, 0, -0.4)

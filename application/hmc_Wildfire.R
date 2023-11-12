@@ -256,15 +256,15 @@ file <- file.path(cmdstan_path(), "model.stan")
 init.alpha <- list(list(gamma = array(rep(0,(psi*p)), dim=c(psi, p)),
                         theta = rep(0, (p+1)), 
                         tau = rep(0.01, p), sigma = 0.1, 
-                        lambda1 = 0.1, lambda2 = 100),
+                        lambda1 = 0.1, lambda2 = 10),
                   list(gamma = array(rep(0.02,(psi*p)), dim=c(psi, p)),
                         theta = rep(0.1, (p+1)), 
                         tau = rep(0.01, p), sigma = 1,
-                        lambda1 = 0.1, lambda2 = 100),
+                        lambda1 = 0.1, lambda2 = 10),
                   list(gamma = array(rep(-0.2, (psi*p)), dim=c(psi, p)),
                         theta = rep(-0.2, (p+1)), 
                         tau = rep(0.01, p), sigma = 1,
-                        lambda1 = 0.7, lambda2 = 100))
+                        lambda1 = 0.1, lambda2 = 10))
 
 # stanc("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/application/model1.stan")
 fit1 <- stan(
