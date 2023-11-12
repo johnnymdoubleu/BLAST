@@ -43,7 +43,7 @@ model {
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += gamma_lpdf(lambda1 | 1, 15);
-    target += gamma_lpdf(lambda2 | 0.1, 0.1);
+    target += gamma_lpdf(lambda2 | 0.1, 1);
     target += normal_lpdf(theta[1] | 0, 100);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
     target += (p * log(lambda1) + (p * psi * log(lambda2)));
