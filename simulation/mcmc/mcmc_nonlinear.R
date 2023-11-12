@@ -229,7 +229,7 @@ transformed parameters {
     };
     for (i in 1:n){
         alpha[i] = exp(gsmooth[i,] * rep_vector(1, p));
-        newalpha[i] = exp(newgsmooth[i,] * rep_vector(1, p));
+        newalpha[i] = exp(sum(newgsmooth[i,])); // newalpha[i] = exp(newgsmooth[i,] * rep_vector(1, p))
     };
 }
 

@@ -1,16 +1,25 @@
-library(JOPS)
-library(Pareto)
 library(npreg)
-library(gridExtra)
-library(colorspace)
+library(tmvnsim)
 library(reshape2)
 library(splines2)
-
+library(scales)
+library(MASS)
+library(npreg)
+library(Pareto)
 suppressMessages(library(tidyverse))
+library(JOPS)
+library(readxl)
+library(gridExtra)
+library(colorspace)
+library(corrplot)
+library(ReIns)
+library(evir)
+library(ggmcmc)
+library(MCMCvis)
 # library(ggplotify)
 
 #Scenario 1
-# set.seed(12338)
+set.seed(2)
 # n <- 1000
 # # beta <- c(0.2, 0.7)
 # beta <- c(0.2, 0, 0.8, 0, 0, -0.1, 0, 0, 0, -0.4)
@@ -26,7 +35,7 @@ suppressMessages(library(tidyverse))
 # }
 # # plot(y)
 
-threshold <- 0.95
+
 # x.origin <- x.scale
 # y.origin <- y
 # x.scale <- x.scale[which(y>quantile(y, threshold)),]
@@ -60,6 +69,7 @@ n <- 5000
 xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
 psi <- 20
 p <- 10
+threshold <- 0.90
 
 x.origin <- cbind(replicate(p, runif(n, 0, 1)))
 x.origin <- scale(x.origin)
@@ -113,6 +123,100 @@ f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p
 for(j in 1:p){
     f.origin[, j] <- as.matrix(bs.linear[1:n, (((j-1)*no.theta)+1):(((j-1)*no.theta)+no.theta)]) %*% theta.origin[,j] + (bs.nonlinear[1:n,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j])
     f.linear.origin[,j] <- as.matrix(bs.linear[1:n, (((j-1)*no.theta)+1):(((j-1)*no.theta)+no.theta)]) %*% theta.origin[,j]
+    f.nonlinear.origin[,j] <- (bs.nonlinear[1:n,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j])
+}
+
+alp.origin <- y.origin <- NULL
+for(i in 1:n){
+  alp.origin[i] <- exp(sum(f.origin[i,]))
+  y.origin[i] <- rPareto(1, 1, alpha = alp.origin[i])
+}
+
+n <- 5000
+psi <- 20
+threshold <- 0.90
+p <- 5
+no.theta <- 1
+simul.no <- 50
+
+xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
+
+sample_meanvector <- runif(p, 0, 1)
+sample_covariance_matrix <- matrix(NA, nrow = p, ncol = p)
+diag(sample_covariance_matrix) <- 1
+
+mat_Sim <- matrix(data = NA, nrow = p, ncol = p)
+U <- runif(n = p) * 0.5
+
+for(i in 1:p)
+{
+  if(i %in% c(2,3))
+  {
+    U_Star <- pmin(U + 0.2 * runif(n = p), 0.99999)
+    
+  }else
+  {
+    U_Star <- pmin(pmax(U + sample(c(0, 1), size = p, replace = TRUE) * runif(n = p), 0.00001), 0.99999)
+  }
+  
+  mat_Sim[, i] <- qnorm(U_Star)  
+}
+
+cor_Mat <- cor(mat_Sim)
+sample_covariance_matrix <- cor_Mat * (p/2)
+# diag(sample_covariance_matrix) <- 1
+## create multivariate normal distribution
+# x.origin <- mvrnorm(n = n, mu = rep(0,p), Sigma = sample_covariance_matrix)
+
+C <- matrix(c(1, 0.3, 0.5, 0.3, 0.3,
+              0.3, 1, 0.95, 0.4, 0.4,
+              0.5, 0.95, 1, 0.5, 0.1,
+              0.3, 0.4, 0.5 , 1, 0.5,
+              0.3, 0.4, 0.5, 0.5, 1), nrow = p)
+x.origin <- tmvnsim(n = n, k = p, lower = rep(0, p), means = rep(0, p), sigma = C)$samp
+
+
+corrplot.mixed(cor(x.origin),
+                upper = "circle",
+                lower = "number",
+                addgrid.col = "black")
+newx <- seq(0, 1, length.out=n)
+
+for(i in 1:p){
+  test.knot <- seq(0, 1, length.out = psi)
+  splines <- basis.tps(newx, test.knot, m=2, rk=FALSE, intercept = FALSE)
+  xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
+  xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
+  knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)  
+  tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
+  # tps <- mSpline(x.origin[,i], df=psi, Boundary.knots = range(x.origin[,i]), degree = 3, intercept=TRUE)
+#   bs.x <- cbind(bs.x, tps)
+  bs.linear <- cbind(bs.linear, tps[,1:no.theta])
+  bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])  
+}
+
+gamma.origin <- matrix(, nrow = psi, ncol = p)
+for(j in 1:p){
+    for (ps in 1:psi){
+        if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
+        else if(j==7){
+            if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.01}
+            else{gamma.origin[ps, j] <- 0.01}
+        }
+        else {
+            if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.01}
+            else{gamma.origin[ps, j] <- 0.01}
+        }
+    }
+}
+
+theta.origin <- c(0, 0.2, 0.2, 0, 0)
+
+
+f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
+for(j in 1:p){
+    f.origin[, j] <- as.matrix(bs.linear[1:n, (((j-1)*no.theta)+1):(((j-1)*no.theta)+no.theta)]) %*% theta.origin[j] + (bs.nonlinear[1:n,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j])
+    f.linear.origin[,j] <- as.matrix(bs.linear[1:n, (((j-1)*no.theta)+1):(((j-1)*no.theta)+no.theta)]) %*% theta.origin[j]
     f.nonlinear.origin[,j] <- (bs.nonlinear[1:n,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j])
 }
 

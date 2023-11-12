@@ -14,7 +14,7 @@ suppressMessages(library(tidyverse))
 # library(ggplotify)
 
 #Scenario 1
-# set.seed(2)
+set.seed(2)
 
 n <- 5000
 psi <- 20
@@ -28,14 +28,13 @@ xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow
 sample_meanvector <- runif(p,0,1)
 sample_covariance_matrix <- matrix(NA, nrow = p, ncol = p)
 diag(sample_covariance_matrix) <- 1
-# set.seed(666)
 
 mat_Sim <- matrix(data = NA, nrow = p, ncol = p)
 U <- runif(n = p) * 0.5
 
-for(i in 1 : p)
+for(i in 1:p)
 {
-  if(i <= (p/2))
+  if(i %in% c(2,3))
   {
     U_Star <- pmin(U + 0.2 * runif(n = p), 0.99999)
     
@@ -49,12 +48,17 @@ for(i in 1 : p)
 
 cor_Mat <- cor(mat_Sim)
 sample_covariance_matrix <- cor_Mat * (p/2)
-
+# diag(sample_covariance_matrix) <- 1
 ## create multivariate normal distribution
-# x.origin <- mvrnorm(n = n, mu = sample_meanvector, Sigma = sample_covariance_matrix)
-x.origin <- tmvnsim(n = n, k = p, lower = rep(0, p), means = rep(0, p), sigma = sample_covariance_matrix)$samp
+# x.origin <- mvrnorm(n = n, mu = rep(0,p), Sigma = sample_covariance_matrix)
 
-# x.origin <- cbind(replicate(p, runif(n, 0, 1)))
+C <- matrix(c(1, 0.3, 0.5, 0.3, 0.3,
+              0.3, 1, 0.95, 0.4, 0.4,
+              0.5, 0.95, 1, 0.5, 0.1,
+              0.3, 0.4, 0.5 , 1, 0.5,
+              0.3, 0.4, 0.5, 0.5, 1), nrow = p)
+x.origin <- tmvnsim(n = n, k = p, lower = rep(0, p), means = rep(0, p), sigma = C)$samp
+
 
 corrplot.mixed(cor(x.origin),
                 upper = "circle",
@@ -63,9 +67,6 @@ corrplot.mixed(cor(x.origin),
 for(i in 1:p){
     knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)
     tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
-    # tps <- bSpline(x = x.origin[,i], Boundary.knots = c(min(x.origin[,i]),max(x.origin[,i])), df = psi, intercept = TRUE)
-    # tps <- mSpline(x.origin[,i], df=psi, Boundary.knots = range(x.origin[,i]), degree = 3, intercept=TRUE)
-    #   bs.x <- cbind(bs.x, tps)
     bs.linear <- cbind(bs.linear, tps[,1:no.theta])
     bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])  
 }
@@ -85,20 +86,6 @@ for(j in 1:p){
     }
 }
 
-# theta.origin <- matrix(, nrow = 2, ncol = p)
-# for(j in 1:p){
-#     for (k in 1:2){
-#         if(j %in% c(2,4,5,6,9,10)){theta.origin[k, j] <- 0}
-#         else if(j==7){
-#             if(k==1){theta.origin[k, j] <- 0.5}
-#             else{theta.origin[k, j] <- -0.3}
-#         }
-#         else {
-#             if(k==1){theta.origin[k,j] <- -0.2}
-#             else{theta.origin[k,j] <- 0.8}
-#         }
-#     }
-# }
 theta.origin <- c(0, 0, 0.2, 0.2, 0, 0)
 
 f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
@@ -193,7 +180,7 @@ log.posterior <- function(beta, y.origin){
 
 
 # beta.emp <- c(as.vector(theta.origin), as.vector(gamma.origin), 0.01, 0.01)
-beta.emp <- c(rep(0, (p+1)), rep(0, p*psi), 1, 1)
+beta.emp <- c(rep(0, (p+1)), rep(0, p*psi), 0.01, 0.01)
 beta.map <- optim(par = beta.emp, fn = log.posterior, 
                   y.origin = y.origin,
                   # lower=c(rep(-Inf, (length(beta.emp)-2)), 0, 0),
