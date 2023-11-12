@@ -22,8 +22,8 @@ library(cmdstanr)
 # library(ggplotify)
 
 #Scenario 1
-# set.seed(2)
-set.seed(50)
+set.seed(2)
+# set.seed(50)
 
 n <- 5000
 psi <- 20
@@ -242,8 +242,8 @@ model {
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += gamma_lpdf(lambda1 | 1, 10);
-    target += gamma_lpdf(lambda2 | 1, 100);
-    target += normal_lpdf(theta[1] | 0, 10);
+    target += gamma_lpdf(lambda2 | 1, 5);
+    target += normal_lpdf(theta[1] | 0, 100);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
     target += (p * log(lambda1) + (p * psi * log(lambda2)));
     for (j in 1:p){
@@ -279,15 +279,15 @@ data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi,
 init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
                         theta = rep(0, (p+1)), 
                         tau = rep(0.01, p), sigma = 0.001, 
-                        lambda1 = 0.1, lambda2 = 0.1),
+                        lambda1 = 0.1, lambda2 = 0.01),
                   list(gamma = array(rep(0.02, (psi*p)), dim=c(psi, p)),
                         theta = rep(0.01, (p+1)), 
                         tau = rep(0.01, p), sigma = 0.001,
-                        lambda1 = 0.1, lambda2 = 0.1),
+                        lambda1 = 0.1, lambda2 = 0.0),
                   list(gamma = array(rep(0.01, (psi*p)), dim=c(psi, p)),
                         theta = rep(0.05, (p+1)), 
                         tau = rep(0.01, p), sigma = 0.01,
-                        lambda1 = 0.1, lambda2 = 0.1))
+                        lambda1 = 0.1, lambda2 = 0.01))
 
 fit1 <- stan(
     file = "model_simulation_sc3.stan",  # Stan program
