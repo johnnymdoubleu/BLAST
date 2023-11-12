@@ -69,7 +69,7 @@ simul.no <- 50
 
 xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
 
-sample_meanvector <- runif(p,0,1)
+sample_meanvector <- runif(p, 0, 1)
 sample_covariance_matrix <- matrix(NA, nrow = p, ncol = p)
 diag(sample_covariance_matrix) <- 1
 
@@ -222,6 +222,7 @@ transformed parameters {
     matrix[n, p] gsmooth; // nonlinear component
     array[n] real <lower=0> newalpha; // tail index
     matrix[n, p] newgsmooth; // nonlinear component
+
     for (j in 1:p){
         gsmooth[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
         newgsmooth[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
@@ -237,7 +238,7 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda | 0.1, 0.01);
+    target += gamma_lpdf(lambda | 1, 10);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     target += (p * psi * log(lambda));
     for (j in 1:p){
@@ -269,11 +270,11 @@ data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi,
 # file <- file.path(cmdstan_path(), "model_simulation.stan")
 
 init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
-                        tau = rep(0.01, p), sigma = 0.001, lambda = 1),
+                        tau = rep(0.01, p), sigma = 0.001, lambda = 0.1),
                   list(gamma = array(rep(0.02, (psi*p)), dim=c(psi, p)),
-                        tau = rep(0.01, p), sigma = 0.001, lambda = 1),
-                  list(gamma = array(rep(0.01, (psi*p)), dim=c(psi, p)),
-                        tau = rep(0.01, p), sigma = 0.01, lambda = 1))
+                        tau = rep(0.01, p), sigma = 0.001, lambda = 0.1),
+                  list(gamma = array(rep(0.05, (psi*p)), dim=c(psi, p)),
+                        tau = rep(0.01, p), sigma = 0.01, lambda = 0.1))
 
 fit1 <- stan(
     file = "model_simulation_sc3.stan",  # Stan program
@@ -293,7 +294,7 @@ str(posterior)
 # plot(fit1, plotfun = "trace", pars = c("theta"), nrow = 3)
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_theta_trace_sc2-wi.pdf"), width=10, height = 7.78)
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_theta_trace_sc3-wi.pdf"), width=10, height = 7.78)
-plot(fit1, plotfun = "trace", pars = c("lambda"), nrow = 2)
+plot(fit1, plotfun = "trace", pars = c("lambda"))
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_lambda_sc2-wi.pdf"), width=10, height = 7.78)
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_lambda_sc3-wi.pdf"), width=10, height = 7.78)
 
@@ -302,7 +303,7 @@ gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summar
 lambda.samples <- summary(fit1, par=c("lambda"), probs = c(0.05,0.5, 0.95))$summary
 alpha.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
 newalpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
-
+summary(fit1, par=c("sigma"), probs = c(0.05,0.5, 0.95))$summary
 gamma.post.mean <- gamma.samples[,1]
 gamma.q1 <- gamma.samples[,4]
 gamma.q3 <- gamma.samples[,6]
