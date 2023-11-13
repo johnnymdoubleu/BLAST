@@ -197,9 +197,9 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 1, 100);
+    target += gamma_lpdf(lambda1 | 1, 10);
     target += gamma_lpdf(lambda2 | 0.1, 0.1);
-    target += normal_lpdf(theta[1] | 0, 100);
+    target += normal_lpdf(theta[1] | 0, 10);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
     target += (p * log(lambda1) + (p * psi * log(lambda2)));
     for (j in 1:p){
@@ -216,7 +216,7 @@ op <- optimizing(sm, data = list(y = as.vector(y), u = u, p = p, n= n, psi = psi
             #   init = "random",
               init = list(gamma = array(rep(0,(psi*p)), dim=c(psi, p)),
                         theta = rep(-0.05, (p+1)), 
-                        tau = rep(1, p), sigma = 0.1, 
+                        tau = rep(1, p), sigma = 0.01, 
                         lambda1 = 0.1, lambda2 = 0.1),
               iter = 3500,
               algorithm = "BFGS",
