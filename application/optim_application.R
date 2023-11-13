@@ -185,10 +185,10 @@ transformed parameters {
     vector[n] alpha; // tail index
     matrix[n, p] gsmooth; // nonlinear component
     for (j in 1:p){
-        gsmooth[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
+        gsmooth[,j] <- bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
     };
     for (i in 1:n){
-        alpha[i] = exp(theta[1] + dot_product(bsLinear[i], theta[2:newp]) + (gsmooth[i,] *rep_vector(1, p)));
+        alpha[i] <- exp(theta[1] + dot_product(bsLinear[i], theta[2:newp]) + sum(gsmooth[i,])); //(gsmooth[i,] *rep_vector(1, p))
     };
 }
 
@@ -197,22 +197,15 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 1, 2);
+    target += gamma_lpdf(lambda1 | 0.1, 1);
     target += gamma_lpdf(lambda2 | 0.1, 0.1);
-    target += inv_gamma_lpdf(sigma | 0.01, 0.01);
-    target += double_exponential_lpdf(theta[1] | 0, lambda1); // target += normal_lpdf(theta[1] | 0, 0.1);
+    target += normal_lpdf(theta[1] | 0, 1);
+    target += inv_gamma_lpdf(sigma | 0.01, 0.01); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
+    target += (p * log(lambda1) + (p * psi * log(lambda2)));
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
-        target += gamma_lpdf(tau[j] | atau, (square(lambda2)/2));
-        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau[j] * sigma);
-    }
-}
-generated quantities {
-    // Used in Posterior predictive check
-    vector[n] log_lik;
-    real y_rep[n] = pareto_rng(u, alpha);
-    for (i in 1:n) {
-        log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
+        target += gamma_lpdf(tau[j] | atau, (lambda2/sqrt(2)));
+        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * sqrt(tau[j]) * sqrt(sigma));
     }
 }
 "
@@ -224,7 +217,7 @@ op <- optimizing(sm, data = list(y = as.vector(y), u = u, p = p, n= n, psi = psi
               init = list(gamma = array(rep(0,(psi*p)), dim=c(psi, p)),
                         theta = rep(0, (p+1)), 
                         tau = rep(1, p), sigma = 0.1, 
-                        lambda1 = 0.05, lambda2 = 30),
+                        lambda1 = 0.1, lambda2 = 0.1),
               iter = 3500,
               algorithm = "BFGS",
               verbose = TRUE)
@@ -319,7 +312,7 @@ for(i in 1:n){
   alpha.new[i] <- exp(theta.map[1] + sum(f.new[i,]))
 }
 
-alpha.optim <- op1$par[(158+1):(158+n)]
+alpha.optim <- op$par[(158+1):(158+n)]
 
 func.linear.new <- func.nonlinear.new <- func.new <- matrix(, nrow=n, ncol=0)
 for (j in 1:p){
@@ -401,8 +394,8 @@ data.scenario <- data.frame("x" = c(1:n),
                             "optimAlp" = sort(alpha.optim))
 ggplot(data = data.scenario, aes(x = constant)) + 
   ylab(expression(alpha(x))) + xlab("") +
-#   geom_line(aes(y = mapAlp, col = "MAP Alpha"), linewidth = 2.5) +
-  geom_line(aes(y = optimAlp, col = "Optim Alpha"), linewidth = 2.5) +
+  geom_line(aes(y = mapAlp, col = "MAP Alpha"), linewidth = 2.5) +
+  # geom_line(aes(y = optimAlp, col = "Map Alpha"), linewidth = 2.5) +
   labs(col = "") +
     theme(axis.title.y = element_text(size = rel(1.8), angle = 90)) +
     theme(axis.title.x = element_text(size = rel(1.8), angle = 00)) +
