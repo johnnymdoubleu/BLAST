@@ -199,7 +199,7 @@ model {
     }
     target += gamma_lpdf(lambda1 | 1, 10);
     target += gamma_lpdf(lambda2 | 0.1, 0.1);
-    target += normal_lpdf(theta[1] | 0, 10);
+    target += normal_lpdf(theta[1] | 0, 100);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
     target += (p * log(lambda1) + (p * psi * log(lambda2)));
     for (j in 1:p){
@@ -369,7 +369,7 @@ ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +
         strip.text = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
-# ggsave(paste0("./BRSTIR/application/figures/",date,"_map_linear.pdf"), width=11, height = 15)
+ggsave(paste0("./BRSTIR/application/figures/",date,"_map_linear.pdf"), width=11, height = 15)
 ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab("Nonlinear Component") +
   geom_line(aes(y=new.nonlinear, colour = covariates), linewidth=2) + ylab ("") +
