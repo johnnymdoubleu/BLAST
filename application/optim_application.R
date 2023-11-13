@@ -197,7 +197,7 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 0.1, 1);
+    target += gamma_lpdf(lambda1 | 1, 10);
     target += gamma_lpdf(lambda2 | 0.1, 0.1);
     target += normal_lpdf(theta[1] | 0, 1);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
@@ -238,7 +238,7 @@ df.theta$covariate <- factor(c("\u03b8",colnames(fwi.scaled)), levels = c("\u03b
 df.theta$labels <- factor(c("theta0",colnames(fwi.scaled)))
 
 ggplot(df.theta, aes(x = covariate)) + ylab("") + 
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) +
+  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + ylim(-0.05, 0.05) +
   geom_point(aes(y = theta.map, color = covariate), size = 5) + 
   scale_x_discrete(labels = c(expression(bold(theta[0])),
                               expression(bold(theta[1])),
@@ -344,7 +344,7 @@ equal_breaks <- function(n = 3, s = 0.1,...){
 ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + xlab("Smooth Functions") +
   geom_line(aes(y=new, colour = covariates), linewidth=2) + ylab ("") +
-  facet_grid(covariates ~ ., scales="free_y") +
+  facet_grid(covariates ~ .) +
   scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + theme_minimal(base_size = 30) + 
   theme(plot.title = element_text(hjust = 0.5, size = 30),
         legend.position = "none",
