@@ -197,8 +197,8 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 1, 10);
-    target += gamma_lpdf(lambda2 | 0.01, 0.1);
+    target += gamma_lpdf(lambda1 | 1, 100);
+    target += gamma_lpdf(lambda2 | 0.1, 0.1);
     target += normal_lpdf(theta[1] | 0, 100);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
     target += (p * log(lambda1) + (p * psi * log(lambda2)));
@@ -215,8 +215,8 @@ op <- optimizing(sm, data = list(y = as.vector(y), u = u, p = p, n= n, psi = psi
                     bsLinear = bs.linear, bsNonlinear = bs.nonlinear),
             #   init = "random",
               init = list(gamma = array(rep(0,(psi*p)), dim=c(psi, p)),
-                        theta = rep(0, (p+1)), 
-                        tau = rep(0.1, p), sigma = 0.1, 
+                        theta = rep(-0.05, (p+1)), 
+                        tau = rep(1, p), sigma = 0.1, 
                         lambda1 = 0.1, lambda2 = 0.1),
               iter = 3500,
               algorithm = "BFGS",
@@ -238,7 +238,7 @@ df.theta$covariate <- factor(c("\u03b8",colnames(fwi.scaled)), levels = c("\u03b
 df.theta$labels <- factor(c("theta0",colnames(fwi.scaled)))
 
 ggplot(df.theta, aes(x = covariate)) + ylab("") + 
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + #ylim(-0.025, 0.035) +
+  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + ylim(-0.2, 0.2) +
   geom_point(aes(y = theta.map, color = covariate), size = 5) + 
   scale_x_discrete(labels = c(expression(bold(theta[0])),
                               expression(bold(theta[1])),
