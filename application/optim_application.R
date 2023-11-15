@@ -238,7 +238,7 @@ df.theta$covariate <- factor(c("\u03b8",colnames(fwi.scaled)), levels = c("\u03b
 df.theta$labels <- factor(c("theta0",colnames(fwi.scaled)))
 
 ggplot(df.theta, aes(x = covariate)) + ylab("") + 
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + ylim(-0.2, 0.2) +
+  geom_hline(yintercept = 0, linetype = 2, color = "#141414", linewidth = 2) + ylim(-0.2, 0.2) +
   geom_point(aes(y = theta.map, color = covariate), size = 5) + 
   scale_x_discrete(labels = c(expression(bold(theta[0])),
                               expression(bold(theta[1])),
