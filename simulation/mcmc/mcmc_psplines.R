@@ -27,7 +27,7 @@ set.seed(2)
 
 n <- 5000
 psi <- 20
-threshold <- 0.90
+threshold <- 0.85
 p <- 10
 no.theta <- 1
 simul.no <- 50
@@ -39,6 +39,7 @@ for(i in 1:(dim(x.origin)[2])){
   splines <- bbase(x.origin[, i], min(x.origin[, i]), max(x.origin[, i]), nseg = 17, bdeg = 3)
   bs.nonlinear <- cbind(bs.nonlinear, splines)
   # phi <- dim(out[[1]][[1]]$X)[2]
+#   print(sum(splines))
   psi <- dim(splines)[2]
 }
 
@@ -132,6 +133,7 @@ for(j in 1:p){
 f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
     # f.linear.origin[,j] <- bs.linear[, j] * theta.origin[j+1]
+    # print(head(bs.nonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)]))
     f.nonlinear.origin[,j] <- bs.nonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
     # f.origin[, j] <- f.linear.origin[,j] + f.nonlinear.origin[,j]
 }
