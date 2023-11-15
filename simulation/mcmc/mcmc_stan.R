@@ -60,77 +60,77 @@ for(j in 1:p){
 
 theta.origin <- c(-0.1, 0.8, 0, 0.8, 0, 0, 0, -0.3, 0.8, 0, 0)
 
-# n <- 5000
-# psi <- 20
-# threshold <- 0.90
-# p <- 5
-# no.theta <- 1
-# simul.no <- 50
+n <- 5000
+psi <- 20
+threshold <- 0.90
+p <- 5
+no.theta <- 1
+simul.no <- 50
 
-# xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
+xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
 
-# sample_meanvector <- runif(p,0,1)
-# sample_covariance_matrix <- matrix(NA, nrow = p, ncol = p)
-# diag(sample_covariance_matrix) <- 1
+sample_meanvector <- runif(p,0,1)
+sample_covariance_matrix <- matrix(NA, nrow = p, ncol = p)
+diag(sample_covariance_matrix) <- 1
 
-# mat_Sim <- matrix(data = NA, nrow = p, ncol = p)
-# U <- runif(n = p) * 0.5
+mat_Sim <- matrix(data = NA, nrow = p, ncol = p)
+U <- runif(n = p) * 0.5
 
-# for(i in 1:p)
-# {
-#   if(i %in% c(2,3))
-#   {
-#     U_Star <- pmin(U + 0.2 * runif(n = p), 0.99999)
+for(i in 1:p)
+{
+  if(i %in% c(2,3))
+  {
+    U_Star <- pmin(U + 0.2 * runif(n = p), 0.99999)
     
-#   }else
-#   {
-#     U_Star <- pmin(pmax(U + sample(c(0, 1), size = p, replace = TRUE) * runif(n = p), 0.00001), 0.99999)
-#   }
+  }else
+  {
+    U_Star <- pmin(pmax(U + sample(c(0, 1), size = p, replace = TRUE) * runif(n = p), 0.00001), 0.99999)
+  }
   
-#   mat_Sim[, i] <- qnorm(U_Star)  
-# }
+  mat_Sim[, i] <- qnorm(U_Star)  
+}
 
-# cor_Mat <- cor(mat_Sim)
-# sample_covariance_matrix <- cor_Mat * (p/2)
-# # diag(sample_covariance_matrix) <- 1
-# ## create multivariate normal distribution
-# # x.origin <- mvrnorm(n = n, mu = rep(0,p), Sigma = sample_covariance_matrix)
+cor_Mat <- cor(mat_Sim)
+sample_covariance_matrix <- cor_Mat * (p/2)
+# diag(sample_covariance_matrix) <- 1
+## create multivariate normal distribution
+# x.origin <- mvrnorm(n = n, mu = rep(0,p), Sigma = sample_covariance_matrix)
 
-# C <- matrix(c(1, 0.3, 0.5, 0.3, 0.3,
-#               0.3, 1, 0.95, 0.4, 0.4,
-#               0.5, 0.95, 1, 0.5, 0.1,
-#               0.3, 0.4, 0.5 , 1, 0.5,
-#               0.3, 0.4, 0.5, 0.5, 1), nrow = p)
-# x.origin <- tmvnsim(n = n, k = p, lower = rep(0, p), means = rep(0, p), sigma = C)$samp
+C <- matrix(c(1, 0.3, 0.5, 0.3, 0.3,
+              0.3, 1, 0.95, 0.4, 0.4,
+              0.5, 0.95, 1, 0.5, 0.1,
+              0.3, 0.4, 0.5 , 1, 0.5,
+              0.3, 0.4, 0.5, 0.5, 1), nrow = p)
+x.origin <- tmvnsim(n = n, k = p, lower = rep(0, p), means = rep(0, p), sigma = C)$samp
 
 
 # corrplot.mixed(cor(x.origin),
 #                 upper = "circle",
 #                 lower = "number",
 #                 addgrid.col = "black")
-# for(i in 1:p){
-#     knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)
-#     tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
-#     bs.linear <- cbind(bs.linear, tps[,1:no.theta])
-#     bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])  
-# }
+for(i in 1:p){
+    knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)
+    tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
+    bs.linear <- cbind(bs.linear, tps[,1:no.theta])
+    bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])  
+}
 
-# gamma.origin <- matrix(, nrow = psi, ncol = p)
-# for(j in 1:p){
-#     for (ps in 1:psi){
-#         if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
-#         else if(j==7){
-#             if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.01}
-#             else{gamma.origin[ps, j] <- 0.01}
-#         }
-#         else {
-#             if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.01}
-#             else{gamma.origin[ps, j] <- 0.01}
-#         }
-#     }
-# }
+gamma.origin <- matrix(, nrow = psi, ncol = p)
+for(j in 1:p){
+    for (ps in 1:psi){
+        if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
+        else if(j==7){
+            if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.01}
+            else{gamma.origin[ps, j] <- 0.01}
+        }
+        else {
+            if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.01}
+            else{gamma.origin[ps, j] <- 0.01}
+        }
+    }
+}
 
-# theta.origin <- c(0.5, 0, 0.2, 0.2, 0, 0)
+theta.origin <- c(0.5, 0, 0.2, 0.2, 0, 0)
 
 f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
@@ -451,7 +451,7 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
   geom_line(aes(y=post.mean, colour = covariates, linetype = "Posterior Mean"), linewidth=2) + 
   ylab("") + xlab ("Smooth Functions") +
   # geom_point(aes(y=origin, shape = replicate)) + geom_point(aes(y=new, shape = replicate)) +
-  facet_grid(covariates ~ .) +
+  facet_grid(covariates ~ ., scales = "free_y") +
   scale_linetype_manual("functions",values=c("Posterior Mean"=3,"True"=1)) +
   scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + theme_minimal(base_size = 30) + 
   theme(plot.title = element_text(hjust = 0.5, size = 30),

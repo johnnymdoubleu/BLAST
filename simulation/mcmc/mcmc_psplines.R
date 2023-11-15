@@ -1,4 +1,5 @@
 library(npreg)
+library(dlnm)
 library(tmvnsim)
 library(reshape2)
 library(splines2)
@@ -22,12 +23,12 @@ library(cmdstanr)
 # library(ggplotify)
 
 #Scenario 1
-set.seed(2)
+set.seed(36)
 # set.seed(50)
 
 n <- 5000
 psi <- 20
-threshold <- 0.85
+threshold <- 0.90
 p <- 10
 no.theta <- 1
 simul.no <- 50
@@ -36,11 +37,12 @@ xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow
 x.origin <- cbind(replicate(p, runif(n, 0, 1)))
 
 for(i in 1:(dim(x.origin)[2])){
-  splines <- bbase(x.origin[, i], min(x.origin[, i]), max(x.origin[, i]), nseg = 17, bdeg = 3)
+#   splines <- bbase(x.origin[, i], min(x.origin[, i]), max(x.origin[, i]), nseg = 17, bdeg = 3)
+  splines <- ps(x.origin[,i], df=psi, knots=NULL, degree=3, intercept=FALSE, fx= FALSE, S=NULL, diff=2)
   bs.nonlinear <- cbind(bs.nonlinear, splines)
   # phi <- dim(out[[1]][[1]]$X)[2]
 #   print(sum(splines))
-  psi <- dim(splines)[2]
+#   psi <- dim(splines)[2]
 }
 
 gamma.origin <- matrix(, nrow = psi, ncol = p)
@@ -156,9 +158,11 @@ newx <- seq(0, 1, length.out=n)
 xholder <- bs.x <- matrix(, nrow = n, ncol = p)
 for(i in 1:p){
     xholder[,i] <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = n)
-    splines <- bbase(x.origin[, i], min(x.origin[, i]), max(x.origin[, i]), nseg = 17, bdeg = 3)
+    # splines <- bbase(x.origin[, i], min(x.origin[, i]), max(x.origin[, i]), nseg = 17, bdeg = 3)
+    splines <-  ps(x.origin[,i], df=psi, knots=NULL, degree=3, intercept=FALSE, fx= FALSE, S=NULL, diff=2)
     bs.nonlinear <- cbind(bs.nonlinear, splines)
-    test.splines <- bbase(xholder[,i], min(xholder[,i]), max(xholder[,i]), nseg = 17, bdeg = 3)
+    # test.splines <- bbase(xholder[,i], min(xholder[,i]), max(xholder[,i]), nseg = 17, bdeg = 3)
+    test.splines <- ps(xholder[,i], df=psi, knots=NULL, degree=3, intercept=FALSE, fx= FALSE, S=NULL, diff=2)
     xholder.nonlinear <- cbind(xholder.nonlinear, test.splines)
 }
 
@@ -233,7 +237,7 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda | 1, 10);
+    target += gamma_lpdf(lambda | 0.1, 0.1);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     target += (p * psi * log(lambda));
     for (j in 1:p){
