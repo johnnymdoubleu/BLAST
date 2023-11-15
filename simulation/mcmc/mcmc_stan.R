@@ -241,8 +241,8 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 0.1, 10);
-    target += gamma_lpdf(lambda2 | 0.1, 100);
+    target += gamma_lpdf(lambda1 | 0.1, 1);
+    target += gamma_lpdf(lambda2 | 0.1, 1);
     target += normal_lpdf(theta[1] | 0, 100);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
     target += (p * log(lambda1) + (p * psi * log(lambda2)));
@@ -278,16 +278,16 @@ data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi,
 
 init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
                         theta = rep(0, (p+1)), 
-                        tau = rep(0.01, p), sigma = 0.001, 
-                        lambda1 = 0.001, lambda2 = 0.001),
+                        tau = rep(0.1, p), sigma = 0.1, 
+                        lambda1 = 0.1, lambda2 = 0.1),
                   list(gamma = array(rep(0.02, (psi*p)), dim=c(psi, p)),
                         theta = rep(0.01, (p+1)), 
                         tau = rep(0.01, p), sigma = 0.001,
-                        lambda1 = 0.001, lambda2 = 0.001),
+                        lambda1 = 0.01, lambda2 = 0.1),
                   list(gamma = array(rep(0.01, (psi*p)), dim=c(psi, p)),
                         theta = rep(0.05, (p+1)), 
                         tau = rep(0.01, p), sigma = 0.01,
-                        lambda1 = 0.001, lambda2 = 0.001))
+                        lambda1 = 0.1, lambda2 = 0.01))
 
 fit1 <- stan(
     file = "model_simulation_sc3.stan",  # Stan program
