@@ -47,12 +47,12 @@ for(j in 1:p){
     for (ps in 1:psi){
         if(j %in% c(2,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
         else if(j==7){
-            if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.1}
-            else{gamma.origin[ps, j] <- 0.1}
+            if(ps <= (psi/2)){gamma.origin[ps, j] <- -0.2}
+            else{gamma.origin[ps, j] <- -0.2}
         }
         else {
-            if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.1}
-            else{gamma.origin[ps, j] <- 0.1}
+            if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.3}
+            else{gamma.origin[ps, j] <- 0.3}
         }
     }
 }
@@ -153,9 +153,10 @@ xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow
 newx <- seq(0, 1, length.out=n)
 xholder <- bs.x <- matrix(, nrow = n, ncol = p)
 for(i in 1:p){
+    xholder[,i] <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = n)
     splines <- bbase(x.origin[, i], min(x.origin[, i]), max(x.origin[, i]), nseg = 17, bdeg = 3)
     bs.nonlinear <- cbind(bs.nonlinear, splines)
-    test.splines <- bbase(seq(0, 1, length.out = n), 0, 1, nseg = 17, bdeg = 3)
+    test.splines <- bbase(xholder[,i], min(xholder[,i]), max(xholder[,i]), nseg = 17, bdeg = 3)
     xholder.nonlinear <- cbind(xholder.nonlinear, test.splines)
 }
 
@@ -163,7 +164,7 @@ f.nonlinear.new <- f.linear.new <- f.new <- f.nonlinear.origin <- f.linear.origi
 for(j in 1:p){
     # f.linear.origin[,j] <- bs.linear[, j] * theta.origin[j+1]
     f.nonlinear.origin[,j] <- bs.nonlinear[1:n,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
-    f.origin[, j] <- f.linear.origin[,j] + f.nonlinear.origin[,j]
+    # f.origin[, j] <- f.linear.origin[,j] + f.nonlinear.origin[,j]
     # f.linear.new[,j] <- xholder.linear[, j] * theta.origin[j+1]
     f.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
     # f.new[,j] <- f.linear.new[,j] + f.nonlinear.new[,j]
@@ -262,11 +263,11 @@ data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi,
 # file <- file.path(cmdstan_path(), "model_simulation.stan")
 
 init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
-                        tau = rep(0.01, p), sigma = 0.001, lambda = 0.1),
+                        tau = rep(0.01, p), sigma = 0.1, lambda = 0.1),
                   list(gamma = array(rep(0.02, (psi*p)), dim=c(psi, p)),
-                        tau = rep(0.01, p), sigma = 0.001, lambda = 0.1),
+                        tau = rep(0.01, p), sigma = 0.1, lambda = 0.1),
                   list(gamma = array(rep(0.05, (psi*p)), dim=c(psi, p)),
-                        tau = rep(0.01, p), sigma = 0.01, lambda = 0.1))
+                        tau = rep(0.01, p), sigma = 0.1, lambda = 0.1))
 
 fit1 <- stan(
     file = "model_simulation_sc3.stan",  # Stan program
