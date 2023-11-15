@@ -23,7 +23,7 @@ library(cmdstanr)
 
 #Scenario 1
 # set.seed(2)
-set.seed(50)
+set.seed(48)
 
 n <- 5000
 psi <- 20
@@ -157,7 +157,9 @@ newx <- seq(0, 1, length.out=n)
 xholder <- bs.x <- matrix(, nrow = n, ncol = p)
 for(i in 1:p){
     xholder[,i] <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = n)  
-    test.knot <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)  
+    test.knot <- seq(min(xholder[,i]), max(xholder[,i]), length.out = psi)  
+    # xholder[,i] <- seq(0, 1, length.out = n)  
+    # test.knot <- seq(0, 1, length.out = psi)
     splines <- basis.tps(xholder[,i], test.knot, m=2, rk=FALSE, intercept = FALSE)
     xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
     xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
@@ -241,11 +243,11 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 0.1, 1);
-    target += gamma_lpdf(lambda2 | 0.1, 0.1);
+    target += gamma_lpdf(lambda1 | 1, 10);
+    target += gamma_lpdf(lambda2 | 1, 10);
     target += normal_lpdf(theta[1] | 0, 100);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
-    target += (p * log(lambda1) + (p * psi * log(lambda2)));
+    target += (newp * log(lambda1) + (p * psi * log(lambda2)));
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, lambda2/sqrt(2));
@@ -444,7 +446,7 @@ data.smooth <- data.frame("x"=c(1:n),
                           "replicate" = gl(2, n, (p*n)))
 ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  # geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
+  geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
   geom_line(aes(y=true, colour = covariates, linetype = "True"), linewidth=2) + 
   geom_line(aes(y=post.mean, colour = covariates, linetype = "Posterior Mean"), linewidth=2) + 
   ylab("") + xlab ("Smooth Functions") +
@@ -472,7 +474,7 @@ data.linear <- data.frame("x"=c(1:n),
                           "replicate" = gl(2, n, (p*n)))
 ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  # geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
+  geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
   geom_line(aes(y=true, colour = covariates, linetype = "True"), linewidth=2) + 
   geom_line(aes(y=post.mean, colour = covariates, linetype = "Posterior Mean"), linewidth=2) + xlab("Linear Components") + ylab("") +
   facet_grid(covariates ~ ., scales = "free_y") + 
@@ -499,7 +501,7 @@ data.nonlinear <- data.frame("x"=c(1:n),
                           "replicate" = gl(2, n, (p*n)))
 ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  # geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
+  geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
   geom_line(aes(y=true, colour = covariates, linetype = "True"), linewidth=2) + 
   geom_line(aes(y=post.mean, colour = covariates, linetype = "MCMC"), linewidth=2) + xlab("Nonlinear Components") + ylab("") +
   facet_grid(covariates ~ ., scales = "free_y") + 
@@ -541,7 +543,7 @@ ggplot(data.scenario, aes(x=x)) +
   theme(plot.title = element_text(hjust = 0.5, size = 30),
         legend.position="top", 
         legend.key.size = unit(1, 'cm'),
-        legend.text = element_text(size=35),
+        legend.text = element_text(size=18),
         plot.margin = margin(0,0,0,-10),
         strip.text = element_blank(),
         axis.text.x = element_blank(),
@@ -578,7 +580,7 @@ ggplot(data.scenario, aes(x=x)) +
   theme(plot.title = element_text(hjust = 0.5, size = 30),
         legend.position="top", 
         legend.key.size = unit(1, 'cm'),
-        legend.text = element_text(size=25),
+        legend.text = element_text(size=18),
         plot.margin = margin(0,0,0,-10),
         strip.text = element_blank(),
         axis.text.x = element_blank(),
