@@ -18,6 +18,7 @@ library(rstan)
 library(ggmcmc)
 library(MCMCvis)
 library(cmdstanr)
+library(ggh4x)
 # library(simstudy)
 # library(ggplotify)
 
@@ -37,8 +38,6 @@ x.origin <- cbind(replicate(p, runif(n, 0, 1)))
 for(i in 1:p){
     knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)  
     tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
-    # tps <- mSpline(x.origin[,i], df=psi, Boundary.knots = range(x.origin[,i]), degree = 3, intercept=TRUE)
-    #   bs.x <- cbind(bs.x, tps)
     bs.linear <- cbind(bs.linear, tps[,1:no.theta])
     bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])  
 }
@@ -60,77 +59,77 @@ for(j in 1:p){
 
 theta.origin <- c(-0.1, 0.8, 0, 0.8, 0, 0, 0, -0.3, 0.8, 0, 0)
 
-n <- 5000
-psi <- 20
-threshold <- 0.90
-p <- 5
-no.theta <- 1
-simul.no <- 50
+# n <- 5000
+# psi <- 20
+# threshold <- 0.90
+# p <- 5
+# no.theta <- 1
+# simul.no <- 50
 
-xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
+# xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
 
-sample_meanvector <- runif(p,0,1)
-sample_covariance_matrix <- matrix(NA, nrow = p, ncol = p)
-diag(sample_covariance_matrix) <- 1
-
-mat_Sim <- matrix(data = NA, nrow = p, ncol = p)
-U <- runif(n = p) * 0.5
-
-for(i in 1:p)
-{
-  if(i %in% c(2,3))
-  {
-    U_Star <- pmin(U + 0.2 * runif(n = p), 0.99999)
-    
-  }else
-  {
-    U_Star <- pmin(pmax(U + sample(c(0, 1), size = p, replace = TRUE) * runif(n = p), 0.00001), 0.99999)
-  }
-  
-  mat_Sim[, i] <- qnorm(U_Star)  
-}
-
-cor_Mat <- cor(mat_Sim)
-sample_covariance_matrix <- cor_Mat * (p/2)
+# sample_meanvector <- runif(p,0,1)
+# sample_covariance_matrix <- matrix(NA, nrow = p, ncol = p)
 # diag(sample_covariance_matrix) <- 1
-## create multivariate normal distribution
-# x.origin <- mvrnorm(n = n, mu = rep(0,p), Sigma = sample_covariance_matrix)
 
-C <- matrix(c(1, 0.3, 0.5, 0.3, 0.3,
-              0.3, 1, 0.95, 0.4, 0.4,
-              0.5, 0.95, 1, 0.5, 0.1,
-              0.3, 0.4, 0.5 , 1, 0.5,
-              0.3, 0.4, 0.5, 0.5, 1), nrow = p)
-x.origin <- tmvnsim(n = n, k = p, lower = rep(0, p), means = rep(0, p), sigma = C)$samp
+# mat_Sim <- matrix(data = NA, nrow = p, ncol = p)
+# U <- runif(n = p) * 0.5
+
+# for(i in 1:p)
+# {
+#   if(i %in% c(2,3))
+#   {
+#     U_Star <- pmin(U + 0.2 * runif(n = p), 0.99999)
+    
+#   }else
+#   {
+#     U_Star <- pmin(pmax(U + sample(c(0, 1), size = p, replace = TRUE) * runif(n = p), 0.00001), 0.99999)
+#   }
+  
+#   mat_Sim[, i] <- qnorm(U_Star)  
+# }
+
+# cor_Mat <- cor(mat_Sim)
+# sample_covariance_matrix <- cor_Mat * (p/2)
+# # diag(sample_covariance_matrix) <- 1
+# ## create multivariate normal distribution
+# # x.origin <- mvrnorm(n = n, mu = rep(0,p), Sigma = sample_covariance_matrix)
+
+# C <- matrix(c(1, 0.3, 0.5, 0.3, 0.3,
+#               0.3, 1, 0.95, 0.4, 0.4,
+#               0.5, 0.95, 1, 0.5, 0.1,
+#               0.3, 0.4, 0.5 , 1, 0.5,
+#               0.3, 0.4, 0.5, 0.5, 1), nrow = p)
+# x.origin <- tmvnsim(n = n, k = p, lower = rep(0, p), means = rep(0, p), sigma = C)$samp
 
 
-# corrplot.mixed(cor(x.origin),
-#                 upper = "circle",
-#                 lower = "number",
-#                 addgrid.col = "black")
-for(i in 1:p){
-    knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)
-    tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
-    bs.linear <- cbind(bs.linear, tps[,1:no.theta])
-    bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])  
-}
+# # corrplot.mixed(cor(x.origin),
+# #                 upper = "circle",
+# #                 lower = "number",
+# #                 addgrid.col = "black")
+# for(i in 1:p){
+#     knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)
+#     tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
+#     bs.linear <- cbind(bs.linear, tps[,1:no.theta])
+#     bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])  
+# }
 
-gamma.origin <- matrix(, nrow = psi, ncol = p)
-for(j in 1:p){
-    for (ps in 1:psi){
-        if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
-        else if(j==7){
-            if(ps <= (psi/2)){gamma.origin[ps, j] <- -0.1}
-            else{gamma.origin[ps, j] <- -0.1}
-        }
-        else {
-            if(ps <= (psi/2)){gamma.origin[ps, j] <- -0.1}
-            else{gamma.origin[ps, j] <- -0.1}
-        }
-    }
-}
+# gamma.origin <- matrix(, nrow = psi, ncol = p)
+# for(j in 1:p){
+#     for (ps in 1:psi){
+#         if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
+#         else if(j==7){
+#             if(ps <= (psi/2)){gamma.origin[ps, j] <- -0.1}
+#             else{gamma.origin[ps, j] <- -0.1}
+#         }
+#         else {
+#             if(ps <= (psi/2)){gamma.origin[ps, j] <- -0.1}
+#             else{gamma.origin[ps, j] <- -0.1}
+#         }
+#     }
+# }
 
-theta.origin <- c(0.5, 0, -0.2, -0.2, 0, 0)
+# theta.origin <- c(0.5, 0, -0.2, -0.2, 0, 0)
 
 f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
@@ -156,10 +155,10 @@ xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow
 newx <- seq(0, 1, length.out=n)
 xholder <- bs.x <- matrix(, nrow = n, ncol = p)
 for(i in 1:p){
-    xholder[,i] <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = n)  
-    test.knot <- seq(min(xholder[,i]), max(xholder[,i]), length.out = psi)  
-    # xholder[,i] <- seq(0, 1, length.out = n)  
-    # test.knot <- seq(0, 1, length.out = psi)
+    # xholder[,i] <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = n)  
+    # test.knot <- seq(min(xholder[,i]), max(xholder[,i]), length.out = psi)  
+    xholder[,i] <- seq(0, 1, length.out = n)  
+    test.knot <- seq(0, 1, length.out = psi)
     splines <- basis.tps(xholder[,i], test.knot, m=2, rk=FALSE, intercept = FALSE)
     xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
     xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
@@ -327,10 +326,6 @@ theta.post.mean <- theta.samples[,1]
 theta.q1 <- theta.samples[,4]
 theta.q3 <- theta.samples[,6]
 
-
-# theta.samples <- data.frame(apply(posterior$theta, 2, summary))
-
-
 df.theta <- data.frame("seq" = seq(1, (p+1)),
                         "true" = theta.origin,
                         "m" = theta.post.mean,
@@ -353,7 +348,6 @@ ggplot(df.theta, aes(x = covariate, y=m, color = covariate)) + ylab("") + xlab('
                               expression(bold(theta[8])),
                               expression(bold(theta[9])),
                               expression(bold(theta[10])))) + 
-#   scale_color_discrete(labels = c(expression(theta[0]),colnames(fwi.scaled))) + 
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 20),
           legend.text.align = 0,
@@ -444,7 +438,7 @@ data.smooth <- data.frame("x"=c(1:n),
                           "q3" = as.vector(g.q3),
                           "covariates" = gl(p, n, (p*n)),
                           "replicate" = gl(2, n, (p*n)))
-ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) + 
+plot.smooth <- ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
   geom_line(aes(y=true, colour = covariates, linetype = "True"), linewidth=2) + 
@@ -463,7 +457,28 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
 
+plot.smooth + facetted_pos_scales(y = list(
+    covariates == "1" ~ ylim(0, 1.4), 
+    covariates == "2" ~ ylim(0, 1.3),
+    covariates == "3" ~ ylim(0, 1.5),
+    covariates == "4" ~ ylim(-0.68, 0.05),
+    covariates == "5" ~ ylim(-0.2, 0.15),
+    covariates == "6" ~ ylim(-0.1, 0.8),
+    covariates == "7" ~ ylim(-0.5, 1),
+    covariates == "8" ~ ylim(0, 1.4),
+    covariates == "9" ~ ylim(-0.81, 0.1),
+    covariates == "10" ~ ylim(-0.7, 0.1)
+    ))
+
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_smooth_sc2-wi.pdf"), width=10.5, height = 15)
+
+# plot.smooth + facetted_pos_scales(y = list(
+#     covariates == "1" ~ ylim(-0.01, 0.38),
+#     covariates == "2" ~ ylim(-0.35, 0),
+#     covariates == "3" ~ ylim(-0.35, 0),
+#     covariates == "4" ~ ylim(-0.1, 0.05),
+#     covariates == "5" ~ ylim(-0.35, 0)))
+
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_smooth_sc3-wi.pdf"), width=10.5, height = 15)
 data.linear <- data.frame("x"=c(1:n),
                           "true" = as.vector(f.linear.new),
@@ -472,7 +487,7 @@ data.linear <- data.frame("x"=c(1:n),
                           "q3" = as.vector(g.linear.q3),
                           "covariates" = gl(p, n, (p*n)),
                           "replicate" = gl(2, n, (p*n)))
-ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) + 
+plot.linear <- ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
   geom_line(aes(y=true, colour = covariates, linetype = "True"), linewidth=2) + 
@@ -489,7 +504,28 @@ ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) +
         axis.ticks.x = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
+
+plot.linear + facetted_pos_scales(y = list(
+    covariates == "1" ~ ylim(0, 1.4), 
+    covariates == "2" ~ ylim(0, 0.28),
+    covariates == "3" ~ ylim(0, 1.5),
+    covariates == "4" ~ ylim(-0.27, 0.15),
+    covariates == "5" ~ ylim(-0.2, 0.15),
+    covariates == "6" ~ ylim(-0.1, 0.28),
+    covariates == "7" ~ ylim(-0.33, 0.33),
+    covariates == "8" ~ ylim(0, 1.4),
+    covariates == "9" ~ ylim(-0.28, 0.1),
+    covariates == "10" ~ ylim(-0.7, 0.1)
+    ))
+
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_linear_sc2-wi.pdf"), width=10.5, height = 15)
+
+# plot.linear + facetted_pos_scales(y = list(
+#     covariates == "1" ~ ylim(-0.01, 0.38),
+#     covariates == "2" ~ ylim(-0.35, 0),
+#     covariates == "3" ~ ylim(-0.35, 0),
+#     covariates == "4" ~ ylim(-0.1, 0.05),
+#     covariates == "5" ~ ylim(-0.35, 0)))
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_linear_sc3-wi.pdf"), width=10.5, height = 15)
 
 data.nonlinear <- data.frame("x"=c(1:n),
@@ -499,7 +535,7 @@ data.nonlinear <- data.frame("x"=c(1:n),
                           "q3" = as.vector(g.nonlinear.q3),
                           "covariates" = gl(p, n, (p*n)),
                           "replicate" = gl(2, n, (p*n)))
-ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) + 
+plot.nonlinear <- ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
   geom_line(aes(y=true, colour = covariates, linetype = "True"), linewidth=2) + 
@@ -518,7 +554,27 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
         axis.text.x = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
+
+plot.nonlinear + facetted_pos_scales(y = list(
+    covariates == "1" ~ ylim(0, 1.4), 
+    covariates == "2" ~ ylim(-0.02, 0.6),
+    covariates == "3" ~ ylim(0, 1.5),
+    covariates == "4" ~ ylim(-0.33, 0.33),
+    covariates == "5" ~ ylim(-0.33, 0.33),
+    covariates == "6" ~ ylim(-0.4, 0.01),
+    covariates == "7" ~ ylim(-0.2, 1.4),
+    covariates == "8" ~ ylim(0, 1.4),
+    covariates == "9" ~ ylim(-0.33, 0.33),
+    covariates == "10" ~ ylim(-0.7, 0.1)
+    ))        
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_nonlinear_sc2-wi.pdf"), width=12.5, height = 15)
+
+# plot.nonlinear + facetted_pos_scales(y = list(
+#     covariates == "1" ~ ylim(-0.03, 0.05), 
+#     covariates == "2" ~ ylim(-0.09, 0),
+#     covariates == "3" ~ ylim(-0.09, 0),
+#     covariates == "4" ~ ylim(-0.03, 0.03),
+#     covariates == "5" ~ ylim(-0.03, 0.03)))
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_nonlinear_sc3-wi.pdf"), width=12.5, height = 15)
 data.scenario <- data.frame("x" = c(1:n),
                             "constant" = newx,
