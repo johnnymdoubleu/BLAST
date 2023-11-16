@@ -120,17 +120,17 @@ for(j in 1:p){
     for (ps in 1:psi){
         if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
         else if(j==7){
-            if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.01}
-            else{gamma.origin[ps, j] <- 0.01}
+            if(ps <= (psi/2)){gamma.origin[ps, j] <- -0.1}
+            else{gamma.origin[ps, j] <- -0.1}
         }
         else {
-            if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.01}
-            else{gamma.origin[ps, j] <- 0.01}
+            if(ps <= (psi/2)){gamma.origin[ps, j] <- -0.1}
+            else{gamma.origin[ps, j] <- -0.1}
         }
     }
 }
 
-theta.origin <- c(0.5, 0, 0.2, 0.2, 0, 0)
+theta.origin <- c(0.5, 0, -0.2, -0.2, 0, 0)
 
 f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
@@ -244,10 +244,10 @@ model {
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += gamma_lpdf(lambda1 | 1, 10);
-    target += gamma_lpdf(lambda2 | 1, 10);
-    target += normal_lpdf(theta[1] | 0, 100);
+    target += gamma_lpdf(lambda2 | 0.1, 0.1);
+    target += normal_lpdf(theta[1] | 0, 10);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
-    target += (p * log(lambda1) + (p * psi * log(lambda2)));
+    target += (newp * log(lambda1) + (p * psi * log(lambda2)));
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, lambda2/sqrt(2));
@@ -639,7 +639,8 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
   coord_fixed(xlim = c(-3, 3),  
               ylim = c(-3, 3))
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_qqplot_sc2-wi.pdf"), width=10, height = 7.78)
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_qqplot_sc3-wi.pdf"), width=10, height = 7.78)           
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_qqplot_sc3-wi.pdf"), width=10, height = 7.78)
+
 # saveRDS(data.scenario, file=paste0("Simulation/BayesianPsplines/results/",date,"-",time, "_sc1_data_samp1.rds"))
 
 # for (i in 1:n){

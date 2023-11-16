@@ -38,7 +38,8 @@ x.origin <- cbind(replicate(p, runif(n, 0, 1)))
 
 for(i in 1:(dim(x.origin)[2])){
 #   splines <- bbase(x.origin[, i], min(x.origin[, i]), max(x.origin[, i]), nseg = 17, bdeg = 3)
-  splines <- ps(x.origin[,i], df=psi, knots=NULL, degree=3, intercept=FALSE, fx= FALSE, S=NULL, diff=2)
+# knots=seq(min(x.origin[,i]), max(x.origin[,i]), length.out=(psi+1)),
+  splines <- ps(x.origin[,i], df=psi,  degree=3, intercept=TRUE, fx= FALSE, S=NULL, diff=2)
   bs.nonlinear <- cbind(bs.nonlinear, splines)
   # phi <- dim(out[[1]][[1]]$X)[2]
 #   print(sum(splines))
@@ -50,12 +51,12 @@ for(j in 1:p){
     for (ps in 1:psi){
         if(j %in% c(2,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
         else if(j==7){
-            if(ps <= (psi/2)){gamma.origin[ps, j] <- -0.2}
-            else{gamma.origin[ps, j] <- -0.2}
+            if(ps <= (psi/2)){gamma.origin[ps, j] <- -1}
+            else{gamma.origin[ps, j] <- -1}
         }
         else {
-            if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.3}
-            else{gamma.origin[ps, j] <- 0.3}
+            if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.5}
+            else{gamma.origin[ps, j] <- 0.5}
         }
     }
 }
@@ -159,10 +160,10 @@ xholder <- bs.x <- matrix(, nrow = n, ncol = p)
 for(i in 1:p){
     xholder[,i] <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = n)
     # splines <- bbase(x.origin[, i], min(x.origin[, i]), max(x.origin[, i]), nseg = 17, bdeg = 3)
-    splines <-  ps(x.origin[,i], df=psi, knots=NULL, degree=3, intercept=FALSE, fx= FALSE, S=NULL, diff=2)
+    splines <-  ps(x.origin[,i], df=psi, knots=NULL, degree=3, intercept=TRUE, fx= FALSE, S=NULL, diff=2)
     bs.nonlinear <- cbind(bs.nonlinear, splines)
     # test.splines <- bbase(xholder[,i], min(xholder[,i]), max(xholder[,i]), nseg = 17, bdeg = 3)
-    test.splines <- ps(xholder[,i], df=psi, knots=NULL, degree=3, intercept=FALSE, fx= FALSE, S=NULL, diff=2)
+    test.splines <- ps(xholder[,i], df=psi, knots=NULL, degree=3, intercept=TRUE, fx= FALSE, S=NULL, diff=2)
     xholder.nonlinear <- cbind(xholder.nonlinear, test.splines)
 }
 
@@ -237,7 +238,7 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda | 0.1, 0.1);
+    target += gamma_lpdf(lambda | 0.1, 1);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     target += (p * psi * log(lambda));
     for (j in 1:p){
