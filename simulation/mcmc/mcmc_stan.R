@@ -24,7 +24,7 @@ library(ggh4x)
 
 #Scenario 1
 # set.seed(2)
-# set.seed(36)
+set.seed(36)
 
 n <- 5000
 psi <- 20
@@ -59,7 +59,7 @@ for(j in 1:p){
 
 theta.origin <- c(-0.1, 0.8, 0, 0.8, 0, 0, 0, -0.3, 0.8, 0, 0)
 
-n <- 5000
+n <- 10000
 psi <- 20
 threshold <- 0.9
 p <- 5
