@@ -59,13 +59,6 @@ for(j in 1:p){
 
 theta.origin <- c(-0.1, 0.8, 0, 0.8, 0, 0, 0, -0.3, 0.8, 0, 0)
 
-n <- 5000
-psi <- 20
-threshold <- 0.9
-p <- 5
-no.theta <- 1
-simul.no <- 50
-
 f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
     f.linear.origin[,j] <- bs.linear[, j] * theta.origin[j+1]
@@ -119,19 +112,6 @@ for(i in 1:n){
     alp.new[i] <- exp(theta.origin[1] + sum(f.new[i,]))
 }
 
-# lambda1 ~ gamma(1, 1.78);
-# intercept ~ double_exponential(0, lambda1);
-# lambda2 ~ gamma(0.1, 0.1);
-# sigma ~ inv_gamma(0.01, 0.01);
-# for (j in 1:p){
-#     theta[j] ~ double_exponential(0, lambda1);
-#     tau[j] ~ gamma(atau, square(lambda2));
-#     gamma[j] ~ multi_normal(rep_vector(0, psi), diag_matrix(rep_vector(1,psi)) * tau[j] * sigma);
-# }
-# // likelihood
-# for (i in 1:n){
-#     target += pareto_lpdf(y[i] | u, alpha[i]);
-# }
 
 write("// Stan model for simple linear regression
 data {
