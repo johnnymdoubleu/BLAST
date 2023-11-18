@@ -99,9 +99,9 @@ generated quantities {
 data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, 
                     newp = newp, x = x.origin, xholder = xholder)
 
-init.alpha <- list(list(beta = rep(0, (p+1)), lambda1 = 0.1),
+init.alpha <- list(list(beta = rep(0, (p+1)), lambda1 = 0.01),
                   list(beta = rep(0.01, (p+1)), lambda1 = 0.01),
-                  list(beta = rep(0.05, (p+1)), lambda1 = 0.1))
+                  list(beta = rep(-0.05, (p+1)), lambda1 = 0.01))
 
 fit1 <- stan(
     file = "model_simulation_sc1.stan",  # Stan program
