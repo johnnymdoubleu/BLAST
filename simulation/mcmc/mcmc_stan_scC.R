@@ -456,7 +456,7 @@ plot.smooth <- ggplot(data.smooth, aes(x=x, group=interaction(covariates, replic
 plot.smooth + facetted_pos_scales(y = list(
     covariates == "1" ~ ylim(-0.01, 0.38),
     covariates == "2" ~ ylim(-0.35, 0),
-    covariates == "3" ~ ylim(-0.35, 0),
+    covariates == "3" ~ ylim(-0.25, 0.1),
     covariates == "4" ~ ylim(-0.3, 0.05),
     covariates == "5" ~ ylim(-0.35, 0)))
 
