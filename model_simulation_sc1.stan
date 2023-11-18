@@ -19,7 +19,7 @@ transformed parameters {
     array[n] real <lower=0> newalpha; // new tail index
     
     for (i in 1:n){
-        alpha[i] = exp(beta[1] + dot_product(xholder[i], beta[2:newp]));
+        alpha[i] = exp(beta[1] + dot_product(x[i], beta[2:newp]));
         newalpha[i] = exp(beta[1] + dot_product(xholder[i], beta[2:newp]));
     };
 }
