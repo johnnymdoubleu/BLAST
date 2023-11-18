@@ -21,7 +21,7 @@ library(cmdstanr)
 library(ggh4x)
 
 #Scenario 1
-set.seed(36)
+set.seed(9)
 
 n <- 5000
 threshold <- 0.9
@@ -79,7 +79,7 @@ model {
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += gamma_lpdf(lambda1 | 0.1, 0.1);
-    target += normal_lpdf(beta[1] | 0, 1);
+    target += normal_lpdf(beta[1] | 0, 100);
     target += newp * log(lambda1);
     for (j in 1:p){
         target += double_exponential_lpdf(beta[(j+1)] | 0, lambda1);
@@ -121,7 +121,6 @@ plot(fit1, plotfun = "trace", pars = c("beta"), nrow = 3)
 # ggsave(paste0("./simulation/results/",Sys.Date(),n,"_mcmc_theta_trace_sc1-wi.pdf"), width=10, height = 7.78)
 
 plot(fit1, plotfun = "trace", pars = c("lambda1"), nrow = 2)
-
 # ggsave(paste0("./simulation/results/",Sys.Date(),n,"_mcmc_lambda_sc1-wi.pdf"), width=10, height = 7.78)
 
 

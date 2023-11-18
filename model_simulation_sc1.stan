@@ -30,7 +30,7 @@ model {
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += gamma_lpdf(lambda1 | 0.1, 0.1);
-    target += normal_lpdf(beta[1] | 0, 1);
+    target += normal_lpdf(beta[1] | 0, 100);
     target += newp * log(lambda1);
     for (j in 1:p){
         target += double_exponential_lpdf(beta[(j+1)] | 0, lambda1);

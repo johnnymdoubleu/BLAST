@@ -77,7 +77,7 @@ C <- matrix(c(1, 0.3, 0.5, 0.3, 0.3,
               0.3, 0.4, 0.5 , 1, 0.5,
               0.3, 0.4, 0.5, 0.5, 1), nrow = p)
 x.origin <- tmvnsim(n = n, k = p, lower = rep(0, p), means = rep(0, p), sigma = C)$samp
-
+# x.origin <- scale(x.origin)
 
 # corrplot.mixed(cor(x.origin),
 #                 upper = "circle",
@@ -106,7 +106,7 @@ for(j in 1:p){
     }
 }
 
-theta.origin <- c(0.5, 0, -0.2, -0.2, 0, 0)
+theta.origin <- c(-0.5, 0, -0.2, -0.2, 0, 0)
 
 f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
@@ -124,7 +124,6 @@ for(i in 1:n){
 u <- quantile(y.origin, threshold)
 x.origin <- x.origin[which(y.origin>u),]
 # x.bs <- x.origin
-# x.origin <- scale(x.origin)
 y.origin <- y.origin[y.origin > u]
 n <- length(y.origin)
 
