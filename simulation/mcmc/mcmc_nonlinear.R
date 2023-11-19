@@ -133,8 +133,8 @@ xholder <- bs.x <- matrix(, nrow = n, ncol = p)
 for(i in 1:p){
     # xholder[,i] <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = n)  
     # test.knot <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)
-    xholder[,i] <- seq(0, 1, length.out = n)
-    test.knot <- seq(0, 1, length.out = psi)
+    xholder[,i] <- seq(0, 0.1, length.out = n)
+    test.knot <- seq(0, 0.1, length.out = psi)
     splines <- basis.tps(xholder[,i], test.knot, m=2, rk=FALSE, intercept = FALSE)
     xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
     xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
@@ -400,7 +400,7 @@ data.nonlinear <- data.frame("x"=c(1:n),
                         
 plot.nonlinear <- ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
+  # geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
   geom_line(aes(y=true, colour = covariates, linetype = "True"), linewidth=2) + 
   geom_line(aes(y=post.mean, colour = covariates, linetype = "MCMC"), linewidth=2) + xlab("Nonlinear Components") + ylab("") +
   facet_wrap(covariates ~ ., scale="free_y", nrow = p)  +
@@ -417,13 +417,13 @@ plot.nonlinear <- ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, 
         axis.text.x = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
-
-plot.nonlinear + facetted_pos_scales(y = list(
-    covariates == "1" ~ ylim(-0.01, 0.01),
-    covariates == "2" ~ ylim(-0.06, 0),
-    covariates == "3" ~ ylim(-0.09, 0),
-    covariates == "4" ~ ylim(-0.001, 0.05),
-    covariates == "5" ~ ylim(-0.01, 0.01)))
+plot.nonlinear
+# plot.nonlinear + facetted_pos_scales(y = list(
+#     covariates == "1" ~ ylim(-0.01, 0.01),
+#     covariates == "2" ~ ylim(-0.06, 0),
+#     covariates == "3" ~ ylim(-0.09, 0),
+#     covariates == "4" ~ ylim(-0.001, 0.05),
+#     covariates == "5" ~ ylim(-0.01, 0.01)))
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_nonlinear_sc2-nl.pdf"), width=12.5, height = 15)
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_nonlinear_sc3-nl.pdf"), width=12.5, height = 15)
 data.scenario <- data.frame("x" = c(1:n),
@@ -476,7 +476,7 @@ ggplot(data.scenario, aes(x=x)) +
   geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
   geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
   geom_line(aes(y=post.mean, col = "Posterior Mean"), linewidth=2, linetype = 2) + 
-  ylim(0, (max(data.scenario$q3)+10)) +
+  # ylim(0, (max(data.scenario$q3)+10)) +
   geom_line(aes(y=post.median, col = "Posterior Median"), linetype=2, linewidth=2) +
   # geom_line(aes(y=chain2, col = "Chian 2"), linetype=3) +
   # facet_grid(covariates ~ .) + 

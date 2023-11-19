@@ -118,10 +118,10 @@ posterior <- extract(fit1)
 str(posterior)
 
 plot(fit1, plotfun = "trace", pars = c("beta"), nrow = 3)
-# ggsave(paste0("./simulation/results/",Sys.Date(),n,"_mcmc_theta_trace_sc1-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_theta_trace_sc1-wi.pdf"), width=10, height = 7.78)
 
 plot(fit1, plotfun = "trace", pars = c("lambda1"), nrow = 2)
-# ggsave(paste0("./simulation/results/",Sys.Date(),n,"_mcmc_lambda_sc1-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_lambda_sc1-wi.pdf"), width=10, height = 7.78)
 
 
 beta.samples <- summary(fit1, par=c("beta"), probs = c(0.05,0.5, 0.95))$summary
@@ -166,7 +166,7 @@ ggplot(df.beta, aes(x = covariate, y=m, color = covariate)) + ylab("") + xlab(''
           axis.text.x = element_text(hjust=0.35),
           axis.text = element_text(size = 28))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),n,"_mcmc_beta_sc1-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_beta_sc1-wi.pdf"), width=10, height = 7.78)
 
 data.scenario <- data.frame("x" = c(1:n),
                             "constant" = newx,
@@ -198,7 +198,7 @@ ggplot(data.scenario, aes(x=x)) +
         axis.ticks.x = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
-# ggsave(paste0("./simulation/results/",Sys.Date(),n,"_mcmc_alpha_train_sc1-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_train_sc1-wi.pdf"), width=10, height = 7.78)
 
 data.scenario <- data.frame("x" = c(1:n),
                             "constant" = newx,
@@ -234,7 +234,7 @@ ggplot(data.scenario, aes(x=x)) +
         axis.ticks.x = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
-# ggsave(paste0("./simulation/results/",Sys.Date(),n,"_mcmc_alpha_test_sc1-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_test_sc1-wi.pdf"), width=10, height = 7.78)
 
 mcmc.alpha <- posterior$alpha
 len <- dim(mcmc.alpha)[1]
@@ -267,4 +267,4 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
   theme(text = element_text(size = 20)) + 
   coord_fixed(xlim = c(-3, 3),  
               ylim = c(-3, 3))
-# ggsave(paste0("./simulation/results/",Sys.Date(),n,"_mcmc_qqplot_sc1-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_qqplot_sc1-wi.pdf"), width=10, height = 7.78)

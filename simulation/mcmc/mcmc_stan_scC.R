@@ -306,9 +306,9 @@ posterior <- extract(fit1)
 str(posterior)
 
 plot(fit1, plotfun = "trace", pars = c("theta"), nrow = 3)
-# ggsave(paste0("./simulation/results/",Sys.Date(),n,"_mcmc_theta_trace_sc3-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_theta_trace_sc3-wi.pdf"), width=10, height = 7.78)
 plot(fit1, plotfun = "trace", pars = c("lambda1", "lambda2"), nrow = 2)
-# ggsave(paste0("./simulation/results/",Sys.Date(),n,"_mcmc_lambda_sc3-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_lambda_sc3-wi.pdf"), width=10, height = 7.78)
 
 
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
@@ -356,7 +356,7 @@ ggplot(df.theta, aes(x = covariate, y=m, color = covariate)) + ylab("") + xlab('
           plot.margin = margin(0,0,0,-20),
           axis.text.x = element_text(hjust=0.35),
           axis.text = element_text(size = 28))
-# ggsave(paste0("./simulation/results/",Sys.Date(),n,"_mcmc_theta_sc3-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_theta_sc3-wi.pdf"), width=10, height = 7.78)
 
 df.gamma <- data.frame("seq" = seq(1, (psi*p)), 
                   "true" = as.vector(gamma.origin),
@@ -392,7 +392,7 @@ ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) +
           plot.margin = margin(0,0,0,-20),
           axis.text.x = element_text(hjust=0.5),
           axis.text = element_text(size = 28))
-# ggsave(paste0("./simulation/results/",Sys.Date(),n,"_mcmc_gamma_sc3-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_gamma_sc3-wi.pdf"), width=10, height = 7.78)
 
 g.nonlinear.q1 <- g.linear.q1 <- g.q1 <- g.nonlinear.q3 <- g.linear.q3 <- g.q3 <- g.nonlinear.new <- g.linear.new <- g.new <- matrix(, nrow = n, ncol=p)
 alpha.smooth.q1 <- alpha.smooth.q3 <- alpha.smooth.new <- alpha.new <- NULL
@@ -460,7 +460,7 @@ plot.smooth + facetted_pos_scales(y = list(
     covariates == "4" ~ ylim(-0.3, 0.05),
     covariates == "5" ~ ylim(-0.35, 0)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),n,"_mcmc_smooth_sc3-wi.pdf"), width=10.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_smooth_sc3-wi.pdf"), width=10.5, height = 15)
 data.linear <- data.frame("x"=c(1:n),
                           "true" = as.vector(f.linear.new),
                           "post.mean" = as.vector(g.linear.new),
@@ -492,7 +492,7 @@ plot.linear + facetted_pos_scales(y = list(
     covariates == "3" ~ ylim(-0.35, 0),
     covariates == "4" ~ ylim(-0.1, 0.05),
     covariates == "5" ~ ylim(-0.35, 0)))
-# ggsave(paste0("./simulation/results/",Sys.Date(),n,"_mcmc_linear_sc3-wi.pdf"), width=10.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_linear_sc3-wi.pdf"), width=10.5, height = 15)
 
 data.nonlinear <- data.frame("x"=c(1:n),
                           "true" = as.vector(f.nonlinear.new),
@@ -528,7 +528,7 @@ plot.nonlinear + facetted_pos_scales(y = list(
     covariates == "3" ~ ylim(-0.09, 0),
     covariates == "4" ~ ylim(-0.03, 0.03),
     covariates == "5" ~ ylim(-0.03, 0.03)))
-# ggsave(paste0("./simulation/results/",Sys.Date(),n,"_mcmc_nonlinear_sc3-wi.pdf"), width=12.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_nonlinear_sc3-wi.pdf"), width=12.5, height = 15)
 
 data.scenario <- data.frame("x" = c(1:n),
                             "constant" = newx,
@@ -561,7 +561,7 @@ ggplot(data.scenario, aes(x=x)) +
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),n,"_mcmc_alpha_train_sc3-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_train_sc3-wi.pdf"), width=10, height = 7.78)
 
 data.scenario <- data.frame("x" = c(1:n),
                             "constant" = newx,
@@ -598,7 +598,7 @@ ggplot(data.scenario, aes(x=x)) +
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),n,"_mcmc_alpha_test_sc3-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_test_sc3-wi.pdf"), width=10, height = 7.78)
 
 # mcmc.gamma <- posterior$gamma
 # gamma.container <- as.data.frame(matrix(NA, nrow = 20, ,ncol = 0))
@@ -650,7 +650,7 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
   coord_fixed(xlim = c(-3, 3),  
               ylim = c(-3, 3))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),n,"_mcmc_qqplot_sc3-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_qqplot_sc3-wi.pdf"), width=10, height = 7.78)
 
 # saveRDS(data.scenario, file=paste0("Simulation/BayesianPsplines/results/",date,"-",time, "_sc1_data_samp1.rds"))
 
