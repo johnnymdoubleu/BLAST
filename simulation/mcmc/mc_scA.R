@@ -65,7 +65,7 @@ model {
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += gamma_lpdf(lambda1 | 0.1, 0.1);
-    target += normal_lpdf(beta[1] | 0, 100);
+    target += normal_lpdf(beta[1] | 0, 10);
     target += newp * log(lambda1);
     for (j in 1:p){
         target += double_exponential_lpdf(beta[(j+1)] | 0, lambda1);
@@ -82,13 +82,6 @@ generated quantities {
 "
 , "model_simulation_sc1.stan")
 
-data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, 
-                    newp = newp, x = x.origin, xholder = xholder)
-
-init.alpha <- list(list(beta = rep(0, (p+1)), lambda1 = 0.01),
-                list(beta = rep(0.01, (p+1)), lambda1 = 0.01),
-                list(beta = rep(-0.05, (p+1)), lambda1 = 0.01))
-
 beta.container <- as.data.frame(matrix(, nrow = newp, ncol= total.iter))
 linear.container <- nonlinear.container <- f.container <- lapply(1:simul.no, data.frame)
 alpha.container <- as.data.frame(matrix(, nrow=n, ncol = total.iter))
@@ -98,7 +91,7 @@ for(iter in 1:total.iter){
 
     y <- alpha.origin <- alpha.new <- NULL
     for(i in 1:n){
-    y[i] <- rPareto(1, 1, alpha = exp(beta.origin[1] + sum(X[i, ] * beta.origin[2:newp])))
+        y[i] <- rPareto(1, 1, alpha = exp(beta.origin[1] + sum(X[i, ] * beta.origin[2:newp])))
     }
 
     x.origin <- X[which(y>quantile(y, threshold)),]
@@ -111,6 +104,12 @@ for(iter in 1:total.iter){
     alpha.origin[i] <- exp(beta.origin[1] + sum(x.origin[i, ] * beta.origin[2:newp]))
     alpha.new[i] <- exp(beta.origin[1] + sum(xholder[i,] * beta.origin[2:newp]))
     }
+    data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, 
+                    newp = newp, x = x.origin, xholder = xholder)
+
+    init.alpha <- list(list(beta = rep(0, (p+1)), lambda1 = 0.01),
+                    list(beta = rep(0.01, (p+1)), lambda1 = 0.01),
+                    list(beta = rep(-0.05, (p+1)), lambda1 = 0.01))
 
     fit1 <- stan(
         file = "model_simulation_sc1.stan",  # Stan program
@@ -130,13 +129,13 @@ for(iter in 1:total.iter){
     alpha.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
     newalpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
 
-    alpha.container[,iter] <- newalpha.samples[,1]
+    alpha.container[,iter] <- sort(newalpha.samples[,1])
     beta.container[,iter] <- beta.samples[,1]
 }
 
 alpha.container$x <- seq(0,1, length.out = n)
-alpha.container$true <- data.scenario$trueAlp
-alpha.container <- cbind(alpha.container, t(apply(alpha.container[,1:simul.no], 1, quantile, c(0.05, .5, .95))))
+alpha.container$true <- alpha.new
+alpha.container <- cbind(alpha.container, t(apply(alpha.container[,1:total.iter], 1, quantile, c(0.05, .5, .95))))
 colnames(alpha.container)[(dim(alpha.container)[2]-2):(dim(alpha.container)[2])] <- c("q1","q2","q3")
 alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
@@ -144,8 +143,21 @@ plt <- ggplot(data = alpha.container, aes(x = x)) + ylab(expression(alpha(x))) +
 for(i in 1:total.iter){
   # print(.data[[names(data.scenario)[i]]])
   plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.4,linewidth = 0.7)
-  # plt <- plt + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
 }
+
+print(plt + geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) + 
+        geom_line(aes(y=true, col = "True"), linewidth = 1.8) + 
+        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.8, linetype = 2) +
+        # geom_line(aes(y = post.check, col=paste0("Simulated Alpha: ",n,"/",psi,"/",threshold)), linewidth = 1.5) +
+        theme(axis.title.y = element_text(size = rel(1.8), angle = 90)) +
+        theme(axis.title.x = element_text(size = rel(1.8), angle = 00)) +
+        labs(col = "") + #ylim(0, 150) +
+        scale_color_manual(values = c("#e0b430", "red"))+
+        theme(text = element_text(size = 15),
+                legend.position="bottom", legend.key.size = unit(1, 'cm'),
+                axis.text = element_text(size = 20),
+                legend.margin=margin(-15,-15,-15,-15),
+                legend.box.margin=margin(-25,0,20,0)))
 
 
 resg <- gather(beta.container,
