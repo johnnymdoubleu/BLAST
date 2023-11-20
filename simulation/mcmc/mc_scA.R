@@ -25,13 +25,148 @@ library(ggh4x)
 #Scenario 1
 # set.seed(9)
 
-total.iter <- 50
+total.iter <- 2
 
 n <- 5000
 threshold <- 0.9
 beta.origin <- c(0.2, 0, 0.8, 0, 0,-0.1, 0, 0, 0,-0.4)
 newp <- length(beta.origin)
 p <- length(beta.origin)-1
+
+write("// Stan model for simple linear regression
+data {
+    int <lower=1> n; // Sample size
+    int <lower=1> p; // regression coefficient size
+    int <lower=1> newp; 
+    real <lower=0> u; // large threshold value
+    matrix[n, p] x; // train dataset
+    matrix[n,p] xholder; // test dataset
+    vector[n] y; // extreme response
+}
+
+parameters {
+    vector[newp] beta; // linear predictor
+    real <lower=0> lambda1; // lasso penalty
+}
+
+transformed parameters {
+    array[n] real <lower=0> alpha; // tail index
+    array[n] real <lower=0> newalpha; // new tail index
+    
+    for (i in 1:n){
+        alpha[i] = exp(beta[1] + dot_product(x[i], beta[2:newp]));
+        newalpha[i] = exp(beta[1] + dot_product(xholder[i], beta[2:newp]));
+    };
+}
+
+model {
+    // likelihood
+    for (i in 1:n){
+        target += pareto_lpdf(y[i] | u, alpha[i]);
+    }
+    target += gamma_lpdf(lambda1 | 0.1, 0.1);
+    target += normal_lpdf(beta[1] | 0, 100);
+    target += newp * log(lambda1);
+    for (j in 1:p){
+        target += double_exponential_lpdf(beta[(j+1)] | 0, lambda1);
+    }
+}
+generated quantities {
+    // Used in Posterior predictive check
+    vector[n] log_lik;
+    array[n] real y_rep = pareto_rng(rep_vector(u, n), alpha);
+    for (i in 1:n) {
+        log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
+    }
+}
+"
+, "model_simulation_sc1.stan")
+
+data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, 
+                    newp = newp, x = x.origin, xholder = xholder)
+
+init.alpha <- list(list(beta = rep(0, (p+1)), lambda1 = 0.01),
+                list(beta = rep(0.01, (p+1)), lambda1 = 0.01),
+                list(beta = rep(-0.05, (p+1)), lambda1 = 0.01))
+
+beta.container <- as.data.frame(matrix(, nrow = newp, ncol= total.iter))
+linear.container <- nonlinear.container <- f.container <- lapply(1:simul.no, data.frame)
+alpha.container <- as.data.frame(matrix(, nrow=n, ncol = total.iter))
+for(iter in 1:total.iter){
+    X <- replicate(p, runif(n))
+    # X <- scale(X)
+
+    y <- alpha.origin <- alpha.new <- NULL
+    for(i in 1:n){
+    y[i] <- rPareto(1, 1, alpha = exp(beta.origin[1] + sum(X[i, ] * beta.origin[2:newp])))
+    }
+
+    x.origin <- X[which(y>quantile(y, threshold)),]
+    u <- quantile(y, threshold)
+
+    y.origin <- as.matrix(y[y>quantile(y, threshold)])
+    n <- length(y.origin)
+    xholder <- replicate(p, seq(0, 1, length.out = n))
+    for(i in 1:n){
+    alpha.origin[i] <- exp(beta.origin[1] + sum(x.origin[i, ] * beta.origin[2:newp]))
+    alpha.new[i] <- exp(beta.origin[1] + sum(xholder[i,] * beta.origin[2:newp]))
+    }
+
+    fit1 <- stan(
+        file = "model_simulation_sc1.stan",  # Stan program
+        data = data.stan,    # named list of data
+        init = init.alpha,      # initial value
+        chains = 3,             # number of Markov chains
+        warmup = 1000,          # number of warmup iterations per chain
+        iter = 2000,            # total number of iterations per chain
+        cores = 4,              # number of cores (could use one per chain)
+        refresh = 500             # no progress shown
+    )
+
+    posterior <- extract(fit1)
+
+    beta.samples <- summary(fit1, par=c("beta"), probs = c(0.05,0.5, 0.95))$summary
+    lambda.samples <- summary(fit1, par=c("lambda1"), probs = c(0.05,0.5, 0.95))$summary
+    alpha.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
+    newalpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
+
+    alpha.container[,iter] <- newalpha.samples[,1]
+    beta.container[,iter] <- beta.samples[,1]
+}
+
+alpha.container$x <- seq(0,1, length.out = n)
+alpha.container$true <- data.scenario$trueAlp
+alpha.container <- cbind(alpha.container, t(apply(alpha.container[,1:simul.no], 1, quantile, c(0.05, .5, .95))))
+colnames(alpha.container)[(dim(alpha.container)[2]-2):(dim(alpha.container)[2])] <- c("q1","q2","q3")
+alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
+alpha.container <- as.data.frame(alpha.container)
+plt <- ggplot(data = alpha.container, aes(x = x)) + ylab(expression(alpha(x))) + xlab("")
+for(i in 1:total.iter){
+  # print(.data[[names(data.scenario)[i]]])
+  plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.4,linewidth = 0.7)
+  # plt <- plt + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
+}
+
+
+resg <- gather(beta.container,
+               key = "group",
+               names(beta.container),
+               value = "values")
+resg$group1 <- factor(rep(1:newp, total.iter))
+somelines <- data.frame(value=c(as.vector(beta.origin)),boxplot.nr=c(1:(newp)))
+ggplot(resg, aes(group=group1, x = group1, y = values, fill=group2)) + ylim(-1,1) + 
+  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) +
+  geom_boxplot() + #coord_cartesian(ylim=c(-1,1))+
+  geom_segment(data=somelines,aes(x=boxplot.nr-0.5,xend=boxplot.nr+0.5, 
+                                  y=value,yend=value),inherit.aes=FALSE,color="red",linewidth=1.5)+
+  # facet_wrap( ~ group2, labeller = label_parsed) +
+  labs(x = "", y = "") + 
+  theme(axis.ticks.x = element_blank(),
+        axis.text.x = element_text(hjust=0.8),
+        axis.text = element_text(size = 30),
+        legend.title = element_blank(),
+        legend.text = element_text(size=30))
+
 X <- replicate(p, runif(n))
 # X <- scale(X)
 
