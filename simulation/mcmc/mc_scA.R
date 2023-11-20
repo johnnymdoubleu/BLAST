@@ -83,9 +83,10 @@ generated quantities {
 , "model_simulation_sc1.stan")
 
 beta.container <- as.data.frame(matrix(, nrow = newp, ncol= total.iter))
-linear.container <- nonlinear.container <- f.container <- lapply(1:simul.no, data.frame)
 alpha.container <- as.data.frame(matrix(, nrow=n, ncol = total.iter))
+
 for(iter in 1:total.iter){
+    n <- 5000
     X <- replicate(p, runif(n))
     # X <- scale(X)
 
@@ -165,19 +166,36 @@ resg <- gather(beta.container,
                names(beta.container),
                value = "values")
 resg$group1 <- factor(rep(1:newp, total.iter))
+
 somelines <- data.frame(value=c(as.vector(beta.origin)),boxplot.nr=c(1:(newp)))
-ggplot(resg, aes(group=group1, x = group1, y = values)) + ylim(-1,1) + 
+ggplot(resg, aes(group=group1, x = group1, y = values, fill=group1)) + ylim(-0.5,1) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) +
   geom_boxplot() + #coord_cartesian(ylim=c(-1,1))+
   geom_segment(data=somelines,aes(x=boxplot.nr-0.5, xend=boxplot.nr+0.5, 
                                   y=value,yend=value),inherit.aes=FALSE,color="red",linewidth=1.5)+
   # facet_wrap( ~ group2, labeller = label_parsed) +
   labs(x = "", y = "") + 
-  theme(axis.ticks.x = element_blank(),
-        axis.text.x = element_text(hjust=0.8),
-        axis.text = element_text(size = 30),
-        legend.title = element_blank(),
-        legend.text = element_text(size=30))
+  scale_x_discrete(labels = c(expression(bold(theta[0])),
+                              expression(bold(theta[1])),
+                              expression(bold(theta[2])),
+                              expression(bold(theta[3])),
+                              expression(bold(theta[4])),
+                              expression(bold(theta[5])),
+                              expression(bold(theta[6])),
+                              expression(bold(theta[7])),
+                              expression(bold(theta[8])),
+                              expression(bold(theta[9])),
+                              expression(bold(theta[10])))) + 
+  theme_minimal(base_size = 30) +
+  theme(plot.title = element_text(hjust = 0.5, size = 20),
+          legend.text.align = 0,
+          legend.title = element_blank(),
+          legend.text = element_text(size=25),
+          legend.margin=margin(0,0,0,-10),
+          legend.box.margin=margin(-10,0,-10,0),
+          plot.margin = margin(0,0,0,-20),
+          axis.text.x = element_text(hjust=0.35),
+          axis.text = element_text(size = 28))
 
 # X <- replicate(p, runif(n))
 # # X <- scale(X)
