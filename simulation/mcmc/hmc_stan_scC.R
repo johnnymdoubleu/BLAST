@@ -128,7 +128,7 @@ for(j in 1:p){
     }
 }
 
-theta.origin <- c(0.5, 0, -0.2, -0.2, 0, 0)
+theta.origin <- c(1.5, 0, -0.2, -0.2, 0, 0)
 
 f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
@@ -154,10 +154,10 @@ xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow
 newx <- seq(0, 1, length.out=n)
 xholder <- bs.x <- matrix(, nrow = n, ncol = p)
 for(i in 1:p){
-    # xholder[,i] <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = n)  
-    # test.knot <- seq(min(xholder[,i]), max(xholder[,i]), length.out = psi)  
-    xholder[,i] <- seq(0, 1, length.out = n)  
-    test.knot <- seq(0, 1, length.out = psi)
+    xholder[,i] <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = n)  
+    test.knot <- seq(min(xholder[,i]), max(xholder[,i]), length.out = psi)
+    # xholder[,i] <- seq(0, 1, length.out = n)  
+    # test.knot <- seq(0, 1, length.out = psi)
     splines <- basis.tps(xholder[,i], test.knot, m=2, rk=FALSE, intercept = FALSE)
     xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
     xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
@@ -243,7 +243,7 @@ model {
     }
     target += gamma_lpdf(lambda1 | 1, 10);
     target += gamma_lpdf(lambda2 | 0.1, 0.1);
-    target += normal_lpdf(theta[1] | 0, 1);
+    target += normal_lpdf(theta[1] | 0, 10);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
     target += (newp * log(lambda1) + (p * psi * log(lambda2)));
     for (j in 1:p){
@@ -294,7 +294,7 @@ fit1 <- stan(
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
     chains = 3,             # number of Markov chains
-    warmup = 1000,          # number of warmup iterations per chain
+    warmup = 1500,          # number of warmup iterations per chain
     iter = 3000,            # total number of iterations per chain
     cores = 4,              # number of cores (could use one per chain)
     refresh = 500             # no progress shown
