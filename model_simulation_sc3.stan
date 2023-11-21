@@ -38,16 +38,15 @@ model {
     // likelihood
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
-    }
+    };
     target += gamma_lpdf(lambda | 0.1, 0.1);
-    target += normal_lpdf(theta | 0, 10);
+    target += normal_lpdf(theta | 0, 1);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
-    target += (p * psi * log(lambda2)));
+    target += (p * psi * log(lambda));
     for (j in 1:p){
-        target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, lambda/sqrt(2));
         target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * sqrt(tau[j]) * sqrt(sigma));
-    }
+    };
 }
 generated quantities {
     // Used in Posterior predictive check

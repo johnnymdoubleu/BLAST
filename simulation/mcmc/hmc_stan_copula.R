@@ -125,7 +125,7 @@ for(i in 1:p){
 
 f.nonlinear.new <- f.nonlinear.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
-    f.nonlinear.origin[,j] <- bs.nonlinear[1:n,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
+    f.nonlinear.origin[,j] <- bs.nonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
     f.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
 }
 
@@ -189,15 +189,15 @@ model {
     // likelihood
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
-    }
+    };
     target += gamma_lpdf(lambda | 0.1, 0.1);
-    target += normal_lpdf(theta | 0, 10);
+    target += normal_lpdf(theta | 0, 1);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
-    target += (p * psi * log(lambda)));
+    target += (p * psi * log(lambda));
     for (j in 1:p){
         target += gamma_lpdf(tau[j] | atau, lambda/sqrt(2));
         target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * sqrt(tau[j]) * sqrt(sigma));
-    }
+    };
 }
 generated quantities {
     // Used in Posterior predictive check
@@ -253,50 +253,13 @@ plot(fit1, plotfun = "trace", pars = c("theta", "lambda"), nrow = 2)
 
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
-lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
-alpha.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
+lambda.samples <- summary(fit1, par=c("lambda"), probs = c(0.05,0.5, 0.95))$summary
+# alpha.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
 newalpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
 
 gamma.post.mean <- gamma.samples[,1]
 gamma.q1 <- gamma.samples[,4]
 gamma.q3 <- gamma.samples[,6]
-theta.post.mean <- theta.samples[,1]
-theta.q1 <- theta.samples[,4]
-theta.q3 <- theta.samples[,6]
-
-df.theta <- data.frame("seq" = seq(1, (p+1)),
-                        "true" = theta.origin,
-                        "m" = theta.post.mean,
-                        "l" = theta.q1,
-                        "u" = theta.q3)
-df.theta$covariate <- factor(0:p)
-df.theta$labels <- factor(0:p)
-ggplot(df.theta, aes(x = covariate, y=m, color = covariate)) + ylab("") + xlab('') +
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  geom_point(size = 5) + geom_point(aes(y = true), color="red", size = 4) +
-  geom_errorbar(aes(ymin = l, ymax = u), width = 0.3, linewidth =1.2) + 
-  scale_x_discrete(labels = c(expression(bold(theta[0])),
-                              expression(bold(theta[1])),
-                              expression(bold(theta[2])),
-                              expression(bold(theta[3])),
-                              expression(bold(theta[4])),
-                              expression(bold(theta[5])),
-                              expression(bold(theta[6])),
-                              expression(bold(theta[7])),
-                              expression(bold(theta[8])),
-                              expression(bold(theta[9])),
-                              expression(bold(theta[10])))) + 
-  theme_minimal(base_size = 30) +
-  theme(plot.title = element_text(hjust = 0.5, size = 20),
-          legend.text.align = 0,
-          legend.title = element_blank(),
-          legend.text = element_text(size=25),
-          legend.margin=margin(0,0,0,-10),
-          legend.box.margin=margin(-10,0,-10,0),
-          plot.margin = margin(0,0,0,-20),
-          axis.text.x = element_text(hjust=0.35),
-          axis.text = element_text(size = 28))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_theta_sc3-wi.pdf"), width=10, height = 7.78)
 
 df.gamma <- data.frame("seq" = seq(1, (psi*p)), 
                   "true" = as.vector(gamma.origin),
@@ -337,19 +300,13 @@ ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) +
 g.nonlinear.q1 <- g.linear.q1 <- g.q1 <- g.nonlinear.q3 <- g.linear.q3 <- g.q3 <- g.nonlinear.new <- g.linear.new <- g.new <- matrix(, nrow = n, ncol=p)
 alpha.smooth.q1 <- alpha.smooth.q3 <- alpha.smooth.new <- alpha.new <- NULL
 for (j in 1:p){
-  g.linear.new[,j] <- xholder.linear[,j] * theta.post.mean[(j+1)]
-  g.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.post.mean, nrow=psi)[,j] 
-  g.new[1:n, j] <- g.linear.new[,j] + g.nonlinear.new[,j]
-  g.linear.q1[,j] <- xholder.linear[,j] * theta.q1[(j+1)]
+  g.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.post.mean, nrow=psi)[,j]
   g.nonlinear.q1[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.q1, nrow=psi)[,j] 
-  g.q1[1:n, j] <- g.linear.q1[,j] + g.nonlinear.q1[,j]
-  g.linear.q3[,j] <- xholder.linear[,j] * theta.q3[(j+1)]
   g.nonlinear.q3[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.q3, nrow=psi)[,j] 
-  g.q3[1:n, j] <- g.linear.q3[,j] + g.nonlinear.q3[,j]
 }
 
 for(i in 1:n){
-  alpha.smooth.new[i] <- exp(theta.post.mean[1] + sum(g.new[i,]))
+  alpha.smooth.new[i] <- exp(theta.post.mean[1] + sum(g.nonlinear.new[i,]))
   alpha.smooth.q1[i] <- exp(theta.q1[1] + sum(g.q1[i,]))
   alpha.smooth.q3[i] <- exp(theta.q3[1] + sum(g.q3[i,]))
 }
