@@ -25,7 +25,7 @@ library(ggh4x)
 #Scenario 1
 # set.seed(9)
 
-total.iter <- 10
+total.iter <- 500
 
 n <- 5000
 threshold <- 0.9
@@ -140,25 +140,33 @@ alpha.container <- cbind(alpha.container, t(apply(alpha.container[,1:total.iter]
 colnames(alpha.container)[(dim(alpha.container)[2]-2):(dim(alpha.container)[2])] <- c("q1","q2","q3")
 alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
-plt <- ggplot(data = alpha.container, aes(x = x)) + ylab(expression(alpha(x))) + xlab("")
 # for(i in 1:total.iter){
 #   # print(.data[[names(data.scenario)[i]]])
 #   plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.4,linewidth = 0.7)
 # }
 
-print(plt + geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) + 
-        geom_line(aes(y=true, col = "True"), linewidth = 1.8) + 
-        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.8, linetype = 2) +
-        # geom_line(aes(y = post.check, col=paste0("Simulated Alpha: ",n,"/",psi,"/",threshold)), linewidth = 1.5) +
-        theme(axis.title.y = element_text(size = rel(1.8), angle = 90)) +
-        theme(axis.title.x = element_text(size = rel(1.8), angle = 00)) +
-        labs(col = "") + #ylim(0, 150) +
-        scale_color_manual(values = c("#e0b430", "red"))+
-        theme(text = element_text(size = 15),
-                legend.position="bottom", legend.key.size = unit(1, 'cm'),
-                axis.text = element_text(size = 20),
-                legend.margin=margin(-15,-15,-15,-15),
-                legend.box.margin=margin(-25,0,20,0)))
+ggplot(data = alpha.container, aes(x = x)) + 
+    ylab(expression(alpha(x))) + xlab(expression(x)) + 
+    geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) + 
+    geom_line(aes(y=true, col = "True"), linewidth = 1.8) + 
+    geom_line(aes(y=mean, col = "Mean"), linewidth = 1.8, linetype = 2) +
+    geom_line(aes(y=q2, col = "Median"), linewidth = 1.8, linetype = 2) +
+    theme(axis.title.y = element_text(size = rel(1.8), angle = 90)) +
+    theme(axis.title.x = element_text(size = rel(1.8), angle = 00)) +
+    labs(col = "") + #ylim(0, 150) +
+    scale_color_manual(values = c("blue","#e0b430","red"))+
+    theme_minimal(base_size = 30) +
+    theme(plot.title = element_text(hjust = 0.5, size = 30),
+            legend.position="top", 
+            legend.key.size = unit(1, 'cm'),
+            legend.text = element_text(size=18),
+            plot.margin = margin(0,0,0,-10),
+            strip.text = element_blank(),
+            axis.text.x = element_blank(),
+            axis.ticks.x = element_blank(),
+            axis.text.y = element_text(size=33),
+            axis.title.x = element_text(size = 35))
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_sc1-wi.pdf"), width=10, height = 7.78)
 
 
 resg <- gather(beta.container,
@@ -173,7 +181,6 @@ ggplot(resg, aes(group=group1, x = group1, y = values, fill=group1)) + ylim(-0.5
   geom_boxplot() + #coord_cartesian(ylim=c(-1,1))+
   geom_segment(data=somelines,aes(x=boxplot.nr-0.5, xend=boxplot.nr+0.5, 
                                   y=value,yend=value),inherit.aes=FALSE,color="red",linewidth=1.5)+
-  # facet_wrap( ~ group2, labeller = label_parsed) +
   labs(x = "", y = "") + 
   scale_x_discrete(labels = c(expression(bold(theta[0])),
                               expression(bold(theta[1])),
@@ -196,6 +203,8 @@ ggplot(resg, aes(group=group1, x = group1, y = values, fill=group1)) + ylim(-0.5
           plot.margin = margin(0,0,0,-20),
           axis.text.x = element_text(hjust=0.35),
           axis.text = element_text(size = 28))
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_beta_sc1-wi.pdf"), width=10, height = 7.78)
+
 
 # X <- replicate(p, runif(n))
 # # X <- scale(X)
