@@ -23,8 +23,8 @@ library(ggh4x)
 # library(ggplotify)
 
 #Scenario 1
+# set.seed(2)
 set.seed(3)
-# set.seed(36)
 
 n <- 5000
 psi <- 20
@@ -43,7 +43,7 @@ C <- matrix(c(1, 0.3, 0.5, 0.3, 0.3,
             0.3, 0.4, 0.5, 0.5, 1), nrow = p)    
 ## Generate sample
 x.origin <- pnorm(matrix(rnorm(n*p), ncol = p) %*% chol(C))
-x.origin <- scale(x.origin)
+# x.origin <- scale(x.origin)
 # pairs(x.origin, diag.panel = function(x){
 #           h <- hist(x, plot = FALSE)
 #           rect(head(h$breaks, -1), 0, tail(h$breaks, -1), h$counts/max(h$counts))})
@@ -90,7 +90,7 @@ for(i in 1:n){
 u <- quantile(y.origin, threshold)
 x.origin <- x.origin[which(y.origin>u),]
 # x.bs <- x.origin
-# x.origin <- scale(x.origin)
+x.origin <- scale(x.origin)
 y.origin <- y.origin[y.origin > u]
 n <- length(y.origin)
 
@@ -246,6 +246,7 @@ newalpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$
 
 theta.post.mean <- theta.samples[,1]
 theta.q1 <- theta.samples[,4]
+theta.q2 <- theta.samples[,5]
 theta.q3 <- theta.samples[,6]
 gamma.post.mean <- gamma.samples[,1]
 gamma.q1 <- gamma.samples[,4]
@@ -288,17 +289,19 @@ ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) +
           axis.text = element_text(size = 28))
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_gamma_sc3-wi.pdf"), width=10, height = 7.78)
 
-g.nonlinear.q1 <- g.linear.q1 <- g.q1 <- g.nonlinear.q3 <- g.linear.q3 <- g.q3 <- g.nonlinear.new <- g.linear.new <- g.new <- matrix(, nrow = n, ncol=p)
-alpha.smooth.q1 <- alpha.smooth.q3 <- alpha.smooth.new <- alpha.new <- NULL
+g.nonlinear.q1 <- g.nonlinear.q2  <- g.nonlinear.q3 <- g.nonlinear.new <- matrix(, nrow = n, ncol=p)
+alpha.smooth.q1 <- alpha.smooth.q2 <- alpha.smooth.q3 <- alpha.smooth.new <- alpha.new <- NULL
 for (j in 1:p){
   g.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.post.mean, nrow=psi)[,j]
-  g.nonlinear.q1[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.q1, nrow=psi)[,j] 
+  g.nonlinear.q1[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.q1, nrow=psi)[,j]
+  g.nonlinear.q2[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.q2, nrow=psi)[,j] 
   g.nonlinear.q3[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.q3, nrow=psi)[,j] 
 }
 
 for(i in 1:n){
   alpha.smooth.new[i] <- exp(theta.post.mean + sum(g.nonlinear.new[i,]))
   alpha.smooth.q1[i] <- exp(theta.q1 + sum(g.nonlinear.q1[i,]))
+  alpha.smooth.q2[i] <- exp(theta.q2 + sum(g.nonlinear.q2[i,]))
   alpha.smooth.q3[i] <- exp(theta.q3 + sum(g.nonlinear.q3[i,]))
 }
 
@@ -314,13 +317,14 @@ data.nonlinear <- data.frame("x"=c(1:n),
                           "true" = as.vector(f.nonlinear.new),
                           "post.mean" = as.vector(g.nonlinear.new),
                           "q1" = as.vector(g.nonlinear.q1),
+                          "q2" = as.vector(g.nonlinear.q2),
                           "q3" = as.vector(g.nonlinear.q3),
                           "covariates" = gl(p, n, (p*n)),
                           "replicate" = gl(2, n, (p*n)))
 plot.nonlinear <- ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_line(aes(y=true, colour = covariates, linetype = "True"), linewidth=2) + 
-  geom_line(aes(y=post.mean, colour = covariates, linetype = "MCMC"), linewidth=2) + xlab("Nonlinear Components") + ylab("") +
+  geom_line(aes(y=q2, colour = covariates, linetype = "MCMC"), linewidth=2) + xlab("Nonlinear Components") + ylab("") +
   facet_grid(covariates ~ ., scales = "free_y") + 
   scale_linetype_manual("functions",values=c("MCMC"=3,"True"=1)) +
   scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
@@ -340,12 +344,11 @@ plot.nonlinear <- ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, 
 plot.nonlinear
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_nonlinear_sc3-wi.pdf"), width=12.5, height = 15)
 
-
 ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
   geom_line(aes(y=true, colour = covariates, linetype = "True"), linewidth=2) + 
-  geom_line(aes(y=post.mean, colour = covariates, linetype = "MCMC"), linewidth=2) + xlab("Nonlinear Components") + ylab("") +
+  geom_line(aes(y=q2, colour = covariates, linetype = "MCMC"), linewidth=2) + xlab("Nonlinear Components") + ylab("") +
   facet_grid(covariates ~ ., scales = "free_y") + 
   scale_linetype_manual("functions",values=c("MCMC"=3,"True"=1)) +
   scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
@@ -377,7 +380,7 @@ data.scenario <- data.frame("x" = c(1:n),
                             "q1" = sort(newalpha.samples[,4]),
                             "q3" = sort(newalpha.samples[,6]))
                             # "post.mean" = sort(alpha.smooth.new),
-                            # "post.median" = sort(newalpha.samples[,5]),
+                            # "post.median" = sort(alpha.smooth.q2),
                             # "q1" = sort(alpha.smooth.q1),
                             # "q3" = sort(alpha.smooth.q3))                            
 

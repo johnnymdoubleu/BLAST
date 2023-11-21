@@ -24,7 +24,7 @@ library(ggh4x)
 
 #Scenario 1
 # set.seed(2)
-set.seed(3)
+set.seed(36)
 
 n <- 5000
 psi <- 20
@@ -109,7 +109,7 @@ C <- matrix(c(1, 0.3, 0.5, 0.3, 0.3,
             0.3, 0.4, 0.5, 0.5, 1), nrow = p)    
 ## Generate sample
 x.origin <- pnorm(matrix(rnorm(n*p), ncol = p) %*% chol(C))
-
+x.origin <- scale(x.origin)
 # corrplot.mixed(cor(x.origin),
 #                 upper = "circle",
 #                 lower = "number",
