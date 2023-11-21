@@ -400,7 +400,7 @@ data.nonlinear <- data.frame("x"=c(1:n),
                         
 plot.nonlinear <- ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  # geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
+  geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
   geom_line(aes(y=true, colour = covariates, linetype = "True"), linewidth=2) + 
   geom_line(aes(y=post.mean, colour = covariates, linetype = "MCMC"), linewidth=2) + xlab("Nonlinear Components") + ylab("") +
   facet_wrap(covariates ~ ., scale="free_y", nrow = p)  +
@@ -422,7 +422,7 @@ plot.nonlinear
 #     covariates == "1" ~ ylim(-0.01, 0.01),
 #     covariates == "2" ~ ylim(-0.06, 0),
 #     covariates == "3" ~ ylim(-0.09, 0),
-#     covariates == "4" ~ ylim(-0.001, 0.05),
+#     covariates == "4" ~ ylim(-0.001, 0.05),\
 #     covariates == "5" ~ ylim(-0.01, 0.01)))
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_nonlinear_sc2-nl.pdf"), width=12.5, height = 15)
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_mcmc_nonlinear_sc3-nl.pdf"), width=12.5, height = 15)
