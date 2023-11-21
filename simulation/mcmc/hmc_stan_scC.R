@@ -326,9 +326,11 @@ newalpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$
 
 gamma.post.mean <- gamma.samples[,1]
 gamma.q1 <- gamma.samples[,4]
+gamma.q2 <- gamma.samples[,5]
 gamma.q3 <- gamma.samples[,6]
 theta.post.mean <- theta.samples[,1]
 theta.q1 <- theta.samples[,4]
+theta.q2 <- theta.samples[,5]
 theta.q3 <- theta.samples[,6]
 
 df.theta <- data.frame("seq" = seq(1, (p+1)),
@@ -401,7 +403,7 @@ ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) +
           axis.text = element_text(size = 28))
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_gamma_sc3-wi.pdf"), width=10, height = 7.78)
 
-g.nonlinear.q1 <- g.linear.q1 <- g.q1 <- g.nonlinear.q3 <- g.linear.q3 <- g.q3 <- g.nonlinear.new <- g.linear.new <- g.new <- matrix(, nrow = n, ncol=p)
+g.nonlinear.q2 <- g.linear.q2 <- g.q2 <- g.nonlinear.q1 <- g.linear.q1 <- g.q1 <- g.nonlinear.q3 <- g.linear.q3 <- g.q3 <- g.nonlinear.new <- g.linear.new <- g.new <- matrix(, nrow = n, ncol=p)
 alpha.smooth.q1 <- alpha.smooth.q3 <- alpha.smooth.new <- alpha.new <- NULL
 for (j in 1:p){
   g.linear.new[,j] <- xholder.linear[,j] * theta.post.mean[(j+1)]
@@ -410,6 +412,9 @@ for (j in 1:p){
   g.linear.q1[,j] <- xholder.linear[,j] * theta.q1[(j+1)]
   g.nonlinear.q1[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.q1, nrow=psi)[,j] 
   g.q1[1:n, j] <- g.linear.q1[,j] + g.nonlinear.q1[,j]
+  g.linear.q2[,j] <- xholder.linear[,j] * theta.q2[(j+1)]
+  g.nonlinear.q2[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.q2, nrow=psi)[,j] 
+  g.q2[1:n, j] <- g.linear.q2[,j] + g.nonlinear.q2[,j]
   g.linear.q3[,j] <- xholder.linear[,j] * theta.q3[(j+1)]
   g.nonlinear.q3[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.q3, nrow=psi)[,j] 
   g.q3[1:n, j] <- g.linear.q3[,j] + g.nonlinear.q3[,j]
@@ -437,18 +442,19 @@ data.smooth <- data.frame("x"=c(1:n),
                           "true" = as.vector(f.new),
                           "post.mean" = as.vector(g.new),
                           "q1" = as.vector(g.q1),
+                          "q2" = as.vector(g.q2),
                           "q3" = as.vector(g.q3),
                           "covariates" = gl(p, n, (p*n)),
                           "replicate" = gl(2, n, (p*n)))
 plot.smooth <- ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
-  geom_line(aes(y=true, colour = covariates, linetype = "True"), linewidth=2) + 
-  geom_line(aes(y=post.mean, colour = covariates, linetype = "Posterior Mean"), linewidth=2) + 
-  ylab("") + xlab ("Smooth Functions") +
-  # geom_point(aes(y=origin, shape = replicate)) + geom_point(aes(y=new, shape = replicate)) +
-  facet_grid(covariates ~ ., scales = "free_y") +
-  scale_linetype_manual("functions",values=c("Posterior Mean"=3,"True"=1)) +
+  geom_line(aes(y=true, colour = "true"), linewidth=2) + 
+  geom_line(aes(y=q2, colour = covariates), linewidth=1.5) + 
+  xlab("Smooth Functions") + ylab("") +
+  facet_grid(covariates ~ ., scales = "free_y") + 
+  scale_color_manual(values=c("pink", "#F5C710", "#61D04F", "#2297E6", "purple", "red")) +
+  # scale_linetype_manual("functions",values=c("Posterior Mean"=3,"True"=1)) +
   scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + theme_minimal(base_size = 30) + 
   theme(plot.title = element_text(hjust = 0.5, size = 30),
         legend.position = "none",
@@ -458,6 +464,7 @@ plot.smooth <- ggplot(data.smooth, aes(x=x, group=interaction(covariates, replic
         axis.ticks.x = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
+plot.smooth
 
 
 plot.smooth + facetted_pos_scales(y = list(
@@ -472,16 +479,19 @@ data.linear <- data.frame("x"=c(1:n),
                           "true" = as.vector(f.linear.new),
                           "post.mean" = as.vector(g.linear.new),
                           "q1" = as.vector(g.linear.q1),
+                          "q2" = as.vector(g.linear.q2),
                           "q3" = as.vector(g.linear.q3),
                           "covariates" = gl(p, n, (p*n)),
                           "replicate" = gl(2, n, (p*n)))
 plot.linear <- ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
-  geom_line(aes(y=true, colour = covariates, linetype = "True"), linewidth=2) + 
-  geom_line(aes(y=post.mean, colour = covariates, linetype = "Posterior Mean"), linewidth=2) + xlab("Linear Components") + ylab("") +
+  geom_line(aes(y=true, colour = "true"), linewidth=2) + 
+  geom_line(aes(y=q2, colour = covariates), linewidth=1.5) + 
+  xlab("Linear Components") + ylab("") +
   facet_grid(covariates ~ ., scales = "free_y") + 
-  scale_linetype_manual("functions",values=c("Posterior Mean"=3,"True"=1)) +
+  scale_color_manual(values=c("pink", "#F5C710", "#61D04F", "#2297E6", "purple", "red")) +
+  # scale_linetype_manual("functions",values=c("Posterior Mean"=3,"True"=1)) +
   scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) +
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 30),
@@ -493,8 +503,9 @@ plot.linear <- ggplot(data.linear, aes(x=x, group=interaction(covariates, replic
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
 
+plot.linear
 plot.linear + facetted_pos_scales(y = list(
-    covariates == "1" ~ ylim(-0.01, 0.38),
+    covariates == "1" ~ ylim(-0.1, 0.22),
     covariates == "2" ~ ylim(-0.35, 0),
     covariates == "3" ~ ylim(-0.35, 0),
     covariates == "4" ~ ylim(-0.1, 0.05),
@@ -505,16 +516,19 @@ data.nonlinear <- data.frame("x"=c(1:n),
                           "true" = as.vector(f.nonlinear.new),
                           "post.mean" = as.vector(g.nonlinear.new),
                           "q1" = as.vector(g.nonlinear.q1),
+                          "q2" = as.vector(g.nonlinear.q2),
                           "q3" = as.vector(g.nonlinear.q3),
                           "covariates" = gl(p, n, (p*n)),
                           "replicate" = gl(2, n, (p*n)))
 plot.nonlinear <- ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
-  geom_line(aes(y=true, colour = covariates, linetype = "True"), linewidth=2) + 
-  geom_line(aes(y=post.mean, colour = covariates, linetype = "MCMC"), linewidth=2) + xlab("Nonlinear Components") + ylab("") +
+  geom_line(aes(y=true, colour = "true"), linewidth=2) + 
+  geom_line(aes(y=q2, colour = covariates), linewidth=1.5) + 
+  xlab("Nonlinear Components") + ylab("") +
   facet_grid(covariates ~ ., scales = "free_y") + 
-  scale_linetype_manual("functions",values=c("MCMC"=3,"True"=1)) +
+  scale_color_manual(values=c("pink", "#F5C710", "#61D04F", "#2297E6", "purple", "red")) +
+  # scale_linetype_manual("functions",values=c("MCMC"=3,"True"=1)) +
   scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 15),
         axis.ticks = element_blank(),
@@ -528,7 +542,7 @@ plot.nonlinear <- ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, 
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
 
-
+plot.nonlinear
 plot.nonlinear + facetted_pos_scales(y = list(
     covariates == "1" ~ ylim(-0.03, 0.05), 
     covariates == "2" ~ ylim(-0.09, 0),
@@ -586,13 +600,13 @@ ggplot(data.scenario, aes(x=x)) +
   ylab(expression(alpha(x))) + xlab(expression(x)) + labs(col = "") + 
   geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
   geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
-  geom_line(aes(y=post.mean, col = "Posterior Mean"), linewidth=2, linetype = 2) + 
+#   geom_line(aes(y=post.mean, col = "Posterior Mean"), linewidth=2, linetype = 2) + 
   # ylim(0, (max(data.scenario$q3)+10)) +
-  geom_line(aes(y=post.median, col = "Posterior Median"), linetype=2, linewidth=2) +
+  geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=2) +
   # geom_line(aes(y=chain2, col = "Chian 2"), linetype=3) +
   # facet_grid(covariates ~ .) + 
   # scale_y_continuous(breaks=c(0)) + 
-  scale_color_manual(values = c("blue","#e0b430","red"))+
+  scale_color_manual(values = c("#e0b430","red"))+
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 30),
         legend.position="top", 
