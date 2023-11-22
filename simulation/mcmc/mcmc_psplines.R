@@ -3,6 +3,7 @@ library(dlnm)
 library(tmvnsim)
 library(reshape2)
 library(splines2)
+library(splines)
 library(scales)
 library(MASS)
 library(npreg)
@@ -35,11 +36,12 @@ simul.no <- 50
 
 xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
 x.origin <- cbind(replicate(p, runif(n, 0, 1)))
+x.origin <- scale(x.origin)
 
 for(i in 1:(dim(x.origin)[2])){
 #   splines <- bbase(x.origin[, i], min(x.origin[, i]), max(x.origin[, i]), nseg = 17, bdeg = 3)
-# knots=seq(min(x.origin[,i]), max(x.origin[,i]), length.out=(psi+1)),
-  splines <- ps(x.origin[,i], df=psi,  degree=3, intercept=TRUE, fx= FALSE, S=NULL, diff=2)
+  knots=seq(min(x.origin[,i]), max(x.origin[,i]), length.out=(psi-3))
+  splines <- bs(x.origin[,i], knots=knots,  degree=3, intercept=FALSE)
   bs.nonlinear <- cbind(bs.nonlinear, splines)
   # phi <- dim(out[[1]][[1]]$X)[2]
 #   print(sum(splines))
@@ -48,17 +50,25 @@ for(i in 1:(dim(x.origin)[2])){
 
 gamma.origin <- matrix(, nrow = psi, ncol = p)
 for(j in 1:p){
-    for (ps in 1:psi){
-        if(j %in% c(2,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
-        else if(j==7){
-            if(ps <= (psi/2)){gamma.origin[ps, j] <- -1}
-            else{gamma.origin[ps, j] <- -1}
-        }
-        else {
-            if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.5}
-            else{gamma.origin[ps, j] <- 0.5}
-        }
+    if(j %in% c(2,4,5,6,9,10)){gamma.origin[, j] <- rep(0, psi)}
+    else if(j==7){
+      gamma.origin[,j] <- sort(runif(psi, -1,1))
     }
+    else{
+      gamma.origin[,j] <- sort(runif(psi, min = -1, max = 0))
+    }
+    # for (ps in 1:psi){
+    #     if(j %in% c(2,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
+    #     else if(j==7){
+    #         if(ps <= (psi/2)){gamma.origin[ps, j] <- -1}
+    #         else{gamma.origin[ps, j] <- -0.7}
+    #     }
+    #     else {
+    #         if(ps <= (psi/3)){gamma.origin[ps, j] <- 0.5}
+    #         else if(ps <= (2*psi/3) & ps > (psi/3)){gamma.origin[ps, j] <- 0.1}
+    #         else{gamma.origin[ps, j] <- -0.7}
+    #     }
+    # }
 }
 
 # n <- 5000
@@ -158,14 +168,20 @@ xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow
 newx <- seq(0, 1, length.out=n)
 xholder <- bs.x <- matrix(, nrow = n, ncol = p)
 for(i in 1:p){
-    xholder[,i] <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = n)
-    # splines <- bbase(x.origin[, i], min(x.origin[, i]), max(x.origin[, i]), nseg = 17, bdeg = 3)
-    splines <-  ps(x.origin[,i], df=psi, knots=NULL, degree=3, intercept=TRUE, fx= FALSE, S=NULL, diff=2)
+    knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = (psi-3))
+    splines <-  bs(x.origin[,i], knots=knots,  degree=3, intercept = FALSE)
     bs.nonlinear <- cbind(bs.nonlinear, splines)
     # test.splines <- bbase(xholder[,i], min(xholder[,i]), max(xholder[,i]), nseg = 17, bdeg = 3)
-    test.splines <- ps(xholder[,i], df=psi, knots=NULL, degree=3, intercept=TRUE, fx= FALSE, S=NULL, diff=2)
+    test.knot <- seq(0, 1, length.out = (psi-3))
+    xholder[,i] <- newx
+    test.splines <- bs(xholder[,i], knots=test.knot,  degree=3, intercept = FALSE)
     xholder.nonlinear <- cbind(xholder.nonlinear, test.splines)
 }
+
+plot(test.splines[,1]~newx, ylim=c(0,max(test.splines)), type='l', lwd=2, col=1, 
+     xlab="Cubic B-spline basis", ylab="")
+for (j in 2:ncol(test.splines)) lines(test.splines[,j]~newx, lwd=2, col=j)
+
 
 f.nonlinear.new <- f.linear.new <- f.new <- f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){

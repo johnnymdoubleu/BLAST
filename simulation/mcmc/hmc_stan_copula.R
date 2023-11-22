@@ -26,7 +26,7 @@ library(ggh4x)
 # set.seed(2)
 set.seed(3)
 
-n <- 20000
+n <- 15000
 psi <- 20
 threshold <- 0.9
 p <- 5
@@ -90,7 +90,7 @@ for(i in 1:n){
 u <- quantile(y.origin, threshold)
 x.origin <- x.origin[which(y.origin>u),]
 # x.bs <- x.origin
-x.origin <- scale(x.origin)
+# x.origin <- scale(x.origin)
 y.origin <- y.origin[y.origin > u]
 n <- length(y.origin)
 
@@ -347,11 +347,12 @@ plot.nonlinear
 
 ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
+  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "band"), alpha = 0.2) +
   geom_line(aes(y=true, colour = "true"), linewidth=2) + 
   geom_line(aes(y=q2, colour = covariates), linewidth=1.5) + 
   xlab("Nonlinear Components") + ylab("") +
   facet_grid(covariates ~ ., scales = "free_y") + 
+  scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values=c("pink", "#F5C710", "#61D04F", "#2297E6", "purple", "red")) +
 #   scale_linetype_manual("functions",values=c("MCMC"=1,"True"=1)) +
   scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
@@ -387,27 +388,30 @@ data.scenario <- data.frame("x" = c(1:n),
                             # "q1" = sort(alpha.smooth.q1),
                             # "q3" = sort(alpha.smooth.q3))                            
 
-ggplot(data.scenario, aes(x=x)) + 
-  ylab(expression(alpha(x))) + xlab(expression(x)) + labs(col = "") + 
-  geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
-  geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
+ggplot(data.scenario, aes(x=constant)) + 
+  ylab(expression(alpha(x))) + xlab(expression(c)) + labs(col = "") + 
+  geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
+  geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2) + 
 #   geom_line(aes(y=post.mean, col = "Posterior Mean"), linewidth=2, linetype = 2) + 
 #   ylim(0, (max(data.scenario$q3)+10)) +
-  geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=2) +
+  geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
   # geom_line(aes(y=chain2, col = "Chian 2"), linetype=3) +
   # facet_grid(covariates ~ .) + 
   # scale_y_continuous(breaks=c(0)) + 
-  scale_color_manual(values = c("#e0b430","red"))+
+  scale_fill_manual(values=c("steelblue"), name = "") +
+  scale_color_manual(values = c("steelblue","red"))+
+  guides(color = guide_legend(order = 2), 
+          fill = guide_legend(order = 1)) +
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 30),
         legend.position="top", 
         legend.key.size = unit(1, 'cm'),
-        legend.text = element_text(size=18),
-        plot.margin = margin(0,0,0,-10),
+        legend.text = element_text(size=15),
+        plot.margin = margin(0,0,0,-1),
         strip.text = element_blank(),
-        axis.text.x = element_blank(),
-        axis.ticks.x = element_blank(),
-        axis.text.y = element_text(size=33),
+        # axis.text.x = element_blank(),
+        # axis.ticks.x = element_blank(),
+        # axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_test_sc3-nl.pdf"), width=10, height = 7.78)
