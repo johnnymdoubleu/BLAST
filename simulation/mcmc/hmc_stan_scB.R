@@ -235,84 +235,86 @@ newalpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$
 
 gamma.post.mean <- gamma.samples[,1]
 gamma.q1 <- gamma.samples[,4]
+gamma.q2 <- gamma.samples[,5]
 gamma.q3 <- gamma.samples[,6]
 theta.post.mean <- theta.samples[,1]
 theta.q1 <- theta.samples[,4]
+theta.q2 <- theta.samples[,5]
 theta.q3 <- theta.samples[,6]
 
-df.theta <- data.frame("seq" = seq(1, (p+1)),
-                        "true" = theta.origin,
-                        "m" = theta.post.mean,
-                        "l" = theta.q1,
-                        "u" = theta.q3)
-df.theta$covariate <- factor(0:p)
-df.theta$labels <- factor(0:p)
-ggplot(df.theta, aes(x = covariate, y=m, color = covariate)) + ylab("") + xlab('') +
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  geom_point(size = 5) + geom_point(aes(y = true), color="red", size = 4) +
-  geom_errorbar(aes(ymin = l, ymax = u), width = 0.3, linewidth =1.2) + 
-  scale_x_discrete(labels = c(expression(bold(theta[0])),
-                              expression(bold(theta[1])),
-                              expression(bold(theta[2])),
-                              expression(bold(theta[3])),
-                              expression(bold(theta[4])),
-                              expression(bold(theta[5])),
-                              expression(bold(theta[6])),
-                              expression(bold(theta[7])),
-                              expression(bold(theta[8])),
-                              expression(bold(theta[9])),
-                              expression(bold(theta[10])))) + 
-  theme_minimal(base_size = 30) +
-  theme(plot.title = element_text(hjust = 0.5, size = 20),
-          legend.text.align = 0,
-          legend.title = element_blank(),
-          legend.text = element_text(size=25),
-          legend.margin=margin(0,0,0,-10),
-          legend.box.margin=margin(-10,0,-10,0),
-          plot.margin = margin(0,0,0,-20),
-          axis.text.x = element_text(hjust=0.35),
-          axis.text = element_text(size = 28))
+# df.theta <- data.frame("seq" = seq(1, (p+1)),
+#                         "true" = theta.origin,
+#                         "m" = theta.post.mean,
+#                         "l" = theta.q1,
+#                         "u" = theta.q3)
+# df.theta$covariate <- factor(0:p)
+# df.theta$labels <- factor(0:p)
+# ggplot(df.theta, aes(x = covariate, y=m, color = covariate)) + ylab("") + xlab('') +
+#   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+#   geom_point(size = 5) + geom_point(aes(y = true), color="red", size = 4) +
+#   geom_errorbar(aes(ymin = l, ymax = u), width = 0.3, linewidth =1.2) + 
+#   scale_x_discrete(labels = c(expression(bold(theta[0])),
+#                               expression(bold(theta[1])),
+#                               expression(bold(theta[2])),
+#                               expression(bold(theta[3])),
+#                               expression(bold(theta[4])),
+#                               expression(bold(theta[5])),
+#                               expression(bold(theta[6])),
+#                               expression(bold(theta[7])),
+#                               expression(bold(theta[8])),
+#                               expression(bold(theta[9])),
+#                               expression(bold(theta[10])))) + 
+#   theme_minimal(base_size = 30) +
+#   theme(plot.title = element_text(hjust = 0.5, size = 20),
+#           legend.text.align = 0,
+#           legend.title = element_blank(),
+#           legend.text = element_text(size=25),
+#           legend.margin=margin(0,0,0,-10),
+#           legend.box.margin=margin(-10,0,-10,0),
+#           plot.margin = margin(0,0,0,-20),
+#           axis.text.x = element_text(hjust=0.35),
+#           axis.text = element_text(size = 28))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_theta_sc2-wi.pdf"), width=10, height = 7.78)
+# # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_theta_sc2-wi.pdf"), width=10, height = 7.78)
 
-df.gamma <- data.frame("seq" = seq(1, (psi*p)), 
-                  "true" = as.vector(gamma.origin),
-                  "m" = as.vector(gamma.post.mean),
-                  "l" = as.vector(gamma.q1),
-                  "u" = as.vector(gamma.q3))
-df.gamma$covariate <- factor(rep(seq(1, 1 + nrow(df.gamma) %/% psi), each = psi, length.out = nrow(df.gamma)))
-df.gamma$labels <- factor(1:(psi*p))
-ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) + 
-  geom_errorbar(aes(ymin = l, ymax = u),alpha = 0.4, width = 4, linewidth = 1.2) +
-  geom_point(aes(y=true), size =4, color ="red")+
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  geom_point(size = 4) + ylab("") + xlab("" ) + #ylim(-15,15) +
-  # geom_ribbon(aes(ymin = l, ymax = u)) +
-  scale_x_discrete(breaks=c(seq(0, (psi*p), psi)+7), 
-                    label = c(expression(bold(gamma[1])), 
-                              expression(bold(gamma[2])), 
-                              expression(bold(gamma[3])), 
-                              expression(bold(gamma[4])), 
-                              expression(bold(gamma[5])), 
-                              expression(bold(gamma[6])), 
-                              expression(bold(gamma[7])), 
-                              expression(bold(gamma[8])), 
-                              expression(bold(gamma[9])), 
-                              expression(bold(gamma[10]))),
-                    expand=c(0,3)) +
-  theme_minimal(base_size = 30) +
-  theme(plot.title = element_text(hjust = 0.5, size = 20),
-          legend.title = element_blank(),
-          legend.text = element_text(size=25),
-          legend.margin=margin(0,0,0,-10),
-          legend.box.margin=margin(-10,0,-10,0),
-          plot.margin = margin(0,0,0,-20),
-          axis.text.x = element_text(hjust=0.5),
-          axis.text = element_text(size = 28))
+# df.gamma <- data.frame("seq" = seq(1, (psi*p)), 
+#                   "true" = as.vector(gamma.origin),
+#                   "m" = as.vector(gamma.post.mean),
+#                   "l" = as.vector(gamma.q1),
+#                   "u" = as.vector(gamma.q3))
+# df.gamma$covariate <- factor(rep(seq(1, 1 + nrow(df.gamma) %/% psi), each = psi, length.out = nrow(df.gamma)))
+# df.gamma$labels <- factor(1:(psi*p))
+# ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) + 
+#   geom_errorbar(aes(ymin = l, ymax = u),alpha = 0.4, width = 4, linewidth = 1.2) +
+#   geom_point(aes(y=true), size =4, color ="red")+
+#   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+#   geom_point(size = 4) + ylab("") + xlab("" ) + #ylim(-15,15) +
+#   # geom_ribbon(aes(ymin = l, ymax = u)) +
+#   scale_x_discrete(breaks=c(seq(0, (psi*p), psi)+7), 
+#                     label = c(expression(bold(gamma[1])), 
+#                               expression(bold(gamma[2])), 
+#                               expression(bold(gamma[3])), 
+#                               expression(bold(gamma[4])), 
+#                               expression(bold(gamma[5])), 
+#                               expression(bold(gamma[6])), 
+#                               expression(bold(gamma[7])), 
+#                               expression(bold(gamma[8])), 
+#                               expression(bold(gamma[9])), 
+#                               expression(bold(gamma[10]))),
+#                     expand=c(0,3)) +
+#   theme_minimal(base_size = 30) +
+#   theme(plot.title = element_text(hjust = 0.5, size = 20),
+#           legend.title = element_blank(),
+#           legend.text = element_text(size=25),
+#           legend.margin=margin(0,0,0,-10),
+#           legend.box.margin=margin(-10,0,-10,0),
+#           plot.margin = margin(0,0,0,-20),
+#           axis.text.x = element_text(hjust=0.5),
+#           axis.text = element_text(size = 28))
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_gamma_sc2-wi.pdf"), width=10, height = 7.78)
 
-g.nonlinear.q1 <- g.linear.q1 <- g.q1 <- g.nonlinear.q3 <- g.linear.q3 <- g.q3 <- g.nonlinear.new <- g.linear.new <- g.new <- matrix(, nrow = n, ncol=p)
-alpha.smooth.q1 <- alpha.smooth.q3 <- alpha.smooth.new <- alpha.new <- NULL
+g.nonlinear.q2 <- g.linear.q2 <- g.q2 <- g.nonlinear.q1 <- g.linear.q1 <- g.q1 <- g.nonlinear.q3 <- g.linear.q3 <- g.q3 <- g.nonlinear.new <- g.linear.new <- g.new <- matrix(, nrow = n, ncol=p)
+alpha.smooth.q1 <- alpha.smooth.q2 <- alpha.smooth.q3 <- alpha.smooth.new <- alpha.new <- NULL
 for (j in 1:p){
   g.linear.new[,j] <- xholder.linear[,j] * theta.post.mean[(j+1)]
   g.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.post.mean, nrow=psi)[,j] 
@@ -320,6 +322,9 @@ for (j in 1:p){
   g.linear.q1[,j] <- xholder.linear[,j] * theta.q1[(j+1)]
   g.nonlinear.q1[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.q1, nrow=psi)[,j] 
   g.q1[1:n, j] <- g.linear.q1[,j] + g.nonlinear.q1[,j]
+  g.linear.q2[,j] <- xholder.linear[,j] * theta.q2[(j+1)]
+  g.nonlinear.q2[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.q2, nrow=psi)[,j] 
+  g.q2[1:n, j] <- g.linear.q2[,j] + g.nonlinear.q2[,j]  
   g.linear.q3[,j] <- xholder.linear[,j] * theta.q3[(j+1)]
   g.nonlinear.q3[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.q3, nrow=psi)[,j] 
   g.q3[1:n, j] <- g.linear.q3[,j] + g.nonlinear.q3[,j]
@@ -328,6 +333,7 @@ for (j in 1:p){
 for(i in 1:n){
   alpha.smooth.new[i] <- exp(theta.post.mean[1] + sum(g.new[i,]))
   alpha.smooth.q1[i] <- exp(theta.q1[1] + sum(g.q1[i,]))
+  alpha.smooth.q2[i] <- exp(theta.q2[1] + sum(g.q2[i,]))  
   alpha.smooth.q3[i] <- exp(theta.q3[1] + sum(g.q3[i,]))
 }
 
@@ -347,80 +353,142 @@ data.smooth <- data.frame("x"=c(1:n),
                           "true" = as.vector(f.new),
                           "post.mean" = as.vector(g.new),
                           "q1" = as.vector(g.q1),
+                          "q2" = as.vector(g.q2),
                           "q3" = as.vector(g.q3),
-                          "covariates" = gl(p, n, (p*n)),
+                          "covariates" = gl(p, n, (p*n), 
+                            labels = c("X[1]", "X[2]", "X[3]", "X[4]", "X[5]", 
+                                      "X[6]", "X[7]", "X[8]", "X[9]", "X[10]")),
+                          # "covariates" = gl(p, n, (p*n)),
                           "replicate" = gl(2, n, (p*n)))
-plot.smooth <- ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) + 
+# plot.smooth <- ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) + 
+#   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+#   geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
+#   geom_line(aes(y=true, colour = covariates, linetype = "True"), linewidth=2) + 
+#   geom_line(aes(y=post.mean, colour = covariates, linetype = "Posterior Mean"), linewidth=2) + 
+#   ylab("") + xlab ("Smooth Functions") +
+#   # geom_point(aes(y=origin, shape = replicate)) + geom_point(aes(y=new, shape = replicate)) +
+#   facet_grid(covariates ~ ., scales = "free_y") +
+#   scale_linetype_manual("functions",values=c("Posterior Mean"=3,"True"=1)) +
+#   scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + theme_minimal(base_size = 30) + 
+#   theme(plot.title = element_text(hjust = 0.5, size = 30),
+#         legend.position = "none",
+#         plot.margin = margin(0,0,0,-10),
+#         strip.text = element_blank(),
+#         axis.text.x = element_blank(),
+#         axis.ticks.x = element_blank(),
+#         axis.text.y = element_text(size=33),
+#         axis.title.x = element_text(size = 35))
+# plot.smooth + facetted_pos_scales(y = list(
+#     covariates == "1" ~ ylim(0, 1.4), 
+#     covariates == "2" ~ ylim(0, 1.3),
+#     covariates == "3" ~ ylim(0, 1.5),
+#     covariates == "4" ~ ylim(-0.68, 0.05),
+#     covariates == "5" ~ ylim(-0.2, 0.15),
+#     covariates == "6" ~ ylim(-0.1, 0.8),
+#     covariates == "7" ~ ylim(-0.5, 1),
+#     covariates == "8" ~ ylim(0, 1.4),
+#     covariates == "9" ~ ylim(-0.81, 0.1),
+#     covariates == "10" ~ ylim(-0.7, 0.1)
+#     ))
+
+ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
-  geom_line(aes(y=true, colour = covariates, linetype = "True"), linewidth=2) + 
-  geom_line(aes(y=post.mean, colour = covariates, linetype = "Posterior Mean"), linewidth=2) + 
-  ylab("") + xlab ("Smooth Functions") +
-  # geom_point(aes(y=origin, shape = replicate)) + geom_point(aes(y=new, shape = replicate)) +
-  facet_grid(covariates ~ ., scales = "free_y") +
-  scale_linetype_manual("functions",values=c("Posterior Mean"=3,"True"=1)) +
-  scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + theme_minimal(base_size = 30) + 
-  theme(plot.title = element_text(hjust = 0.5, size = 30),
-        legend.position = "none",
-        plot.margin = margin(0,0,0,-10),
-        strip.text = element_blank(),
-        axis.text.x = element_blank(),
-        axis.ticks.x = element_blank(),
-        axis.text.y = element_text(size=33),
-        axis.title.x = element_text(size = 35))
+  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
+  geom_line(aes(y=true, colour = "True"), linewidth=2) + 
+  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
+  xlab(expression(c)) + ylab("") +
+  facet_grid(covariates ~ ., scales = "free_y", labeller = label_parsed) + 
+  scale_fill_manual(values=c("steelblue"), name = "") +
+  scale_color_manual(values=c("steelblue", "red")) + 
+  guides(color = guide_legend(order = 2), 
+          fill = guide_legend(order = 1)) +
+#   scale_linetype_manual("functions",values=c("MCMC"=1,"True"=1)) +
+  scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
+  theme_minimal(base_size = 30) +
+  theme(plot.title = element_text(hjust = 0.5, size = 15),
+        # axis.ticks = element_blank(),
+        legend.position="top",
+        legend.title = element_blank(),
+        legend.text = element_text(size=20),
+        legend.margin=margin(t = 1, unit='cm'),
+        legend.box.margin=margin(-10,0,-10,0),
+        plot.margin = margin(0,0,0,-20),
+        strip.text.y = element_text(size = 18, colour = "black", angle = 0, face = "bold.italic"),
+        # strip.background = element_rect(color="black", fill="white", size=1.5, linetype="solid"),
+        # axis.text.x = element_blank(),
+        axis.title.x = element_text(size = 35),
+        axis.text.y = element_text(size=25))
 
-plot.smooth + facetted_pos_scales(y = list(
-    covariates == "1" ~ ylim(0, 1.4), 
-    covariates == "2" ~ ylim(0, 1.3),
-    covariates == "3" ~ ylim(0, 1.5),
-    covariates == "4" ~ ylim(-0.68, 0.05),
-    covariates == "5" ~ ylim(-0.2, 0.15),
-    covariates == "6" ~ ylim(-0.1, 0.8),
-    covariates == "7" ~ ylim(-0.5, 1),
-    covariates == "8" ~ ylim(0, 1.4),
-    covariates == "9" ~ ylim(-0.81, 0.1),
-    covariates == "10" ~ ylim(-0.7, 0.1)
-    ))
-
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_smooth_sc2-wi.pdf"), width=10.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_smooth_sc2-wi.pdf"), width=10.5, height = 16)
 
 data.linear <- data.frame("x"=c(1:n),
                           "true" = as.vector(f.linear.new),
                           "post.mean" = as.vector(g.linear.new),
                           "q1" = as.vector(g.linear.q1),
+                          "q2" = as.vector(g.linear.q2),
                           "q3" = as.vector(g.linear.q3),
-                          "covariates" = gl(p, n, (p*n)),
+                          "covariates" = gl(p, n, (p*n), 
+                            labels = c("X[1]", "X[2]", "X[3]", "X[4]", "X[5]", 
+                                      "X[6]", "X[7]", "X[8]", "X[9]", "X[10]")),
                           "replicate" = gl(2, n, (p*n)))
-plot.linear <- ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) + 
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
-  geom_line(aes(y=true, colour = covariates, linetype = "True"), linewidth=2) + 
-  geom_line(aes(y=post.mean, colour = covariates, linetype = "Posterior Mean"), linewidth=2) + xlab("Linear Components") + ylab("") +
-  facet_grid(covariates ~ ., scales = "free_y") + 
-  scale_linetype_manual("functions",values=c("Posterior Mean"=3,"True"=1)) +
-  scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) +
-  theme_minimal(base_size = 30) +
-  theme(plot.title = element_text(hjust = 0.5, size = 30),
-        legend.position = "none",
-        plot.margin = margin(0,0,0,-10),
-        strip.text = element_blank(),
-        axis.text.x = element_blank(),
-        axis.ticks.x = element_blank(),
-        axis.text.y = element_text(size=33),
-        axis.title.x = element_text(size = 35))
+# plot.linear <- ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) + 
+#   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+#   geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
+#   geom_line(aes(y=true, colour = covariates, linetype = "True"), linewidth=2) + 
+#   geom_line(aes(y=post.mean, colour = covariates, linetype = "Posterior Mean"), linewidth=2) + xlab("Linear Components") + ylab("") +
+#   facet_grid(covariates ~ ., scales = "free_y") + 
+#   scale_linetype_manual("functions",values=c("Posterior Mean"=3,"True"=1)) +
+#   scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) +
+#   theme_minimal(base_size = 30) +
+#   theme(plot.title = element_text(hjust = 0.5, size = 30),
+#         legend.position = "none",
+#         plot.margin = margin(0,0,0,-10),
+#         strip.text = element_blank(),
+#         axis.text.x = element_blank(),
+#         axis.ticks.x = element_blank(),
+#         axis.text.y = element_text(size=33),
+#         axis.title.x = element_text(size = 35))
 
-plot.linear + facetted_pos_scales(y = list(
-    covariates == "1" ~ ylim(0, 1.4), 
-    covariates == "2" ~ ylim(0, 0.28),
-    covariates == "3" ~ ylim(0, 1.5),
-    covariates == "4" ~ ylim(-0.27, 0.15),
-    covariates == "5" ~ ylim(-0.2, 0.15),
-    covariates == "6" ~ ylim(-0.1, 0.28),
-    covariates == "7" ~ ylim(-0.33, 0.33),
-    covariates == "8" ~ ylim(0, 1.4),
-    covariates == "9" ~ ylim(-0.28, 0.1),
-    covariates == "10" ~ ylim(-0.7, 0.1)
-    ))
+# plot.linear + facetted_pos_scales(y = list(
+#     covariates == "1" ~ ylim(0, 1.4), 
+#     covariates == "2" ~ ylim(0, 0.28),
+#     covariates == "3" ~ ylim(0, 1.5),
+#     covariates == "4" ~ ylim(-0.27, 0.15),
+#     covariates == "5" ~ ylim(-0.2, 0.15),
+#     covariates == "6" ~ ylim(-0.1, 0.28),
+#     covariates == "7" ~ ylim(-0.33, 0.33),
+#     covariates == "8" ~ ylim(0, 1.4),
+#     covariates == "9" ~ ylim(-0.28, 0.1),
+#     covariates == "10" ~ ylim(-0.7, 0.1)
+#     ))
+
+ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) + 
+  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
+  geom_line(aes(y=true, colour = "True"), linewidth=2) + 
+  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
+  xlab(expression(c)) + ylab("") +
+  facet_grid(covariates ~ ., scales = "free_y", labeller = label_parsed) + 
+  scale_fill_manual(values=c("steelblue"), name = "") +
+  scale_color_manual(values=c("steelblue", "red")) + 
+  guides(color = guide_legend(order = 2), 
+          fill = guide_legend(order = 1)) +
+#   scale_linetype_manual("functions",values=c("MCMC"=1,"True"=1)) +
+  scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
+  theme_minimal(base_size = 30) +
+  theme(plot.title = element_text(hjust = 0.5, size = 15),
+        # axis.ticks = element_blank(),
+        legend.position="top",
+        legend.title = element_blank(),
+        legend.text = element_text(size=20),
+        legend.margin=margin(t = 1, unit='cm'),
+        legend.box.margin=margin(-10,0,-10,0),
+        plot.margin = margin(0,0,0,-20),
+        strip.text.y = element_text(size = 18, colour = "black", angle = 0, face = "bold.italic"),
+        # strip.background = element_rect(color="black", fill="white", size=1.5, linetype="solid"),
+        # axis.text.x = element_blank(),
+        axis.title.x = element_text(size = 35),
+        axis.text.y = element_text(size=25))
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_linear_sc2-wi.pdf"), width=10.5, height = 15)
 
@@ -429,73 +497,105 @@ data.nonlinear <- data.frame("x"=c(1:n),
                           "true" = as.vector(f.nonlinear.new),
                           "post.mean" = as.vector(g.nonlinear.new),
                           "q1" = as.vector(g.nonlinear.q1),
+                          "q2" = as.vector(g.nonlinear.q2),
                           "q3" = as.vector(g.nonlinear.q3),
-                          "covariates" = gl(p, n, (p*n)),
+                          "covariates" = gl(p, n, (p*n), 
+                            labels = c("X[1]", "X[2]", "X[3]", "X[4]", "X[5]", 
+                                      "X[6]", "X[7]", "X[8]", "X[9]", "X[10]")),
                           "replicate" = gl(2, n, (p*n)))
-plot.nonlinear <- ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) + 
+# plot.nonlinear <- ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) + 
+#   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+#   geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
+#   geom_line(aes(y=true, colour = covariates, linetype = "True"), linewidth=2) + 
+#   geom_line(aes(y=post.mean, colour = covariates, linetype = "MCMC"), linewidth=2) + xlab("Nonlinear Components") + ylab("") +
+#   facet_grid(covariates ~ ., scales = "free_y") + 
+#   scale_linetype_manual("functions",values=c("MCMC"=3,"True"=1)) +
+#   scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + theme_minimal(base_size = 30) +
+#   theme(plot.title = element_text(hjust = 0.5, size = 15),
+#         axis.ticks = element_blank(),
+#         legend.title = element_blank(),
+#         legend.text = element_text(size=45),
+#         legend.margin=margin(0,0,0,-10),
+#         legend.box.margin=margin(-10,0,-10,0),
+#         plot.margin = margin(0,0,0,-20),
+#         strip.text = element_blank(),
+#         axis.text.x = element_blank(),
+#         axis.text.y = element_text(size=33),
+#         axis.title.x = element_text(size = 35))
+
+# plot.nonlinear + facetted_pos_scales(y = list(
+#     covariates == "1" ~ ylim(0, 1.4), 
+#     covariates == "2" ~ ylim(-0.02, 0.6),
+#     covariates == "3" ~ ylim(0, 1.5),
+#     covariates == "4" ~ ylim(-0.33, 0.33),
+#     covariates == "5" ~ ylim(-0.33, 0.33),
+#     covariates == "6" ~ ylim(-0.4, 0.01),
+#     covariates == "7" ~ ylim(-0.2, 1.4),
+#     covariates == "8" ~ ylim(0, 1.4),
+#     covariates == "9" ~ ylim(-0.33, 0.33),
+    # covariates == "10" ~ ylim(-0.7, 0.1)
+    ))        
+
+ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
-  geom_line(aes(y=true, colour = covariates, linetype = "True"), linewidth=2) + 
-  geom_line(aes(y=post.mean, colour = covariates, linetype = "MCMC"), linewidth=2) + xlab("Nonlinear Components") + ylab("") +
-  facet_grid(covariates ~ ., scales = "free_y") + 
-  scale_linetype_manual("functions",values=c("MCMC"=3,"True"=1)) +
-  scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + theme_minimal(base_size = 30) +
+  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
+  geom_line(aes(y=true, colour = "True"), linewidth=2) + 
+  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
+  xlab(expression(c)) + ylab("") +
+  facet_grid(covariates ~ ., scales = "free_y", labeller = label_parsed) + 
+  scale_fill_manual(values=c("steelblue"), name = "") +
+  scale_color_manual(values=c("steelblue", "red")) + 
+  guides(color = guide_legend(order = 2), 
+          fill = guide_legend(order = 1)) +
+#   scale_linetype_manual("functions",values=c("MCMC"=1,"True"=1)) +
+  scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
+  theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 15),
-        axis.ticks = element_blank(),
+        # axis.ticks = element_blank(),
+        legend.position="top",
         legend.title = element_blank(),
-        legend.text = element_text(size=45),
-        legend.margin=margin(0,0,0,-10),
+        legend.text = element_text(size=20),
+        legend.margin=margin(t = 1, unit='cm'),
         legend.box.margin=margin(-10,0,-10,0),
         plot.margin = margin(0,0,0,-20),
-        strip.text = element_blank(),
-        axis.text.x = element_blank(),
-        axis.text.y = element_text(size=33),
-        axis.title.x = element_text(size = 35))
+        strip.text.y = element_text(size = 18, colour = "black", angle = 0, face = "bold.italic"),
+        # strip.background = element_rect(color="black", fill="white", size=1.5, linetype="solid"),
+        # axis.text.x = element_blank(),
+        axis.title.x = element_text(size = 35),
+        axis.text.y = element_text(size=25))
 
-plot.nonlinear + facetted_pos_scales(y = list(
-    covariates == "1" ~ ylim(0, 1.4), 
-    covariates == "2" ~ ylim(-0.02, 0.6),
-    covariates == "3" ~ ylim(0, 1.5),
-    covariates == "4" ~ ylim(-0.33, 0.33),
-    covariates == "5" ~ ylim(-0.33, 0.33),
-    covariates == "6" ~ ylim(-0.4, 0.01),
-    covariates == "7" ~ ylim(-0.2, 1.4),
-    covariates == "8" ~ ylim(0, 1.4),
-    covariates == "9" ~ ylim(-0.33, 0.33),
-    covariates == "10" ~ ylim(-0.7, 0.1)
-    ))        
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_nonlinear_sc2-wi.pdf"), width=12.5, height = 15)
 
-data.scenario <- data.frame("x" = c(1:n),
-                            "constant" = newx,
-                            "true" = sort(alp.origin),
-                            "post.mean" = sort(alpha.samples[,1]),
-                            "post.median" = sort(alpha.samples[,5]),
-                            "q1" = sort(alpha.samples[,4]),
-                            "q3" = sort(alpha.samples[,6]))
+# data.scenario <- data.frame("x" = c(1:n),
+#                             "constant" = newx,
+#                             "true" = sort(alp.origin),
+#                             "post.mean" = sort(alpha.samples[,1]),
+#                             "post.median" = sort(alpha.samples[,5]),
+#                             "q1" = sort(alpha.samples[,4]),
+#                             "q3" = sort(alpha.samples[,6]))
 
-ggplot(data.scenario, aes(x=x)) + 
-  ylab(expression(alpha(x))) + xlab(expression(x)) + labs(col = "") + 
-  geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
-  geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
-  geom_line(aes(y=post.mean, col = "Posterior Mean"), linewidth=2, linetype = 2) +
-  # ylim(0, (max(data.scenario$post.mean)+10)) +
-  geom_line(aes(y=post.median, col = "Posterior Median"), linetype=2, linewidth=2) +
-  # geom_line(aes(y=chain2, col = "Chian 2"), linetype=3) +
-  # facet_grid(covariates ~ .) + 
-  # scale_y_continuous(breaks=c(0)) + 
-  scale_color_manual(values = c("blue","#e0b430","red"))+
-  theme_minimal(base_size = 30) +
-  theme(plot.title = element_text(hjust = 0.5, size = 30),
-        legend.position="top", 
-        legend.key.size = unit(1, 'cm'),
-        legend.text = element_text(size=18),
-        plot.margin = margin(0,0,0,-10),
-        strip.text = element_blank(),
-        axis.text.x = element_blank(),
-        axis.ticks.x = element_blank(),
-        axis.text.y = element_text(size=33),
-        axis.title.x = element_text(size = 35))
+# ggplot(data.scenario, aes(x=x)) + 
+#   ylab(expression(alpha(x))) + xlab(expression(x)) + labs(col = "") + 
+#   geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
+#   geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
+#   # geom_line(aes(y=post.mean, col = "Posterior Mean"), linewidth=2, linetype = 2) +
+#   # ylim(0, (max(data.scenario$post.mean)+10)) +
+#   geom_line(aes(y=post.median, col = "Posterior Median"), linetype=2, linewidth=2) +
+#   # geom_line(aes(y=chain2, col = "Chian 2"), linetype=3) +
+#   # facet_grid(covariates ~ .) + 
+#   # scale_y_continuous(breaks=c(0)) + 
+#   scale_color_manual(values = c("blue","#e0b430","red"))+
+#   theme_minimal(base_size = 30) +
+#   theme(plot.title = element_text(hjust = 0.5, size = 30),
+#         legend.position="top", 
+#         legend.key.size = unit(1, 'cm'),
+#         legend.text = element_text(size=18),
+#         plot.margin = margin(0,0,0,-10),
+#         strip.text = element_blank(),
+#         axis.text.x = element_blank(),
+#         axis.ticks.x = element_blank(),
+#         axis.text.y = element_text(size=33),
+#         axis.title.x = element_text(size = 35))
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_train_sc2-wi.pdf"), width=10, height = 7.78)
 
 
@@ -511,28 +611,48 @@ data.scenario <- data.frame("x" = c(1:n),
                             # "q1" = sort(alpha.smooth.q1),
                             # "q3" = sort(alpha.smooth.q3))                            
 
-ggplot(data.scenario, aes(x=x)) + 
-  ylab(expression(alpha(x))) + xlab(expression(x)) + labs(col = "") + 
-  geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
-  geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
-  geom_line(aes(y=post.mean, col = "Posterior Mean"), linewidth=2, linetype = 2) + 
-  # ylim(0, (max(data.scenario$q3)+10)) +
-  geom_line(aes(y=post.median, col = "Posterior Median"), linetype=2, linewidth=2) +
-  # geom_line(aes(y=chain2, col = "Chian 2"), linetype=3) +
-  # facet_grid(covariates ~ .) + 
-  # scale_y_continuous(breaks=c(0)) + 
-  scale_color_manual(values = c("blue","#e0b430","red"))+
+# ggplot(data.scenario, aes(x=x)) + 
+#   ylab(expression(alpha(x))) + xlab(expression(x)) + labs(col = "") + 
+#   geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
+#   geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
+#   geom_line(aes(y=post.mean, col = "Posterior Mean"), linewidth=2, linetype = 2) + 
+#   # ylim(0, (max(data.scenario$q3)+10)) +
+#   geom_line(aes(y=post.median, col = "Posterior Median"), linetype=2, linewidth=2) +
+#   # geom_line(aes(y=chain2, col = "Chian 2"), linetype=3) +
+#   # facet_grid(covariates ~ .) + 
+#   # scale_y_continuous(breaks=c(0)) + 
+#   scale_color_manual(values = c("blue","#e0b430","red"))+
+#   theme_minimal(base_size = 30) +
+#   theme(plot.title = element_text(hjust = 0.5, size = 30),
+#         legend.position="top", 
+#         legend.key.size = unit(1, 'cm'),
+#         legend.text = element_text(size=18),
+#         plot.margin = margin(0,0,0,-10),
+#         strip.text = element_blank(),
+#         axis.text.x = element_blank(),
+#         axis.ticks.x = element_blank(),
+#         axis.text.y = element_text(size=33),
+#         axis.title.x = element_text(size = 35))
+
+ggplot(data.scenario, aes(x=constant)) + 
+  ylab(expression(alpha(x))) + xlab(expression(c)) + labs(col = "") + 
+  geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
+  geom_line(aes(y = true, col = "True"), linewidth = 2) +
+  ylim(0, 150) +
+  geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
+  scale_fill_manual(values=c("steelblue"), name = "") +
+  scale_color_manual(values = c("steelblue","red"))+
+  guides(color = guide_legend(order = 2), 
+          fill = guide_legend(order = 1)) +
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 30),
         legend.position="top", 
         legend.key.size = unit(1, 'cm'),
-        legend.text = element_text(size=18),
-        plot.margin = margin(0,0,0,-10),
+        legend.text = element_text(size=20),
+        plot.margin = margin(0,0,0,-1),
         strip.text = element_blank(),
-        axis.text.x = element_blank(),
-        axis.ticks.x = element_blank(),
-        axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
+
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_test_sc2-wi.pdf"), width=10, height = 7.78)
 
 # mcmc.gamma <- posterior$gamma
@@ -571,13 +691,10 @@ u.band <- apply(traj, 2, quantile, prob = 0.975)
 
 ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat, 
                          u.band = u.band)) + 
-  #geom_ribbon(aes(x = grid, ymin = l.band, ymax = u.band), 
-  #           color = "lightgrey", fill = "lightgrey",
-  #          alpha = 0.4, linetype = "dashed") + 
   geom_ribbon(aes(x = grid, ymin = l.band, ymax = u.band), 
-              # color = "darkgrey", fill = "darkgrey",
+              fill = "steelblue",
               alpha = 0.4, linetype = "dashed") + 
-  geom_line(aes(x = grid, y = trajhat), linetype = "dashed", linewidth = 1.2) + 
+  geom_line(aes(x = grid, y = trajhat), colour = "steelblue", linetype = "dashed", linewidth = 1.2) + 
   geom_abline(intercept = 0, slope = 1, linewidth = 1.2) + 
   labs(x = "Theoretical quantiles", y = "Sample quantiles") + 
   theme_minimal(base_size = 20) +
