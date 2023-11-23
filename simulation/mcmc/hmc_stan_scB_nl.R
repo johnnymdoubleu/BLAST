@@ -26,7 +26,7 @@ library(ggh4x)
 # set.seed(22)
 set.seed(36)
 
-n <- 20000
+n <- 5000
 psi <- 20
 threshold <- 0.90
 p <- 10
