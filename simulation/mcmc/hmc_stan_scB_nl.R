@@ -26,7 +26,7 @@ library(ggh4x)
 # set.seed(22)
 set.seed(36)
 
-n <- 5000
+n <- 25000
 psi <- 20
 threshold <- 0.90
 p <- 10
@@ -305,13 +305,14 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
   geom_line(aes(y=true, colour = "True"), linewidth=2) + 
   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
   ylab("") + xlab("") +
-  facet_wrap(covariates ~ ., scales = "free_x", nrow=5,
+  facet_wrap(covariates ~ ., scales = "free_x", nrow = 5,
               labeller = label_parsed, strip.position = "left") + 
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values=c("steelblue", "red")) + 
   guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) +
-  scale_y_continuous(breaks=c(-0.3, 0.5)) + 
+  # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) +
+  scale_y_continuous(breaks=c(-0.5, 0.2, 0.9)) + 
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 15),
         legend.position="top",
@@ -325,7 +326,7 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
         axis.title.x = element_text(size = 35),
         axis.text = element_text(size=18))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_nonlinear(CI)_sc2-nl.pdf"), width=12.5, height = 16)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_nonlinear(CI)_sc2-nl.pdf"), width=20, height = 16)
 
 data.nonlinear <- data.frame("x"=as.vector(xholder),
                           "true" = as.vector(f.nonlinear.new),
@@ -382,10 +383,11 @@ ggplot(data.scenario, aes(x=constant)) +
         strip.text = element_blank(),
         axis.title.x = element_text(size = 35))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_test_sc2-nl.pdf"), width=10, height = 7.78)
+ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_test_sc2-nl.pdf"), width=10, height = 7.78)
 
 
 mcmc.alpha <- posterior$alpha
+
 len <- dim(mcmc.alpha)[1]
 r <- matrix(, nrow = n, ncol = 30)
 T <- 30
@@ -421,3 +423,4 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_qqplot_sc3-wi.pdf"), width=10, height = 7.78)
 
 # saveRDS(data.scenario, file=paste0("Simulation/BayesianPsplines/results/",date,"-",time, "_sc1_data_samp1.rds"))
+

@@ -35,19 +35,16 @@ simul.no <- 50
 
 xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
 
-## Function to generate Gaussian copula
-# C <- matrix(c(1, 0.3, 0.5, 0.3, 0.3,
-#             0.3, 1, 0.95, 0.4, 0.4,
-#             0.5, 0.95, 1, 0.5, 0.1,
-#             0.3, 0.4, 0.5 , 1, 0.5,
-#             0.3, 0.4, 0.5, 0.5, 1), nrow = p)
-C <- diag(5)                
+# Function to generate Gaussian copula
+C <- matrix(c(1, 0.3, 0.5, 0.3, 0.3,
+            0.3, 1, 0.95, 0.4, 0.4,
+            0.5, 0.95, 1, 0.5, 0.1,
+            0.3, 0.4, 0.5 , 1, 0.5,
+            0.3, 0.4, 0.5, 0.5, 1), nrow = p)
+# C <- diag(5)                
 ## Generate sample
 x.origin <- pnorm(matrix(rnorm(n*p), ncol = p) %*% chol(C))
 # x.origin <- scale(x.origin)
-
-
-
 
 for(i in 1:p){
     knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)
