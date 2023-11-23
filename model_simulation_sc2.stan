@@ -39,7 +39,7 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     };
-    target += gamma_lpdf(lambda | 1, 100);
+    target += gamma_lpdf(lambda | 0.1, 100);
     target += normal_lpdf(theta | 0, 10);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     target += (p * psi * log(lambda));

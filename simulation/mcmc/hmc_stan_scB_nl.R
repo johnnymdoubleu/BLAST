@@ -24,9 +24,9 @@ library(ggh4x)
 
 #Scenario 1
 # set.seed(22)
-set.seed(3)
+set.seed(36)
 
-n <- 5000
+n <- 20000
 psi <- 20
 threshold <- 0.90
 p <- 10
@@ -152,7 +152,7 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     };
-    target += gamma_lpdf(lambda | 1, 100);
+    target += gamma_lpdf(lambda | 0.1, 100);
     target += normal_lpdf(theta | 0, 10);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     target += (p * psi * log(lambda));
@@ -312,10 +312,10 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
   guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) +
   # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) +
-  scale_y_continuous(breaks=c(-0.5, 0.2, 0.9)) + 
+  scale_y_continuous(breaks=c(-0.1, 0.2, 0.6)) + 
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 15),
-        legend.position="top",
+        legend.position="none",
         legend.title = element_blank(),
         legend.text = element_text(size=20),
         legend.margin=margin(t = 1, unit='cm'),
@@ -368,7 +368,7 @@ ggplot(data.scenario, aes(x=constant)) +
   ylab(expression(alpha(bold(c1)))) + xlab(expression(c)) + labs(col = "") + 
   geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
   geom_line(aes(y = true, col = "True"), linewidth = 2) +
-  # ylim(0, 1.7) +
+  ylim(0, 40) +
   geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values = c("steelblue","red"))+
@@ -376,7 +376,7 @@ ggplot(data.scenario, aes(x=constant)) +
           fill = guide_legend(order = 1)) +
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 30),
-        legend.position="top", 
+        legend.position="none", 
         legend.key.size = unit(1, 'cm'),
         legend.text = element_text(size=20),
         plot.margin = margin(0,0,0,-1),
