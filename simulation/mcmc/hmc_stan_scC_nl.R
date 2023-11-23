@@ -26,7 +26,7 @@ library(ggh4x)
 # set.seed(22)
 set.seed(3)
 
-n <- 25000
+n <- 15000
 psi <- 20
 threshold <- 0.9
 p <- 5
@@ -36,17 +36,16 @@ simul.no <- 50
 xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
 
 ## Function to generate Gaussian copula
-C <- matrix(c(1, 0.3, 0.5, 0.3, 0.3,
-            0.3, 1, 0.95, 0.4, 0.4,
-            0.5, 0.95, 1, 0.5, 0.1,
-            0.3, 0.4, 0.5 , 1, 0.5,
-            0.3, 0.4, 0.5, 0.5, 1), nrow = p)    
+# C <- matrix(c(1, 0.3, 0.5, 0.3, 0.3,
+#             0.3, 1, 0.95, 0.4, 0.4,
+#             0.5, 0.95, 1, 0.5, 0.1,
+#             0.3, 0.4, 0.5 , 1, 0.5,
+#             0.3, 0.4, 0.5, 0.5, 1), nrow = p)
+C <- diag(5)                
 ## Generate sample
 x.origin <- pnorm(matrix(rnorm(n*p), ncol = p) %*% chol(C))
 # x.origin <- scale(x.origin)
-# pairs(x.origin, diag.panel = function(x){
-#           h <- hist(x, plot = FALSE)
-#           rect(head(h$breaks, -1), 0, tail(h$breaks, -1), h$counts/max(h$counts))})
+
 
 
 
@@ -90,6 +89,9 @@ x.origin <- x.origin[which(y.origin>u),]
 # x.origin <- scale(x.origin)
 y.origin <- y.origin[y.origin > u]
 n <- length(y.origin)
+pairs(x.origin, diag.panel = function(x){
+          h <- hist(x, plot = FALSE)
+          rect(head(h$breaks, -1), 0, tail(h$breaks, -1), h$counts/max(h$counts))})
 
 # corrplot.mixed(cor(x.origin),
 #                 upper = "circle",
@@ -110,6 +112,10 @@ for(i in 1:p){
     tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
     bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)]) 
 }
+
+# plot(splines[,1]~newx, ylim=c(0,max(splines)), type='l', lwd=2, col=1, 
+#      xlab="Cubic B-spline basis", ylab="")
+# for (j in 2:ncol(splines)) lines(splines[,j]~newx, lwd=2, col=j)
 
 f.nonlinear.new <- f.nonlinear.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
@@ -329,7 +335,7 @@ data.nonlinear <- data.frame("x"=newx,
                           "q1" = as.vector(g.nonlinear.q1),
                           "q2" = as.vector(g.nonlinear.q2),
                           "q3" = as.vector(g.nonlinear.q3),
-                          "covariates" = gl(p, n, (p*n), labels = c("g[1](x[1])", "g[2](x[2])", "g[3](x[3])", "g[4](x[4])", "g[5](x[5])")),
+                          "covariates" = gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]")),
                           "fakelab" = rep(1, (p*n)),
                           "replicate" = gl(p, n, (p*n), labels = c("x[1]", "x[2]", "x[3]", "x[4]", "x[5]")))
 # plot.nonlinear <- ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) + 
@@ -360,7 +366,7 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   geom_line(aes(y=true, colour = "True"), linewidth=2) + 
   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
-  ylab("") + xlab(expression(x[j])) +
+  ylab("") + xlab("") +
   facet_wrap(covariates ~ ., scales = "free_x", nrow=5,
               labeller = label_parsed, strip.position = "left") + 
   scale_fill_manual(values=c("steelblue"), name = "") +
@@ -368,7 +374,8 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
   guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) +
 #   scale_linetype_manual("functions",values=c("MCMC"=1,"True"=1)) +
-  scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
+  scale_y_continuous(breaks=c(-0.3, 0.5, 1.3)) + 
+  # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
   # coord_capped_cart(bottom='both', left='both', xlim=c(0, 1)) +
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 15),
@@ -396,7 +403,7 @@ data.nonlinear <- data.frame("x"=as.vector(xholder),
                           "q1" = g.nonlinear.q1,
                           "q2" = g.nonlinear.q2,
                           "q3" = g.nonlinear.q3,
-                          "covariates" = gl(p, n, (p*n), labels = c("f[1](x[1])", "g[2](x[2])", "g[3](x[3])", "g[4](x[4])", "g[5](x[5])")),
+                          "covariates" = gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]")),
                           "replicate" = gl(2, n, (p*n)))
 data.charge <- data.nonlinear[(1*n):(2*n),]
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_nonlinear_sc3-nl.pdf"), width=12.5, height = 15)
@@ -449,7 +456,7 @@ data.scenario <- data.frame("x" = c(1:n),
 #                             "q3" = newalpha.samples[,6])
 
 ggplot(data.scenario, aes(x=constant)) + 
-  ylab(expression(alpha(x))) + xlab(expression(c)) + labs(col = "") + 
+  ylab(expression(alpha(c))) + xlab(expression(c)) + labs(col = "") + 
   geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
   # geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2) + 
   geom_line(aes(y = true, col = "True"), linewidth = 2) +
