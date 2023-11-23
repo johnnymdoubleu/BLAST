@@ -24,9 +24,9 @@ library(ggh4x)
 
 #Scenario 1
 # set.seed(22)
-set.seed(36)
+set.seed(3)
 
-n <- 25000
+n <- 5000
 psi <- 20
 threshold <- 0.90
 p <- 10
@@ -152,7 +152,7 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     };
-    target += gamma_lpdf(lambda | 0.1, 100);
+    target += gamma_lpdf(lambda | 1, 100);
     target += normal_lpdf(theta | 0, 10);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     target += (p * psi * log(lambda));
@@ -180,11 +180,11 @@ data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi,
 init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
                         theta = 0, tau = rep(0.1, p), sigma = 0.1, 
                         lambda = 0.1),
-                  list(gamma = array(rep(0.02, (psi*p)), dim=c(psi, p)),
-                        theta = -1, tau = rep(0.01, p), sigma = 0.001,
+                  list(gamma = array(rep(0.5, (psi*p)), dim=c(psi, p)),
+                        theta = 1, tau = rep(0.01, p), sigma = 0.001,
                         lambda = 0.1),
                   list(gamma = array(rep(0.01, (psi*p)), dim=c(psi, p)),
-                        theta = -2, tau = rep(0.01, p), sigma = 0.01,
+                        theta = 2, tau = rep(1, p), sigma = 0.01,
                         lambda = 1))
 
 fit1 <- stan(
@@ -383,7 +383,7 @@ ggplot(data.scenario, aes(x=constant)) +
         strip.text = element_blank(),
         axis.title.x = element_text(size = 35))
 
-ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_test_sc2-nl.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_test_sc2-nl.pdf"), width=10, height = 7.78)
 
 
 mcmc.alpha <- posterior$alpha
