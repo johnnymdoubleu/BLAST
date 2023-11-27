@@ -310,9 +310,9 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values=c("steelblue", "red")) + 
   guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) +
-  # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) +
-  scale_y_continuous(breaks=c(-0.1, 0.2, 0.6)) + 
+          fill = guide_legend(order = 1)) + ylim(-0.5, 1) +
+#   scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) +
+#   scale_y_continuous(breaks=c(-0.1, 0.2, 0.6)) + 
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 15),
         legend.position="none",
