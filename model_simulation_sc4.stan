@@ -1,4 +1,15 @@
 // Stan model for simple linear regression
+functions{
+    real burr_lpdf(real y, real c){
+        // Burr distribution log pdf
+        return log(c)+((c-1)*log(y)) - ((1+1)*log1p(y^c));
+    }
+
+    real burr_rng(real c){
+        return ((1-uniform_rng(0,1))^(-1)-1)^(1/c);
+    }
+}
+
 data {
     int <lower=1> n; // Sample size
     int <lower=1> p; // regression coefficient size
@@ -37,23 +48,15 @@ transformed parameters {
 model {
     // likelihood
     for (i in 1:n){
-        target += student_t_lpdf(y[i] | alpha[i], 0, 1);
+        target += burr_lpdf(y[i] | alpha[i]);
     };
-    target += gamma_lpdf(lambda | 0.1, 100);
-    target += normal_lpdf(theta | 0, 100);
-    target += inv_gamma_lpdf(sigma | 0.01, 0.011);
+    target += gamma_lpdf(lambda | 1, 100);
+    target += normal_lpdf(theta | 0, 10);
+    target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     target += (p * psi * log(lambda));
     for (j in 1:p){
         target += gamma_lpdf(tau[j] | atau, lambda/sqrt(2));
         target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * sqrt(tau[j]) * sqrt(sigma));
     };
-}
-generated quantities {
-    // Used in Posterior predictive check
-    vector[n] log_lik;
-    array[n] real y_rep = student_t_rng(alpha, rep_vector(u, n),rep_vector(1, n));
-    for (i in 1:n) {
-        log_lik[i] = student_t_lpdf(y[i] | alpha[i], 0, 1);
-    }
 }
 

@@ -44,7 +44,7 @@ for(j in 1:p){
         }
     }
 }
-theta.origin <- 1.2
+theta.origin <- 1
 
 f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
@@ -56,11 +56,12 @@ for(i in 1:n){
     alp.origin[i] <- exp(theta.origin + sum(f.nonlinear.origin[i,]))
     # y.origin[i] <- rPareto(1, 1, alpha = alp.origin[i])
     y.origin[i] <- rburr(1, m=1, s=alp.origin[i], f=1)
+    # y.origin[i] <- rt(1, df = alp.origin[i])
 }
 
 u <- quantile(y.origin, threshold)
 x.origin <- x.origin[which(y.origin>u),]
-# x.origin <- scale(x.origin)
+x.origin <- scale(x.origin)
 y.origin <- y.origin[y.origin > u]
 n <- length(y.origin)
 # pairs(x.origin, diag.panel = function(x){
@@ -101,6 +102,17 @@ for(i in 1:n){
 
 
 write("// Stan model for simple linear regression
+functions{
+    real burr_lpdf(real y, real c){
+        // Burr distribution log pdf
+        return log(c)+((c-1)*log(y)) - ((1+1)*log1p(y^c));
+    }
+
+    real burr_rng(real c){
+        return ((1-uniform_rng(0,1))^(-1)-1)^(1/c);
+    }
+}
+
 data {
     int <lower=1> n; // Sample size
     int <lower=1> p; // regression coefficient size
@@ -139,9 +151,9 @@ transformed parameters {
 model {
     // likelihood
     for (i in 1:n){
-        target += pareto_lpdf(y[i] | u, alpha[i]);
+        target += burr_lpdf(y[i] | alpha[i]);
     };
-    target += gamma_lpdf(lambda | 0.1, 100);
+    target += gamma_lpdf(lambda | 1, 100);
     target += normal_lpdf(theta | 0, 10);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     target += (p * psi * log(lambda));
@@ -150,16 +162,8 @@ model {
         target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * sqrt(tau[j]) * sqrt(sigma));
     };
 }
-generated quantities {
-    // Used in Posterior predictive check
-    vector[n] log_lik;
-    array[n] real y_rep = pareto_rng(rep_vector(u, n), alpha);
-    for (i in 1:n) {
-        log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
-    }
-}
 "
-, "model_simulation_sc1.stan")
+, "model_simulation_sc4.stan")
 
 data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, 
                     atau = ((psi+1)/2), newp = (p+1),
@@ -168,16 +172,16 @@ data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi,
 
 init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
                         theta = 0, tau = rep(0.1, p), sigma = 0.1, 
-                        lambda = 0.1),
-                  list(gamma = array(rep(0.5, (psi*p)), dim=c(psi, p)),
-                        theta = 1, tau = rep(0.01, p), sigma = 0.001,
-                        lambda = 0.1),
-                  list(gamma = array(rep(0.01, (psi*p)), dim=c(psi, p)),
-                        theta = 2, tau = rep(1, p), sigma = 0.01,
-                        lambda = 1))
+                        lambda = 0.01),
+                  list(gamma = array(rep(-1, (psi*p)), dim=c(psi, p)),
+                        theta = -1, tau = rep(0.01, p), sigma = 0.1,
+                        lambda = 0.01),
+                  list(gamma = array(rep(1, (psi*p)), dim=c(psi, p)),
+                        theta = -0.5, tau = rep(0.1, p), sigma = 0.1,
+                        lambda = 0.01))
 
 fit1 <- stan(
-    file = "model_simulation_sc1.stan",  # Stan program
+    file = "model_simulation_sc4.stan",  # Stan program
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
     chains = 3,             # number of Markov chains

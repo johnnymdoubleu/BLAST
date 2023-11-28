@@ -12,7 +12,8 @@ library(readxl)
 library(gridExtra)
 library(colorspace)
 library(corrplot)
-library(ReIns)
+# library(ReIns)
+library(rmutil)
 library(evir)
 library(rstan)
 library(ggmcmc)
@@ -149,7 +150,8 @@ alp.origin <- y.origin <- NULL
 for(i in 1:n){
     alp.origin[i] <- exp(theta.origin[1] + sum(f.origin[i,]))
     # y.origin[i] <- rPareto(1, 1, alpha = alp.origin[i])
-    y.origin[i] <- rt(1, df = alp.origin[i])
+    # y.origin[i] <- rt(1, df = alp.origin[i])
+    y.origin[i] <-  rburr(1, m=1, s=alp.origin[i], f=1)
 }
 
 u <- quantile(y.origin, threshold)
@@ -207,6 +209,17 @@ for(i in 1:n){
 # }
 
 write("// Stan model for simple linear regression
+functions{
+    real burr_lpdf(real y, real c, real k){
+        // Burr distribution log pdf
+        return log(c*k)+((c-1)*log(y)) - ((k+1)*log1p(y^c));
+    }
+
+    real burr_rng(real c, real k){
+        return ((1-uniform_rng(0,1))^(-1/k)-1)^(1/c);
+    }
+}
+
 data {
     int <lower=1> n; // Sample size
     int <lower=1> p; // regression coefficient size
@@ -248,7 +261,7 @@ transformed parameters {
 model {
     // likelihood
     for (i in 1:n){
-        target += student_t_lpdf(y[i] | alpha[i], 0, 1); // target += pareto_lpdf(y[i] | u, alpha[i])
+        target += burr_lpdf(y[i] | alpha[i], 1); // target += pareto_lpdf(y[i] | u, alpha[i])
     }
     target += gamma_lpdf(lambda1 | 0.1, 10);
     target += gamma_lpdf(lambda2 | 0.1, 100);

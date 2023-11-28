@@ -17,7 +17,7 @@ library(LaplacesDemon)
 set.seed(22)
 # set.seed(36)
 
-n <- 5000
+n <- 50000
 psi <- 20
 threshold <- 0.90
 p <- 6
@@ -26,7 +26,7 @@ simul.no <- 50
 
 xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
 x.origin <- cbind(replicate(p, runif(n, 0, 1)))
-# x.origin <- scale(x.origin)
+x.origin <- scale(x.origin)
 for(i in 1:p){
     knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)  
     tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
