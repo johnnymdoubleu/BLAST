@@ -70,6 +70,8 @@ x.origin <- x.origin[which(y.origin>u),]
 # x.origin <- scale(x.origin)
 y.origin <- y.origin[y.origin > u]
 n <- length(y.origin)
+
+alp.origin <- alp.origin[which(y.origin>u)]
 # pairs(x.origin, diag.panel = function(x){
 #           h <- hist(x, plot = FALSE)
 #           rect(head(h$breaks, -1), 0, tail(h$breaks, -1), h$counts/max(h$counts))})

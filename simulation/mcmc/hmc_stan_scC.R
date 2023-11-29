@@ -103,11 +103,12 @@ xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow
 #               0.3, 0.4, 0.5, 0.5, 1), nrow = p)
 # x.origin <- tmvnsim(n = n, k = p, lower = rep(0, p), means = rep(0, p), sigma = C)$samp
 
-C <- matrix(c(1, 0.3, 0.5, 0.3, 0.3,
-            0.3, 1, 0.95, 0.4, 0.4,
-            0.5, 0.95, 1, 0.5, 0.1,
-            0.3, 0.4, 0.5 , 1, 0.5,
-            0.3, 0.4, 0.5, 0.5, 1), nrow = p)    
+# C <- matrix(c(1, 0.3, 0.5, 0.3, 0.3,
+#             0.3, 1, 0.95, 0.4, 0.4,
+#             0.5, 0.95, 1, 0.5, 0.1,
+#             0.3, 0.4, 0.5 , 1, 0.5,
+#             0.3, 0.4, 0.5, 0.5, 1), nrow = p)
+C <- diag(p)
 ## Generate sample
 x.origin <- pnorm(matrix(rnorm(n*p), ncol = p) %*% chol(C))
 # x.origin <- scale(x.origin)
