@@ -56,7 +56,6 @@ for(i in 1:n){
     alp.origin[i] <- exp(theta.origin + sum(f.nonlinear.origin[i,]))
     # y.origin[i] <- rPareto(1, 1, alpha = alp.origin[i])
     y.origin[i] <- rburr(1, m=1, s=alp.origin[i], f=1)
-    # y.origin[i] <- rt(1, df = alp.origin[i])
 }
 
 u <- quantile(y.origin, threshold)

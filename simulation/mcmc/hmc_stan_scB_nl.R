@@ -26,7 +26,7 @@ library(ggh4x)
 # set.seed(22)
 set.seed(3)
 
-n <- 50000
+n <- 5000
 psi <- 20
 threshold <- 0.9
 p <- 5
@@ -41,7 +41,7 @@ C <- matrix(c(1, 0.3, 0.5, 0.3, 0.3,
             0.5, 0.95, 1, 0.5, 0.1,
             0.3, 0.4, 0.5 , 1, 0.5,
             0.3, 0.4, 0.5, 0.5, 1), nrow = p)
-# C <- diag(5)                
+# C <- diag(p)                
 ## Generate sample
 x.origin <- pnorm(matrix(rnorm(n*p), ncol = p) %*% chol(C))
 # x.origin <- scale(x.origin)

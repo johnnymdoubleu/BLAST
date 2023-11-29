@@ -19,14 +19,17 @@ set.seed(22)
 
 n <- 5000
 psi <- 20
-threshold <- 0.90
+threshold <- 0.95
 p <- 6
 no.theta <- 1
 simul.no <- 50
 
 xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
-x.origin <- cbind(replicate(p, runif(n, 0, 1)))
-x.origin <- scale(x.origin)
+# Function to generate Gaussian copula
+C <- diag(p)                
+## Generate sample
+x.origin <- pnorm(matrix(rnorm(n*p), ncol = p) %*% chol(C))
+
 for(i in 1:p){
     knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)  
     tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
@@ -361,10 +364,10 @@ ggplot(data.scenario, aes(x=constant)) +
   ylab(expression(alpha(bold(c1)))) + xlab(expression(c)) + labs(col = "") + 
   geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
   geom_line(aes(y = true, col = "True"), linewidth = 2) +
-  ylim(0, 40) +
+  ylim(0, 10) +
   geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
   scale_fill_manual(values=c("steelblue"), name = "") +
-  scale_color_manual(values = c("steelblue","red"))+
+  scale_color_manual(values = c("steelblue","red")) + 
   guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) +
   theme_minimal(base_size = 30) +
