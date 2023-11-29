@@ -176,7 +176,7 @@ init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
                   list(gamma = array(rep(0.5, (psi*p)), dim=c(psi, p)),
                         theta = 0.1, tau = rep(0.1, p), sigma = 0.1,
                         lambda = 0.1),
-                  list(gamma = array(rep(0.01, (psi*p)), dim=c(psi, p)),
+                  list(gamma = array(rep(1, (psi*p)), dim=c(psi, p)),
                         theta = 0.2, tau = rep(0.1, p), sigma = 0.1,
                         lambda = 1))
 
