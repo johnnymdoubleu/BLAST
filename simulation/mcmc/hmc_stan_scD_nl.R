@@ -153,8 +153,8 @@ model {
     for (i in 1:n){
         target += burr_lpdf(y[i] | alpha[i]);
     };
-    target += gamma_lpdf(lambda | 1, 100);
-    target += normal_lpdf(theta | 0, 10);
+    target += gamma_lpdf(lambda | 0.1, 100);
+    target += normal_lpdf(theta | 0, 1);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     target += (p * psi * log(lambda));
     for (j in 1:p){
@@ -172,13 +172,13 @@ data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi,
 
 init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
                         theta = 0, tau = rep(0.1, p), sigma = 0.1, 
-                        lambda = 0.01),
+                        lambda = 0.001),
                   list(gamma = array(rep(-1, (psi*p)), dim=c(psi, p)),
                         theta = -1, tau = rep(0.01, p), sigma = 0.1,
-                        lambda = 0.01),
+                        lambda = 0.001),
                   list(gamma = array(rep(1, (psi*p)), dim=c(psi, p)),
-                        theta = -0.5, tau = rep(0.1, p), sigma = 0.1,
-                        lambda = 0.01))
+                        theta = -0.5, tau = rep(1, p), sigma = 0.1,
+                        lambda = 0.001))
 
 fit1 <- stan(
     file = "model_simulation_sc4.stan",  # Stan program

@@ -17,7 +17,7 @@ library(LaplacesDemon)
 set.seed(22)
 # set.seed(36)
 
-n <- 50000
+n <- 5000
 psi <- 20
 threshold <- 0.90
 p <- 6
@@ -147,7 +147,7 @@ model {
     };
     target += gamma_lpdf(lambda | 0.1, 100);
     target += normal_lpdf(theta | 0, 100);
-    target += inv_gamma_lpdf(sigma | 0.01, 0.011);
+    target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     target += (p * psi * log(lambda));
     for (j in 1:p){
         target += gamma_lpdf(tau[j] | atau, lambda/sqrt(2));
@@ -163,7 +163,7 @@ generated quantities {
     }
 }
 "
-, "model_simulation_sc1.stan")
+, "model_simulation_sc3.stan")
 
 data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, 
                     atau = ((psi+1)/2), newp = (p+1),
@@ -181,7 +181,7 @@ init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
                         lambda = 1))
 
 fit1 <- stan(
-    file = "model_simulation_sc1.stan",  # Stan program
+    file = "model_simulation_sc3.stan",  # Stan program
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
     chains = 3,             # number of Markov chains
