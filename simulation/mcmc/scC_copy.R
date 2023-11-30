@@ -69,61 +69,30 @@ n <- length(y.origin)
 write("// Stan model for simple linear regression
 data {
     int <lower=1> n; // Sample size
-    int <lower=1> p; // regression coefficient size
+    real <lower=0> u;
 }
 
 parameters {
-    array[n] real <lower=0> newy;
+    array[n] real <lower=u> newy;
 }
-
 
 model {
     // likelihood
     for (i in 1:n){
-        target += student_t_lpdf(y[i] | alpha[i], 0, 1); // student_t_lpdf(y[i] | alpha[i], 0, 1) halft_lpdf(y[i] | alpha[i]) pareto_lpdf(y[i]|u, alpha[i])
-        target += -1*log(1-student_t_cdf(u, alpha[i], 0, 1));
-    };
-    target += gamma_lpdf(lambda | 0.1, 100);
-    target += normal_lpdf(theta | 0, 10);
-    target += inv_gamma_lpdf(sigma | 0.01, 0.01);
-    target += (p * psi * log(lambda));
-    for (j in 1:p){
-        target += gamma_lpdf(tau[j] | atau, lambda/sqrt(2));
-        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * sqrt(tau[j]) * sqrt(sigma));
-    };
-}
-generated quantities {
-    // Used in Posterior predictive check
-    vector[n] log_lik;
-    array[n] real y_rep = pareto_rng(rep_vector(u, n), alpha);
-    for (i in 1:n) {
-        log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
+      student_t_pdf(newy[i], 2, 0, 1)
     }
+    y ~ student_t_pdf(newy[i], )
+    for (i in 1:n){
+        target += student_t_lpdf(newy[i] | 2, 0, 1); // student_t_lpdf(y[i] | alpha[i], 0, 1) halft_lpdf(y[i] | alpha[i]) pareto_lpdf(y[i]|u, alpha[i])
+        target += -1*log(1-student_t_cdf(u, 2, 0, 1));
+    };
 }
 "
 , "model_simulation_sc3.stan")
 
-data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, 
-                    atau = ((psi+1)/2), newp = (p+1),
-                    bsNonlinear = bs.nonlinear,
-                    xholderNonlinear = xholder.nonlinear)
+data.stan <- list(u = u, n=n)
 
-# set_cmdstan_path(path = NULL)
-#> CmdStan path set to: /Users/jgabry/.cmdstan/cmdstan-2.32.2
-
-# Create a CmdStanModel object from a Stan program,
-# here using the example model that comes with CmdStan
-# file <- file.path(cmdstan_path(), "model_simulation.stan")
-
-init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
-                        theta = 0, tau = rep(0.1, p), sigma = 0.1, 
-                        lambda = 0.1),
-                  list(gamma = array(rep(0.02, (psi*p)), dim=c(psi, p)),
-                        theta = -1, tau = rep(0.01, p), sigma = 0.001,
-                        lambda = 0.1),
-                  list(gamma = array(rep(0.01, (psi*p)), dim=c(psi, p)),
-                        theta = -2, tau = rep(0.01, p), sigma = 0.01,
-                        lambda = 1))
+init.alpha <- list(list(newy = y.origin))
 
 fit1 <- stan(
     file = "model_simulation_sc3.stan",  # Stan program
