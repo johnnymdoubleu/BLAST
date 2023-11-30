@@ -60,7 +60,7 @@ set.seed(36)
 
 # theta.origin <- c(-0.1, 0.8, 0, 0.8, 0, 0, 0, -0.3, 0.8, 0, 0)
 
-n <- 15000
+n <- 5000
 psi <- 20
 threshold <- 0.9
 p <- 5
@@ -862,8 +862,7 @@ transformed parameters {
 model {
     // likelihood
     for (i in 1:n){
-        target += student_t_lpdf(y[i] | alpha[i], 0, 1); // pareto_lpdf(y[i] | u, alpha[i])
-        target += -1*log(1-student_t_cdf(u, alpha[i], 0, 1));
+        target += student_t_lpdf(y[i] | alpha[i], 0, 1); // pareto_lpdf(y[i] | u, alpha[i]) target += -1*log(1-student_t_cdf(u, alpha[i], 0, 1))
     }
     target += gamma_lpdf(lambda1 | 0.1, 0.01);
     target += gamma_lpdf(lambda2 | 0.1, 0.01);

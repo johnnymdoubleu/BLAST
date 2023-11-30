@@ -248,6 +248,7 @@ gamma.q3 <- gamma.samples[,6]
 df.gamma <- data.frame("seq" = seq(1, (psi*p)), 
                   "true" = as.vector(gamma.origin),
                   "m" = as.vector(gamma.q2),
+                  "pm" = as.vector(gamma.post.mean),
                   "l" = as.vector(gamma.q1),
                   "u" = as.vector(gamma.q3))
 df.gamma$covariate <- factor(rep(seq(1, 1 + nrow(df.gamma) %/% psi), each = psi, length.out = nrow(df.gamma)))

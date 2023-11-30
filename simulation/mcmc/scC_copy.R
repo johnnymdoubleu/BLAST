@@ -79,10 +79,6 @@ parameters {
 model {
     // likelihood
     for (i in 1:n){
-      student_t_pdf(newy[i], 2, 0, 1)
-    }
-    y ~ student_t_pdf(newy[i], )
-    for (i in 1:n){
         target += student_t_lpdf(newy[i] | 2, 0, 1); // student_t_lpdf(y[i] | alpha[i], 0, 1) halft_lpdf(y[i] | alpha[i]) pareto_lpdf(y[i]|u, alpha[i])
         target += -1*log(1-student_t_cdf(u, 2, 0, 1));
     };
