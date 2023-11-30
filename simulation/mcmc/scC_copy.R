@@ -48,7 +48,7 @@ x.origin <- pnorm(matrix(rnorm(n*p), ncol = p) %*% chol(C))
 
 y.origin <- NULL
 for(i in 1:n){
-    y.origin[i] <- rPareto(1, 1, alpha = 2)
+    y.origin[i] <- rt(1, df = 2)
 }
 
 u <- quantile(y.origin, threshold)
@@ -65,74 +65,23 @@ n <- length(y.origin)
 #                 lower = "number",
 #                 addgrid.col = "black")
 
-xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
-newx <- seq(0, 1, length.out=n)
-xholder <- bs.x <- matrix(, nrow = n, ncol = p)
-for(i in 1:p){
-    # xholder[,i] <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = n)  
-    # test.knot <- seq(min(xholder[,i]), max(xholder[,i]), length.out = psi)
-    xholder[,i] <- seq(0, 1, length.out = n)  
-    test.knot <- seq(0, 1, length.out = psi)
-    splines <- basis.tps(xholder[,i], test.knot, m=2, rk=FALSE, intercept = FALSE)
-    xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
-    knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)  
-    tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
-    bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)]) 
-}
-
-f.nonlinear.new <- f.nonlinear.origin <- matrix(, nrow = n, ncol = p)
-for(j in 1:p){
-    f.nonlinear.origin[,j] <- bs.nonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
-    f.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
-}
-
-true.alpha <- alp.new <- alp.origin <- NULL
-for(i in 1:n){
-    alp.origin[i] <- exp(theta.origin + sum(f.nonlinear.origin[i,]))
-    alp.new[i] <- exp(theta.origin + sum(f.nonlinear.new[i,]))
-}
-
 
 write("// Stan model for simple linear regression
 data {
     int <lower=1> n; // Sample size
     int <lower=1> p; // regression coefficient size
-    int <lower=1> newp; 
-    int <lower=1> psi; // splines coefficient size
-    real <lower=0> u; // large threshold value
-    matrix[n, (psi*p)] bsNonlinear; // thin plate splines basis
-    matrix[n, (psi*p)] xholderNonlinear; // thin plate splines basis    
-    vector[n] y; // extreme response
-    real <lower=0> atau;
 }
 
 parameters {
-    real theta; // intercept term
-    array[p] vector[psi] gamma; // splines coefficient
-    real <lower=0> lambda; // group lasso penalty
-    real <lower=0> sigma; //
-    array[p] real <lower=0> tau;
+    array[n] real <lower=0> newy;
 }
 
-transformed parameters {
-    array[n] real <lower=0> alpha; // tail index
-    matrix[n, p] gsmooth; // nonlinear component
-    array[n] real <lower=0> newalpha; // tail index
-    matrix[n, p] newgsmooth; // nonlinear component
-    for (j in 1:p){
-        gsmooth[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
-        newgsmooth[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
-    };
-    for (i in 1:n){
-        alpha[i] = exp(theta + sum(gsmooth[i,]));
-        newalpha[i] = exp(theta + sum(newgsmooth[i,]));
-    };
-}
 
 model {
     // likelihood
     for (i in 1:n){
-        target += pareto_lpdf(y[i] | u, alpha[i]);
+        target += student_t_lpdf(y[i] | alpha[i], 0, 1); // student_t_lpdf(y[i] | alpha[i], 0, 1) halft_lpdf(y[i] | alpha[i]) pareto_lpdf(y[i]|u, alpha[i])
+        target += -1*log(1-student_t_cdf(u, alpha[i], 0, 1));
     };
     target += gamma_lpdf(lambda | 0.1, 100);
     target += normal_lpdf(theta | 0, 10);
@@ -180,7 +129,7 @@ fit1 <- stan(
     file = "model_simulation_sc3.stan",  # Stan program
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
-    chains = 3,             # number of Markov chains
+    chains = 1,             # number of Markov chains
     warmup = 1000,          # number of warmup iterations per chain
     iter = 2000,            # total number of iterations per chain
     cores = 4,              # number of cores (could use one per chain)
@@ -193,7 +142,7 @@ posterior <- extract(fit1)
 
 plot(fit1, plotfun = "trace", pars = c("theta", "lambda"), nrow = 2)
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_lambda_sc2-wi.pdf"), width=10, height = 7.78)
-
+y.samples <- summary(fit1, par=c("newy"), probs = c(0.05,0.5, 0.95))$summary
 
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary

@@ -22,7 +22,7 @@ set.seed(36)
 n <- 5000
 psi <- 20
 threshold <- 0.9
-p <- 6
+p <- 1
 no.theta <- 1
 simul.no <- 50
 
@@ -117,28 +117,96 @@ for(i in 1:n){
 
 
 write("// Stan model for simple linear regression
+functions{
+    real halft_lpdf(real y, real c){
+        // Burr distribution log pdf
+        return ((c+1)/2) * log(1+((y^2)/c));
+    }
+
+    real burr_rng(real c){
+        return ((1-uniform_rng(0,1))^(-1)-1)^(1/c);
+    }
+}
+
 data {
     int <lower=1> n; // Sample size
+    int <lower=1> p; // regression coefficient size
+    int <lower=1> newp;
     real <lower=0> u;
+    int <lower=1> psi; // splines coefficient size
+    matrix[n, (psi*p)] bsNonlinear; // thin plate splines basis
+    matrix[n, (psi*p)] xholderNonlinear; // thin plate splines basis    
+    array[n] real <lower=0> y; // extreme responses
+    real <lower=0> atau;
 }
 
 parameters {
-    array[n] real <lower=0> newy;
+    real theta; // intercept term
+    array[p] vector[psi] gamma; // splines coefficient
+    real <lower=0> lambda; // group lasso penalty
+    real <lower=0> sigma; //
+    array[p] real <lower=0> tau;
+}
+
+transformed parameters {
+    array[n] real <lower=0> alpha; // tail index
+    matrix[n, p] gsmooth; // nonlinear component
+    array[n] real <lower=0> newalpha; // tail index
+    matrix[n, p] newgsmooth; // nonlinear component
+    for (j in 1:p){
+        gsmooth[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
+        newgsmooth[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
+    };
+    for (i in 1:n){
+        alpha[i] = exp(theta + sum(gsmooth[i,]));
+        newalpha[i] = exp(theta + sum(newgsmooth[i,]));
+    };
 }
 
 model {
     // likelihood
     for (i in 1:n){
-        target += student_t_lpdf(newy[i] | 2, 0, 1); // student_t_lpdf(y[i] | alpha[i], 0, 1) halft_lpdf(y[i] | alpha[i]) pareto_lpdf(y[i]|u, alpha[i])
-        target += -1*log(1-student_t_cdf(u, 2, 0, 1));
+        target += student_t_lpdf(y[i] | alpha[i], 0, 1); // student_t_lpdf(y[i] | alpha[i], 0, 1) halft_lpdf(y[i] | alpha[i]) pareto_lpdf(y[i]|u, alpha[i])
+        target += -1*log(1-student_t_cdf(u, alpha[i], 0, 1));
     };
+    target += gamma_lpdf(lambda | 0.1, 1000);
+    target += normal_lpdf(theta | 0, 10);
+    target += inv_gamma_lpdf(sigma | 0.01, 0.01);
+    target += (p * psi * log(lambda));
+    for (j in 1:p){
+        target += gamma_lpdf(tau[j] | atau, lambda/sqrt(2));
+        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * sqrt(tau[j]) * sqrt(sigma));
+    };
+}
+generated quantities {
+    // Used in Posterior predictive check
+    vector[n] log_lik;
+    array[n] real y_rep = student_t_rng(alpha, rep_vector(0, n),rep_vector(1, n));
+    for (i in 1:n) {
+        log_lik[i] = student_t_lpdf(y[i] | alpha[i], 0, 1);
+    }
 }
 "
 , "model_simulation_sc3.stan")
 
-data.stan <- list(u = u, n= n)
+data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, 
+                    atau = ((psi+1)/2), newp = (p+1),
+                    bsNonlinear = bs.nonlinear,
+                    xholderNonlinear = xholder.nonlinear)
 
-init.alpha <- list(list(newy = y.origin))
+# init.alpha <- list(list(gamma = gamma.map, theta = theta.map, tau = tau.map, sigma = sigma.map, lambda = lambda.map),
+# list(gamma = gamma.map, theta = theta.map, tau = tau.map, sigma = sigma.map, lambda = lambda.map),
+# list(gamma = gamma.map, theta = theta.map, tau = tau.map, sigma = sigma.map, lambda = lambda.map))
+
+init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
+                        theta = 0, tau = rep(0.1, p), sigma = 0.1, 
+                        lambda = 0.1),
+                  list(gamma = array(rep(0.5, (psi*p)), dim=c(psi, p)),
+                        theta = 0.5, tau = rep(0.1, p), sigma = 0.1,
+                        lambda = 0.1),
+                  list(gamma = array(rep(1, (psi*p)), dim=c(psi, p)),
+                        theta = -1, tau = rep(0.1, p), sigma = 0.1,
+                        lambda = 1))
 
 
 
@@ -163,6 +231,7 @@ plot(fit1, plotfun = "trace", pars = c("theta", "lambda"), nrow = 2)
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
 lambda.samples <- summary(fit1, par=c("lambda"), probs = c(0.05,0.5, 0.95))$summary
+
 newgsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
 newalpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
 
