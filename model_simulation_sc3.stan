@@ -1,7 +1,7 @@
 // Stan model for simple linear regression
 functions{
     real halft_lpdf(real y, real c){
-        // Burr distribution log pdf
+        // Half-t distribution log pdf
         return ((c+1)/2) * log(1+((y^2)/c));
     }
 
@@ -14,11 +14,11 @@ data {
     int <lower=1> n; // Sample size
     int <lower=1> p; // regression coefficient size
     int <lower=1> newp;
-    real <lower=0> u;
+    real u; // <lower=0> 
     int <lower=1> psi; // splines coefficient size
     matrix[n, (psi*p)] bsNonlinear; // thin plate splines basis
     matrix[n, (psi*p)] xholderNonlinear; // thin plate splines basis    
-    array[n] real <lower=0> y; // extreme responses
+    array[n] real y; // extreme responses
     real <lower=0> atau;
 }
 
@@ -51,7 +51,7 @@ model {
         target += student_t_lpdf(y[i] | alpha[i], 0, 1); // student_t_lpdf(y[i] | alpha[i], 0, 1) halft_lpdf(y[i] | alpha[i]) pareto_lpdf(y[i]|u, alpha[i])
         target += -1*log(1-student_t_cdf(u, alpha[i], 0, 1));
     };
-    target += gamma_lpdf(lambda | 0.1, 1000);
+    target += gamma_lpdf(lambda | 0.01, 1000);
     target += normal_lpdf(theta | 0, 10);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     target += (p * psi * log(lambda));
