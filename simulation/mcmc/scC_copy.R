@@ -29,7 +29,7 @@ set.seed(3)
 n <- 5000
 psi <- 20
 threshold <- 0.9
-p <- 5
+p <- 1
 no.theta <- 1
 simul.no <- 50
 
@@ -44,11 +44,12 @@ xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow
 C <- diag(p)                
 ## Generate sample
 x.origin <- pnorm(matrix(rnorm(n*p), ncol = p) %*% chol(C))
+x.origin <- as.matrix(runif(n, 0, 1), ncol = 1)
 # x.origin <- scale(x.origin)
 
 y.origin <- NULL
 for(i in 1:n){
-    y.origin[i] <- rt(1, df = 2)
+    y.origin[i] <- rt(1, df = 1)
 }
 
 u <- quantile(y.origin, threshold)
@@ -104,10 +105,14 @@ fit1 <- stan(
 # saveRDS(fit1, file=paste0("./BRSTIR/application/",Sys.Date(),"_stanfit.rds"))
 posterior <- extract(fit1)
 # str(posterior)
+y.samples <- summary(fit1, par=c("newy"), probs = c(0.05,0.5, 0.95))$summary
+plot(density(y.origin))
+plot(density(y.samples[,1]))
+plot(density(y.samples[,5]))
 
 plot(fit1, plotfun = "trace", pars = c("theta", "lambda"), nrow = 2)
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_lambda_sc2-wi.pdf"), width=10, height = 7.78)
-y.samples <- summary(fit1, par=c("newy"), probs = c(0.05,0.5, 0.95))$summary
+
 
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary

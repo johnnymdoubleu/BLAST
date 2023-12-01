@@ -107,6 +107,11 @@ functions{
         return log(c)+((c-1)*log(y)) - ((1+1)*log1p(y^c));
     }
 
+    real burr_cdf(real y, real c){
+        // Bur distribution cdf
+        return 1 - (1 + x^c)^(-1)
+    }
+
     real burr_rng(real c){
         return ((1-uniform_rng(0,1))^(-1)-1)^(1/c);
     }
@@ -318,7 +323,7 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
         axis.title.x = element_text(size = 35),
         axis.text = element_text(size=18))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_nonlinear(CI)_sc1-nl.pdf"), width=20, height = 16)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_nonlinear(CI)_sc4-nl.pdf"), width=20, height = 16)
 
 data.nonlinear <- data.frame("x"=as.vector(xholder),
                           "true" = as.vector(f.nonlinear.new),

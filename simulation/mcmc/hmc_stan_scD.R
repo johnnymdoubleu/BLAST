@@ -1,25 +1,17 @@
 library(npreg)
-library(tmvnsim)
 library(reshape2)
 library(splines2)
 library(scales)
 library(MASS)
-library(npreg)
-library(Pareto)
 suppressMessages(library(tidyverse))
 library(JOPS)
 library(readxl)
-library(gridExtra)
-library(colorspace)
 library(corrplot)
 # library(ReIns)
 library(rmutil)
 library(evir)
 library(rstan)
-library(ggmcmc)
-library(MCMCvis)
 library(cmdstanr)
-library(ggh4x)
 # library(simstudy)
 # library(ggplotify)
 
@@ -27,40 +19,7 @@ library(ggh4x)
 # set.seed(2)
 set.seed(36)
 
-# n <- 5000
-# psi <- 20
-# threshold <- 0.90
-# p <- 10
-# no.theta <- 1
-# simul.no <- 50
-
-# xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
-# x.origin <- cbind(replicate(p, runif(n, 0, 1)))
-# for(i in 1:p){
-#     knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)  
-#     tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
-#     bs.linear <- cbind(bs.linear, tps[,1:no.theta])
-#     bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])  
-# }
-
-# gamma.origin <- matrix(, nrow = psi, ncol = p)
-# for(j in 1:p){
-#     for (ps in 1:psi){
-#         if(j %in% c(2,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
-#         else if(j==7){
-#             if(ps <= (psi/2)){gamma.origin[ps, j] <- 1}
-#             else{gamma.origin[ps, j] <- 1}
-#         }
-#         else {
-#             if(ps <= (psi/2)){gamma.origin[ps, j] <- 1}
-#             else{gamma.origin[ps, j] <- 1}
-#         }
-#     }
-# }
-
-# theta.origin <- c(-0.1, 0.8, 0, 0.8, 0, 0, 0, -0.3, 0.8, 0, 0)
-
-n <- 5000
+n <- 55000
 psi <- 20
 threshold <- 0.9
 p <- 5
@@ -68,40 +27,6 @@ no.theta <- 1
 simul.no <- 50
 
 xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
-
-# sample_meanvector <- runif(p,0,1)
-# sample_covariance_matrix <- matrix(NA, nrow = p, ncol = p)
-# diag(sample_covariance_matrix) <- 1
-
-# mat_Sim <- matrix(data = NA, nrow = p, ncol = p)
-# U <- runif(n = p) * 0.5
-
-# for(i in 1:p)
-# {
-#   if(i %in% c(2,3))
-#   {
-#     U_Star <- pmin(U + 0.2 * runif(n = p), 0.99999)
-    
-#   }else
-#   {
-#     U_Star <- pmin(pmax(U + sample(c(0, 1), size = p, replace = TRUE) * runif(n = p), 0.00001), 0.99999)
-#   }
-  
-#   mat_Sim[, i] <- qnorm(U_Star)  
-# }
-
-# cor_Mat <- cor(mat_Sim)
-# sample_covariance_matrix <- cor_Mat * (p/2)
-# # diag(sample_covariance_matrix) <- 1
-# ## create multivariate normal distribution
-# # x.origin <- mvrnorm(n = n, mu = rep(0,p), Sigma = sample_covariance_matrix)
-
-# C <- matrix(c(1, 0.3, 0.5, 0.3, 0.3,
-#               0.3, 1, 0.95, 0.4, 0.4,
-#               0.5, 0.95, 1, 0.5, 0.1,
-#               0.3, 0.4, 0.5 , 1, 0.5,
-#               0.3, 0.4, 0.5, 0.5, 1), nrow = p)
-# x.origin <- tmvnsim(n = n, k = p, lower = rep(0, p), means = rep(0, p), sigma = C)$samp
 
 # C <- matrix(c(1, 0.3, 0.5, 0.3, 0.3,
 #             0.3, 1, 0.95, 0.4, 0.4,
@@ -151,8 +76,8 @@ alp.origin <- y.origin <- NULL
 for(i in 1:n){
     alp.origin[i] <- exp(theta.origin[1] + sum(f.origin[i,]))
     # y.origin[i] <- rPareto(1, 1, alpha = alp.origin[i])
-    y.origin[i] <- rt(1, df = alp.origin[i])
-    # y.origin[i] <-  rburr(1, m=1, s=alp.origin[i], f=1)
+    # y.origin[i] <- rt(1, df = alp.origin[i])
+    y.origin[i] <-  rburr(1, m=1, s=alp.origin[i], f=1)
 }
 
 u <- quantile(y.origin, threshold)
@@ -211,13 +136,18 @@ for(i in 1:n){
 
 write("// Stan model for simple linear regression
 functions{
-    real burr_lpdf(real y, real c, real k){
+    real burr_lpdf(real y, real c){
         // Burr distribution log pdf
-        return log(c*k)+((c-1)*log(y)) - ((k+1)*log1p(y^c));
+        return log(c)+((c-1)*log(y)) - ((1+1)*log1p(y^c));
     }
 
-    real burr_rng(real c, real k){
-        return ((1-uniform_rng(0,1))^(-1/k)-1)^(1/c);
+    real burr_cdf(real y, real c){
+        // Bur distribution cdf
+        return 1 - (1 + y^c)^(-1);
+    }    
+
+    real burr_rng(real c){
+        return ((1-uniform_rng(0,1))^(-1)-1)^(1/c);
     }
 }
 
@@ -268,8 +198,8 @@ transformed parameters {
 model {
     // likelihood
     for (i in 1:n){
-        target += student_t_lpdf(y[i] | alpha[i], 0, 1); // pareto_lpdf(y[i] | u, alpha[i]) burr_lpdf(y[i] | alpha[i], 1)
-        target += -1*log(1-student_t_cdf(u, alpha[i], 0, 1));
+        target += burr_lpdf(y[i] | alpha[i]); // pareto_lpdf(y[i] | u, alpha[i]) burr_lpdf(y[i] | alpha[i], 1) student_t_lpdf(y[i] | alpha[i], 0, 1)
+        target += -1*log(1-burr_cdf(u, alpha[i]));
     }
     target += gamma_lpdf(lambda1 | 1, 10);
     target += gamma_lpdf(lambda2 | 0.1, 100);
@@ -280,14 +210,6 @@ model {
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, lambda2/sqrt(2));
         target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * sqrt(tau[j]) * sqrt(sigma));
-    }
-}
-generated quantities {
-    // Used in Posterior predictive check
-    vector[n] log_lik;
-    array[n] real y_rep = pareto_rng(rep_vector(u, n), alpha);
-    for (i in 1:n) {
-        log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
     }
 }
 "
@@ -389,7 +311,7 @@ ggplot(df.theta, aes(x = covariate, y=m, color = covariate)) + ylab("") + xlab('
           plot.margin = margin(0,0,0,-20),
           axis.text.x = element_text(hjust=0.35),
           axis.text = element_text(size = 28))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_theta_sc3-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_theta_sc4-wi.pdf"), width=10, height = 7.78)
 
 df.gamma <- data.frame("seq" = seq(1, (psi*p)), 
                   "true" = as.vector(gamma.origin),
@@ -425,7 +347,7 @@ ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) +
           plot.margin = margin(0,0,0,-20),
           axis.text.x = element_text(hjust=0.5),
           axis.text = element_text(size = 28))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_gamma_sc3-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_gamma_sc4-wi.pdf"), width=10, height = 7.78)
 
 g.linear.mean <- as.vector(matrix(newgl.samples[,1], nrow = n, byrow=TRUE))
 g.linear.q1 <- as.vector(matrix(newgl.samples[,4], nrow = n, byrow=TRUE))
@@ -436,6 +358,15 @@ g.nonlinear.q1 <- as.vector(matrix(newgnl.samples[,4], nrow = n, byrow=TRUE))
 g.nonlinear.q2 <- as.vector(matrix(newgnl.samples[,5], nrow = n, byrow=TRUE))
 g.nonlinear.q3 <- as.vector(matrix(newgnl.samples[,6], nrow = n, byrow=TRUE))
 
+
+equal_breaks <- function(n = 3, s = 0.1,...){
+  function(x){
+    d <- s * diff(range(x)) / (1+2*s)
+    seq = seq(min(x)+d, max(x)-d, length=n)
+    round(seq, -floor(log10(abs(seq[2]-seq[1]))))
+  }
+}
+
 data.linear <- data.frame("x"=newx,
                           "true" = as.vector(f.linear.new),
                           "post.mean" = as.vector(g.linear.mean),
@@ -445,8 +376,6 @@ data.linear <- data.frame("x"=newx,
                           "covariates" = gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]", "g[6]")),
                           "fakelab" = rep(1, (p*n)),
                           "replicate" = gl(p, n, (p*n), labels = c("x[1]", "x[2]", "x[3]", "x[4]", "x[5]", "x[6]")))
-
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_nonlinear_sc1-nl.pdf"), width=12.5, height = 15)
 
 ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
@@ -459,7 +388,7 @@ ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) +
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values=c("steelblue", "red")) + 
   guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) + ylim(-0.71, 0.5) +
+          fill = guide_legend(order = 1)) + ylim(-0.65, 0.3) +
   # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 15),
@@ -474,6 +403,8 @@ ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) +
         axis.title.x = element_text(size = 35),
         axis.text = element_text(size=18))
 
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_linear_sc4-nl.pdf"), width=12.5, height = 15)
+
 data.nonlinear <- data.frame("x"=newx,
                           "true" = as.vector(f.nonlinear.new),
                           "post.mean" = as.vector(g.nonlinear.new),
@@ -483,8 +414,6 @@ data.nonlinear <- data.frame("x"=newx,
                           "covariates" = gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]", "g[6]")),
                           "fakelab" = rep(1, (p*n)),
                           "replicate" = gl(p, n, (p*n), labels = c("x[1]", "x[2]", "x[3]", "x[4]", "x[5]", "x[6]")))
-
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_nonlinear_sc1-nl.pdf"), width=12.5, height = 15)
 
 ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
@@ -497,8 +426,8 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values=c("steelblue", "red")) + 
   guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) + #ylim(-0.8, 0.8) +
-  scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) +
+          fill = guide_legend(order = 1)) + ylim(-0.55, 0.5) +
+  # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) +
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 15),
         legend.position="none",
@@ -512,6 +441,8 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
         axis.title.x = element_text(size = 35),
         axis.text = element_text(size=18))
 
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_nonlinear_sc4-nl.pdf"), width=12.5, height = 15)
+
 data.scenario <- data.frame("x" = c(1:n),
                             "constant" = newx,
                             "true" = sort(alp.new),
@@ -524,7 +455,7 @@ ggplot(data.scenario, aes(x=constant)) +
   ylab(expression(alpha(bold(c1)))) + xlab(expression(c)) + labs(col = "") + 
   geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
   geom_line(aes(y = true, col = "True"), linewidth = 2) +
-  ylim(0.5, 2) +
+  ylim(0.5, 3) +
   geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values = c("steelblue","red")) + 
@@ -538,7 +469,7 @@ ggplot(data.scenario, aes(x=constant)) +
         plot.margin = margin(0,0,0,-1),
         strip.text = element_blank(),
         axis.title.x = element_text(size = 35))
-
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_test_sc4-nl.pdf"), width=10, height = 7.78)
 
 g.nonlinear.q2 <- g.linear.q2 <- g.q2 <- g.nonlinear.q1 <- g.linear.q1 <- g.q1 <- g.nonlinear.q3 <- g.linear.q3 <- g.q3 <- g.nonlinear.new <- g.linear.new <- g.new <- matrix(, nrow = n, ncol=p)
 alpha.smooth.q1 <- alpha.smooth.q3 <- alpha.smooth.new <- alpha.new <- NULL
