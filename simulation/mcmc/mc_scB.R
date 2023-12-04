@@ -16,9 +16,9 @@ library(cmdstanr)
 
 # Scenario B
 
-total.iter <- 2
+total.iter <- 10
 
-n <- 5000
+n <- 15000
 psi <- 20
 threshold <- 0.9
 p <- 5
@@ -125,7 +125,7 @@ newgnl.container <- as.data.frame(matrix(, nrow = (p*n), ncol = total.iter))
 alpha.container <- as.data.frame(matrix(, nrow = n, ncol = total.iter))
 
 for(iter in 1:total.iter){
-    n <- 5000
+    n <- 15000
     x.origin <- pnorm(matrix(rnorm(n*p), ncol = p) %*% chol(C))
     xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
     for(i in 1:p){
@@ -231,34 +231,29 @@ for(iter in 1:total.iter){
 }
 
 alpha.container$x <- seq(0,1, length.out = n)
-alpha.container$true <- alpha.new
+alpha.container$true <- sort(alp.new)
 alpha.container <- cbind(alpha.container, t(apply(alpha.container[,1:total.iter], 1, quantile, c(0.05, .5, .95))))
 colnames(alpha.container)[(dim(alpha.container)[2]-2):(dim(alpha.container)[2])] <- c("q1","q2","q3")
 alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
+plt <- ggplot(data = alpha.container, aes(x = x)) + ylab(expression(alpha(bold(c1)))) + xlab(expression(c)) + labs(col = "")
+for(i in 1:total.iter){
+  plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.2,linewidth = 0.7)
+  # plt <- plt + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
+}
+print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
+        geom_line(aes(y=true, col = "True"), linewidth = 2) + 
+        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5, linetype = 2) +
+        #scale_fill_manual(values=c("steelblue"), name = "") +
+        scale_color_manual(values = c("steelblue", "red"))+
+        guides(color = guide_legend(order = 2), 
+          fill = guide_legend(order = 1)) +
+        theme_minimal(base_size = 30) +
+        theme(legend.position = "none",
+                strip.text = element_blank(),
+                axis.text = element_text(size = 35)))
 
-ggplot(data = alpha.container, aes(x = x)) + 
-    ylab(expression(alpha(x))) + xlab(expression(x)) + 
-    geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) + 
-    geom_line(aes(y=true, col = "True"), linewidth = 1.8) + 
-    geom_line(aes(y=mean, col = "Mean"), linewidth = 1.8, linetype = 2) +
-    # geom_line(aes(y=q2, col = "Median"), linewidth = 1.8, linetype = 2) +
-    theme(axis.title.y = element_text(size = rel(1.8), angle = 90)) +
-    theme(axis.title.x = element_text(size = rel(1.8), angle = 00)) +
-    labs(col = "") + #ylim(0, 150) +
-    scale_color_manual(values = c("blue","#e0b430","red"))+
-    theme_minimal(base_size = 30) +
-    theme(plot.title = element_text(hjust = 0.5, size = 30),
-            legend.position="top", 
-            legend.key.size = unit(1, 'cm'),
-            legend.text = element_text(size=18),
-            plot.margin = margin(0,0,0,-10),
-            strip.text = element_blank(),
-            axis.text.x = element_blank(),
-            axis.ticks.x = element_blank(),
-            axis.text.y = element_text(size=33),
-            axis.title.x = element_text(size = 35))
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_sc1-wi.pdf"), width=10, height = 7.78)
 
 
