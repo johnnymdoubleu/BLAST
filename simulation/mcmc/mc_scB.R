@@ -1,10 +1,6 @@
 library(npreg)
 library(tmvnsim)
 library(reshape2)
-library(splines2)
-library(scales)
-library(MASS)
-library(npreg)
 library(Pareto)
 suppressMessages(library(tidyverse))
 library(JOPS)
@@ -15,11 +11,7 @@ library(corrplot)
 library(ReIns)
 library(evir)
 library(rstan)
-library(ggmcmc)
-library(MCMCvis)
 library(cmdstanr)
-library(ggh4x)
-
 
 
 # Scenario B
@@ -30,10 +22,8 @@ n <- 5000
 psi <- 20
 threshold <- 0.9
 p <- 5
+newp <- p+1
 no.theta <- 1
-simul.no <- 50
-
-xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
 
 # Function to generate Gaussian copula
 C <- matrix(c(1, 0.3, 0.5, 0.3, 0.3,
@@ -43,7 +33,22 @@ C <- matrix(c(1, 0.3, 0.5, 0.3, 0.3,
             0.3, 0.4, 0.5, 0.5, 1), nrow = p)
 # C <- diag(p)                
 ## Generate sample
+gamma.origin <- matrix(, nrow = psi, ncol = p)
+for(j in 1:p){
+    for (ps in 1:psi){
+        if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
+        else if(j==7){
+            if(ps <= (psi/2)){gamma.origin[ps, j] <- -0.1}
+            else{gamma.origin[ps, j] <- -0.1}
+        }
+        else {
+            if(ps <= (psi/2)){gamma.origin[ps, j] <- -0.1}
+            else{gamma.origin[ps, j] <- -0.1}
+        }
+    }
+}
 
+theta.origin <- c(0.5, 0, -0.2, -0.2, 0, 0)
 
 write("// Stan model for simple linear regression
 
@@ -114,35 +119,22 @@ model {
 
 theta.container <- as.data.frame(matrix(, nrow = newp, ncol= total.iter))
 gamma.container <- as.data.frame(matrix(, nrow = (p*psi), ncol = total.iter))
+newgsmooth.container <- as.data.frame(matrix(, nrow = (p*n), ncol = total.iter))
+newgl.container <- as.data.frame(matrix(, nrow = (p*n), ncol = total.iter))
+newgnl.container <- as.data.frame(matrix(, nrow = (p*n), ncol = total.iter))
 alpha.container <- as.data.frame(matrix(, nrow = n, ncol = total.iter))
 
 for(iter in 1:total.iter){
     n <- 5000
     x.origin <- pnorm(matrix(rnorm(n*p), ncol = p) %*% chol(C))
-# x.origin <- scale(x.origin)
-
+    xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
     for(i in 1:p){
         knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)
         tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
-        # bs.linear <- cbind(bs.linear, tps[,1:no.theta])
-        bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])  
+        bs.linear <- cbind(bs.linear, tps[,1:no.theta])
+        bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])
     }
-
-    gamma.origin <- matrix(, nrow = psi, ncol = p)
-    for(j in 1:p){
-        for (ps in 1:psi){
-            if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
-            else if(j==7){
-                if(ps <= (psi/2)){gamma.origin[ps, j] <- -0.5}
-                else{gamma.origin[ps, j] <- -0.5}
-            }
-            else {
-                if(ps <= (psi/2)){gamma.origin[ps, j] <- 1.7}
-                else{gamma.origin[ps, j] <- 1.7}
-            }
-        }
-    }
-    theta.origin <- -1.6      
+   
     f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
     for(j in 1:p){
         f.linear.origin[,j] <- bs.linear[, j] * theta.origin[j+1]
@@ -192,6 +184,25 @@ for(iter in 1:total.iter){
         alp.new[i] <- exp(theta.origin[1] + sum(f.new[i,]))
     }
 
+    data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, 
+                        atau = ((psi+1)/2), newp = (p+1),
+                        bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
+                        xholderLinear = xholder.linear, 
+                        xholderNonlinear = xholder.nonlinear)
+
+    init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
+                            theta = rep(0, (p+1)), 
+                            tau = rep(0.1, p), sigma = 0.1, 
+                            lambda1 = 0.1, lambda2 = 0.1),
+                      list(gamma = array(rep(0.02, (psi*p)), dim=c(psi, p)),
+                            theta = rep(0.01, (p+1)), 
+                            tau = rep(0.01, p), sigma = 0.001,
+                            lambda1 = 0.01, lambda2 = 0.1),
+                      list(gamma = array(rep(0.01, (psi*p)), dim=c(psi, p)),
+                            theta = rep(0.05, (p+1)), 
+                            tau = rep(0.01, p), sigma = 0.01,
+                            lambda1 = 0.1, lambda2 = 0.01))
+
     fit1 <- stan(
         file = "model_simulation_sc2.stan",  # Stan program
         data = data.stan,    # named list of data
@@ -203,15 +214,20 @@ for(iter in 1:total.iter){
         refresh = 500             # no progress shown
     )
 
-    posterior <- extract(fit1)
-
-    beta.samples <- summary(fit1, par=c("beta"), probs = c(0.05,0.5, 0.95))$summary
-    lambda.samples <- summary(fit1, par=c("lambda1"), probs = c(0.05,0.5, 0.95))$summary
-    alpha.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
+    theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
+    gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
+    lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
+    newgl.samples <- summary(fit1, par=c("newgl"), probs = c(0.05, 0.5, 0.95))$summary
+    newgnl.samples <- summary(fit1, par=c("newgnl"), probs = c(0.05, 0.5, 0.95))$summary
+    newgsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
     newalpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
 
-    alpha.container[,iter] <- sort(newalpha.samples[,1])
-    beta.container[,iter] <- beta.samples[,1]
+    alpha.container[,iter] <- sort(newalpha.samples[,5])
+    theta.container[,iter] <- theta.samples[,5]
+    gamma.container[,iter] <- gamma.samples[,5]
+    newgl.container[,iter] <- as.vector(matrix(newgl.samples[,5], nrow = n, byrow=TRUE))
+    newgnl.container[,iter] <- as.vector(matrix(newgnl.samples[,5], nrow = n, byrow=TRUE))
+    newgsmooth.container[,iter] <- as.vector(matrix(newgsmooth.samples[,5], nrow = n, byrow=TRUE))
 }
 
 alpha.container$x <- seq(0,1, length.out = n)
@@ -220,17 +236,14 @@ alpha.container <- cbind(alpha.container, t(apply(alpha.container[,1:total.iter]
 colnames(alpha.container)[(dim(alpha.container)[2]-2):(dim(alpha.container)[2])] <- c("q1","q2","q3")
 alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
-# for(i in 1:total.iter){
-#   # print(.data[[names(data.scenario)[i]]])
-#   plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.4,linewidth = 0.7)
-# }
+
 
 ggplot(data = alpha.container, aes(x = x)) + 
     ylab(expression(alpha(x))) + xlab(expression(x)) + 
     geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) + 
     geom_line(aes(y=true, col = "True"), linewidth = 1.8) + 
     geom_line(aes(y=mean, col = "Mean"), linewidth = 1.8, linetype = 2) +
-    geom_line(aes(y=q2, col = "Median"), linewidth = 1.8, linetype = 2) +
+    # geom_line(aes(y=q2, col = "Median"), linewidth = 1.8, linetype = 2) +
     theme(axis.title.y = element_text(size = rel(1.8), angle = 90)) +
     theme(axis.title.x = element_text(size = rel(1.8), angle = 00)) +
     labs(col = "") + #ylim(0, 150) +
@@ -249,9 +262,9 @@ ggplot(data = alpha.container, aes(x = x)) +
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_sc1-wi.pdf"), width=10, height = 7.78)
 
 
-resg <- gather(beta.container,
+resg <- gather(theta.container,
                key = "group",
-               names(beta.container),
+               names(theta.container),
                value = "values")
 resg$group1 <- factor(rep(1:newp, total.iter))
 
