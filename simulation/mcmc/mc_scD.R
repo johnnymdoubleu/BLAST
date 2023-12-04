@@ -132,7 +132,7 @@ model {
     }
 }
 "
-, "model_simulation_sc3.stan")
+, "model_simulation_sc4.stan")
 
 theta.container <- as.data.frame(matrix(, nrow = newp, ncol= total.iter))
 gamma.container <- as.data.frame(matrix(, nrow = (p*psi), ncol = total.iter))
@@ -221,7 +221,7 @@ for(iter in 1:total.iter){
                             lambda1 = 0.1, lambda2 = 0.01))
 
     fit1 <- stan(
-        file = "model_simulation_sc3.stan",  # Stan program
+        file = "model_simulation_sc4.stan",  # Stan program
         data = data.stan,    # named list of data
         init = init.alpha,      # initial value
         chains = 3,             # number of Markov chains

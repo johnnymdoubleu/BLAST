@@ -1,19 +1,4 @@
 // Stan model for simple linear regression
-functions{
-    real burr_lpdf(real y, real c){
-        // Burr distribution log pdf
-        return log(c)+((c-1)*log(y)) - ((1+1)*log1p(y^c));
-    }
-
-    real burr_cdf(real y, real c){
-        // Bur distribution cdf
-        return 1 - (1 + y^c)^(-1);
-    }    
-
-    real burr_rng(real c){
-        return ((1-uniform_rng(0,1))^(-1)-1)^(1/c);
-    }
-}
 
 data {
     int <lower=1> n; // Sample size
@@ -64,8 +49,8 @@ transformed parameters {
 model {
     // likelihood
     for (i in 1:n){
-        target += burr_lpdf(y[i] | alpha[i]); // pareto_lpdf(y[i] | u, alpha[i]) burr_lpdf(y[i] | alpha[i], 1) student_t_lpdf(y[i] | alpha[i], 0, 1)
-        target += -1*log(1-burr_cdf(u, alpha[i]));
+        target += student_t_lpdf(y[i] | alpha[i], 0, 1);
+        target += -1*log(1-student_t_cdf(u, alpha[i], 0, 1));
     }
     target += gamma_lpdf(lambda1 | 1, 10);
     target += gamma_lpdf(lambda2 | 0.1, 100);
