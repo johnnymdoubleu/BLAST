@@ -303,7 +303,7 @@ somelines <- data.frame(value=c(as.vector(gamma.origin)),
                         boxplot.nr=c(1:(psi*p)),
                         covariate = factor(rep(1:p, each= psi)))
 ggplot(resg, aes(group=group1, x = group1, y = values, fill=group2)) + ylim(-1.1,1.1) + 
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) +
+  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + labs(x = "", y = "") + 
   geom_boxplot() + #coord_cartesian(ylim=c(-1,1))+
   geom_segment(data=somelines,aes(x=boxplot.nr-0.5,xend=boxplot.nr+0.5, 
                                   y=value,yend=value),inherit.aes=FALSE,
