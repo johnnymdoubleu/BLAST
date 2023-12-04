@@ -342,7 +342,7 @@ equal_breaks <- function(n = 3, s = 0.1,...){
 }
 
 newgsmooth.container$x <- seq(0,1, length.out = n)
-newgsmooth.container$true <- as.vector(f.linear.new)
+newgsmooth.container$true <- as.vector(f.new)
 newgsmooth.container <- cbind(newgsmooth.container, t(apply(newgsmooth.container[,1:total.iter], 1, quantile, c(0.05, .5, .95))))
 colnames(newgsmooth.container)[(dim(newgsmooth.container)[2]-2):(dim(newgsmooth.container)[2])] <- c("q1","q2","q3")
 newgsmooth.container$mean <- rowMeans(newgsmooth.container[,1:total.iter])
@@ -350,16 +350,23 @@ newgsmooth.container$covariate <- gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[
 newgsmooth.container <- as.data.frame(newgsmooth.container)
 
 plt <- ggplot(data = newgsmooth.container, aes(x = x, group = covariate)) + ylab("") + xlab("")
-for(i in 1:total.iter){
-  plt <- plt + geom_line(aes(y = .data[[names(newgsmooth.container)[i]]]), alpha = 0.2, linewidth = 0.7)
-  # plt <- plt + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
+if(total.iter < 50){
+  for(i in 1:total.iter){
+    plt <- plt + geom_line(aes(y = .data[[names(newgsmooth.container)[i]]]), alpha = 0.2, linewidth = 0.7)
+    # plt <- plt + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
+  }
+} else{
+  for(i in 1:50){
+    plt <- plt + geom_line(aes(y = .data[[names(newgsmooth.container)[i]]]), alpha = 0.2, linewidth = 0.7)
+    # plt <- plt + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
+  }
 }
 print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
         geom_line(aes(y=true, col = "True"), linewidth = 2) + 
-        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5, linetype = 2) +
+        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5, linetype = 2) + ylim(-0.4, 0.2) +
         facet_wrap(covariate ~ ., scales = "free_x", nrow = 5,
                     labeller = label_parsed, strip.position = "left") +
-        scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
+        # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
         #scale_fill_manual(values=c("steelblue"), name = "") +
         scale_color_manual(values = c("steelblue", "red"))+
         guides(color = guide_legend(order = 2), 
@@ -368,8 +375,6 @@ print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha 
         theme(legend.position = "none",
                 strip.text = element_blank(),
                 axis.text = element_text(size = 35)))
-
-
 
 
 newgl.container$x <- seq(0,1, length.out = n)
@@ -381,16 +386,58 @@ newgl.container$covariate <- gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", 
 newgl.container <- as.data.frame(newgl.container)
 
 plt <- ggplot(data = newgl.container, aes(x = x, group = covariate)) + ylab("") + xlab("")
-for(i in 1:total.iter){
-  plt <- plt + geom_line(aes(y = .data[[names(newgl.container)[i]]]), alpha = 0.2, linewidth = 0.7)
-  # plt <- plt + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
+if(total.iter < 50){
+  for(i in 1:total.iter){
+    plt <- plt + geom_line(aes(y = .data[[names(newgl.container)[i]]]), alpha = 0.2, linewidth = 0.7)
+    # plt <- plt + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
+  }
+}else{
+  for(i in 1:50){
+    plt <- plt + geom_line(aes(y = .data[[names(newgl.container)[i]]]), alpha = 0.2, linewidth = 0.7)
+    # plt <- plt + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
+  }
 }
 print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
         geom_line(aes(y=true, col = "True"), linewidth = 2) + 
-        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5, linetype = 2) +
+        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5, linetype = 2) + ylim(-0.4, 0.2) +
         facet_wrap(covariate ~ ., scales = "free_x", nrow = 5,
                     labeller = label_parsed, strip.position = "left") +
-        scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
+        # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
+        #scale_fill_manual(values=c("steelblue"), name = "") +
+        scale_color_manual(values = c("steelblue", "red"))+
+        guides(color = guide_legend(order = 2), 
+          fill = guide_legend(order = 1)) +
+        theme_minimal(base_size = 30) +
+        theme(legend.position = "none",
+                strip.text = element_blank(),
+                axis.text = element_text(size = 35)))
+
+newgnl.container$x <- seq(0,1, length.out = n)
+newgnl.container$true <- as.vector(f.nonlinear.new)
+newgnl.container <- cbind(newgnl.container, t(apply(newgnl.container[,1:total.iter], 1, quantile, c(0.05, .5, .95))))
+colnames(newgnl.container)[(dim(newgnl.container)[2]-2):(dim(newgnl.container)[2])] <- c("q1","q2","q3")
+newgnl.container$mean <- rowMeans(newgnl.container[,1:total.iter])
+newgnl.container$covariate <- gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]", "g[6]"))
+newgnl.container <- as.data.frame(newgnl.container)
+
+plt <- ggplot(data = newgnl.container, aes(x = x, group = covariate)) + ylab("") + xlab("")
+if(total.iter < 50){
+  for(i in 1:total.iter){
+    plt <- plt + geom_line(aes(y = .data[[names(newgnl.container)[i]]]), alpha = 0.2, linewidth = 0.7)
+    # plt <- plt + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
+  }
+}else{
+  for(i in 1:50){
+    plt <- plt + geom_line(aes(y = .data[[names(newgnl.container)[i]]]), alpha = 0.2, linewidth = 0.7)
+    # plt <- plt + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
+  }
+}
+print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
+        geom_line(aes(y=true, col = "True"), linewidth = 2) + 
+        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5, linetype = 2) + ylim(-0.4, 0.2) +
+        facet_wrap(covariate ~ ., scales = "free_x", nrow = 5,
+                    labeller = label_parsed, strip.position = "left") +
+        # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
         #scale_fill_manual(values=c("steelblue"), name = "") +
         scale_color_manual(values = c("steelblue", "red"))+
         guides(color = guide_legend(order = 2), 
