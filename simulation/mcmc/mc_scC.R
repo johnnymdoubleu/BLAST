@@ -23,7 +23,7 @@ n <- 15000
 psi <- 20
 threshold <- 0.95
 p <- 5
-newp <- p+1
+newp <- p+1z
 no.theta <- 1
 
 # Function to generate Gaussian copula
