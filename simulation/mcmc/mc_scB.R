@@ -119,12 +119,12 @@ model {
 
 # theta.container <- as.data.frame(matrix(, nrow = newp, ncol= total.iter))
 # gamma.container <- as.data.frame(matrix(, nrow = (p*psi), ncol = total.iter))
-newgsmooth.container <- as.data.frame(matrix(, nrow = (p*(n-(1-threshold))), ncol = total.iter))
-newgl.container <- as.data.frame(matrix(, nrow = (p*(n-(1-threshold))), ncol = total.iter))
-newgnl.container <- as.data.frame(matrix(, nrow = (p*(n-(1-threshold))), ncol = total.iter))
-alpha.container <- as.data.frame(matrix(, nrow = (n-(1-threshold)), ncol = total.iter))
-alpha.lower.container <- as.data.frame(matrix(, nrow = (n-(1-threshold)), ncol = total.iter))
-alpha.upper.container <- as.data.frame(matrix(, nrow = (n-(1-threshold)), ncol = total.iter))
+newgsmooth.container <- as.data.frame(matrix(, nrow = (p*(n*(1-threshold))), ncol = total.iter))
+newgl.container <- as.data.frame(matrix(, nrow = (p*(n*(1-threshold))), ncol = total.iter))
+newgnl.container <- as.data.frame(matrix(, nrow = (p*(n*(1-threshold))), ncol = total.iter))
+alpha.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total.iter))
+alpha.lower.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total.iter))
+alpha.upper.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total.iter))
 
 for(iter in 1:total.iter){
     n <- 15000
