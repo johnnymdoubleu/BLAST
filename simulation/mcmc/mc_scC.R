@@ -241,8 +241,8 @@ alpha.container$true <- sort(alp.new)
 alpha.container <- cbind(alpha.container, t(apply(alpha.container[,1:total.iter], 1, quantile, c(0.05, .5, .95))))
 colnames(alpha.container)[(dim(alpha.container)[2]-2):(dim(alpha.container)[2])] <- c("q1","q2","q3")
 alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
-alpha.container$q1 <- t(apply(alpha.lower.container[,1:total.iter], 1, quantile, c(.5)))
-alpha.container$q3 <- t(apply(alpha.upper.container[,1:total.iter], 1, quantile, c(.5)))
+alpha.container$q1 <- apply(alpha.lower.container[,1:total.iter], 1, quantile, c(.5))
+alpha.container$q3 <- apply(alpha.upper.container[,1:total.iter], 1, quantile, c(.5))
 alpha.container <- as.data.frame(alpha.container)
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + ylab(expression(alpha(bold(c1)))) + xlab(expression(c)) + labs(col = "")
@@ -265,79 +265,79 @@ print(plt + geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha =
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_sc2-wi.pdf"), width=10, height = 7.78)
 
 
-resg <- gather(theta.container,
-               key = "group",
-               names(theta.container),
-               value = "values")
-resg$group1 <- factor(rep(1:newp, total.iter))
+# resg <- gather(theta.container,
+#                key = "group",
+#                names(theta.container),
+#                value = "values")
+# resg$group1 <- factor(rep(1:newp, total.iter))
 
-somelines <- data.frame(value=c(as.vector(theta.origin)),boxplot.nr=c(1:(newp)))
-ggplot(resg, aes(group=group1, x = group1, y = values, fill=group1)) + ylim(-0.5,1) + 
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + geom_boxplot() + 
-  geom_segment(data=somelines,aes(x=boxplot.nr-0.5, xend=boxplot.nr+0.5, 
-                                  y=value,yend=value),inherit.aes=FALSE,color="red",linewidth=1.5)+
-  labs(x = "", y = "") + 
-  scale_x_discrete(labels = c(expression(bold(theta[0])),
-                              expression(bold(theta[1])),
-                              expression(bold(theta[2])),
-                              expression(bold(theta[3])),
-                              expression(bold(theta[4])),
-                              expression(bold(theta[5])),
-                              expression(bold(theta[6])),
-                              expression(bold(theta[7])),
-                              expression(bold(theta[8])),
-                              expression(bold(theta[9])),
-                              expression(bold(theta[10])))) + 
-  theme_minimal(base_size = 30) +
-  theme(plot.title = element_text(hjust = 0.5, size = 20),
-          legend.text.align = 0,
-          legend.title = element_blank(),
-          legend.text = element_text(size=25),
-          legend.margin=margin(0,0,0,-10),
-          legend.box.margin=margin(-10,0,-10,0),
-          plot.margin = margin(0,0,0,-20),
-          axis.text.x = element_text(hjust=0.35),
-          axis.text = element_text(size = 28))
+# somelines <- data.frame(value=c(as.vector(theta.origin)),boxplot.nr=c(1:(newp)))
+# ggplot(resg, aes(group=group1, x = group1, y = values, fill=group1)) + ylim(-0.5,1) + 
+#   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + geom_boxplot() + 
+#   geom_segment(data=somelines,aes(x=boxplot.nr-0.5, xend=boxplot.nr+0.5, 
+#                                   y=value,yend=value),inherit.aes=FALSE,color="red",linewidth=1.5)+
+#   labs(x = "", y = "") + 
+#   scale_x_discrete(labels = c(expression(bold(theta[0])),
+#                               expression(bold(theta[1])),
+#                               expression(bold(theta[2])),
+#                               expression(bold(theta[3])),
+#                               expression(bold(theta[4])),
+#                               expression(bold(theta[5])),
+#                               expression(bold(theta[6])),
+#                               expression(bold(theta[7])),
+#                               expression(bold(theta[8])),
+#                               expression(bold(theta[9])),
+#                               expression(bold(theta[10])))) + 
+#   theme_minimal(base_size = 30) +
+#   theme(plot.title = element_text(hjust = 0.5, size = 20),
+#           legend.text.align = 0,
+#           legend.title = element_blank(),
+#           legend.text = element_text(size=25),
+#           legend.margin=margin(0,0,0,-10),
+#           legend.box.margin=margin(-10,0,-10,0),
+#           plot.margin = margin(0,0,0,-20),
+#           axis.text.x = element_text(hjust=0.35),
+#           axis.text = element_text(size = 28))
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_theta_sc2-wi.pdf"), width=10, height = 7.78)
 
-resg <- gather(gamma.container,
-               key = "group",
-               names(gamma.container),
-               value = "values")
-resg$group1 <- factor(rep(1:(psi*p), total.iter))
-resg$group2 <- factor(rep(1:p, each = psi))
+# resg <- gather(gamma.container,
+#                key = "group",
+#                names(gamma.container),
+#                value = "values")
+# resg$group1 <- factor(rep(1:(psi*p), total.iter))
+# resg$group2 <- factor(rep(1:p, each = psi))
 
-somelines <- data.frame(value=c(as.vector(gamma.origin)),
-                        boxplot.nr=c(1:(psi*p)),
-                        covariate = factor(rep(1:p, each= psi)))
-ggplot(resg, aes(group=group1, x = group1, y = values, fill=group2)) + ylim(-1.1,1.1) + 
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + labs(x = "", y = "") + 
-  geom_boxplot() + #coord_cartesian(ylim=c(-1,1))+
-  geom_segment(data=somelines,aes(x=boxplot.nr-0.5,xend=boxplot.nr+0.5, 
-                                  y=value,yend=value),inherit.aes=FALSE,
-                                  color="red",
-                                  linewidth=1.5)+
-  scale_x_discrete(breaks=c(seq(0, (psi*p), psi)+7), 
-                    label = c(expression(bold(gamma[1])), 
-                              expression(bold(gamma[2])), 
-                              expression(bold(gamma[3])), 
-                              expression(bold(gamma[4])), 
-                              expression(bold(gamma[5])), 
-                              expression(bold(gamma[6])), 
-                              expression(bold(gamma[7])), 
-                              expression(bold(gamma[8])), 
-                              expression(bold(gamma[9])), 
-                              expression(bold(gamma[10]))),
-                    expand=c(0,3)) +
-  theme_minimal(base_size = 30) +
-  theme(plot.title = element_text(hjust = 0.5, size = 20),
-          legend.title = element_blank(),
-          legend.text = element_text(size=25),
-          legend.margin=margin(0,0,0,-10),
-          legend.box.margin=margin(-10,0,-10,0),
-          plot.margin = margin(0,0,0,-20),
-          axis.text.x = element_text(hjust=0.5),
-          axis.text = element_text(size = 28))
+# somelines <- data.frame(value=c(as.vector(gamma.origin)),
+#                         boxplot.nr=c(1:(psi*p)),
+#                         covariate = factor(rep(1:p, each= psi)))
+# ggplot(resg, aes(group=group1, x = group1, y = values, fill=group2)) + ylim(-1.1,1.1) + 
+#   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + labs(x = "", y = "") + 
+#   geom_boxplot() + #coord_cartesian(ylim=c(-1,1))+
+#   geom_segment(data=somelines,aes(x=boxplot.nr-0.5,xend=boxplot.nr+0.5, 
+#                                   y=value,yend=value),inherit.aes=FALSE,
+#                                   color="red",
+#                                   linewidth=1.5)+
+#   scale_x_discrete(breaks=c(seq(0, (psi*p), psi)+7), 
+#                     label = c(expression(bold(gamma[1])), 
+#                               expression(bold(gamma[2])), 
+#                               expression(bold(gamma[3])), 
+#                               expression(bold(gamma[4])), 
+#                               expression(bold(gamma[5])), 
+#                               expression(bold(gamma[6])), 
+#                               expression(bold(gamma[7])), 
+#                               expression(bold(gamma[8])), 
+#                               expression(bold(gamma[9])), 
+#                               expression(bold(gamma[10]))),
+#                     expand=c(0,3)) +
+#   theme_minimal(base_size = 30) +
+#   theme(plot.title = element_text(hjust = 0.5, size = 20),
+#           legend.title = element_blank(),
+#           legend.text = element_text(size=25),
+#           legend.margin=margin(0,0,0,-10),
+#           legend.box.margin=margin(-10,0,-10,0),
+#           plot.margin = margin(0,0,0,-20),
+#           axis.text.x = element_text(hjust=0.5),
+#           axis.text = element_text(size = 28))
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_gamma_sc2-wi.pdf"), width=10, height = 7.78)
 
