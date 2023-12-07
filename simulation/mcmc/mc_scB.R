@@ -16,7 +16,7 @@ library(cmdstanr)
 
 # Scenario B
 
-total.iter <- 10
+total.iter <- 2
 
 n <- 15000
 psi <- 20
@@ -104,7 +104,7 @@ model {
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += gamma_lpdf(lambda1 | 1, 10);
-    target += gamma_lpdf(lambda2 | 0.1, 10);
+    target += gamma_lpdf(lambda2 | 0.1, 100);
     target += normal_lpdf(theta[1] | 0, 100);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
     target += (newp * log(lambda1) + (p * psi * log(lambda2)));
@@ -119,10 +119,12 @@ model {
 
 # theta.container <- as.data.frame(matrix(, nrow = newp, ncol= total.iter))
 # gamma.container <- as.data.frame(matrix(, nrow = (p*psi), ncol = total.iter))
-newgsmooth.container <- as.data.frame(matrix(, nrow = (p*n), ncol = total.iter))
-newgl.container <- as.data.frame(matrix(, nrow = (p*n), ncol = total.iter))
-newgnl.container <- as.data.frame(matrix(, nrow = (p*n), ncol = total.iter))
-alpha.container <- as.data.frame(matrix(, nrow = n, ncol = total.iter))
+newgsmooth.container <- as.data.frame(matrix(, nrow = (p*(n-(1-threshold))), ncol = total.iter))
+newgl.container <- as.data.frame(matrix(, nrow = (p*(n-(1-threshold))), ncol = total.iter))
+newgnl.container <- as.data.frame(matrix(, nrow = (p*(n-(1-threshold))), ncol = total.iter))
+alpha.container <- as.data.frame(matrix(, nrow = (n-(1-threshold)), ncol = total.iter))
+alpha.lower.container <- as.data.frame(matrix(, nrow = (n-(1-threshold)), ncol = total.iter))
+alpha.upper.container <- as.data.frame(matrix(, nrow = (n-(1-threshold)), ncol = total.iter))
 
 for(iter in 1:total.iter){
     n <- 15000
@@ -222,7 +224,9 @@ for(iter in 1:total.iter){
     newgsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
     newalpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
 
+    alpha.lower.container[,iter] <- sort(newalpha.samples[,4])
     alpha.container[,iter] <- sort(newalpha.samples[,5])
+    alpha.upper.container[,iter] <- sort(newalpha.samples[,6])
     # theta.container[,iter] <- theta.samples[,5]
     # gamma.container[,iter] <- gamma.samples[,5]
     newgl.container[,iter] <- as.vector(matrix(newgl.samples[,5], nrow = n, byrow=TRUE))
@@ -235,6 +239,8 @@ alpha.container$true <- sort(alp.new)
 alpha.container <- cbind(alpha.container, t(apply(alpha.container[,1:total.iter], 1, quantile, c(0.05, .5, .95))))
 colnames(alpha.container)[(dim(alpha.container)[2]-2):(dim(alpha.container)[2])] <- c("q1","q2","q3")
 alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
+alpha.container$q1 <- t(apply(alpha.lower.container[,1:total.iter], 1, quantile, c(.5)))
+alpha.container$q3 <- t(apply(alpha.upper.container[,1:total.iter], 1, quantile, c(.5)))
 alpha.container <- as.data.frame(alpha.container)
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + ylab(expression(alpha(bold(c1)))) + xlab(expression(c)) + labs(col = "")
@@ -242,10 +248,10 @@ for(i in 1:total.iter){
   plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.2,linewidth = 0.7)
   # plt <- plt + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
 }
-print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
+print(plt + geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
         geom_line(aes(y=true, col = "True"), linewidth = 2) + 
         geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5, linetype = 2) +
-        #scale_fill_manual(values=c("steelblue"), name = "") +
+        scale_fill_manual(values=c("steelblue"), name = "") +
         scale_color_manual(values = c("steelblue", "red"))+
         guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) +
