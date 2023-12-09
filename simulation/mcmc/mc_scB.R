@@ -103,7 +103,7 @@ model {
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += gamma_lpdf(lambda1 | 1, 10);
-    target += gamma_lpdf(lambda2 | 0.1, 100);
+    target += gamma_lpdf(lambda2 | 0.1, 10);
     target += normal_lpdf(theta[1] | 0, 100);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
     target += (newp * log(lambda1) + (p * psi * log(lambda2)));
@@ -247,7 +247,7 @@ for(i in 1:total.iter){
   plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.2,linewidth = 0.7)
   # plt <- plt + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
 }
-print(plt + geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
+print(plt + geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) + ylim(0.5, 2.5) +
         geom_line(aes(y=true, col = "True"), linewidth = 2) + 
         geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5, linetype = 2) +
         scale_fill_manual(values=c("steelblue"), name = "") +
@@ -385,6 +385,8 @@ print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha 
                 strip.text = element_blank(),
                 axis.text = element_text(size = 20)))
 
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_sc2-wi.pdf"), width=10, height = 7.78)
+
 
 newgl.container$x <- seq(0,1, length.out = n)
 newgl.container$true <- as.vector(f.linear.new)
@@ -425,6 +427,8 @@ print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha 
                 strip.text = element_blank(),
                 axis.text = element_text(size = 20)))
 
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_linear_sc2-wi.pdf"), width=10, height = 7.78) 
+
 newgnl.container$x <- seq(0,1, length.out = n)
 newgnl.container$true <- as.vector(f.nonlinear.new)
 newgnl.container <- cbind(newgnl.container, t(apply(newgnl.container[,1:total.iter], 1, quantile, c(0.05, .5, .95))))
@@ -463,3 +467,5 @@ print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha 
                 plot.margin = margin(0,0,0,-20),
                 strip.text = element_blank(),
                 axis.text = element_text(size = 20)))
+
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_nonlinear_sc2-wi.pdf"), width=10, height = 7.78) 
