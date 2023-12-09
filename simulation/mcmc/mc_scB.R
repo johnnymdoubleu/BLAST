@@ -12,7 +12,6 @@ library(ReIns)
 library(evir)
 library(rstan)
 library(cmdstanr)
-내 마음을 가득 채운 / 은혜로다 / 주께 가까이
 
 # Scenario B
 
