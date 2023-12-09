@@ -12,14 +12,14 @@ library(ReIns)
 library(evir)
 library(rstan)
 library(cmdstanr)
-
+내 마음을 가득 채운 / 은혜로다 / 주께 가까이
 
 # Scenario B
 
-total.iter <- 10
+total.iter <- 100
 
 n <- 15000
-psi <- 20
+psi <- 10
 threshold <- 0.95
 p <- 5
 newp <- p+1
@@ -243,7 +243,7 @@ alpha.container$q1 <- apply(alpha.lower.container[,1:total.iter], 1, quantile, c
 alpha.container$q3 <- apply(alpha.upper.container[,1:total.iter], 1, quantile, c(.5))
 alpha.container <- as.data.frame(alpha.container)
 
-plt <- ggplot(data = alpha.container, aes(x = x)) + ylab(expression(alpha(bold(c1)))) + xlab(expression(c)) + labs(col = "")
+plt <- ggplot(data = alpha.container, aes(x = x)) + ylab(expression(alpha(c*bold("1")))) + xlab(expression(c)) + labs(col = "")
 for(i in 1:total.iter){
   plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.2,linewidth = 0.7)
   # plt <- plt + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
@@ -355,7 +355,7 @@ newgsmooth.container$mean <- rowMeans(newgsmooth.container[,1:total.iter])
 newgsmooth.container$covariate <- gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]", "g[6]"))
 newgsmooth.container <- as.data.frame(newgsmooth.container)
 
-plt <- ggplot(data = newgsmooth.container, aes(x = x, group = covariate)) + ylab("") + xlab("")
+plt <- ggplot(data = newgsmooth.container, aes(x = x, group = covariate)) + ylab("") + xlab(expression(c))
 if(total.iter < 50){
   for(i in 1:total.iter){
     plt <- plt + geom_line(aes(y = .data[[names(newgsmooth.container)[i]]]), alpha = 0.2, linewidth = 0.7)
@@ -369,9 +369,12 @@ if(total.iter < 50){
 }
 print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
         geom_line(aes(y=true, col = "True"), linewidth = 2) + 
-        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5, linetype = 2) + ylim(-0.4, 0.2) +
-        facet_wrap(covariate ~ ., scales = "free_x", nrow = 5,
-                    labeller = label_parsed, strip.position = "left") +
+        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5, linetype = 2) + 
+        ylim(-0.23, 0.2) +
+        # facet_wrap(covariate ~ ., scales = "free_x", nrow = 5,
+        #             labeller = label_parsed, strip.position = "left") +
+        facet_grid(covariate ~ ., scales = "free_x", switch = "y",
+                    labeller = label_parsed) +        
         # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
         #scale_fill_manual(values=c("steelblue"), name = "") +
         scale_color_manual(values = c("steelblue", "red"))+
@@ -379,8 +382,9 @@ print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha 
           fill = guide_legend(order = 1)) +
         theme_minimal(base_size = 30) +
         theme(legend.position = "none",
+                plot.margin = margin(0,0,0,-20),
                 strip.text = element_blank(),
-                axis.text = element_text(size = 35)))
+                axis.text = element_text(size = 20)))
 
 
 newgl.container$x <- seq(0,1, length.out = n)
@@ -391,7 +395,7 @@ newgl.container$mean <- rowMeans(newgl.container[,1:total.iter])
 newgl.container$covariate <- gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]", "g[6]"))
 newgl.container <- as.data.frame(newgl.container)
 
-plt <- ggplot(data = newgl.container, aes(x = x, group = covariate)) + ylab("") + xlab("")
+plt <- ggplot(data = newgl.container, aes(x = x, group = covariate)) + ylab("") + xlab(expression(c))
 if(total.iter < 50){
   for(i in 1:total.iter){
     plt <- plt + geom_line(aes(y = .data[[names(newgl.container)[i]]]), alpha = 0.2, linewidth = 0.7)
@@ -405,9 +409,12 @@ if(total.iter < 50){
 }
 print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
         geom_line(aes(y=true, col = "True"), linewidth = 2) + 
-        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5, linetype = 2) + ylim(-0.4, 0.2) +
-        facet_wrap(covariate ~ ., scales = "free_x", nrow = 5,
-                    labeller = label_parsed, strip.position = "left") +
+        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5, linetype = 2) + 
+        ylim(-0.23, 0.2) +
+        # facet_wrap(covariate ~ ., scales = "free_x", nrow = 5,
+        #             labeller = label_parsed, strip.position = "left") +
+        facet_grid(covariate ~ ., scales = "free_x", switch = "y",
+                    labeller = label_parsed) +  
         # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
         #scale_fill_manual(values=c("steelblue"), name = "") +
         scale_color_manual(values = c("steelblue", "red"))+
@@ -415,8 +422,9 @@ print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha 
           fill = guide_legend(order = 1)) +
         theme_minimal(base_size = 30) +
         theme(legend.position = "none",
+                plot.margin = margin(0,0,0,-20),
                 strip.text = element_blank(),
-                axis.text = element_text(size = 35)))
+                axis.text = element_text(size = 20)))
 
 newgnl.container$x <- seq(0,1, length.out = n)
 newgnl.container$true <- as.vector(f.nonlinear.new)
@@ -426,7 +434,7 @@ newgnl.container$mean <- rowMeans(newgnl.container[,1:total.iter])
 newgnl.container$covariate <- gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]", "g[6]"))
 newgnl.container <- as.data.frame(newgnl.container)
 
-plt <- ggplot(data = newgnl.container, aes(x = x, group = covariate)) + ylab("") + xlab("")
+plt <- ggplot(data = newgnl.container, aes(x = x, group = covariate)) + ylab("") + xlab(expression(c))
 if(total.iter < 50){
   for(i in 1:total.iter){
     plt <- plt + geom_line(aes(y = .data[[names(newgnl.container)[i]]]), alpha = 0.2, linewidth = 0.7)
@@ -440,9 +448,12 @@ if(total.iter < 50){
 }
 print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
         geom_line(aes(y=true, col = "True"), linewidth = 2) + 
-        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5, linetype = 2) + ylim(-0.4, 0.2) +
-        facet_wrap(covariate ~ ., scales = "free_x", nrow = 5,
-                    labeller = label_parsed, strip.position = "left") +
+        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5, linetype = 2) + 
+        ylim(-0.23, 0.2) +
+        # facet_wrap(covariate ~ ., scales = "free_x", nrow = 5,
+        #             labeller = label_parsed, strip.position = "left") +
+        facet_grid(covariate ~ ., scales = "free_x", switch = "y",
+                    labeller = label_parsed) +  
         # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
         #scale_fill_manual(values=c("steelblue"), name = "") +
         scale_color_manual(values = c("steelblue", "red"))+
@@ -450,5 +461,6 @@ print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha 
           fill = guide_legend(order = 1)) +
         theme_minimal(base_size = 30) +
         theme(legend.position = "none",
+                plot.margin = margin(0,0,0,-20),
                 strip.text = element_blank(),
-                axis.text = element_text(size = 35)))
+                axis.text = element_text(size = 20)))
