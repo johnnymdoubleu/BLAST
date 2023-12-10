@@ -14,7 +14,6 @@ library(rstan)
 library(cmdstanr)
 library(rmutil)
 
-
 # Scenario D
 
 total.iter <- 100
