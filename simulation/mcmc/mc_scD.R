@@ -1,7 +1,5 @@
 library(npreg)
-library(tmvnsim)
 library(reshape2)
-library(Pareto)
 suppressMessages(library(tidyverse))
 library(JOPS)
 library(readxl)
