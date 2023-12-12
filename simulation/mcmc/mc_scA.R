@@ -243,9 +243,14 @@ alpha.container$q3 <- apply(alpha.upper.container[,1:total.iter], 1, quantile, c
 alpha.container <- as.data.frame(alpha.container)
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + ylab(expression(alpha(c*bold("1")))) + xlab(expression(c)) + labs(col = "")
-for(i in 1:total.iter){
-  plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.2,linewidth = 0.7)
-  # plt <- plt + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
+if(total.iter < 50){
+  for(i in 1:total.iter){
+    plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.2, linewidth = 0.7)
+  }
+} else{
+  for(i in 50:100){
+    plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.2, linewidth = 0.7)
+  }
 }
 print(plt + geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) + ylim(0.5, 2.5) + 
         geom_line(aes(y=true, col = "True"), linewidth = 2) + 
