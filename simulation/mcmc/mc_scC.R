@@ -246,7 +246,7 @@ alpha.container$q3 <- apply(alpha.upper.container[,1:total.iter], 1, quantile, c
 alpha.container <- as.data.frame(alpha.container)
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + ylab(expression(alpha(c*bold("1")))) + xlab(expression(c)) + labs(col = "")
-if(total.iter < 50){
+if(total.iter <= 50){
   for(i in 1:total.iter){
     plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.2, linewidth = 0.7)
   }
@@ -475,4 +475,4 @@ print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha 
                 strip.text = element_blank(),
                 axis.text = element_text(size = 20)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_nonlinear_sc3-wi.pdf"), width=10, height = 7.78) 
+ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_nonlinear_sc3-wi.pdf"), width=10, height = 7.78) 

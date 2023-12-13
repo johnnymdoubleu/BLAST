@@ -458,7 +458,7 @@ newgnl.container$covariate <- gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]",
 newgnl.container <- as.data.frame(newgnl.container)
 
 plt <- ggplot(data = newgnl.container, aes(x = x, group = covariate)) + ylab("") + xlab(expression(c))
-if(total.iter < 50){
+if(total.iter <= 50){
   for(i in 1:total.iter){
     plt <- plt + geom_line(aes(y = .data[[names(newgnl.container)[i]]]), alpha = 0.2, linewidth = 0.7)
     # plt <- plt + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
