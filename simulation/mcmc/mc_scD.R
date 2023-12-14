@@ -14,7 +14,7 @@ library(rmutil)
 
 # Scenario D
 
-total.iter <- 100
+total.iter <- 50
 
 n <- 15000
 psi <- 10
@@ -258,7 +258,7 @@ alpha.container$q3 <- apply(alpha.upper.container[,1:total.iter], 1, quantile, c
 alpha.container <- as.data.frame(alpha.container)
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + ylab(expression(alpha(c*bold("1")))) + xlab(expression(c)) + labs(col = "")
-if(total.iter < 50){
+if(total.iter <= 50){
   for(i in 1:total.iter){
     plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.2, linewidth = 0.7)
   }
@@ -376,7 +376,7 @@ newgsmooth.container$covariate <- gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[
 newgsmooth.container <- as.data.frame(newgsmooth.container)
 
 plt <- ggplot(data = newgsmooth.container, aes(x = x, group = covariate)) + ylab("") + xlab(expression(c))
-if(total.iter < 50){
+if(total.iter <= 50){
   for(i in 1:total.iter){
     plt <- plt + geom_line(aes(y = .data[[names(newgsmooth.container)[i]]]), alpha = 0.2, linewidth = 0.7)
     # plt <- plt + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
@@ -417,7 +417,7 @@ newgl.container$covariate <- gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", 
 newgl.container <- as.data.frame(newgl.container)
 
 plt <- ggplot(data = newgl.container, aes(x = x, group = covariate)) + ylab("") + xlab(expression(c))
-if(total.iter < 50){
+if(total.iter <= 50){
   for(i in 1:total.iter){
     plt <- plt + geom_line(aes(y = .data[[names(newgl.container)[i]]]), alpha = 0.2, linewidth = 0.7)
     # plt <- plt + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
