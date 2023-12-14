@@ -213,7 +213,7 @@ model {
     }
 }
 "
-, "model_simulation_sc3.stan")
+, "model_simulation_sc4.stan")
 
 data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, 
                     atau = ((psi+1)/2), newp = (p+1),
