@@ -286,7 +286,7 @@ fit1 <- stan(
 
 # saveRDS(fit1, file=paste0("./BRSTIR/application/",Sys.Date(),"_stanfit.rds"))
 posterior <- extract(fit1)
-str(posterior)
+# str(posterior)
 
 # print(as.mcmc(fit1), pars=c("alpha", "gamma", "intercept", "theta", "lambda1", "lambda2","lp__"), probs=c(.05,.5,.95))
 plot(fit1, plotfun = "trace", pars = c("theta"), nrow = 3)
@@ -296,7 +296,7 @@ plot(fit1, plotfun = "trace", pars = c("lambda1", "lambda2"), nrow = 2)
 
 # traceplot(fit1, pars = c("theta"))
 # traceplot(fit1, pars = c("lambda1", "lambda2"), inc_warmup = TRUE, nrow = 2)
-fit.v2 <- as.mcmc(fit1)
+# fit.v2 <- as.mcmc(fit1)
 
 # alpha.summary <- fit.v2$summary$all.chains
 
