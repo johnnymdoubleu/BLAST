@@ -18,7 +18,7 @@ library(bayesplot)
 # library(mgcv)
 library(MCMCvis)
 library(cmdstanr)
-# library(ggplotify)
+
 # Structure of the FWI System
 #DSR : Dail Severity Rating
 #FWI : Fire Weather Index
@@ -227,9 +227,9 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 1, 10);
-    target += gamma_lpdf(lambda2 | 0.1, 1);
-    target += normal_lpdf(theta[1] | 0, 1);
+    target += gamma_lpdf(lambda1 | 0.1, 0.1);
+    target += gamma_lpdf(lambda2 | 0.1, 0.1);
+    target += normal_lpdf(theta[1] | 0, 100);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
     target += (newp * log(lambda1) + (p * psi * log(lambda2)));
     for (j in 1:p){
@@ -359,12 +359,12 @@ theta.q3 <- theta.samples[,6]
 # theta.samples <- data.frame(apply(posterior$theta, 2, summary))
 
 
-# df.theta <- data.frame("seq" = seq(1, (p+1)),
-#                         "m" = c(theta.q2),
-#                         "l" = c(theta.q1),
-#                         "u" = c(theta.q3))
-# df.theta$covariate <- factor(c("\u03b8",names(fwi.scaled)), levels = c("\u03b8",colnames(fwi.scaled)))
-# df.theta$labels <- factor(c("\u03b8",colnames(fwi.scaled)))
+df.theta <- data.frame("seq" = seq(1, (p+1)),
+                        "m" = c(theta.q2),
+                        "l" = c(theta.q1),
+                        "u" = c(theta.q3))
+df.theta$covariate <- factor(c("\u03b8",names(fwi.scaled)), levels = c("\u03b8",colnames(fwi.scaled)))
+df.theta$labels <- factor(c("\u03b8",colnames(fwi.scaled)))
 
 ggplot(df.theta, aes(x = covariate, y=m, color = covariate)) + ylab("") + xlab('') +
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
