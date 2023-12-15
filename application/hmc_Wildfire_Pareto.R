@@ -228,7 +228,7 @@ model {
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += gamma_lpdf(lambda1 | 1, 10);
-    target += gamma_lpdf(lambda2 | 0.1, 10);
+    target += gamma_lpdf(lambda2 | 0.1, 1);
     target += normal_lpdf(theta[1] | 0, 1);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
     target += (newp * log(lambda1) + (p * psi * log(lambda2)));
@@ -280,8 +280,8 @@ fit1 <- stan(
     init = init.alpha,      # initial value
     # init_r = 1,
     chains = 3,             # number of Markov chains
-    warmup = 1000,          # number of warmup iterations per chain
-    iter = 2000,            # total number of iterations per chain
+    warmup = 1500,          # number of warmup iterations per chain
+    iter = 3000,            # total number of iterations per chain
     cores = 4,              # number of cores (could use one per chain)
     refresh = 500           # no progress shown
 )
@@ -291,9 +291,9 @@ posterior <- extract(fit1)
 # str(posterior)
 
 # print(as.mcmc(fit1), pars=c("alpha", "gamma", "intercept", "theta", "lambda1", "lambda2","lp__"), probs=c(.05,.5,.95))
-plot(fit1, plotfun = "trace", pars = c("theta"), nrow = 3)
+# plot(fit1, plotfun = "trace", pars = c("theta"), nrow = 3)
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_theta_trace.pdf"), width=10, height = 7.78)
-plot(fit1, plotfun = "trace", pars = c("lambda1", "lambda2"), nrow = 2)
+# plot(fit1, plotfun = "trace", pars = c("lambda1", "lambda2"), nrow = 2)
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_lambda.pdf"), width=10, height = 7.78)
 
 # traceplot(fit1, pars = c("theta"))
@@ -366,29 +366,29 @@ theta.q3 <- theta.samples[,6]
 # df.theta$covariate <- factor(c("\u03b8",names(fwi.scaled)), levels = c("\u03b8",colnames(fwi.scaled)))
 # df.theta$labels <- factor(c("\u03b8",colnames(fwi.scaled)))
 
-# ggplot(df.theta, aes(x = covariate, y=m, color = covariate)) + ylab("") + xlab('') +
-#   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-#   geom_point(size = 5) + 
-#   geom_errorbar(aes(ymin = l, ymax = u), width = 0.3, linewidth =1.2) + 
-#   scale_x_discrete(labels = c(expression(bold(theta[0])),
-#                               expression(bold(theta[1])),
-#                               expression(bold(theta[2])),
-#                               expression(bold(theta[3])),
-#                               expression(bold(theta[4])),
-#                               expression(bold(theta[5])),
-#                               expression(bold(theta[6])),
-#                               expression(bold(theta[7])))) + 
-#   scale_color_discrete(labels = c(expression(theta[0]),colnames(fwi.scaled))) + 
-#   theme_minimal(base_size = 30) +
-#   theme(plot.title = element_text(hjust = 0.5, size = 20),
-#           legend.text.align = 0,
-#           legend.title = element_blank(),
-#           legend.text = element_text(size=25),
-#           legend.margin=margin(0,0,0,-10),
-#           legend.box.margin=margin(-10,0,-10,0),
-#           plot.margin = margin(0,0,0,-20),
-#           axis.text.x = element_text(hjust=0.35),
-#           axis.text = element_text(size = 28))
+ggplot(df.theta, aes(x = covariate, y=m, color = covariate)) + ylab("") + xlab('') +
+  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+  geom_point(size = 5) + 
+  geom_errorbar(aes(ymin = l, ymax = u), width = 0.3, linewidth =1.2) + 
+  scale_x_discrete(labels = c(expression(bold(theta[0])),
+                              expression(bold(theta[1])),
+                              expression(bold(theta[2])),
+                              expression(bold(theta[3])),
+                              expression(bold(theta[4])),
+                              expression(bold(theta[5])),
+                              expression(bold(theta[6])),
+                              expression(bold(theta[7])))) + 
+  scale_color_discrete(labels = c(expression(theta[0]),colnames(fwi.scaled))) + 
+  theme_minimal(base_size = 30) +
+  theme(plot.title = element_text(hjust = 0.5, size = 20),
+          legend.text.align = 0,
+          legend.title = element_blank(),
+          legend.text = element_text(size=25),
+          legend.margin=margin(0,0,0,-10),
+          legend.box.margin=margin(-10,0,-10,0),
+          plot.margin = margin(0,0,0,-20),
+          axis.text.x = element_text(hjust=0.35),
+          axis.text = element_text(size = 28))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_theta.pdf"), width=10, height = 7.78)
 
 # ggplot(data.frame(group = factor(1:(p+1)), m=theta.post.mean, l = theta.q1, u = theta.q3), 
@@ -407,36 +407,36 @@ theta.q3 <- theta.samples[,6]
 #         axis.text.x = element_text(angle = 0, hjust = 0.5))
 
 
-# df.gamma <- data.frame("seq" = seq(1, (psi*p)), 
-#                   "m" = as.vector(gamma.q2),
-#                   "l" = as.vector(gamma.q1),
-#                   "u" = as.vector(gamma.q3))
-# df.gamma$covariate <- factor(rep(names(fwi.scaled), each = psi, length.out = nrow(df.gamma)), levels = colnames(fwi.scaled))
-# df.gamma$labels <- factor(1:(psi*p))
-# ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) + 
-#   geom_errorbar(aes(ymin = l, ymax = u), alpha = 0.4, width = 4, linewidth = 1.2) +
-#   geom_point(size = 4) + ylab("") + xlab("" ) + #xlim(1,(psi*p)) +
-#   # geom_ribbon(aes(ymin = l, ymax = u)) +
-#   # geom_point(size = 4, color = "black") + 
-#   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-#   scale_x_discrete(breaks=c(seq(0, (psi*p), psi)+10), 
-#                     label = c(expression(bold(gamma[1])), 
-#                               expression(bold(gamma[2])), 
-#                               expression(bold(gamma[3])), 
-#                               expression(bold(gamma[4])), 
-#                               expression(bold(gamma[5])), 
-#                               expression(bold(gamma[6])), 
-#                               expression(bold(gamma[7]))),
-#                     expand=c(0,10)) +
-#   theme_minimal(base_size = 30) +
-#   theme(plot.title = element_text(hjust = 0.5, size = 20),
-#           legend.title = element_blank(),
-#           legend.text = element_text(size=25),
-#           legend.margin=margin(0,0,0,-10),
-#           legend.box.margin=margin(-10,0,-10,0),
-#           plot.margin = margin(0,0,0,-20),
-#           axis.text.x = element_text(hjust=0.5),
-#           axis.text = element_text(size = 28))
+df.gamma <- data.frame("seq" = seq(1, (psi*p)), 
+                  "m" = as.vector(gamma.q2),
+                  "l" = as.vector(gamma.q1),
+                  "u" = as.vector(gamma.q3))
+df.gamma$covariate <- factor(rep(names(fwi.scaled), each = psi, length.out = nrow(df.gamma)), levels = colnames(fwi.scaled))
+df.gamma$labels <- factor(1:(psi*p))
+ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) + 
+  geom_errorbar(aes(ymin = l, ymax = u), alpha = 0.4, width = 4, linewidth = 1.2) +
+  geom_point(size = 4) + ylab("") + xlab("" ) + #xlim(1,(psi*p)) +
+  # geom_ribbon(aes(ymin = l, ymax = u)) +
+  # geom_point(size = 4, color = "black") + 
+  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+  scale_x_discrete(breaks=c(seq(0, (psi*p), psi)+10), 
+                    label = c(expression(bold(gamma[1])), 
+                              expression(bold(gamma[2])), 
+                              expression(bold(gamma[3])), 
+                              expression(bold(gamma[4])), 
+                              expression(bold(gamma[5])), 
+                              expression(bold(gamma[6])), 
+                              expression(bold(gamma[7]))),
+                    expand=c(0,10)) +
+  theme_minimal(base_size = 30) +
+  theme(plot.title = element_text(hjust = 0.5, size = 20),
+          legend.title = element_blank(),
+          legend.text = element_text(size=25),
+          legend.margin=margin(0,0,0,-10),
+          legend.box.margin=margin(-10,0,-10,0),
+          plot.margin = margin(0,0,0,-20),
+          axis.text.x = element_text(hjust=0.5),
+          axis.text = element_text(size = 28))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_gamma.pdf"), width=10, height = 7.78)
 
 
@@ -478,7 +478,7 @@ equal_breaks <- function(n = 3, s = 0.1,...){
   }
 }
 
-data.smooth <- data.frame("x"=newx,
+data.smooth <- data.frame("x"= as.vector(xholder),
                           "post.mean" = as.vector(sort(g.smooth.mean)),
                           "q1" = as.vector(sort(g.smooth.q1)),
                           "q2" = as.vector(sort(g.smooth.q2)),
