@@ -67,6 +67,8 @@ setwd("C:/Users/Johnny Lee/Documents/GitHub")
 path <- "./BRSTIR/application/DadosDiariosPT_FWI.xlsx"
 # importing fire weather index
 cov <- multiplesheets(path)
+
+
 fwi.scaled <- fwi.index <- data.frame(DSR = double(length(Y)),
                                         FWI = double(length(Y)),
                                         BUI = double(length(Y)),
@@ -227,7 +229,7 @@ model {
     }
     target += gamma_lpdf(lambda1 | 1, 10);
     target += gamma_lpdf(lambda2 | 0.1, 10);
-    target += normal_lpdf(theta[1] | 0, 100);
+    target += normal_lpdf(theta[1] | 0, 1);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
     target += (newp * log(lambda1) + (p * psi * log(lambda2)));
     for (j in 1:p){
@@ -451,6 +453,22 @@ g.smooth.q1 <- as.vector(matrix(gsmooth.samples[,4], nrow = n, byrow=TRUE))
 g.smooth.q2 <- as.vector(matrix(gsmooth.samples[,5], nrow = n, byrow=TRUE))
 g.smooth.q3 <- as.vector(matrix(gsmooth.samples[,6], nrow = n, byrow=TRUE))
 
+g.nonlinear.q2 <- g.linear.q2 <- g.q2 <- g.nonlinear.q1 <- g.linear.q1 <- g.q1 <- g.nonlinear.q3 <- g.linear.q3 <- g.q3 <- g.nonlinear.new <- g.linear.new <- g.new <- matrix(, nrow = n, ncol=p)
+for (j in 1:p){
+  g.linear.new[,j] <- xholder.linear[,j] * theta.post.mean[(j+1)]
+  g.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.post.mean, nrow=psi)[,j] 
+  g.new[1:n, j] <- g.linear.new[,j] + g.nonlinear.new[,j]
+  g.linear.q1[,j] <- xholder.linear[,j] * theta.q1[(j+1)]
+  g.nonlinear.q1[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.q1, nrow=psi)[,j] 
+  g.q1[1:n, j] <- g.linear.q1[,j] + g.nonlinear.q1[,j]
+  g.linear.q2[,j] <- xholder.linear[,j] * theta.q2[(j+1)]
+  g.nonlinear.q2[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.q2, nrow=psi)[,j] 
+  g.q2[1:n, j] <- g.linear.q2[,j] + g.nonlinear.q2[,j]  
+  g.linear.q3[,j] <- xholder.linear[,j] * theta.q3[(j+1)]
+  g.nonlinear.q3[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.q3, nrow=psi)[,j] 
+  g.q3[1:n, j] <- g.linear.q3[,j] + g.nonlinear.q3[,j]
+}
+
 
 equal_breaks <- function(n = 3, s = 0.1,...){
   function(x){
@@ -461,24 +479,24 @@ equal_breaks <- function(n = 3, s = 0.1,...){
 }
 
 data.smooth <- data.frame("x"=newx,
-                          "post.mean" = as.vector(g.smooth.mean),
-                          "q1" = as.vector(g.smooth.q1),
-                          "q2" = as.vector(g.smooth.q2),
-                          "q3" = as.vector(g.smooth.q3),
-                          "covariates" = gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]", "g[6]", "g[7]")),
+                          "post.mean" = as.vector(sort(g.smooth.mean)),
+                          "q1" = as.vector(sort(g.smooth.q1)),
+                          "q2" = as.vector(sort(g.smooth.q2)),
+                          "q3" = as.vector(sort(g.smooth.q3)),
+                          "covariates" = gl(p, n, (p*n), labels = c("DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC")),
                           "fakelab" = rep(1, (p*n)),
-                          "replicate" = gl(p, n, (p*n), labels = c("x[1]", "x[2]", "x[3]", "x[4]", "x[5]", "x[6]", "x[7]")))
+                          "replicate" = gl(p, n, (p*n), labels = c("DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC")))
 
 ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
-  geom_line(aes(y=true, colour = "True"), linewidth=2) + 
+  # geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
+  # geom_line(aes(y=true, colour = "True"), linewidth=2) + 
   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
   ylab("") + xlab("") +
-  facet_grid(covariates ~ ., scales = "free_x", switch = "y",
+  facet_grid(covariates ~ ., scales = "free", switch = "y",
               labeller = label_parsed) + 
   scale_fill_manual(values=c("steelblue"), name = "") +
-  scale_color_manual(values=c("steelblue", "red")) + 
+  scale_color_manual(values=c("steelblue")) + 
   guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) + #ylim(-0.65, 0.3) +
   scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
@@ -490,24 +508,24 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_smooth.pdf"), width=12.5, height = 15)
 
 data.linear <- data.frame("x"= c(1:n),
-                          "post.mean" = as.vector(g.linear.mean),
-                          "q1" = as.vector(g.linear.q1),
-                          "q2" = as.vector(g.linear.q2),
-                          "q3" = as.vector(g.linear.q3),
-                          "covariates" = gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]", "g[6]", "g[7]")),
+                          "post.mean" = as.vector(sort(g.linear.mean)),
+                          "q1" = as.vector(sort(g.linear.q1)),
+                          "q2" = as.vector(sort(g.linear.q2)),
+                          "q3" = as.vector(sort(g.linear.q3)),
+                          "covariates" = gl(p, n, (p*n), labels = c("DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC")),
                           "fakelab" = rep(1, (p*n)),
-                          "replicate" = gl(p, n, (p*n), labels = c("x[1]", "x[2]", "x[3]", "x[4]", "x[5]", "x[6]", "x[7]")))
+                          "replicate" = gl(p, n, (p*n), labels = c("DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC")))
 
 ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
-  geom_line(aes(y=true, colour = "True"), linewidth=2) + 
+  # geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
+  # geom_line(aes(y=true, colour = "True"), linewidth=2) + 
   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
   ylab("") + xlab("") +
   facet_grid(covariates ~ ., scales = "free_x", switch = "y",
               labeller = label_parsed) + 
-  scale_fill_manual(values=c("steelblue"), name = "") +
-  scale_color_manual(values=c("steelblue", "red")) + 
+  # scale_fill_manual(values=c("steelblue"), name = "") +
+  scale_color_manual(values=c("steelblue")) + 
   guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) + #ylim(-0.65, 0.3) +
   scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
@@ -522,24 +540,24 @@ ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) +
 # q3 <- as.vector(apply(as.data.frame(matrix(alpha.summary[((n+(n*p))+1):(n+(2*n*p)),5], nrow = n, ncol = p)), 2, sort, decreasing=F))
 
 data.nonlinear <- data.frame("x"=newx,
-                          "post.mean" = as.vector(g.nonlinear.mean),
-                          "q1" = as.vector(g.nonlinear.q1),
-                          "q2" = as.vector(g.nonlinear.q2),
-                          "q3" = as.vector(g.nonlinear.q3),
-                          "covariates" = gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]", "g[6]", "g[7]")),
+                          "post.mean" = as.vector(sort(g.nonlinear.mean)),
+                          "q1" = as.vector(sort(g.nonlinear.q1)),
+                          "q2" = as.vector(sort(g.nonlinear.q2)),
+                          "q3" = as.vector(sort(g.nonlinear.q3)),
+                          "covariates" = gl(p, n, (p*n), labels = c("DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC")),
                           "fakelab" = rep(1, (p*n)),
-                          "replicate" = gl(p, n, (p*n), labels = c("x[1]", "x[2]", "x[3]", "x[4]", "x[5]", "x[6]", "x[7]")))
+                          "replicate" = gl(p, n, (p*n), labels = c("DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC")))
 
 ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
-  geom_line(aes(y=true, colour = "True"), linewidth=2) + 
+  # geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
+  # geom_line(aes(y=true, colour = "True"), linewidth=2) + 
   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
   ylab("") + xlab("") +
   facet_grid(covariates ~ ., scales = "free_x", switch = "y",
               labeller = label_parsed) + 
   scale_fill_manual(values=c("steelblue"), name = "") +
-  scale_color_manual(values=c("steelblue", "red")) + 
+  scale_color_manual(values=c("steelblue")) + 
   guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) + #ylim(-0.65, 0.3) +
   scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
@@ -551,20 +569,19 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_nonlinear.pdf"), width=12.5, height = 15)
 
 data.scenario <- data.frame("x" = c(1:n),
-                            "true" = sort(alp.new),
                             "post.mean" = sort(alpha.samples[,1]),
                             "post.median" = sort(alpha.samples[,5]),
                             "q1" = sort(alpha.samples[,4]),
                             "q3" = sort(alpha.samples[,6]))
 
 ggplot(data.scenario, aes(x=x)) + 
-  ylab(expression(alpha(c*bold("1")))) + xlab(expression(c)) + labs(col = "")
+  ylab(expression(alpha(bold(x)))) + xlab(expression(x)) + labs(col = "") +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
-  geom_line(aes(y = true, col = "True"), linewidth = 2) +
-  ylim(0.5, 3) +
+  # geom_line(aes(y = true, col = "True"), linewidth = 2) +
+  ylim(0, 10) +
   geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
   scale_fill_manual(values=c("steelblue"), name = "") +
-  scale_color_manual(values = c("steelblue","red")) + 
+  scale_color_manual(values = c("steelblue")) + 
   guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) +
   theme_minimal(base_size = 30) +
