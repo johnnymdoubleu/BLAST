@@ -260,18 +260,18 @@ set_cmdstan_path(path = NULL)
 # here using the example model that comes with CmdStan
 file <- file.path(cmdstan_path(), "model.stan")
 
-init.alpha <- list(list(gamma = array(rep(0,(psi*p)), dim=c(psi, p)),
+init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
                         theta = rep(0, (p+1)), 
-                        tau = rep(0.1, p), sigma = 0.01, 
+                        tau = rep(0.1, p), sigma = 0.1, 
                         lambda1 = 0.1, lambda2 = 0.1),
-                  list(gamma = array(rep(0.002,(psi*p)), dim=c(psi, p)),
-                        theta = rep(0.001, (p+1)), 
-                        tau = rep(0.1, p), sigma = 0.01,
-                        lambda1 = 0.1, lambda2 = 0.1),
-                  list(gamma = array(rep(-0.002, (psi*p)), dim=c(psi, p)),
-                        theta = rep(-0.002, (p+1)), 
-                        tau = rep(0.1, p), sigma = 0.01,
-                        lambda1 = 0.1, lambda2 = 0.1))
+                  list(gamma = array(rep(0.02, (psi*p)), dim=c(psi, p)),
+                        theta = rep(0.01, (p+1)), 
+                        tau = rep(0.01, p), sigma = 0.001,
+                        lambda1 = 0.01, lambda2 = 0.1),
+                  list(gamma = array(rep(0.01, (psi*p)), dim=c(psi, p)),
+                        theta = rep(0.05, (p+1)), 
+                        tau = rep(0.01, p), sigma = 0.01,
+                        lambda1 = 0.1, lambda2 = 0.01))
 
 # stanc("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/application/model1.stan")
 fit1 <- stan(
