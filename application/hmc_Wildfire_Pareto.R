@@ -140,7 +140,7 @@ df.extreme <- as.data.frame(cbind(month = fwi.index$month[which(Y>u)], df.extrem
 #       axis.text = element_text(size = 25),
 #       axis.title = element_text(size = 30))
 
-psi <- 10
+psi <- 20
 n <- dim(fwi.scaled)[[1]]
 p <- dim(fwi.scaled)[[2]]
 no.theta <- 1
@@ -218,7 +218,7 @@ transformed parameters {
         gsmooth[,j] = gl[,j] + gnl[,j];
     };
     for (i in 1:n){
-        alpha[i] = exp(theta[1] + sum(gnl[i,]) + sum(gl[i,]));
+        alpha[i] = exp(theta[1] + sum(gsmooth[i,]));
     };
 }
 
@@ -229,9 +229,9 @@ model {
     }
     target += gamma_lpdf(lambda1 | 0.1, 0.1);
     target += gamma_lpdf(lambda2 | 0.1, 0.1);
-    target += normal_lpdf(theta[1] | 0, 100);
+    target += normal_lpdf(theta[1] | 0, 1);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
-    target += (newp * log(lambda1) + (p * psi * log(lambda2)));
+    target += (p * log(lambda1) + (p * psi * log(lambda2)));
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, lambda2/sqrt(2));
@@ -507,7 +507,7 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
           axis.text = element_text(size = 20))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_smooth.pdf"), width=12.5, height = 15)
 
-data.linear <- data.frame("x"= c(1:n),
+data.linear <- data.frame("x"= as.vector(xholder),
                           "post.mean" = as.vector(sort(g.linear.mean)),
                           "q1" = as.vector(sort(g.linear.q1)),
                           "q2" = as.vector(sort(g.linear.q2)),
@@ -522,7 +522,7 @@ ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) +
   # geom_line(aes(y=true, colour = "True"), linewidth=2) + 
   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
   ylab("") + xlab("") +
-  facet_grid(covariates ~ ., scales = "free_x", switch = "y",
+  facet_grid(covariates ~ ., scales = "free", switch = "y",
               labeller = label_parsed) + 
   # scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values=c("steelblue")) + 
@@ -539,7 +539,7 @@ ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) +
 # q1 <- as.vector(apply(as.data.frame(matrix(alpha.summary[((n+(n*p))+1):(n+(2*n*p)),4], nrow = n, ncol = p)), 2, sort, decreasing=F))
 # q3 <- as.vector(apply(as.data.frame(matrix(alpha.summary[((n+(n*p))+1):(n+(2*n*p)),5], nrow = n, ncol = p)), 2, sort, decreasing=F))
 
-data.nonlinear <- data.frame("x"=newx,
+data.nonlinear <- data.frame("x"=as.vector(xholder),
                           "post.mean" = as.vector(sort(g.nonlinear.mean)),
                           "q1" = as.vector(sort(g.nonlinear.q1)),
                           "q2" = as.vector(sort(g.nonlinear.q2)),
@@ -554,7 +554,7 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
   # geom_line(aes(y=true, colour = "True"), linewidth=2) + 
   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
   ylab("") + xlab("") +
-  facet_grid(covariates ~ ., scales = "free_x", switch = "y",
+  facet_grid(covariates ~ ., scales = "free", switch = "y",
               labeller = label_parsed) + 
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values=c("steelblue")) + 
