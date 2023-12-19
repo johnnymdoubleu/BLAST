@@ -190,6 +190,7 @@ parameters {
 
 transformed parameters {
     vector[n] alpha; // tail index
+    vector[n] newalpha; // tail index    
     matrix[n, p] gnl; // nonlinear component
     matrix[n, p] gl; // linear component
     matrix[n, p] gsmooth; // smooth function
@@ -200,9 +201,13 @@ transformed parameters {
         gnl[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
         gl[,j] = bsLinear[,j] * theta[j+1];
         gsmooth[,j] = gl[,j] + gnl[,j];
+        newgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
+        newgl[,j] = xholderLinear[,j] * theta[j+1];
+        newgsmooth[,j] = newgl[,j] + newgnl[,j];        
     };
     for (i in 1:n){
         alpha[i] = exp(theta[1] + sum(gsmooth[i,]));
+        newalpha[i] = exp(theta[1] + sum(newgsmooth[i,]));        
     };
 }
 
@@ -212,7 +217,7 @@ model {
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += gamma_lpdf(lambda1 | 1, 10);
-    target += gamma_lpdf(lambda2 | 1, 100);
+    target += gamma_lpdf(lambda2 | 0.1, 0.1);
     target += normal_lpdf(theta[1] | 0, 1);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
     target += (newp * log(lambda1) + (p * psi * log(lambda2)));
@@ -235,7 +240,8 @@ generated quantities {
 
 data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, 
                     atau = ((psi+1)/2), newp = (p+1),
-                    bsLinear = bs.linear, bsNonlinear = bs.nonlinear)
+                    bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
+                    xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear)
 
 set_cmdstan_path(path = NULL)
 #> CmdStan path set to: /Users/jgabry/.cmdstan/cmdstan-2.32.2
@@ -323,10 +329,10 @@ posterior <- extract(fit1)
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
 lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
-gl.samples <- summary(fit1, par=c("gl"), probs = c(0.05, 0.5, 0.95))$summary
-gnl.samples <- summary(fit1, par=c("gnl"), probs = c(0.05, 0.5, 0.95))$summary
-gsmooth.samples <- summary(fit1, par=c("gsmooth"), probs = c(0.05, 0.5, 0.95))$summary
-alpha.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
+gl.samples <- summary(fit1, par=c("newgl"), probs = c(0.05, 0.5, 0.95))$summary
+gnl.samples <- summary(fit1, par=c("newgnl"), probs = c(0.05, 0.5, 0.95))$summary
+gsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
+alpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
 summary(fit1, par=c("sigma"), probs = c(0.05,0.5, 0.95))$summary
 summary(fit1, par=c("tau"), probs = c(0.05,0.5, 0.95))$summary
 
