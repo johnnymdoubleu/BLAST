@@ -140,7 +140,7 @@ df.extreme <- as.data.frame(cbind(month = fwi.index$month[which(Y>u)], df.extrem
 #       axis.text = element_text(size = 25),
 #       axis.title = element_text(size = 30))
 
-psi <- 20
+psi <- 10
 n <- dim(fwi.scaled)[[1]]
 p <- dim(fwi.scaled)[[2]]
 no.theta <- 1
