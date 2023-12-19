@@ -163,27 +163,6 @@ for(i in 1:p){
   bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])
 }
 
-# bs.linear <- cbind(rep(1,n), bs.linear)
-# xholder.linear <- cbind(rep(1,n), xholder.linear)
-# cov_matrix[psi] covmat[p]; // covariance
-# for(j in 1:p){
-#     covmat[j] <- diag_matrix(rep_vector(1, psi)) * tau[j] * sigma;
-# };
-# // priors
-# lambda1 ~ gamma(1, 1.78);
-# intercept ~ double_exponential(0, lambda1);
-# lambda2 ~ gamma(0.1, 0.1);
-# sigma ~ inv_gamma(0.01, 0.01);
-# for (j in 1:p){
-#     theta[j] ~ double_exponential(0, lambda1);
-#     tau[j] ~ gamma(atau, square(lambda2));
-#     gamma[j] ~ multi_normal(rep_vector(0, psi), diag_matrix(rep_vector(1,psi)) * tau[j] * sigma);
-# }
-# // likelihood
-# for (i in 1:n){
-#     target += pareto_lpdf(y[i] | u, alpha[i]);
-# }
-
 
 write("// Stan model for simple linear regression
 data {
@@ -194,6 +173,8 @@ data {
     real <lower=0> u; // large threshold value
     matrix[n,p] bsLinear; // fwi dataset
     matrix[n, (psi*p)] bsNonlinear; // thin plate splines basis
+    matrix[n,p] xholderLinear; // fwi dataset
+    matrix[n, (psi*p)] xholderNonlinear; // thin plate splines basis    
     vector[n] y; // extreme response
     real <lower=0> atau;
 }
@@ -212,6 +193,9 @@ transformed parameters {
     matrix[n, p] gnl; // nonlinear component
     matrix[n, p] gl; // linear component
     matrix[n, p] gsmooth; // smooth function
+    matrix[n, p] newgnl; // nonlinear component
+    matrix[n, p] newgl; // linear component
+    matrix[n, p] newgsmooth; // smooth function    
     for (j in 1:p){
         gnl[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
         gl[,j] = bsLinear[,j] * theta[j+1];
@@ -453,21 +437,21 @@ g.smooth.q1 <- as.vector(matrix(gsmooth.samples[,4], nrow = n, byrow=TRUE))
 g.smooth.q2 <- as.vector(matrix(gsmooth.samples[,5], nrow = n, byrow=TRUE))
 g.smooth.q3 <- as.vector(matrix(gsmooth.samples[,6], nrow = n, byrow=TRUE))
 
-g.nonlinear.q2 <- g.linear.q2 <- g.q2 <- g.nonlinear.q1 <- g.linear.q1 <- g.q1 <- g.nonlinear.q3 <- g.linear.q3 <- g.q3 <- g.nonlinear.new <- g.linear.new <- g.new <- matrix(, nrow = n, ncol=p)
-for (j in 1:p){
-  g.linear.new[,j] <- xholder.linear[,j] * theta.post.mean[(j+1)]
-  g.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.post.mean, nrow=psi)[,j] 
-  g.new[1:n, j] <- g.linear.new[,j] + g.nonlinear.new[,j]
-  g.linear.q1[,j] <- xholder.linear[,j] * theta.q1[(j+1)]
-  g.nonlinear.q1[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.q1, nrow=psi)[,j] 
-  g.q1[1:n, j] <- g.linear.q1[,j] + g.nonlinear.q1[,j]
-  g.linear.q2[,j] <- xholder.linear[,j] * theta.q2[(j+1)]
-  g.nonlinear.q2[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.q2, nrow=psi)[,j] 
-  g.q2[1:n, j] <- g.linear.q2[,j] + g.nonlinear.q2[,j]  
-  g.linear.q3[,j] <- xholder.linear[,j] * theta.q3[(j+1)]
-  g.nonlinear.q3[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.q3, nrow=psi)[,j] 
-  g.q3[1:n, j] <- g.linear.q3[,j] + g.nonlinear.q3[,j]
-}
+# g.nonlinear.q2 <- g.linear.q2 <- g.q2 <- g.nonlinear.q1 <- g.linear.q1 <- g.q1 <- g.nonlinear.q3 <- g.linear.q3 <- g.q3 <- g.nonlinear.new <- g.linear.new <- g.new <- matrix(, nrow = n, ncol=p)
+# for (j in 1:p){
+#   g.linear.new[,j] <- xholder.linear[,j] * theta.post.mean[(j+1)]
+#   g.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.post.mean, nrow=psi)[,j] 
+#   g.new[1:n, j] <- g.linear.new[,j] + g.nonlinear.new[,j]
+#   g.linear.q1[,j] <- xholder.linear[,j] * theta.q1[(j+1)]
+#   g.nonlinear.q1[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.q1, nrow=psi)[,j] 
+#   g.q1[1:n, j] <- g.linear.q1[,j] + g.nonlinear.q1[,j]
+#   g.linear.q2[,j] <- xholder.linear[,j] * theta.q2[(j+1)]
+#   g.nonlinear.q2[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.q2, nrow=psi)[,j] 
+#   g.q2[1:n, j] <- g.linear.q2[,j] + g.nonlinear.q2[,j]  
+#   g.linear.q3[,j] <- xholder.linear[,j] * theta.q3[(j+1)]
+#   g.nonlinear.q3[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.q3, nrow=psi)[,j] 
+#   g.q3[1:n, j] <- g.linear.q3[,j] + g.nonlinear.q3[,j]
+# }
 
 
 equal_breaks <- function(n = 3, s = 0.1,...){
@@ -479,18 +463,21 @@ equal_breaks <- function(n = 3, s = 0.1,...){
 }
 
 data.smooth <- data.frame("x"= as.vector(xholder),
-                          "post.mean" = as.vector(sort(g.smooth.mean)),
-                          "q1" = as.vector(sort(g.smooth.q1)),
-                          "q2" = as.vector(sort(g.smooth.q2)),
-                          "q3" = as.vector(sort(g.smooth.q3)),
+                          "post.mean" = as.vector(g.smooth.mean),
+                          "q1" = as.vector(g.smooth.q1),
+                          "q2" = as.vector(g.smooth.q2),
+                          "q3" = as.vector(g.smooth.q3),
+                          # "post.mean" = as.vector(sort(g.smooth.mean)),
+                          # "q1" = as.vector(sort(g.smooth.q1)),
+                          # "q2" = as.vector(sort(g.smooth.q2)),
+                          # "q3" = as.vector(sort(g.smooth.q3)),
                           "covariates" = gl(p, n, (p*n), labels = c("DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC")),
                           "fakelab" = rep(1, (p*n)),
                           "replicate" = gl(p, n, (p*n), labels = c("DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC")))
 
 ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  # geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
-  # geom_line(aes(y=true, colour = "True"), linewidth=2) + 
+  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
   ylab("") + xlab("") +
   facet_grid(covariates ~ ., scales = "free", switch = "y",
@@ -647,7 +634,7 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_qqplot.pdf"), width=10, height = 7.78)              
 # saveRDS(data.scenario, file=paste0("Simulation/BayesianPsplines/results/",date,"-",time, "_sc1_data_samp1.rds"))
 
-cat("sc1_Alp Done")
+cat("Finished Running")
 
 
 fwi.loo <- loo(fit1)
