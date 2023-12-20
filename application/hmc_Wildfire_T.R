@@ -164,7 +164,7 @@ for(i in 1:p){
 }
 
 
-write("// Stan model for simple linear regression
+write("// Stan model for BRSTIR
 data {
     int <lower=1> n; // Sample size
     int <lower=1> p; // regression coefficient size
@@ -214,7 +214,8 @@ transformed parameters {
 model {
     // likelihood
     for (i in 1:n){
-        target += pareto_lpdf(y[i] | u, alpha[i]);
+        target += student_t_lpdf(y[i] | alpha[i], 0, 1);
+        target += -1*log(1-student_t_cdf(u, alpha[i], 0, 1));
     }
     target += gamma_lpdf(lambda1 | 1, 10);
     target += gamma_lpdf(lambda2 | 0.1, 0.1);
@@ -236,7 +237,7 @@ generated quantities {
     }
 }
 "
-, "model_pareto.stan")
+, "model_t.stan")
 
 data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, 
                     atau = ((psi+1)/2), newp = (p+1),

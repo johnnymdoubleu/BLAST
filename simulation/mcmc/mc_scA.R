@@ -49,7 +49,7 @@ for(j in 1:p){
 
 theta.origin <- c(0.5, 0, -0.2, -0.2, 0, 0)
 
-write("// Stan model for simple linear regression
+write("// Stan model for BRSTIR Pareto Uncorrelated Samples
 
 data {
     int <lower=1> n; // Sample size
@@ -114,7 +114,7 @@ model {
     }
 }
 "
-, "model_simulation_sc2.stan")
+, "model_simulation_sc1.stan")
 
 # theta.container <- as.data.frame(matrix(, nrow = newp, ncol= total.iter))
 # gamma.container <- as.data.frame(matrix(, nrow = (p*psi), ncol = total.iter))
