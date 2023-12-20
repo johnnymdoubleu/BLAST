@@ -501,10 +501,10 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_smooth.pdf"), width=12.5, height = 15)
 
 data.linear <- data.frame("x"= as.vector(xholder),
-                          "post.mean" = as.vector(sort(g.linear.mean)),
-                          "q1" = as.vector(sort(g.linear.q1)),
-                          "q2" = as.vector(sort(g.linear.q2)),
-                          "q3" = as.vector(sort(g.linear.q3)),
+                          "post.mean" = as.vector(g.linear.mean),
+                          "q1" = as.vector(g.linear.q1),
+                          "q2" = as.vector(g.linear.q2),
+                          "q3" = as.vector(g.linear.q3),
                           "covariates" = gl(p, n, (p*n), labels = c("DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC")),
                           "fakelab" = rep(1, (p*n)),
                           "replicate" = gl(p, n, (p*n), labels = c("DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC")))
@@ -533,10 +533,10 @@ ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) +
 # q3 <- as.vector(apply(as.data.frame(matrix(alpha.summary[((n+(n*p))+1):(n+(2*n*p)),5], nrow = n, ncol = p)), 2, sort, decreasing=F))
 
 data.nonlinear <- data.frame("x"=as.vector(xholder),
-                          "post.mean" = as.vector(sort(g.nonlinear.mean)),
-                          "q1" = as.vector(sort(g.nonlinear.q1)),
-                          "q2" = as.vector(sort(g.nonlinear.q2)),
-                          "q3" = as.vector(sort(g.nonlinear.q3)),
+                          "post.mean" = as.vector(g.nonlinear.mean),
+                          "q1" = as.vector(g.nonlinear.q1),
+                          "q2" = as.vector(g.nonlinear.q2),
+                          "q3" = as.vector(g.nonlinear.q3),
                           "covariates" = gl(p, n, (p*n), labels = c("DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC")),
                           "fakelab" = rep(1, (p*n)),
                           "replicate" = gl(p, n, (p*n), labels = c("DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC")))
@@ -571,7 +571,7 @@ ggplot(data.scenario, aes(x=x)) +
   ylab(expression(alpha(bold(x)))) + xlab(expression(x)) + labs(col = "") +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
   # geom_line(aes(y = true, col = "True"), linewidth = 2) +
-  ylim(0, 10) +
+  ylim(0, 2500) +
   geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values = c("steelblue")) + 
@@ -611,13 +611,10 @@ u.band <- apply(traj, 2, quantile, prob = 0.975)
 
 ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat, 
                          u.band = u.band)) + 
-  #geom_ribbon(aes(x = grid, ymin = l.band, ymax = u.band), 
-  #           color = "lightgrey", fill = "lightgrey",
-  #          alpha = 0.4, linetype = "dashed") + 
   geom_ribbon(aes(x = grid, ymin = l.band, ymax = u.band), 
-              # color = "darkgrey", fill = "darkgrey",
+              fill = "steelblue",
               alpha = 0.4, linetype = "dashed") + 
-  geom_line(aes(x = grid, y = trajhat), linetype = "dashed", linewidth = 1.2) + 
+  geom_line(aes(x = grid, y = trajhat), colour = "steelblue", linetype = "dashed", linewidth = 1.2) + 
   geom_abline(intercept = 0, slope = 1, linewidth = 1.2) + 
   labs(x = "Theoretical quantiles", y = "Sample quantiles") + 
   theme_minimal(base_size = 20) +
