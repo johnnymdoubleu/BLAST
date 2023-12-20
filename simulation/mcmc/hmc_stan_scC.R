@@ -209,17 +209,7 @@ for(i in 1:n){
 #     target += pareto_lpdf(y[i] | u, alpha[i]);
 # }
 
-write("// Stan model for simple linear regression
-functions{
-    real burr_lpdf(real y, real c, real k){
-        // Burr distribution log pdf
-        return log(c*k)+((c-1)*log(y)) - ((k+1)*log1p(y^c));
-    }
-
-    real burr_rng(real c, real k){
-        return ((1-uniform_rng(0,1))^(-1/k)-1)^(1/c);
-    }
-}
+write("// Stan model for BRSTIR Student-t Uncorrelated Samples
 
 data {
     int <lower=1> n; // Sample size
@@ -258,6 +248,8 @@ transformed parameters {
         newgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
         gl[,j] = bsLinear[,j] * theta[j+1];
         newgl[,j] = xholderLinear[,j] * theta[j+1];
+        gsmooth[,j] = gl[,j] + gnl[,j];
+        newgsmooth[,j] = newgl[,j] + newgnl[,j];
     };
     for (i in 1:n){
         alpha[i] = exp(theta[1] + sum(gnl[i,]) + sum(gl[i,]));
@@ -268,7 +260,7 @@ transformed parameters {
 model {
     // likelihood
     for (i in 1:n){
-        target += student_t_lpdf(y[i] | alpha[i], 0, 1); // pareto_lpdf(y[i] | u, alpha[i]) burr_lpdf(y[i] | alpha[i], 1)
+        target += student_t_lpdf(y[i] | alpha[i], 0, 1);
         target += -1*log(1-student_t_cdf(u, alpha[i], 0, 1));
     }
     target += gamma_lpdf(lambda1 | 1, 10);
@@ -280,14 +272,6 @@ model {
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, lambda2/sqrt(2));
         target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * sqrt(tau[j]) * sqrt(sigma));
-    }
-}
-generated quantities {
-    // Used in Posterior predictive check
-    vector[n] log_lik;
-    array[n] real y_rep = pareto_rng(rep_vector(u, n), alpha);
-    for (i in 1:n) {
-        log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
     }
 }
 "
@@ -446,7 +430,7 @@ data.linear <- data.frame("x"=newx,
                           "fakelab" = rep(1, (p*n)),
                           "replicate" = gl(p, n, (p*n), labels = c("x[1]", "x[2]", "x[3]", "x[4]", "x[5]", "x[6]")))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_nonlinear_sc1-nl.pdf"), width=12.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_nonlinear_sc3-nl.pdf"), width=12.5, height = 15)
 
 ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
@@ -484,7 +468,7 @@ data.nonlinear <- data.frame("x"=newx,
                           "fakelab" = rep(1, (p*n)),
                           "replicate" = gl(p, n, (p*n), labels = c("x[1]", "x[2]", "x[3]", "x[4]", "x[5]", "x[6]")))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_nonlinear_sc1-nl.pdf"), width=12.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_nonlinear_sc3-nl.pdf"), width=12.5, height = 15)
 
 ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
@@ -564,9 +548,19 @@ for(i in 1:n){
 }
 
 ### Plotting linear and nonlinear components
-# post.mean <- as.vector(apply(as.data.frame(matrix(alpha.summary[(n+1):(n+(n*p)),1], nrow = n, ncol = p)), 2, sort, decreasing=F))
-# q1 <- as.vector(apply(as.data.frame(matrix(alpha.summary[(n+1):(n+(n*p)),4], nrow = n, ncol = p)), 2, sort, decreasing=F))
-# q3 <- as.vector(apply(as.data.frame(matrix(alpha.summary[(n+1):(n+(n*p)),5], nrow = n, ncol = p)), 2, sort, decreasing=F))
+g.linear.mean <- as.vector(matrix(newgl.samples[,1], nrow = n, byrow=TRUE))
+g.linear.q1 <- as.vector(matrix(newgl.samples[,4], nrow = n, byrow=TRUE))
+g.linear.q2 <- as.vector(matrix(newgl.samples[,5], nrow = n, byrow=TRUE))
+g.linear.q3 <- as.vector(matrix(newgl.samples[,6], nrow = n, byrow=TRUE))
+g.nonlinear.mean <- as.vector(matrix(newgnl.samples[,1], nrow = n, byrow=TRUE))
+g.nonlinear.q1 <- as.vector(matrix(newgnl.samples[,4], nrow = n, byrow=TRUE))
+g.nonlinear.q2 <- as.vector(matrix(newgnl.samples[,5], nrow = n, byrow=TRUE))
+g.nonlinear.q3 <- as.vector(matrix(newgnl.samples[,6], nrow = n, byrow=TRUE))
+g.smooth.mean <- as.vector(matrix(newgsmooth.samples[,1], nrow = n, byrow=TRUE))
+g.smooth.q1 <- as.vector(matrix(newgsmooth.samples[,4], nrow = n, byrow=TRUE))
+g.smooth.q2 <- as.vector(matrix(newgsmooth.samples[,5], nrow = n, byrow=TRUE))
+g.smooth.q3 <- as.vector(matrix(newgsmooth.samples[,6], nrow = n, byrow=TRUE))
+
 equal_breaks <- function(n = 3, s = 0.1,...){
   function(x){
     d <- s * diff(range(x)) / (1+2*s)
@@ -575,151 +569,120 @@ equal_breaks <- function(n = 3, s = 0.1,...){
   }
 }
 
-data.smooth <- data.frame("x"=c(1:n),
+data.smooth <- data.frame("x"=newx,
                           "true" = as.vector(f.new),
-                          "post.mean" = as.vector(g.new),
-                          "q1" = as.vector(g.q1),
-                          "q2" = as.vector(g.q2),
-                          "q3" = as.vector(g.q3),
-                          "covariates" = gl(p, n, (p*n)),
-                          "replicate" = gl(2, n, (p*n)))
-plot.smooth <- ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) + 
+                          "post.mean" = as.vector(g.smooth.mean),
+                          "q1" = as.vector(g.smooth.q1),
+                          "q2" = as.vector(g.smooth.q2),
+                          "q3" = as.vector(g.smooth.q3),
+                          "covariates" = gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]", "g[6]")),
+                          "fakelab" = rep(1, (p*n)),
+                          "replicate" = gl(p, n, (p*n), labels = c("x[1]", "x[2]", "x[3]", "x[4]", "x[5]", "x[6]")))
+
+ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
-  geom_line(aes(y=true, colour = "true"), linewidth=2) + 
-  geom_line(aes(y=q2, colour = covariates), linewidth=1.5) + 
-  xlab("Smooth Functions") + ylab("") +
-  facet_grid(covariates ~ ., scales = "free_y") + 
-  scale_color_manual(values=c("pink", "#F5C710", "#61D04F", "#2297E6", "purple", "red")) +
-  # scale_linetype_manual("functions",values=c("Posterior Mean"=3,"True"=1)) +
-  scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + theme_minimal(base_size = 30) + 
-  theme(plot.title = element_text(hjust = 0.5, size = 30),
-        legend.position = "none",
-        plot.margin = margin(0,0,0,-10),
-        strip.text = element_blank(),
-        axis.text.x = element_blank(),
-        axis.ticks.x = element_blank(),
-        axis.text.y = element_text(size=33),
-        axis.title.x = element_text(size = 35))
-plot.smooth
+  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
+  geom_line(aes(y=true, colour = "True"), linewidth=2) + 
+  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
+  ylab("") + xlab("") +
+  facet_wrap(covariates ~ ., scales = "free_x", nrow = 5,
+              labeller = label_parsed, strip.position = "left") + 
+  scale_fill_manual(values=c("steelblue"), name = "") +
+  scale_color_manual(values=c("steelblue", "red")) + 
+  guides(color = guide_legend(order = 2), 
+          fill = guide_legend(order = 1)) + ylim(-0.65, 0.3) +
+  # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
+  theme_minimal(base_size = 30) +
+  theme(plot.title = element_text(hjust = 0.5, size = 15),
+        legend.position="none",
+        legend.title = element_blank(),
+        legend.text = element_text(size=20),
+        legend.margin=margin(t = 1, unit='cm'),
+        legend.box.margin=margin(-10,0,-10,0),
+        plot.margin = margin(0,0,0,-20),
+        strip.text.y = element_text(size = 25, colour = "black", angle = 0, face = "bold.italic"),
+        strip.placement = "outside",
+        axis.title.x = element_text(size = 35),
+        axis.text = element_text(size=18))
 
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_smooth_sc3-wi.pdf"), width=12.5, height = 15)
 
-plot.smooth + facetted_pos_scales(y = list(
-    covariates == "1" ~ ylim(-0.01, 0.38),
-    covariates == "2" ~ ylim(-0.35, 0),
-    covariates == "3" ~ ylim(-0.25, 0.1),
-    covariates == "4" ~ ylim(-0.3, 0.05),
-    covariates == "5" ~ ylim(-0.35, 0)))
-
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_smooth_sc3-wi.pdf"), width=10.5, height = 15)
-data.linear <- data.frame("x"=c(1:n),
+data.linear <- data.frame("x"=newx,
                           "true" = as.vector(f.linear.new),
-                          "post.mean" = as.vector(g.linear.new),
+                          "post.mean" = as.vector(g.linear.mean),
                           "q1" = as.vector(g.linear.q1),
                           "q2" = as.vector(g.linear.q2),
                           "q3" = as.vector(g.linear.q3),
-                          "covariates" = gl(p, n, (p*n)),
-                          "replicate" = gl(2, n, (p*n)))
-plot.linear <- ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) + 
+                          "covariates" = gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]", "g[6]")),
+                          "fakelab" = rep(1, (p*n)),
+                          "replicate" = gl(p, n, (p*n), labels = c("x[1]", "x[2]", "x[3]", "x[4]", "x[5]", "x[6]")))
+
+ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
-  geom_line(aes(y=true, colour = "true"), linewidth=2) + 
-  geom_line(aes(y=q2, colour = covariates), linewidth=1.5) + 
-  xlab("Linear Components") + ylab("") +
-  facet_grid(covariates ~ ., scales = "free_y") + 
-  scale_color_manual(values=c("pink", "#F5C710", "#61D04F", "#2297E6", "purple", "red")) +
-  # scale_linetype_manual("functions",values=c("Posterior Mean"=3,"True"=1)) +
-  scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) +
+  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
+  geom_line(aes(y=true, colour = "True"), linewidth=2) + 
+  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
+  ylab("") + xlab("") +
+  facet_wrap(covariates ~ ., scales = "free_x", nrow = 5,
+              labeller = label_parsed, strip.position = "left") + 
+  scale_fill_manual(values=c("steelblue"), name = "") +
+  scale_color_manual(values=c("steelblue", "red")) + 
+  guides(color = guide_legend(order = 2), 
+          fill = guide_legend(order = 1)) + ylim(-0.65, 0.3) +
+  # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
   theme_minimal(base_size = 30) +
-  theme(plot.title = element_text(hjust = 0.5, size = 30),
-        legend.position = "none",
-        plot.margin = margin(0,0,0,-10),
-        strip.text = element_blank(),
-        axis.text.x = element_blank(),
-        axis.ticks.x = element_blank(),
-        axis.text.y = element_text(size=33),
-        axis.title.x = element_text(size = 35))
+  theme(plot.title = element_text(hjust = 0.5, size = 15),
+        legend.position="none",
+        legend.title = element_blank(),
+        legend.text = element_text(size=20),
+        legend.margin=margin(t = 1, unit='cm'),
+        legend.box.margin=margin(-10,0,-10,0),
+        plot.margin = margin(0,0,0,-20),
+        strip.text.y = element_text(size = 25, colour = "black", angle = 0, face = "bold.italic"),
+        strip.placement = "outside",
+        axis.title.x = element_text(size = 35),
+        axis.text = element_text(size=18))
 
-plot.linear
-plot.linear + facetted_pos_scales(y = list(
-    covariates == "1" ~ ylim(-0.1, 0.22),
-    covariates == "2" ~ ylim(-0.35, 0),
-    covariates == "3" ~ ylim(-0.35, 0),
-    covariates == "4" ~ ylim(-0.1, 0.05),
-    covariates == "5" ~ ylim(-0.35, 0)))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_linear_sc3-wi.pdf"), width=10.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_linear_sc3-wi.pdf"), width=12.5, height = 15)
 
-data.nonlinear <- data.frame("x"=c(1:n),
+
+data.nonlinear <- data.frame("x"=newx,
                           "true" = as.vector(f.nonlinear.new),
                           "post.mean" = as.vector(g.nonlinear.new),
                           "q1" = as.vector(g.nonlinear.q1),
                           "q2" = as.vector(g.nonlinear.q2),
                           "q3" = as.vector(g.nonlinear.q3),
-                          "covariates" = gl(p, n, (p*n)),
-                          "replicate" = gl(2, n, (p*n)))
-plot.nonlinear <- ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) + 
+                          "covariates" = gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]", "g[6]")),
+                          "fakelab" = rep(1, (p*n)),
+                          "replicate" = gl(p, n, (p*n), labels = c("x[1]", "x[2]", "x[3]", "x[4]", "x[5]", "x[6]")))
+
+ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
-  geom_line(aes(y=true, colour = "true"), linewidth=2) + 
-  geom_line(aes(y=q2, colour = covariates), linewidth=1.5) + 
-  xlab("Nonlinear Components") + ylab("") +
-  facet_grid(covariates ~ ., scales = "free_y") + 
-  scale_color_manual(values=c("pink", "#F5C710", "#61D04F", "#2297E6", "purple", "red")) +
-  # scale_linetype_manual("functions",values=c("MCMC"=3,"True"=1)) +
-  scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + theme_minimal(base_size = 30) +
+  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
+  geom_line(aes(y=true, colour = "True"), linewidth=2) + 
+  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
+  ylab("") + xlab("") +
+  facet_wrap(covariates ~ ., scales = "free_x", nrow = 5,
+              labeller = label_parsed, strip.position = "left") + 
+  scale_fill_manual(values=c("steelblue"), name = "") +
+  scale_color_manual(values=c("steelblue", "red")) + 
+  guides(color = guide_legend(order = 2), 
+          fill = guide_legend(order = 1)) + ylim(-0.55, 0.5) +
+  # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) +
+  theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 15),
-        axis.ticks = element_blank(),
+        legend.position="none",
         legend.title = element_blank(),
-        legend.text = element_text(size=45),
-        legend.margin=margin(0,0,0,-10),
+        legend.text = element_text(size=20),
+        legend.margin=margin(t = 1, unit='cm'),
         legend.box.margin=margin(-10,0,-10,0),
         plot.margin = margin(0,0,0,-20),
-        strip.text = element_blank(),
-        axis.text.x = element_blank(),
-        axis.text.y = element_text(size=33),
-        axis.title.x = element_text(size = 35))
+        strip.text.y = element_text(size = 25, colour = "black", angle = 0, face = "bold.italic"),
+        strip.placement = "outside",
+        axis.title.x = element_text(size = 35),
+        axis.text = element_text(size=18))
 
-plot.nonlinear
-plot.nonlinear + facetted_pos_scales(y = list(
-    covariates == "1" ~ ylim(-0.03, 0.05), 
-    covariates == "2" ~ ylim(-0.09, 0),
-    covariates == "3" ~ ylim(-0.09, 0),
-    covariates == "4" ~ ylim(-0.03, 0.03),
-    covariates == "5" ~ ylim(-0.03, 0.03)))
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_nonlinear_sc3-wi.pdf"), width=12.5, height = 15)
-
-data.scenario <- data.frame("x" = c(1:n),
-                            "constant" = newx,
-                            "true" = sort(alp.origin),
-                            "post.mean" = sort(alpha.samples[,1]),
-                            "post.median" = sort(alpha.samples[,5]),
-                            "q1" = sort(alpha.samples[,4]),
-                            "q3" = sort(alpha.samples[,6]))
-
-ggplot(data.scenario, aes(x=x)) + 
-  ylab(expression(alpha(x))) + xlab(expression(x)) + labs(col = "") + 
-  geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
-  geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
-  geom_line(aes(y=post.mean, col = "Posterior Mean"), linewidth=2, linetype = 2) +
-  # ylim(0, (max(data.scenario$post.mean)+10)) +
-  geom_line(aes(y=post.median, col = "Posterior Median"), linetype=2, linewidth=2) +
-  # geom_line(aes(y=chain2, col = "Chian 2"), linetype=3) +
-  # facet_grid(covariates ~ .) + 
-  # scale_y_continuous(breaks=c(0)) + 
-  scale_color_manual(values = c("blue","#e0b430","red"))+
-  theme_minimal(base_size = 30) +
-  theme(plot.title = element_text(hjust = 0.5, size = 30),
-        legend.position="top", 
-        legend.key.size = unit(1, 'cm'),
-        legend.text = element_text(size=18),
-        plot.margin = margin(0,0,0,-10),
-        strip.text = element_blank(),
-        axis.text.x = element_blank(),
-        axis.ticks.x = element_blank(),
-        axis.text.y = element_text(size=33),
-        axis.title.x = element_text(size = 35))
-
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_train_sc3-wi.pdf"), width=10, height = 7.78)
 
 data.scenario <- data.frame("x" = c(1:n),
                             "constant" = newx,
@@ -734,7 +697,7 @@ data.scenario <- data.frame("x" = c(1:n),
                             # "q3" = sort(alpha.smooth.q3))                            
 
 ggplot(data.scenario, aes(x=x)) + 
-  ylab(expression(alpha(x))) + xlab(expression(x)) + labs(col = "") + 
+  ylab(expression(alpha(c*bold("1")))) + xlab(expression(c)) + labs(col = "")
   geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
   geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
 #   geom_line(aes(y=post.mean, col = "Posterior Mean"), linewidth=2, linetype = 2) + 
@@ -756,17 +719,9 @@ ggplot(data.scenario, aes(x=x)) +
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
 
+
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_test_sc3-wi.pdf"), width=10, height = 7.78)
 
-# mcmc.gamma <- posterior$gamma
-# gamma.container <- as.data.frame(matrix(NA, nrow = 20, ,ncol = 0))
-# for(i in 1:(dim(mcmc.gamma)[1]/3)){
-#     gamma.container <- cbind(gamma.container, mcmc.gamma[i,1,])    
-# }
-# corrplot.mixed(cor(gamma.samples),
-#                 upper = "circle",
-#                 lower = "number",
-#                 addgrid.col = "black")
 
 mcmc.alpha <- posterior$alpha
 len <- dim(mcmc.alpha)[1]
@@ -776,7 +731,6 @@ T <- 30
 for(i in 1:n){
   for(t in 1:T){
     r[i, t] <- qnorm(pPareto(y.origin[i], u, alpha = mcmc.alpha[round(runif(1,1,len)),i]))
-    # r[i, t] <- qnorm(pPareto(y[i], u, alpha = alpha.new[i]))
   }
 }
 lgrid <- n
@@ -794,23 +748,19 @@ u.band <- apply(traj, 2, quantile, prob = 0.975)
 
 ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat, 
                          u.band = u.band)) + 
-  #geom_ribbon(aes(x = grid, ymin = l.band, ymax = u.band), 
-  #           color = "lightgrey", fill = "lightgrey",
-  #          alpha = 0.4, linetype = "dashed") + 
   geom_ribbon(aes(x = grid, ymin = l.band, ymax = u.band), 
-              # color = "darkgrey", fill = "darkgrey",
+              fill = "steelblue",
               alpha = 0.4, linetype = "dashed") + 
-  geom_line(aes(x = grid, y = trajhat), linetype = "dashed", linewidth = 1.2) + 
+  geom_line(aes(x = grid, y = trajhat), colour = "steelblue", linetype = "dashed", linewidth = 1.2) + 
   geom_abline(intercept = 0, slope = 1, linewidth = 1.2) + 
   labs(x = "Theoretical quantiles", y = "Sample quantiles") + 
   theme_minimal(base_size = 20) +
   theme(text = element_text(size = 20)) + 
   coord_fixed(xlim = c(-3, 3),  
               ylim = c(-3, 3))
-
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_qqplot_sc3-wi.pdf"), width=10, height = 7.78)
 
-# saveRDS(data.scenario, file=paste0("Simulation/BayesianPsplines/results/",date,"-",time, "_sc1_data_samp1.rds"))
+# saveRDS(data.scenario, file=paste0("Simulation/BayesianPsplines/results/",date,"-",time, "_sc3_data_samp1.rds"))
 
 # for (i in 1:n){
 #     alpha[i] <- exp(theta[1] + dot_product(bsLinear[i], theta[2:newp]) + (gsmooth[i,] * rep_vector(1, p)));    
@@ -818,7 +768,7 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
 
 # target += gamma_lpdf(lambda1 | 1, 10);
 # target += gamma_lpdf(lambda2 | 1, 100);
-cat("sc1_Alp Done")
+cat("sc3_Alp Done")
 # set_cmdstan_path(path = NULL)
 write("// Stan model for simple linear regression
 data {

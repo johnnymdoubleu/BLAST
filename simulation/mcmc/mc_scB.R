@@ -30,7 +30,8 @@ C <- matrix(c(1, 0.3, 0.5, 0.3, 0.3,
             0.5, 0.95, 1, 0.5, 0.1,
             0.3, 0.4, 0.5 , 1, 0.5,
             0.3, 0.4, 0.5, 0.5, 1), nrow = p)
-# C <- diag(p)                
+# C <- diag(p)
+
 ## Generate sample
 gamma.origin <- matrix(, nrow = psi, ncol = p)
 for(j in 1:p){

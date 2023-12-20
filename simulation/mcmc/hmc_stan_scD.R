@@ -134,7 +134,7 @@ for(i in 1:n){
 #     target += pareto_lpdf(y[i] | u, alpha[i]);
 # }
 
-write("// Stan model for simple linear regression
+write("// Stan model for BRSTIR Burr Uncorrelated Samples
 functions{
     real burr_lpdf(real y, real c){
         // Burr distribution log pdf
@@ -188,6 +188,8 @@ transformed parameters {
         newgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
         gl[,j] = bsLinear[,j] * theta[j+1];
         newgl[,j] = xholderLinear[,j] * theta[j+1];
+        gsmooth[,j] = gl[,j] + gnl[,j];
+        newgsmooth[,j] = newgl[,j] + newgnl[,j];
     };
     for (i in 1:n){
         alpha[i] = exp(theta[1] + sum(gnl[i,]) + sum(gl[i,]));
@@ -242,7 +244,7 @@ init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
                         lambda1 = 0.1, lambda2 = 0.01))
 
 fit1 <- stan(
-    file = "model_simulation_sc3.stan",  # Stan program
+    file = "model_simulation_sc4.stan",  # Stan program
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
     chains = 3,             # number of Markov chains
@@ -257,9 +259,9 @@ posterior <- extract(fit1)
 str(posterior)
 
 plot(fit1, plotfun = "trace", pars = c("theta"), nrow = 3)
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_theta_trace_sc3-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_theta_trace_sc4-wi.pdf"), width=10, height = 7.78)
 plot(fit1, plotfun = "trace", pars = c("lambda1", "lambda2"), nrow = 2)
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_lambda_sc3-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_lambda_sc4-wi.pdf"), width=10, height = 7.78)
 
 
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
@@ -353,7 +355,7 @@ g.linear.mean <- as.vector(matrix(newgl.samples[,1], nrow = n, byrow=TRUE))
 g.linear.q1 <- as.vector(matrix(newgl.samples[,4], nrow = n, byrow=TRUE))
 g.linear.q2 <- as.vector(matrix(newgl.samples[,5], nrow = n, byrow=TRUE))
 g.linear.q3 <- as.vector(matrix(newgl.samples[,6], nrow = n, byrow=TRUE))
-g.nonlinear.new <- as.vector(matrix(newgnl.samples[,1], nrow = n, byrow=TRUE))
+g.nonlinear.mean <- as.vector(matrix(newgnl.samples[,1], nrow = n, byrow=TRUE))
 g.nonlinear.q1 <- as.vector(matrix(newgnl.samples[,4], nrow = n, byrow=TRUE))
 g.nonlinear.q2 <- as.vector(matrix(newgnl.samples[,5], nrow = n, byrow=TRUE))
 g.nonlinear.q3 <- as.vector(matrix(newgnl.samples[,6], nrow = n, byrow=TRUE))
@@ -542,7 +544,7 @@ plot.smooth + facetted_pos_scales(y = list(
     covariates == "4" ~ ylim(-0.3, 0.05),
     covariates == "5" ~ ylim(-0.35, 0)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_smooth_sc3-wi.pdf"), width=10.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_smooth_sc4-wi.pdf"), width=10.5, height = 15)
 data.linear <- data.frame("x"=c(1:n),
                           "true" = as.vector(f.linear.new),
                           "post.mean" = as.vector(g.linear.new),
@@ -578,7 +580,7 @@ plot.linear + facetted_pos_scales(y = list(
     covariates == "3" ~ ylim(-0.35, 0),
     covariates == "4" ~ ylim(-0.1, 0.05),
     covariates == "5" ~ ylim(-0.35, 0)))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_linear_sc3-wi.pdf"), width=10.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_linear_sc4-wi.pdf"), width=10.5, height = 15)
 
 data.nonlinear <- data.frame("x"=c(1:n),
                           "true" = as.vector(f.nonlinear.new),
@@ -617,7 +619,7 @@ plot.nonlinear + facetted_pos_scales(y = list(
     covariates == "3" ~ ylim(-0.09, 0),
     covariates == "4" ~ ylim(-0.03, 0.03),
     covariates == "5" ~ ylim(-0.03, 0.03)))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_nonlinear_sc3-wi.pdf"), width=12.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_nonlinear_sc4-wi.pdf"), width=12.5, height = 15)
 
 data.scenario <- data.frame("x" = c(1:n),
                             "constant" = newx,
@@ -628,7 +630,7 @@ data.scenario <- data.frame("x" = c(1:n),
                             "q3" = sort(alpha.samples[,6]))
 
 ggplot(data.scenario, aes(x=x)) + 
-  ylab(expression(alpha(x))) + xlab(expression(x)) + labs(col = "") + 
+  ylab(expression(alpha(c*bold("1")))) + xlab(expression(c)) + labs(col = "")
   geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
   geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
   geom_line(aes(y=post.mean, col = "Posterior Mean"), linewidth=2, linetype = 2) +
@@ -650,7 +652,7 @@ ggplot(data.scenario, aes(x=x)) +
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_train_sc3-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_train_sc4-wi.pdf"), width=10, height = 7.78)
 
 data.scenario <- data.frame("x" = c(1:n),
                             "constant" = newx,
@@ -665,7 +667,7 @@ data.scenario <- data.frame("x" = c(1:n),
                             # "q3" = sort(alpha.smooth.q3))                            
 
 ggplot(data.scenario, aes(x=x)) + 
-  ylab(expression(alpha(x))) + xlab(expression(x)) + labs(col = "") + 
+  ylab(expression(alpha(c*bold("1")))) + xlab(expression(c)) + labs(col = "")
   geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
   geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
 #   geom_line(aes(y=post.mean, col = "Posterior Mean"), linewidth=2, linetype = 2) + 
@@ -687,7 +689,7 @@ ggplot(data.scenario, aes(x=x)) +
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_test_sc3-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_test_sc4-wi.pdf"), width=10, height = 7.78)
 
 # mcmc.gamma <- posterior$gamma
 # gamma.container <- as.data.frame(matrix(NA, nrow = 20, ,ncol = 0))
@@ -739,7 +741,7 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
   coord_fixed(xlim = c(-3, 3),  
               ylim = c(-3, 3))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_qqplot_sc3-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_qqplot_sc4-wi.pdf"), width=10, height = 7.78)
 
 # saveRDS(data.scenario, file=paste0("Simulation/BayesianPsplines/results/",date,"-",time, "_sc1_data_samp1.rds"))
 
@@ -815,9 +817,9 @@ generated quantities {
     }
 }
 "
-, "C:/Users/Johnny Lee/Documents/.cmdstan/cmdstan-2.33.1/examples/model_simulation_sc3.stan")
+, "C:/Users/Johnny Lee/Documents/.cmdstan/cmdstan-2.33.1/examples/model_simulation_sc4.stan")
 
-file <- file.path(cmdstan_path(), "examples/model_simulation_sc3.stan")
+file <- file.path(cmdstan_path(), "examples/model_simulation_sc4.stan")
 mod <- cmdstan_model(file)
 
 op <- mod$optimize(
@@ -904,8 +906,8 @@ ggplot(df.theta, aes(x = labels)) + ylab("") + xlab("") +
           axis.text.x = element_text(hjust=0.3),
           axis.text = element_text(size = 30),
           panel.grid.minor.x = element_blank())
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_theta_sc2-wi.pdf"), width=10, height = 7.78)
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_theta_sc3-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_theta_sc4-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_theta_sc4-wi.pdf"), width=10, height = 7.78)
 
 df <- data.frame("seq" = seq(1, (psi*p)), 
                   gamma.map, 
@@ -936,8 +938,8 @@ ggplot(df, aes(x =labels , y = gamma.map, col = covariate)) +
           axis.text.x = element_text(hjust=1),
           axis.text = element_text(size = 30),
           panel.grid.major.x = element_blank())
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_gamma_sc2-wi.pdf"), width=10, height = 7.78)
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_gamma_sc3-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_gamma_sc4-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_gamma_sc4-wi.pdf"), width=10, height = 7.78)
 
 
 f.nonlinear.origin <- f.linear.origin <- f.origin <- f.nonlinear.new <- f.linear.new <- f.new <- matrix(, nrow = n, ncol=p)
@@ -998,8 +1000,8 @@ ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +
         axis.ticks.x = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_linear_train_sc2-wi.pdf"), width=10.5, height = 15)
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_linear_train_sc3-wi.pdf"), width=10.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_linear_train_sc4-wi.pdf"), width=10.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_linear_train_sc4-wi.pdf"), width=10.5, height = 15)
 
 ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
@@ -1018,8 +1020,8 @@ ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +
         strip.text = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_linear_train_sc2-wi.pdf"), width=10.5, height = 15)
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_linear_train_sc3-wi.pdf"), width=10.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_linear_train_sc4-wi.pdf"), width=10.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_linear_train_sc4-wi.pdf"), width=10.5, height = 15)
 
 
 ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) + 
@@ -1042,8 +1044,8 @@ ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_nonlinear_train_sc2-wi.pdf"), width=12.5, height = 15)
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_nonlinear_train_sc3-wi.pdf"), width=12.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_nonlinear_train_sc4-wi.pdf"), width=12.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_nonlinear_train_sc4-wi.pdf"), width=12.5, height = 15)
 
 old.alpha <- NULL
 for(i in 1:n){
@@ -1068,8 +1070,8 @@ ggplot(data = data.scenario, aes(x = constant)) +
             axis.text = element_text(size = 20),
             legend.margin=margin(-15,-15,-15,-15),
             legend.box.margin=margin(-25,0,20,0))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_alpha_train_sc2-wi.pdf"), width=10, height = 7.78)
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_alpha_train_sc3-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_alpha_train_sc4-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_alpha_train_sc4-wi.pdf"), width=10, height = 7.78)
 
 #### Test Set
 f.nonlinear.origin <- f.linear.origin <- f.origin <- f.nonlinear.new <- f.linear.new <- f.new <- matrix(, nrow = n, ncol=p)
@@ -1122,8 +1124,8 @@ ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +
         axis.ticks.x = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_smooth_test_sc2-wi.pdf"), width=10.5, height = 15)
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_smooth_test_sc3-wi.pdf"), width=10.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_smooth_test_sc4-wi.pdf"), width=10.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_smooth_test_sc4-wi.pdf"), width=10.5, height = 15)
 
 ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +  
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) +  
@@ -1141,8 +1143,8 @@ ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +
         strip.text = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_linear_test_sc2-wi.pdf"), width=10, height = 15)
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_linear_test_sc3-wi.pdf"), width=10, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_linear_test_sc4-wi.pdf"), width=10, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_linear_test_sc4-wi.pdf"), width=10, height = 15)
 
 ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
@@ -1161,8 +1163,8 @@ ggplot(func.df, aes(x=x, group=interaction(covariates, replicate))) +
         strip.text = element_blank(),
         axis.text.y = element_text(size=33),
         axis.title.x = element_text(size = 35))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_nonlinear_test_sc2-wi.pdf"), width=12, height = 15)
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_nonlinear_test_sc3-wi.pdf"), width=12, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_nonlinear_test_sc4-wi.pdf"), width=12, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_nonlinear_test_sc4-wi.pdf"), width=12, height = 15)
 
 
 data.scenario <- data.frame("x" = c(1:n),
@@ -1183,8 +1185,8 @@ ggplot(data = data.scenario, aes(x = constant)) +
           axis.text = element_text(size = 20),
           legend.margin=margin(-15,-15,-15,-15),
           legend.box.margin=margin(-25,0,20,0))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_alpha_test_sc2-wi.pdf"), width=10, height = 7.78)
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_alpha_test_sc3-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_alpha_test_sc4-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_alpha_test_sc4-wi.pdf"), width=10, height = 7.78)
 
 # Randomized quantile residuals
 r <- matrix(NA, nrow = n, ncol = 20)
@@ -1223,5 +1225,5 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
   coord_fixed(xlim = c(-3, 3),  
               ylim = c(-3, 3))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_qqplot_sc2-wi.pdf"), width=10, height = 7.78)
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_qqplot_sc3-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_qqplot_sc4-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_map_qqplot_sc4-wi.pdf"), width=10, height = 7.78)

@@ -51,7 +51,7 @@ for(j in 1:p){
 
 theta.origin <- c(0.5, 0, -0.2, -0.2, 0, 0)
 
-write("// Stan model for simple linear regression
+write("// Stan model for BRSTIR Student-t Uncorrelated Samples
 
 data {
     int <lower=1> n; // Sample size

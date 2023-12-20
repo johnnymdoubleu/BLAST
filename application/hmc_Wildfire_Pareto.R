@@ -478,7 +478,7 @@ data.smooth <- data.frame("x"= as.vector(xholder),
                           # "q2" = as.vector(sort(g.smooth.q2)),
                           # "q3" = as.vector(sort(g.smooth.q3)),
                           "covariates" = gl(p, n, (p*n), labels = c("DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC")),
-                          "fakelab" = rep(1, (p*n)),
+                          # "fakelab" = rep(1, (p*n)),
                           "replicate" = gl(p, n, (p*n), labels = c("DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC")))
 
 ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) + 
@@ -486,7 +486,7 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
   ylab("") + xlab("") +
-  facet_grid(covariates ~ ., scales = "free", switch = "y",
+  facet_grid(covariates ~ ., scales = "free",
               labeller = label_parsed) + 
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values=c("steelblue")) + 
@@ -496,7 +496,7 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
   theme_minimal(base_size = 30) +
   theme(legend.position = "none",
           plot.margin = margin(0,0,0,-20),
-          strip.text = element_blank(),
+          # strip.text = element_blank(),
           axis.text = element_text(size = 20))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_smooth.pdf"), width=12.5, height = 15)
 
@@ -515,7 +515,7 @@ ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) +
   # geom_line(aes(y=true, colour = "True"), linewidth=2) + 
   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
   ylab("") + xlab("") +
-  facet_grid(covariates ~ ., scales = "free", switch = "y",
+  facet_grid(covariates ~ ., scales = "free"
               labeller = label_parsed) + 
   # scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values=c("steelblue")) + 
@@ -525,7 +525,7 @@ ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) +
   theme_minimal(base_size = 30) +
   theme(legend.position = "none",
           plot.margin = margin(0,0,0,-20),
-          strip.text = element_blank(),
+          # strip.text = element_blank(),
           axis.text = element_text(size = 20))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_linear.pdf"), width=12.5, height = 15)
 # post.mean <- as.vector(apply(as.data.frame(matrix(alpha.summary[((n+(n*p))+1):(n+(2*n*p)),1], nrow = n, ncol = p)), 2, sort, decreasing=F))
@@ -547,7 +547,7 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
   # geom_line(aes(y=true, colour = "True"), linewidth=2) + 
   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
   ylab("") + xlab("") +
-  facet_grid(covariates ~ ., scales = "free", switch = "y",
+  facet_grid(covariates ~ ., scales = "free", #switch = "y",
               labeller = label_parsed) + 
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values=c("steelblue")) + 
@@ -557,7 +557,7 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
   theme_minimal(base_size = 30) +
   theme(legend.position = "none",
           plot.margin = margin(0,0,0,-20),
-          strip.text = element_blank(),
+          # strip.text = element_blank(),
           axis.text = element_text(size = 20))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_nonlinear.pdf"), width=12.5, height = 15)
 
