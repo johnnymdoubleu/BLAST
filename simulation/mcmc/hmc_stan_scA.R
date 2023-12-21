@@ -24,7 +24,7 @@ library(ggh4x)
 set.seed(9)
 
 n <- 5000
-psi <-10
+psi <- 10
 threshold <- 0.95
 p <- 5
 no.theta <- 1
@@ -324,6 +324,7 @@ g.smooth.mean <- as.vector(matrix(newgsmooth.samples[,1], nrow = n, byrow=TRUE))
 g.smooth.q1 <- as.vector(matrix(newgsmooth.samples[,4], nrow = n, byrow=TRUE))
 g.smooth.q2 <- as.vector(matrix(newgsmooth.samples[,5], nrow = n, byrow=TRUE))
 g.smooth.q3 <- as.vector(matrix(newgsmooth.samples[,6], nrow = n, byrow=TRUE))
+
 equal_breaks <- function(n = 3, s = 0.1,...){
   function(x){
     d <- s * diff(range(x)) / (1+2*s)

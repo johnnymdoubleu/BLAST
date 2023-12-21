@@ -247,9 +247,9 @@ model {
 generated quantities {
     // Used in Posterior predictive check
     vector[n] log_lik;
-    real y_rep[n] = pareto_rng(u, alpha);
+    real y_rep[n] = burr_rng(u, alpha);
     for (i in 1:n) {
-        log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
+        log_lik[i] = burr_lpdf(y[i] | u, alpha[i]);
     }
 }
 "
@@ -609,8 +609,7 @@ r <- matrix(, nrow = n, ncol = 30)
 T <- 30
 for(i in 1:n){
   for(t in 1:T){
-    r[i, t] <- qnorm(pPareto(y[i], u, alpha = posterior$alpha[round(runif(1,1,len)),i]))
-    # r[i, t] <- qnorm(pPareto(y[i], u, alpha = alpha.new[i]))
+    r[i, t] <- qnorm(pburr(y[i], u, alpha = posterior$alpha[round(runif(1,1,len)),i]))
   }
 }
 lgrid <- n

@@ -515,7 +515,7 @@ ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) +
   # geom_line(aes(y=true, colour = "True"), linewidth=2) + 
   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
   ylab("") + xlab("") +
-  facet_grid(covariates ~ ., scales = "free"
+  facet_grid(covariates ~ ., scales = "free",
               labeller = label_parsed) + 
   # scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values=c("steelblue")) + 

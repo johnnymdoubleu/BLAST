@@ -19,9 +19,9 @@ library(cmdstanr)
 # set.seed(2)
 set.seed(36)
 
-n <- 55000
-psi <- 20
-threshold <- 0.9
+n <- 5000
+psi <- 10
+threshold <- 0.95
 p <- 5
 no.theta <- 1
 simul.no <- 50
@@ -119,20 +119,6 @@ for(i in 1:n){
     alp.origin[i] <- exp(theta.origin[1] + sum(f.origin[i,]))
     alp.new[i] <- exp(theta.origin[1] + sum(f.new[i,]))
 }
-
-# lambda1 ~ gamma(1, 1.78);
-# intercept ~ double_exponential(0, lambda1);
-# lambda2 ~ gamma(0.1, 0.1);
-# sigma ~ inv_gamma(0.01, 0.01);
-# for (j in 1:p){
-#     theta[j] ~ double_exponential(0, lambda1);
-#     tau[j] ~ gamma(atau, square(lambda2));
-#     gamma[j] ~ multi_normal(rep_vector(0, psi), diag_matrix(rep_vector(1,psi)) * tau[j] * sigma);
-# }
-# // likelihood
-# for (i in 1:n){
-#     target += pareto_lpdf(y[i] | u, alpha[i]);
-# }
 
 write("// Stan model for BRSTIR Burr Uncorrelated Samples
 functions{
