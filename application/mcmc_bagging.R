@@ -170,6 +170,7 @@ data {
     int <lower=1> p; // regression coefficient size
     int <lower=1> newp; 
     int <lower=1> psi; // splines coefficient size
+    int <lower=1> bag; // bag size
     real <lower=0> u; // large threshold value
     matrix[n,p] bsLinear; // fwi dataset
     matrix[n, (psi*p)] bsNonlinear; // thin plate splines basis
@@ -209,7 +210,7 @@ transformed parameters {
         alpha[i] = exp(theta[1] + sum(gsmooth[i,]));
         newalpha[i] = exp(theta[1] + sum(newgsmooth[i,]));        
     };
-    
+
 }
 
 model {
@@ -240,7 +241,7 @@ generated quantities {
 , "model_pareto.stan")
 
 data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, 
-                    atau = ((psi+1)/2), newp = (p+1),
+                    atau = ((psi+1)/2), newp = (p+1), bag = 
                     bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
                     xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear)
 
