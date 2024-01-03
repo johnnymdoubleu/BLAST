@@ -191,14 +191,14 @@ parameters {
 }
 
 transformed parameters {
-    vector[n] alpha; // tail index
-    vector[n] newalpha; // tail index    
-    matrix[n, p] gnl; // nonlinear component
-    matrix[n, p] gl; // linear component
-    matrix[n, p] gsmooth; // smooth function
-    matrix[n, p] newgnl; // nonlinear component
-    matrix[n, p] newgl; // linear component
-    matrix[n, p] newgsmooth; // smooth function
+    vector[bag] alpha; // tail index
+    vector[bag] newalpha; // tail index    
+    matrix[bag, p] gnl; // nonlinear component
+    matrix[bag, p] gl; // linear component
+    matrix[bag, p] gsmooth; // smooth function
+    matrix[bag, p] newgnl; // nonlinear component
+    matrix[bag, p] newgl; // linear component
+    matrix[bag, p] newgsmooth; // smooth function
     simplex[bag] uniform = rep_vector(1.0 / bag, bag);
     array[bag] int<lower=1, upper=bag> bagIndex;
 
