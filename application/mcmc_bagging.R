@@ -170,7 +170,7 @@ data {
     int <lower=1> p; // regression coefficient size
     int <lower=1> newp; 
     int <lower=1> psi; // splines coefficient size
-    int <lower=1> bag; // bag size
+    int <lower=0> bag; // bag size
     real <lower=0> u; // large threshold value
     matrix[n,p] bsLinear; // fwi dataset
     matrix[n, (psi*p)] bsNonlinear; // thin plate splines basis
@@ -178,7 +178,15 @@ data {
     matrix[n, (psi*p)] xholderNonlinear; // thin plate splines basis    
     vector[n] y; // extreme response
     real <lower=0> atau;
-    int<lower=0, upper=1> resample;
+    int <lower=0, upper=1> resample;
+}
+
+transformed data {
+    simplex[bag] uniform = rep_vector(1.0 / bag, bag);
+    array[bag] int<lower=1, upper=bag> bagIndex;
+    for (b in 1:bag) {
+      bagIndex[b] = resample ? categorical_rng(uniform) : b;
+    };
 }
 
 parameters {
@@ -190,6 +198,7 @@ parameters {
     vector[p] tau;
 }
 
+
 transformed parameters {
     vector[bag] alpha; // tail index
     vector[bag] newalpha; // tail index    
@@ -199,29 +208,21 @@ transformed parameters {
     matrix[bag, p] newgnl; // nonlinear component
     matrix[bag, p] newgl; // linear component
     matrix[bag, p] newgsmooth; // smooth function
-    simplex[bag] uniform = rep_vector(1.0 / bag, bag);
-    array[bag] int<lower=1, upper=bag> bagIndex;
-
-    for (kk in 1:bag) {
-      bagIndex[kk] = resample ? categorical_rng(uniform) : kk;
-    };
 
     for (j in 1:p){
-        gnl[bagIndex,j] = bsNonlinear[bagIndex,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
-        gl[bagIndex,j] = bsLinear[bagIndex,j] * theta[j+1];
-        gsmooth[bagIndex,j] = gl[bagIndex,j] + gnl[bagIndex,j];
-        newgnl[badIndex,j] = xholderNonlinear[bagIndex,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
-        newgl[bagIndex,j] = xholderLinear[badIndex,j] * theta[j+1];
-        newgsmooth[bagIndex,j] = newgl[bagIndex,j] + newgnl[bagIndex,j];        
+        gnl[,j] = bsNonlinear[bagIndex,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
+        gl[,j] = bsLinear[bagIndex,j] * theta[j+1];
+        gsmooth[,j] = gl[,j] + gnl[,j];
+        newgnl[,j] = xholderNonlinear[bagIndex, (((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
+        newgl[,j] = xholderLinear[bagIndex,j] * theta[j+1];
+        newgsmooth[,j] = newgl[, j] + newgnl[,j];
     };
+
     for (i in 1:bag){
         alpha[i] = exp(theta[1] + sum(gsmooth[i,]));
         newalpha[i] = exp(theta[1] + sum(newgsmooth[i,]));        
-    };  
-
-
+    };
 }
-
 model {
     // likelihood
     for (i in 1:bag){
@@ -250,7 +251,7 @@ generated quantities {
 , "model_bagging.stan")
 
 data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, 
-                    atau = ((psi+1)/2), newp = (p+1), bag = ceiling(n*0.95), resample = 1,
+                    atau = ((psi+1)/2), newp = (p+1), bag = as.integer(ceiling(n*0.95)), resample = 1,
                     bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
                     xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear)
 
@@ -274,7 +275,7 @@ init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
                         tau = rep(0.01, p), sigma = 0.01,
                         lambda1 = 0.1, lambda2 = 0.01))
 
-# stanc("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/application/model1.stan")
+
 fit1 <- stan(
     file = "model_bagging.stan",  # Stan program
     data = data.stan,    # named list of data
