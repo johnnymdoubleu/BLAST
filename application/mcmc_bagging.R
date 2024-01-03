@@ -265,15 +265,28 @@ file <- file.path(cmdstan_path(), "model_bagging.stan")
 init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
                         theta = rep(0, (p+1)), 
                         tau = rep(0.1, p), sigma = 0.1, 
-                        lambda1 = 0.1, lambda2 = 0.1),
-                  list(gamma = array(rep(0.02, (psi*p)), dim=c(psi, p)),
-                        theta = rep(0.01, (p+1)), 
-                        tau = rep(0.01, p), sigma = 0.001,
-                        lambda1 = 0.01, lambda2 = 0.1),
-                  list(gamma = array(rep(0.01, (psi*p)), dim=c(psi, p)),
-                        theta = rep(0.05, (p+1)), 
-                        tau = rep(0.01, p), sigma = 0.01,
-                        lambda1 = 0.1, lambda2 = 0.01))
+                        lambda1 = 1, lambda2 = 1),
+                  list(gamma = array(rep(1, (psi*p)), dim=c(psi, p)),
+                        theta = rep(1, (p+1)), 
+                        tau = rep(1, p), sigma = 1,
+                        lambda1 = 1, lambda2 = 1),
+                  list(gamma = array(rep(5, (psi*p)), dim=c(psi, p)),
+                        theta = rep(10, (p+1)), 
+                        tau = rep(1, p), sigma = 1,
+                        lambda1 = 1, lambda2 = 1))
+
+# init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
+#                         theta = rep(0, (p+1)), 
+#                         tau = rep(0.1, p), sigma = 0.1, 
+#                         lambda1 = 0.1, lambda2 = 0.1),
+#                   list(gamma = array(rep(0.02, (psi*p)), dim=c(psi, p)),
+#                         theta = rep(0.01, (p+1)), 
+#                         tau = rep(0.01, p), sigma = 0.001,
+#                         lambda1 = 0.01, lambda2 = 0.1),
+#                   list(gamma = array(rep(0.01, (psi*p)), dim=c(psi, p)),
+#                         theta = rep(0.05, (p+1)), 
+#                         tau = rep(0.01, p), sigma = 0.01,
+#                         lambda1 = 0.1, lambda2 = 0.01))
 
 
 fit1 <- stan(
