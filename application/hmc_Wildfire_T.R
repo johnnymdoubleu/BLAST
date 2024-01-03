@@ -228,14 +228,6 @@ model {
         target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * sqrt(tau[j]) * sqrt(sigma));
     }
 }
-generated quantities {
-    // Used in Posterior predictive check
-    vector[n] log_lik;
-    real y_rep[n] = pareto_rng(u, alpha);
-    for (i in 1:n) {
-        log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
-    }
-}
 "
 , "model_t.stan")
 
