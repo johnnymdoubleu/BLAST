@@ -262,15 +262,15 @@ file <- file.path(cmdstan_path(), "model_burr.stan")
 init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
                         theta = rep(0, (p+1)), 
                         tau = rep(0.1, p), sigma = 0.1, 
-                        lambda1 = 0.1, lambda2 = 0.1),
-                  list(gamma = array(rep(0.02, (psi*p)), dim=c(psi, p)),
-                        theta = rep(0.01, (p+1)), 
-                        tau = rep(0.01, p), sigma = 0.001,
-                        lambda1 = 0.01, lambda2 = 0.1),
-                  list(gamma = array(rep(0.01, (psi*p)), dim=c(psi, p)),
-                        theta = rep(0.05, (p+1)), 
-                        tau = rep(0.01, p), sigma = 0.01,
-                        lambda1 = 0.1, lambda2 = 0.01))
+                        lambda1 = 1, lambda2 = 1),
+                  list(gamma = array(rep(0.1, (psi*p)), dim=c(psi, p)),
+                        theta = rep(0.1, (p+1)), 
+                        tau = rep(0.1, p), sigma = 0.01,
+                        lambda1 = 1, lambda2 = 1),
+                  list(gamma = array(rep(0.05, (psi*p)), dim=c(psi, p)),
+                        theta = rep(0.5, (p+1)), 
+                        tau = rep(0.1, p), sigma = 0.1,
+                        lambda1 = 1, lambda2 = 1))
 
 # stanc("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/application/model1.stan")
 fit1 <- stan(
