@@ -178,6 +178,7 @@ data {
     matrix[n, (psi*p)] xholderNonlinear; // thin plate splines basis    
     vector[n] y; // extreme response
     real <lower=0> atau;
+    int<lower=0, upper=1> resample;
 }
 
 parameters {
@@ -197,25 +198,33 @@ transformed parameters {
     matrix[n, p] gsmooth; // smooth function
     matrix[n, p] newgnl; // nonlinear component
     matrix[n, p] newgl; // linear component
-    matrix[n, p] newgsmooth; // smooth function    
-    for (j in 1:p){
-        gnl[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
-        gl[,j] = bsLinear[,j] * theta[j+1];
-        gsmooth[,j] = gl[,j] + gnl[,j];
-        newgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
-        newgl[,j] = xholderLinear[,j] * theta[j+1];
-        newgsmooth[,j] = newgl[,j] + newgnl[,j];        
+    matrix[n, p] newgsmooth; // smooth function
+    simplex[bag] uniform = rep_vector(1.0 / bag, bag);
+    array[bag] int<lower=1, upper=bag> bagIndex;
+
+    for (kk in 1:bag) {
+      bagIndex[kk] = resample ? categorical_rng(uniform) : kk;
     };
-    for (i in 1:n){
+
+    for (j in 1:p){
+        gnl[bagIndex,j] = bsNonlinear[bagIndex,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
+        gl[bagIndex,j] = bsLinear[bagIndex,j] * theta[j+1];
+        gsmooth[bagIndex,j] = gl[bagIndex,j] + gnl[bagIndex,j];
+        newgnl[badIndex,j] = xholderNonlinear[bagIndex,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
+        newgl[bagIndex,j] = xholderLinear[badIndex,j] * theta[j+1];
+        newgsmooth[bagIndex,j] = newgl[bagIndex,j] + newgnl[bagIndex,j];        
+    };
+    for (i in 1:bag){
         alpha[i] = exp(theta[1] + sum(gsmooth[i,]));
         newalpha[i] = exp(theta[1] + sum(newgsmooth[i,]));        
-    };
+    };  
+
 
 }
 
 model {
     // likelihood
-    for (i in 1:n){
+    for (i in 1:bag){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += gamma_lpdf(lambda1 | 1, 10);
@@ -231,9 +240,9 @@ model {
 }
 generated quantities {
     // Used in Posterior predictive check
-    vector[n] log_lik;
-    real y_rep[n] = pareto_rng(u, alpha);
-    for (i in 1:n) {
+    vector[bag] log_lik;
+    real y_rep[bag] = pareto_rng(u, alpha);
+    for (i in 1:bag) {
         log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
     }
 }
@@ -241,7 +250,7 @@ generated quantities {
 , "model_pareto.stan")
 
 data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, 
-                    atau = ((psi+1)/2), newp = (p+1), bag = (n*0.95),
+                    atau = ((psi+1)/2), newp = (p+1), bag = ceiling(n*0.95),
                     bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
                     xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear)
 
