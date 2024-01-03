@@ -164,23 +164,7 @@ for(i in 1:p){
 }
 
 
-write("// Stan model for BRSTIR
-functions{
-    real burr_lpdf(real y, real c){
-        // Burr distribution log pdf
-        return log(c)+((c-1)*log(y)) - ((1+1)*log1p(y^c));
-    }
-
-    real burr_cdf(real y, real c){
-        // Bur distribution cdf
-        return 1 - (1 + y^c)^(-1);
-    }    
-
-    real burr_rng(real c){
-        return ((1-uniform_rng(0,1))^(-1)-1)^(1/c);
-    }
-}
-
+write("// Stan model for simple linear regression
 data {
     int <lower=1> n; // Sample size
     int <lower=1> p; // regression coefficient size
@@ -225,13 +209,13 @@ transformed parameters {
         alpha[i] = exp(theta[1] + sum(gsmooth[i,]));
         newalpha[i] = exp(theta[1] + sum(newgsmooth[i,]));        
     };
+    
 }
 
 model {
     // likelihood
     for (i in 1:n){
-        target += burr_lpdf(y[i] | alpha[i]);
-        target += -1*log(1-burr_cdf(u, alpha[i]));
+        target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += gamma_lpdf(lambda1 | 1, 10);
     target += gamma_lpdf(lambda2 | 0.1, 0.1);
@@ -244,8 +228,16 @@ model {
         target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * sqrt(tau[j]) * sqrt(sigma));
     }
 }
+generated quantities {
+    // Used in Posterior predictive check
+    vector[n] log_lik;
+    real y_rep[n] = pareto_rng(u, alpha);
+    for (i in 1:n) {
+        log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
+    }
+}
 "
-, "model_burr.stan")
+, "model_pareto.stan")
 
 data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, 
                     atau = ((psi+1)/2), newp = (p+1),
@@ -257,24 +249,24 @@ set_cmdstan_path(path = NULL)
 
 # Create a CmdStanModel object from a Stan program,
 # here using the example model that comes with CmdStan
-file <- file.path(cmdstan_path(), "model_burr.stan")
+file <- file.path(cmdstan_path(), "model.stan")
 
 init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
                         theta = rep(0, (p+1)), 
                         tau = rep(0.1, p), sigma = 0.1, 
-                        lambda1 = 1, lambda2 = 1),
-                  list(gamma = array(rep(1, (psi*p)), dim=c(psi, p)),
-                        theta = rep(1, (p+1)), 
-                        tau = rep(1, p), sigma = 1,
-                        lambda1 = 1, lambda2 = 1),
-                  list(gamma = array(rep(5, (psi*p)), dim=c(psi, p)),
-                        theta = rep(10, (p+1)), 
-                        tau = rep(1, p), sigma = 1,
-                        lambda1 = 1, lambda2 = 1))
+                        lambda1 = 0.1, lambda2 = 0.1),
+                  list(gamma = array(rep(0.02, (psi*p)), dim=c(psi, p)),
+                        theta = rep(0.01, (p+1)), 
+                        tau = rep(0.01, p), sigma = 0.001,
+                        lambda1 = 0.01, lambda2 = 0.1),
+                  list(gamma = array(rep(0.01, (psi*p)), dim=c(psi, p)),
+                        theta = rep(0.05, (p+1)), 
+                        tau = rep(0.01, p), sigma = 0.01,
+                        lambda1 = 0.1, lambda2 = 0.01))
 
 # stanc("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/application/model1.stan")
 fit1 <- stan(
-    file = "model_burr.stan",  # Stan program
+    file = "model.stan",  # Stan program
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
     # init_r = 1,
@@ -388,7 +380,7 @@ ggplot(df.theta, aes(x = covariate, y=m, color = covariate)) + ylab("") + xlab('
           plot.margin = margin(0,0,0,-20),
           axis.text.x = element_text(hjust=0.35),
           axis.text = element_text(size = 28))
-# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_burr_mcmc_theta.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_theta.pdf"), width=10, height = 7.78)
 
 # ggplot(data.frame(group = factor(1:(p+1)), m=theta.post.mean, l = theta.q1, u = theta.q3), 
 #        aes(group)) +
@@ -436,7 +428,7 @@ ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) +
           plot.margin = margin(0,0,0,-20),
           axis.text.x = element_text(hjust=0.5),
           axis.text = element_text(size = 28))
-# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_burr_mcmc_gamma.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_gamma.pdf"), width=10, height = 7.78)
 
 
 g.linear.mean <- as.vector(matrix(gl.samples[,1], nrow = n, byrow=TRUE))
@@ -487,7 +479,7 @@ data.smooth <- data.frame("x"= as.vector(xholder),
                           # "q2" = as.vector(sort(g.smooth.q2)),
                           # "q3" = as.vector(sort(g.smooth.q3)),
                           "covariates" = gl(p, n, (p*n), labels = c("DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC")),
-                          "fakelab" = rep(1, (p*n)),
+                          # "fakelab" = rep(1, (p*n)),
                           "replicate" = gl(p, n, (p*n), labels = c("DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC")))
 
 ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) + 
@@ -495,7 +487,7 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
   ylab("") + xlab("") +
-  facet_grid(covariates ~ ., scales = "free", switch = "y",
+  facet_grid(covariates ~ ., scales = "free",
               labeller = label_parsed) + 
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values=c("steelblue")) + 
@@ -505,9 +497,9 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
   theme_minimal(base_size = 30) +
   theme(legend.position = "none",
           plot.margin = margin(0,0,0,-20),
-          strip.text = element_blank(),
+          # strip.text = element_blank(),
           axis.text = element_text(size = 20))
-# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_burr_mcmc_smooth.pdf"), width=12.5, height = 15)
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=12.5, height = 15)
 
 data.linear <- data.frame("x"= as.vector(xholder),
                           "post.mean" = as.vector(g.linear.mean),
@@ -524,7 +516,7 @@ ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) +
   # geom_line(aes(y=true, colour = "True"), linewidth=2) + 
   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
   ylab("") + xlab("") +
-  facet_grid(covariates ~ ., scales = "free", switch = "y",
+  facet_grid(covariates ~ ., scales = "free",
               labeller = label_parsed) + 
   # scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values=c("steelblue")) + 
@@ -534,9 +526,12 @@ ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) +
   theme_minimal(base_size = 30) +
   theme(legend.position = "none",
           plot.margin = margin(0,0,0,-20),
-          strip.text = element_blank(),
+          # strip.text = element_blank(),
           axis.text = element_text(size = 20))
-# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_burr_mcmc_linear.pdf"), width=12.5, height = 15)
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_linear.pdf"), width=12.5, height = 15)
+# post.mean <- as.vector(apply(as.data.frame(matrix(alpha.summary[((n+(n*p))+1):(n+(2*n*p)),1], nrow = n, ncol = p)), 2, sort, decreasing=F))
+# q1 <- as.vector(apply(as.data.frame(matrix(alpha.summary[((n+(n*p))+1):(n+(2*n*p)),4], nrow = n, ncol = p)), 2, sort, decreasing=F))
+# q3 <- as.vector(apply(as.data.frame(matrix(alpha.summary[((n+(n*p))+1):(n+(2*n*p)),5], nrow = n, ncol = p)), 2, sort, decreasing=F))
 
 data.nonlinear <- data.frame("x"=as.vector(xholder),
                           "post.mean" = as.vector(g.nonlinear.mean),
@@ -553,7 +548,7 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
   # geom_line(aes(y=true, colour = "True"), linewidth=2) + 
   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
   ylab("") + xlab("") +
-  facet_grid(covariates ~ ., scales = "free", switch = "y",
+  facet_grid(covariates ~ ., scales = "free", #switch = "y",
               labeller = label_parsed) + 
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values=c("steelblue")) + 
@@ -563,9 +558,9 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
   theme_minimal(base_size = 30) +
   theme(legend.position = "none",
           plot.margin = margin(0,0,0,-20),
-          strip.text = element_blank(),
+          # strip.text = element_blank(),
           axis.text = element_text(size = 20))
-# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_burr_mcmc_nonlinear.pdf"), width=12.5, height = 15)
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_nonlinear.pdf"), width=12.5, height = 15)
 
 data.scenario <- data.frame("x" = c(1:n),
                             "post.mean" = sort(alpha.samples[,1]),
@@ -592,7 +587,7 @@ ggplot(data.scenario, aes(x=x)) +
         strip.text = element_blank(),
         axis.title.x = element_text(size = 35))
 
-# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_burr_mcmc_alpha.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_alpha.pdf"), width=10, height = 7.78)
 
 len <- dim(posterior$alpha)[1]
 r <- matrix(, nrow = n, ncol = 30)
@@ -600,7 +595,8 @@ r <- matrix(, nrow = n, ncol = 30)
 T <- 30
 for(i in 1:n){
   for(t in 1:T){
-    r[i, t] <- qnorm(pburr(y[i], u, alpha = posterior$alpha[round(runif(1,1,len)),i]))
+    r[i, t] <- qnorm(pPareto(y[i], u, alpha = posterior$alpha[round(runif(1,1,len)),i]))
+    # r[i, t] <- qnorm(pPareto(y[i], u, alpha = alpha.new[i]))
   }
 }
 lgrid <- n
@@ -628,7 +624,7 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
   theme(text = element_text(size = 20)) + 
   coord_fixed(xlim = c(-3, 3),  
               ylim = c(-3, 3))
-# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_burr_mcmc_qqplot.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_qqplot.pdf"), width=10, height = 7.78)
 
 # mcmc.gamma <- posterior$gamma
 # gamma.container <- as.data.frame(matrix(NA, nrow = 20, ,ncol = 0))
