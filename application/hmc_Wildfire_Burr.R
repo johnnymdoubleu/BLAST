@@ -244,14 +244,6 @@ model {
         target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * sqrt(tau[j]) * sqrt(sigma));
     }
 }
-generated quantities {
-    // Used in Posterior predictive check
-    vector[n] log_lik;
-    real y_rep[n] = burr_rng(u, alpha);
-    for (i in 1:n) {
-        log_lik[i] = burr_lpdf(y[i] | u, alpha[i]);
-    }
-}
 "
 , "model_burr.stan")
 
@@ -265,7 +257,7 @@ set_cmdstan_path(path = NULL)
 
 # Create a CmdStanModel object from a Stan program,
 # here using the example model that comes with CmdStan
-file <- file.path(cmdstan_path(), "model.stan")
+file <- file.path(cmdstan_path(), "model_burr.stan")
 
 init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
                         theta = rep(0, (p+1)), 
@@ -282,7 +274,7 @@ init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
 
 # stanc("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/application/model1.stan")
 fit1 <- stan(
-    file = "model.stan",  # Stan program
+    file = "model_burr.stan",  # Stan program
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
     # init_r = 1,
@@ -396,7 +388,7 @@ ggplot(df.theta, aes(x = covariate, y=m, color = covariate)) + ylab("") + xlab('
           plot.margin = margin(0,0,0,-20),
           axis.text.x = element_text(hjust=0.35),
           axis.text = element_text(size = 28))
-# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_theta.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_burr_mcmc_theta.pdf"), width=10, height = 7.78)
 
 # ggplot(data.frame(group = factor(1:(p+1)), m=theta.post.mean, l = theta.q1, u = theta.q3), 
 #        aes(group)) +
@@ -444,7 +436,7 @@ ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) +
           plot.margin = margin(0,0,0,-20),
           axis.text.x = element_text(hjust=0.5),
           axis.text = element_text(size = 28))
-# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_gamma.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_burr_mcmc_gamma.pdf"), width=10, height = 7.78)
 
 
 g.linear.mean <- as.vector(matrix(gl.samples[,1], nrow = n, byrow=TRUE))
@@ -515,7 +507,7 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
           plot.margin = margin(0,0,0,-20),
           strip.text = element_blank(),
           axis.text = element_text(size = 20))
-# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_smooth.pdf"), width=12.5, height = 15)
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_burr_mcmc_smooth.pdf"), width=12.5, height = 15)
 
 data.linear <- data.frame("x"= as.vector(xholder),
                           "post.mean" = as.vector(g.linear.mean),
@@ -544,10 +536,7 @@ ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) +
           plot.margin = margin(0,0,0,-20),
           strip.text = element_blank(),
           axis.text = element_text(size = 20))
-# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_linear.pdf"), width=12.5, height = 15)
-# post.mean <- as.vector(apply(as.data.frame(matrix(alpha.summary[((n+(n*p))+1):(n+(2*n*p)),1], nrow = n, ncol = p)), 2, sort, decreasing=F))
-# q1 <- as.vector(apply(as.data.frame(matrix(alpha.summary[((n+(n*p))+1):(n+(2*n*p)),4], nrow = n, ncol = p)), 2, sort, decreasing=F))
-# q3 <- as.vector(apply(as.data.frame(matrix(alpha.summary[((n+(n*p))+1):(n+(2*n*p)),5], nrow = n, ncol = p)), 2, sort, decreasing=F))
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_burr_mcmc_linear.pdf"), width=12.5, height = 15)
 
 data.nonlinear <- data.frame("x"=as.vector(xholder),
                           "post.mean" = as.vector(g.nonlinear.mean),
@@ -576,7 +565,7 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
           plot.margin = margin(0,0,0,-20),
           strip.text = element_blank(),
           axis.text = element_text(size = 20))
-# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_nonlinear.pdf"), width=12.5, height = 15)
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_burr_mcmc_nonlinear.pdf"), width=12.5, height = 15)
 
 data.scenario <- data.frame("x" = c(1:n),
                             "post.mean" = sort(alpha.samples[,1]),
@@ -602,6 +591,8 @@ ggplot(data.scenario, aes(x=x)) +
         plot.margin = margin(0,0,0,-1),
         strip.text = element_blank(),
         axis.title.x = element_text(size = 35))
+
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_burr_mcmc_alpha.pdf"), width=10, height = 7.78)
 
 len <- dim(posterior$alpha)[1]
 r <- matrix(, nrow = n, ncol = 30)
@@ -637,7 +628,7 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
   theme(text = element_text(size = 20)) + 
   coord_fixed(xlim = c(-3, 3),  
               ylim = c(-3, 3))
-# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_qqplot.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_burr_mcmc_qqplot.pdf"), width=10, height = 7.78)
 
 # mcmc.gamma <- posterior$gamma
 # gamma.container <- as.data.frame(matrix(NA, nrow = 20, ,ncol = 0))
