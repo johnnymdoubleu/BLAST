@@ -247,7 +247,7 @@ generated quantities {
     }
 }
 "
-, "model_pareto.stan")
+, "model_bagging.stan")
 
 data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, 
                     atau = ((psi+1)/2), newp = (p+1), bag = ceiling(n*0.95), resample = 1,
@@ -259,7 +259,7 @@ set_cmdstan_path(path = NULL)
 
 # Create a CmdStanModel object from a Stan program,
 # here using the example model that comes with CmdStan
-file <- file.path(cmdstan_path(), "model.stan")
+file <- file.path(cmdstan_path(), "model_bagging.stan")
 
 init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
                         theta = rep(0, (p+1)), 
@@ -276,7 +276,7 @@ init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
 
 # stanc("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/application/model1.stan")
 fit1 <- stan(
-    file = "model.stan",  # Stan program
+    file = "model_bagging.stan",  # Stan program
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
     # init_r = 1,
