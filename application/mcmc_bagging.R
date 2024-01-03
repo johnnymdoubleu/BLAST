@@ -241,7 +241,7 @@ generated quantities {
 , "model_pareto.stan")
 
 data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, 
-                    atau = ((psi+1)/2), newp = (p+1), bag = 
+                    atau = ((psi+1)/2), newp = (p+1), bag = (n*0.95),
                     bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
                     xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear)
 
