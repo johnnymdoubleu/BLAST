@@ -201,7 +201,7 @@ parameters {
 
 transformed parameters {
     vector[bag] alpha; // tail index
-    vector[bag] newalpha; // tail index    
+    vector[n] newalpha; // tail index    
     matrix[bag, p] gnl; // nonlinear component
     matrix[bag, p] gl; // linear component
     matrix[bag, p] gsmooth; // smooth function
