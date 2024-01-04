@@ -280,15 +280,15 @@ file <- file.path(cmdstan_path(), "model_bagging.stan")
 init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
                         theta = rep(0, (p+1)), 
                         tau = rep(0.1, p), sigma = 0.1, 
-                        lambda1 = 0.1, lambda2 = 0.1),
+                        lambda1 = 1, lambda2 = 1),
                   list(gamma = array(rep(0.02, (psi*p)), dim=c(psi, p)),
-                        theta = rep(0.01, (p+1)), 
-                        tau = rep(0.01, p), sigma = 0.001,
-                        lambda1 = 0.01, lambda2 = 0.1),
-                  list(gamma = array(rep(0.01, (psi*p)), dim=c(psi, p)),
+                        theta = rep(0.1, (p+1)), 
+                        tau = rep(0.1, p), sigma = 0.001,
+                        lambda1 = 1, lambda2 = 1),
+                  list(gamma = array(rep(0.05, (psi*p)), dim=c(psi, p)),
                         theta = rep(0.05, (p+1)), 
                         tau = rep(0.01, p), sigma = 0.01,
-                        lambda1 = 0.1, lambda2 = 0.01))
+                        lambda1 = 1, lambda2 = 1))
 
 
 fit1 <- stan(
@@ -525,7 +525,7 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
           plot.margin = margin(0,0,0,-20),
           # strip.text = element_blank(),
           axis.text = element_text(size = 20))
-# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=12.5, height = 15)
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_bagging_mcmc_smooth.pdf"), width=12.5, height = 15)
 
 data.linear <- data.frame("x"= as.vector(xholder),
                           "post.mean" = as.vector(g.linear.mean),
@@ -538,13 +538,13 @@ data.linear <- data.frame("x"= as.vector(xholder),
 
 ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  # geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
+  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   # geom_line(aes(y=true, colour = "True"), linewidth=2) + 
   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
   ylab("") + xlab("") +
-  facet_grid(covariates ~ ., scales = "free",
+  facet_grid(covariates ~ ., scales = "free_x",
               labeller = label_parsed) + 
-  # scale_fill_manual(values=c("steelblue"), name = "") +
+  scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values=c("steelblue")) + 
   guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) + #ylim(-0.65, 0.3) +
@@ -554,10 +554,8 @@ ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) +
           plot.margin = margin(0,0,0,-20),
           # strip.text = element_blank(),
           axis.text = element_text(size = 20))
-# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_linear.pdf"), width=12.5, height = 15)
-# post.mean <- as.vector(apply(as.data.frame(matrix(alpha.summary[((n+(n*p))+1):(n+(2*n*p)),1], nrow = n, ncol = p)), 2, sort, decreasing=F))
-# q1 <- as.vector(apply(as.data.frame(matrix(alpha.summary[((n+(n*p))+1):(n+(2*n*p)),4], nrow = n, ncol = p)), 2, sort, decreasing=F))
-# q3 <- as.vector(apply(as.data.frame(matrix(alpha.summary[((n+(n*p))+1):(n+(2*n*p)),5], nrow = n, ncol = p)), 2, sort, decreasing=F))
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_bagging_mcmc_linear.pdf"), width=12.5, height = 15)
+
 
 data.nonlinear <- data.frame("x"=as.vector(xholder),
                           "post.mean" = as.vector(g.nonlinear.mean),
@@ -570,11 +568,11 @@ data.nonlinear <- data.frame("x"=as.vector(xholder),
 
 ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  # geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
+  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   # geom_line(aes(y=true, colour = "True"), linewidth=2) + 
   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
   ylab("") + xlab("") +
-  facet_grid(covariates ~ ., scales = "free", #switch = "y",
+  facet_grid(covariates ~ ., scales = "free_x", #switch = "y",
               labeller = label_parsed) + 
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values=c("steelblue")) + 
@@ -598,7 +596,7 @@ ggplot(data.scenario, aes(x=x)) +
   ylab(expression(alpha(bold(x)))) + xlab(expression(x)) + labs(col = "") +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
   # geom_line(aes(y = true, col = "True"), linewidth = 2) +
-  ylim(0, 2500) +
+  # ylim(0, 2500) +
   geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values = c("steelblue")) + 
