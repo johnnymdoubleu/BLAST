@@ -205,23 +205,25 @@ transformed parameters {
     matrix[bag, p] gnl; // nonlinear component
     matrix[bag, p] gl; // linear component
     matrix[bag, p] gsmooth; // smooth function
-    matrix[bag, p] newgnl; // nonlinear component
-    matrix[bag, p] newgl; // linear component
-    matrix[bag, p] newgsmooth; // smooth function
+    matrix[n, p] newgnl; // nonlinear component
+    matrix[n, p] newgl; // linear component
+    matrix[n, p] newgsmooth; // smooth function
 
     for (j in 1:p){
         gnl[,j] = bsNonlinear[bagIndex,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
         gl[,j] = bsLinear[bagIndex,j] * theta[j+1];
         gsmooth[,j] = gl[,j] + gnl[,j];
-        newgnl[,j] = xholderNonlinear[bagIndex, (((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
-        newgl[,j] = xholderLinear[bagIndex,j] * theta[j+1];
+        newgnl[,j] = xholderNonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
+        newgl[,j] = xholderLinear[,j] * theta[j+1];
         newgsmooth[,j] = newgl[, j] + newgnl[,j];
     };
 
     for (i in 1:bag){
         alpha[i] = exp(theta[1] + sum(gsmooth[i,]));
-        newalpha[i] = exp(theta[1] + sum(newgsmooth[i,]));        
     };
+    for (i in 1:n){
+        newalpha[i] = exp(theta[1] + sum(newgsmooth[i,]));
+    }
 }
 model {
     // likelihood
@@ -495,13 +497,13 @@ equal_breaks <- function(n = 3, s = 0.1,...){
 
 data.smooth <- data.frame("x"= as.vector(xholder),
                           "post.mean" = as.vector(g.smooth.mean),
-                          # "q1" = as.vector(g.smooth.q1),
-                          # "q2" = as.vector(g.smooth.q2),
-                          # "q3" = as.vector(g.smooth.q3),
+                          "q1" = as.vector(g.smooth.q1),
+                          "q2" = as.vector(g.smooth.q2),
+                          "q3" = as.vector(g.smooth.q3),
                           # "post.mean" = as.vector(sort(g.smooth.mean)),
-                          "q1" = as.vector(sort(g.smooth.q1)),
-                          "q2" = as.vector(sort(g.smooth.q2)),
-                          "q3" = as.vector(sort(g.smooth.q3)),
+                          # "q1" = as.vector(sort(g.smooth.q1)),
+                          # "q2" = as.vector(sort(g.smooth.q2)),
+                          # "q3" = as.vector(sort(g.smooth.q3)),
                           "covariates" = gl(p, n, (p*n), labels = c("DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC")),
                           # "fakelab" = rep(1, (p*n)),
                           "replicate" = gl(p, n, (p*n), labels = c("DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC")))
