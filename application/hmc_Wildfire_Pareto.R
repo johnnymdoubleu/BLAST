@@ -98,8 +98,10 @@ fwi.index$month <- factor(format(fwi.index$date,"%b"),
 fwi.scaled <- fwi.scaled[which(Y>u),]
 min.l <- min(fwi.scaled)
 max.l <- max(fwi.scaled)
+fwi.scaled <- as.data.frame(lapply(fwi.scaled, rescale, to=c(-1,1)))
 # fwi.scaled <- as.data.frame(scale(fwi.scaled))
-rescale(fwi.scaled[,1], to=c(-1,1), from=c(min.l, max.l))
+# rescale(fwi.scaled[,1], to=c(-1,1))
+
 
 # pdf(file = "./BRSTIR/application/figures/correlation.pdf")
 # corrplot.mixed(cor(fwi.scaled),
@@ -574,7 +576,7 @@ ggplot(data.scenario, aes(x=x)) +
   ylab(expression(alpha(bold(x)))) + xlab(expression(x)) + labs(col = "") +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
   # geom_line(aes(y = true, col = "True"), linewidth = 2) +
-  ylim(0, 2500) +
+  # ylim(0, 2500) +
   geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values = c("steelblue")) + 
