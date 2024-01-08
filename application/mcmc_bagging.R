@@ -99,10 +99,10 @@ fwi.scaled <- fwi.scaled[which(Y>u),]
 fwi.scaled <- as.data.frame(scale(fwi.scaled))
 
 # pdf(file = "./BRSTIR/application/figures/correlation.pdf")
-# corrplot.mixed(cor(fwi.scaled),
-#                 upper = "circle",
-#                 lower = "number",
-#                 addgrid.col = "black")
+corrplot.mixed(cor(fwi.scaled),
+                upper = "circle",
+                lower = "number",
+                addgrid.col = "black")
 # dev.off()
 # ggsave("./BRSTIR/application/figures/correlation.pdf", plot = replayPlot(p1), width=10, height = 7.78)
 # cov$date <- as.Date(with(cov, paste(year,month,day,sep="-")),"%Y-%m-%d")
