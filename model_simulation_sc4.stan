@@ -1,4 +1,4 @@
-// Stan model for simple linear regression
+// Stan model for BRSTIR Burr Uncorrelated Samples
 functions{
     real burr_lpdf(real y, real c){
         // Burr distribution log pdf

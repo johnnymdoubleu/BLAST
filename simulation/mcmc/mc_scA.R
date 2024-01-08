@@ -18,7 +18,7 @@ library(cmdstanr)
 total.iter <- 2
 
 n <- 15000
-psi <- 10
+psi <- 5
 threshold <- 0.95
 p <- 5
 newp <- p+1
