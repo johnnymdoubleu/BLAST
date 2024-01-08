@@ -145,7 +145,7 @@ df.extreme <- as.data.frame(cbind(month = fwi.index$month[which(Y>u)], df.extrem
 #       axis.text = element_text(size = 25),
 #       axis.title = element_text(size = 30))
 
-psi <- 10
+psi <- 20
 n <- dim(fwi.scaled)[[1]]
 p <- dim(fwi.scaled)[[2]]
 no.theta <- 1
@@ -482,9 +482,9 @@ data.smooth <- data.frame("x"= as.vector(xholder),
                           # "q1" = as.vector(sort(g.smooth.q1)),
                           # "q2" = as.vector(sort(g.smooth.q2)),
                           # "q3" = as.vector(sort(g.smooth.q3)),
-                          "covariates" = gl(p, n, (p*n), labels = c("DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC")),
+                          "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)),
                           # "fakelab" = rep(1, (p*n)),
-                          "replicate" = gl(p, n, (p*n), labels = c("DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC")))
+                          "replicate" = gl(p, n, (p*n), labels = names(fwi.scaled)))
 
 ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
@@ -510,19 +510,19 @@ data.linear <- data.frame("x"= as.vector(xholder),
                           "q1" = as.vector(g.linear.q1),
                           "q2" = as.vector(g.linear.q2),
                           "q3" = as.vector(g.linear.q3),
-                          "covariates" = gl(p, n, (p*n), labels = c("DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC")),
+                          "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)),
                           "fakelab" = rep(1, (p*n)),
-                          "replicate" = gl(p, n, (p*n), labels = c("DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC")))
+                          "replicate" = gl(p, n, (p*n), labels = names(fwi.scaled)))
 
 ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  # geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
+  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   # geom_line(aes(y=true, colour = "True"), linewidth=2) + 
   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
   ylab("") + xlab("") +
   facet_grid(covariates ~ ., scales = "free",
               labeller = label_parsed) + 
-  # scale_fill_manual(values=c("steelblue"), name = "") +
+  scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values=c("steelblue")) + 
   guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) + #ylim(-0.65, 0.3) +
@@ -533,22 +533,20 @@ ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) +
           # strip.text = element_blank(),
           axis.text = element_text(size = 20))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_linear.pdf"), width=12.5, height = 15)
-# post.mean <- as.vector(apply(as.data.frame(matrix(alpha.summary[((n+(n*p))+1):(n+(2*n*p)),1], nrow = n, ncol = p)), 2, sort, decreasing=F))
-# q1 <- as.vector(apply(as.data.frame(matrix(alpha.summary[((n+(n*p))+1):(n+(2*n*p)),4], nrow = n, ncol = p)), 2, sort, decreasing=F))
-# q3 <- as.vector(apply(as.data.frame(matrix(alpha.summary[((n+(n*p))+1):(n+(2*n*p)),5], nrow = n, ncol = p)), 2, sort, decreasing=F))
+
 
 data.nonlinear <- data.frame("x"=as.vector(xholder),
                           "post.mean" = as.vector(g.nonlinear.mean),
                           "q1" = as.vector(g.nonlinear.q1),
                           "q2" = as.vector(g.nonlinear.q2),
                           "q3" = as.vector(g.nonlinear.q3),
-                          "covariates" = gl(p, n, (p*n), labels = c("DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC")),
+                          "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)),
                           "fakelab" = rep(1, (p*n)),
-                          "replicate" = gl(p, n, (p*n), labels = c("DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC")))
+                          "replicate" = gl(p, n, (p*n), labels = names(fwi.scaled)))
 
 ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  # geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
+  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   # geom_line(aes(y=true, colour = "True"), linewidth=2) + 
   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
   ylab("") + xlab("") +
@@ -639,9 +637,7 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
 #                 upper = "circle",
 #                 lower = "number",
 #                 addgrid.col = "black")
-
-
-# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_qqplot.pdf"), width=10, height = 7.78)              
+             
 # saveRDS(data.scenario, file=paste0("Simulation/BayesianPsplines/results/",date,"-",time, "_sc1_data_samp1.rds"))
 
 cat("Finished Running")
@@ -655,19 +651,33 @@ print(paste("ELPD (PSIS)=",round(sum(y.psis),2)))
 print(paste("ELPD (brute force)=",round(sum(y),2)))
 
 plot(fwi.loo, label_points = TRUE)
-fwi.waic <- waic(posterior$log_lik)
-fwi.waic
+# fwi.waic <- waic(posterior$log_lik)
+# fwi.waic
 
-y.rep <- as.matrix(fit1, pars = "y_rep")
-ppc_loo_pit_overlay(
-  y = y,
-  yrep = y.rep,
-  lw = weights(fwi.loo$psis_object)
-)
-# ppc_dens_overlay(y, y.rep[1:50, ])
+# y.rep <- as.matrix(fit1, pars = "y_rep")
+# ppc_loo_pit_overlay(
+#   y = y,
+#   yrep = y.rep,
+#   lw = weights(fwi.loo$psis_object)
+# )
 
+grid.plts <- list()
+for(i in 1:p){
+  grid.plt <- ggplot(data = data.smooth[((((i-1)*n)+1):(i*n)),], aes(x=x)) + 
+                  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+                  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
+                  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
+                  ylab("") + xlab(names(fwi.scaled)[i]) +
+                  scale_fill_manual(values=c("steelblue"), name = "") +
+                  scale_color_manual(values=c("steelblue")) +
+                  #ylim(-0.65, 0.3) +
+                  scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
+                  theme_minimal(base_size = 30) +
+                  theme(legend.position = "none",
+                          plot.margin = margin(0,0,0,-20),
+                          axis.text = element_text(size = 20),
+                          axis.title.x = element_text(size = 15))
+  grid.plts[[i]] <- grid.plt
+}
 
-
-# plot(xholder[,2], g.new[,c(2)])
-# plot(xholder[,2], rowSums(g.new[,c(1,2,4)]))
-# plot(xholder[,3], rowSums(g.new[,c(3,6)]))
+grid.arrange(grobs = grid.plts, ncol = 2, nrow = (p/2))

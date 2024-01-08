@@ -15,7 +15,7 @@ library(cmdstanr)
 
 # Scenario A
 
-total.iter <- 2
+total.iter <- 10
 
 n <- 15000
 psi <- 5
