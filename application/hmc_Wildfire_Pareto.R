@@ -18,6 +18,7 @@ library(bayesplot)
 # library(mgcv)
 library(MCMCvis)
 library(cmdstanr)
+library(scales)
 
 # Structure of the FWI System
 #DSR : Dail Severity Rating
@@ -94,9 +95,11 @@ fwi.index$month <- factor(format(fwi.index$date,"%b"),
 # as.Date(substr(cov.long$...1[missing.values],1,10))
 # fwi.index$day <- as.Date(substr(cov.long$...1[missing.values],9,10),"%d")
 # with(cov.long[missing.values], paste(substr[...1, 6, 10],month,day,sep="-"))
-
 fwi.scaled <- fwi.scaled[which(Y>u),]
-fwi.scaled <- as.data.frame(scale(fwi.scaled))
+min.l <- min(fwi.scaled)
+max.l <- max(fwi.scaled)
+# fwi.scaled <- as.data.frame(scale(fwi.scaled))
+rescale(fwi.scaled[,1], to=c(-1,1), from=c(min.l, max.l))
 
 # pdf(file = "./BRSTIR/application/figures/correlation.pdf")
 # corrplot.mixed(cor(fwi.scaled),
