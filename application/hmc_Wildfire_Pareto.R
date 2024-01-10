@@ -663,15 +663,17 @@ plot(fwi.loo, label_points = TRUE)
 
 grid.plts <- list()
 for(i in 1:p){
-  grid.plt <- ggplot(data = data.smooth[((((i-1)*n)+1):(i*n)),], aes(x=x)) + 
+  grid.plt <- ggplot(data = data.frame(data.smooth[((((i-1)*n)+1):(i*n)),], origin = fwi.scaled[,i]), aes(x=x)) + 
+                  geom_point(aes(x= origin, y=q2)) + 
                   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
                   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
                   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
+                  geom_rug(aes(x= origin, y=q2), sides = "b") +
                   ylab("") + xlab(names(fwi.scaled)[i]) +
                   scale_fill_manual(values=c("steelblue"), name = "") +
                   scale_color_manual(values=c("steelblue")) +
                   #ylim(-0.65, 0.3) +
-                  scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
+                  scale_y_continuous(breaks=equal_breaks(n=5, s=0.1)) + 
                   theme_minimal(base_size = 30) +
                   theme(legend.position = "none",
                           plot.margin = margin(0,0,0,-20),
@@ -680,4 +682,4 @@ for(i in 1:p){
   grid.plts[[i]] <- grid.plt
 }
 
-grid.arrange(grobs = grid.plts, ncol = 3, nrow = (p/2))
+grid.arrange(grobs = grid.plts, ncol = floor(p/2), nrow = 3)
