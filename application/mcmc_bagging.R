@@ -46,6 +46,7 @@ df.long[which(is.na(df.long$...1))+1,]
 Y <- df.long$measurement[!is.na(df.long$measurement)]
 summary(Y) #total burnt area
 length(Y)
+psi <- 10
 threshold <- 0.95
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
@@ -95,14 +96,17 @@ fwi.index$month <- factor(format(fwi.index$date,"%b"),
 # fwi.index$day <- as.Date(substr(cov.long$...1[missing.values],9,10),"%d")
 # with(cov.long[missing.values], paste(substr[...1, 6, 10],month,day,sep="-"))
 
-fwi.scaled <- fwi.scaled[which(Y>u),]
-fwi.scaled <- as.data.frame(scale(fwi.scaled))
+fwi.scaled <- fwi.scaled[which(Y>u),2:7]
+min.l <- min(fwi.scaled)
+max.l <- max(fwi.scaled)
+fwi.scaled <- as.data.frame(lapply(fwi.scaled, rescale, to=c(-1,1)))
+# fwi.scaled <- as.data.frame(scale(fwi.scaled))
 
 # pdf(file = "./BRSTIR/application/figures/correlation.pdf")
-corrplot.mixed(cor(fwi.scaled),
-                upper = "circle",
-                lower = "number",
-                addgrid.col = "black")
+# corrplot.mixed(cor(fwi.scaled),
+#                 upper = "circle",
+#                 lower = "number",
+#                 addgrid.col = "black")
 # dev.off()
 # ggsave("./BRSTIR/application/figures/correlation.pdf", plot = replayPlot(p1), width=10, height = 7.78)
 # cov$date <- as.Date(with(cov, paste(year,month,day,sep="-")),"%Y-%m-%d")
@@ -140,7 +144,6 @@ df.extreme <- as.data.frame(cbind(month = fwi.index$month[which(Y>u)], df.extrem
 #       axis.text = element_text(size = 25),
 #       axis.title = element_text(size = 30))
 
-psi <- 10
 n <- dim(fwi.scaled)[[1]]
 p <- dim(fwi.scaled)[[2]]
 no.theta <- 1
@@ -297,8 +300,8 @@ fit1 <- stan(
     init = init.alpha,      # initial value
     # init_r = 1,
     chains = 3,             # number of Markov chains
-    warmup = 1000,          # number of warmup iterations per chain
-    iter = 2000,            # total number of iterations per chain
+    warmup = 1500,          # number of warmup iterations per chain
+    iter = 3000,            # total number of iterations per chain
     cores = 4,              # number of cores (could use one per chain)
     refresh = 500           # no progress shown
 )
