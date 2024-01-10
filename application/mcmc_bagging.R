@@ -18,7 +18,7 @@ library(bayesplot)
 # library(mgcv)
 library(MCMCvis)
 library(cmdstanr)
-
+library(scales)
 # Structure of the FWI System
 #DSR : Dail Severity Rating
 #FWI : Fire Weather Index
