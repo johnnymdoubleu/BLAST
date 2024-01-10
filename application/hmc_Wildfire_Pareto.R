@@ -47,7 +47,7 @@ df.long[which(is.na(df.long$...1))+1,]
 Y <- df.long$measurement[!is.na(df.long$measurement)]
 summary(Y) #total burnt area
 length(Y)
-psi <- 5
+psi <- 20
 threshold <- 0.95
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
@@ -96,7 +96,7 @@ fwi.index$month <- factor(format(fwi.index$date,"%b"),
 # as.Date(substr(cov.long$...1[missing.values],1,10))
 # fwi.index$day <- as.Date(substr(cov.long$...1[missing.values],9,10),"%d")
 # with(cov.long[missing.values], paste(substr[...1, 6, 10],month,day,sep="-"))
-fwi.scaled <- fwi.scaled[which(Y>u),2:7]
+fwi.scaled <- fwi.scaled[which(Y>u),]
 min.l <- min(fwi.scaled)
 max.l <- max(fwi.scaled)
 fwi.scaled <- as.data.frame(lapply(fwi.scaled, rescale, to=c(-1,1)))
@@ -665,7 +665,7 @@ plot(fwi.loo, label_points = TRUE)
 grid.plts <- list()
 for(i in 1:p){
   grid.plt <- ggplot(data = data.frame(data.smooth[((((i-1)*n)+1):(i*n)),], origin = fwi.scaled[,i]), aes(x=x)) + 
-                  geom_point(aes(x= origin, y=q2)) + 
+                  geom_point(aes(x= origin, y=q2), alpha = 0.3) + 
                   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
                   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
                   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
