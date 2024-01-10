@@ -683,7 +683,7 @@ for(i in 1:p){
   grid.plts[[i]] <- grid.plt
 }
 
-grid.arrange(grobs = grid.plts, ncol = floor(p/2), nrow = 3)
+grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
 
 
 # Testing accuracy of estimated alpha(x)
