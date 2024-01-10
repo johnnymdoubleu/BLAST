@@ -337,6 +337,7 @@ lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5,
 gl.samples <- summary(fit1, par=c("newgl"), probs = c(0.05, 0.5, 0.95))$summary
 gnl.samples <- summary(fit1, par=c("newgnl"), probs = c(0.05, 0.5, 0.95))$summary
 gsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
+alp.x.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
 alpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
 summary(fit1, par=c("sigma"), probs = c(0.05,0.5, 0.95))$summary
 summary(fit1, par=c("tau"), probs = c(0.05,0.5, 0.95))$summary
@@ -683,3 +684,24 @@ for(i in 1:p){
 }
 
 grid.arrange(grobs = grid.plts, ncol = floor(p/2), nrow = 3)
+
+
+# Testing accuracy of estimated alpha(x)
+data.alpha <- data.frame(type=c(rep("Median", n), rep("Interval.Diff", n)),
+                          value = c(alp.x.samples[,5], abs(alp.x.samples[,6]-alp.x.samples[,4])))
+  
+  # "x" = c(1:n),
+  #                           "post.median" = alp.x.samples[,5],
+  #                           "difference" = (alp.x.samples[,6]-alp.x.samples[,4]),
+  #                           "q1" = sort(alpha.samples[,4]),
+  #                           "q3" = sort(alpha.samples[,6]))
+ggplot(data = data.alpha, aes(x=value, fill=type)) +
+  geom_histogram(alpha=0.4, bins = 500) +
+  # geom_freqpoly(binwidth = 500)
+  # scale_fill_manual(values=c("#69b3a2", "#404080")) +
+  theme_minimal(base_size = 30) +
+  theme(legend.position = "top",
+        plot.margin = margin(0,0,0,-20),
+        axis.text = element_text(size = 20),
+        axis.title.x = element_text(size = 15)) +
+  labs(fill="")
