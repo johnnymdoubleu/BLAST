@@ -689,16 +689,9 @@ grid.arrange(grobs = grid.plts, ncol = floor(p/2), nrow = 3)
 # Testing accuracy of estimated alpha(x)
 data.alpha <- data.frame(type=c(rep("Median", n), rep("Interval.Diff", n)),
                           value = c(alp.x.samples[,5], abs(alp.x.samples[,6]-alp.x.samples[,4])))
-  
-  # "x" = c(1:n),
-  #                           "post.median" = alp.x.samples[,5],
-  #                           "difference" = (alp.x.samples[,6]-alp.x.samples[,4]),
-  #                           "q1" = sort(alpha.samples[,4]),
-  #                           "q3" = sort(alpha.samples[,6]))
+
 ggplot(data = data.alpha, aes(x=value, fill=type)) +
-  geom_histogram(alpha=0.4, bins = 500) +
-  # geom_freqpoly(binwidth = 500)
-  # scale_fill_manual(values=c("#69b3a2", "#404080")) +
+  geom_histogram(alpha=0.4, bins = 250) +
   theme_minimal(base_size = 30) +
   theme(legend.position = "top",
         plot.margin = margin(0,0,0,-20),
