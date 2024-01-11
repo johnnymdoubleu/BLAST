@@ -574,7 +574,7 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
           axis.text = element_text(size = 20))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_nonlinear.pdf"), width=12.5, height = 15)
 
-data.scenario <- data.frame("x" = c(1:n),
+data.scenario <- data.frame("x" = seq(-1, 1, length.out = n),
                             "post.mean" = sort(alpha.samples[,1]),
                             "post.median" = sort(alpha.samples[,5]),
                             "q1" = sort(alpha.samples[,4]),
@@ -599,7 +599,7 @@ ggplot(data.scenario, aes(x=x)) +
         strip.text = element_blank(),
         axis.title.x = element_text(size = 35))
 
-# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_alpha.pdf"), width=10, height = 7.78)
+ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_alpha.pdf"), width=10, height = 7.78)
 
 len <- dim(posterior$alpha)[1]
 r <- matrix(, nrow = n, ncol = 30)
