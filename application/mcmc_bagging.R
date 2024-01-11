@@ -211,6 +211,9 @@ transformed parameters {
     matrix[n, p] newgnl; // nonlinear component
     matrix[n, p] newgl; // linear component
     matrix[n, p] newgsmooth; // smooth function
+    array[bag] int<lower=1, upper=bag> bagin;
+    
+    bagin = bagIndex;
 
     for (j in 1:p){
         gnl[,j] = bsNonlinear[bagIndex,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
