@@ -97,11 +97,12 @@ fwi.index$month <- factor(format(fwi.index$date,"%b"),
 # fwi.index$day <- as.Date(substr(cov.long$...1[missing.values],9,10),"%d")
 # with(cov.long[missing.values], paste(substr[...1, 6, 10],month,day,sep="-"))
 fwi.scaled <- fwi.scaled[which(Y>u),]
+# fwi.scaled <- as.data.frame(scale(fwi.scaled))
 min.l <- min(fwi.scaled)
 max.l <- max(fwi.scaled)
 fwi.scaled <- as.data.frame(lapply(fwi.scaled, rescale, to=c(-1,1)))
-# fwi.scaled <- as.data.frame(scale(fwi.scaled))
-# rescale(fwi.scaled[,1], to=c(-1,1))
+
+
 
 
 # pdf(file = "./BRSTIR/application/figures/correlation.pdf")
@@ -145,6 +146,9 @@ df.extreme <- as.data.frame(cbind(month = fwi.index$month[which(Y>u)], df.extrem
 #       axis.text.x = element_text(hjust=0.35),
 #       axis.text = element_text(size = 25),
 #       axis.title = element_text(size = 30))
+
+
+
 
 n <- dim(fwi.scaled)[[1]]
 p <- dim(fwi.scaled)[[2]]
@@ -339,8 +343,13 @@ gnl.samples <- summary(fit1, par=c("newgnl"), probs = c(0.05, 0.5, 0.95))$summar
 gsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
 alp.x.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
 alpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
-summary(fit1, par=c("sigma"), probs = c(0.05,0.5, 0.95))$summary
-summary(fit1, par=c("tau"), probs = c(0.05,0.5, 0.95))$summary
+# summary(fit1, par=c("sigma"), probs = c(0.05,0.5, 0.95))$summary
+# summary(fit1, par=c("tau"), probs = c(0.05,0.5, 0.95))$summary
+
+# plot(x = ((data.smooth[1:n,4] + data.smooth[((n+1):(2*n)),4] + data.smooth[(((3*n)+1):(4*n)),4])), type = "l", ylab = "DSR + FWI + ISI")
+# plot(x = ((data.smooth[1:n,4] + data.smooth[((n+1):(2*n)),4])), type = "l", ylab = "DSR + FWI")
+# plot(x = ((data.smooth[((n+1):(2*n)),4] + data.smooth[(((3*n)+1):(4*n)),4])), type = "l", ylab = "FWI + ISI")
+# plot(x = ((data.smooth[1:n,4] + data.smooth[(((3*n)+1):(4*n)),4])), type = "l", ylab = "DSR + ISI")
 
 gamma.post.mean <- gamma.samples[,1]
 gamma.q1 <- gamma.samples[,4]
@@ -628,16 +637,6 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
   coord_fixed(xlim = c(-3, 3),  
               ylim = c(-3, 3))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_qqplot.pdf"), width=10, height = 7.78)
-
-# mcmc.gamma <- posterior$gamma
-# gamma.container <- as.data.frame(matrix(NA, nrow = 20, ,ncol = 0))
-# for(i in 5900:6000){
-#     gamma.container <- cbind(gamma.container, mcmc.gamma[i,1,])    
-# }
-# corrplot.mixed(cor(gamma.container),
-#                 upper = "circle",
-#                 lower = "number",
-#                 addgrid.col = "black")
              
 # saveRDS(data.scenario, file=paste0("Simulation/BayesianPsplines/results/",date,"-",time, "_sc1_data_samp1.rds"))
 
@@ -698,3 +697,4 @@ ggplot(data = data.alpha, aes(x=value, fill=type)) +
         axis.text = element_text(size = 20),
         axis.title.x = element_text(size = 15)) +
   labs(fill="")
+
