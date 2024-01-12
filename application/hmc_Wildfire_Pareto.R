@@ -97,10 +97,14 @@ fwi.index$month <- factor(format(fwi.index$date,"%b"),
 # fwi.index$day <- as.Date(substr(cov.long$...1[missing.values],9,10),"%d")
 # with(cov.long[missing.values], paste(substr[...1, 6, 10],month,day,sep="-"))
 fwi.scaled <- fwi.scaled[which(Y>u),]
-# fwi.scaled <- as.data.frame(scale(fwi.scaled))
-min.l <- min(fwi.scaled)
-max.l <- max(fwi.scaled)
-fwi.scaled <- as.data.frame(lapply(fwi.scaled, rescale, to=c(-1,1)))
+fwi.scaled <- as.data.frame(scale(fwi.scaled))
+
+plot((fwi.scaled[,2]), (log(y)))
+plot((fwi.scaled[,5]), (log(y)))
+
+# min.l <- min(fwi.scaled)
+# max.l <- max(fwi.scaled)
+# fwi.scaled <- as.data.frame(lapply(fwi.scaled, rescale, to=c(-1,1)))
 
 
 
@@ -575,19 +579,20 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_nonlinear.pdf"), width=12.5, height = 15)
 
 data.scenario <- data.frame("x" = seq(-1, 1, length.out = n),
-                            "post.mean" = sort(alpha.samples[,1]),
-                            "post.median" = sort(alpha.samples[,5]),
-                            "q1" = sort(alpha.samples[,4]),
-                            "q3" = sort(alpha.samples[,6]))
+                            "post.mean" = (alpha.samples[,1]),
+                            "post.median" = (alpha.samples[,5]),
+                            "q1" = (alpha.samples[,4]),
+                            "q3" = (alpha.samples[,6]))
 
 ggplot(data.scenario, aes(x=x)) + 
-  ylab(expression(alpha(bold(x)))) + xlab(expression(x)) + labs(col = "") +
+  ylab(expression(alpha(bold(x)))) + xlab(expression(c)) + labs(col = "") +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
   # geom_line(aes(y = true, col = "True"), linewidth = 2) +
   # ylim(0, 2500) +
   geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values = c("steelblue")) + 
+  scale_y_log10() + 
   guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) +
   theme_minimal(base_size = 30) +
@@ -599,7 +604,7 @@ ggplot(data.scenario, aes(x=x)) +
         strip.text = element_blank(),
         axis.title.x = element_text(size = 35))
 
-ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_alpha.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_alpha.pdf"), width=10, height = 7.78)
 
 len <- dim(posterior$alpha)[1]
 r <- matrix(, nrow = n, ncol = 30)
