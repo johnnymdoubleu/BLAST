@@ -7,16 +7,11 @@ library(gridExtra)
 library(colorspace)
 library(corrplot)
 library(ReIns)
-library(evir)
 library(rstan)
-suppressMessages(library(coda))
-library(ggmcmc)
 library(loo)
 library(bayesplot)
-# library(R6)
-# suppressMessages(library(igraph))
-# library(mgcv)
-library(MCMCvis)
+library(evir)
+library(mev)
 library(cmdstanr)
 library(scales)
 
@@ -82,30 +77,28 @@ fwi.scaled <- fwi.index <- data.frame(DSR = double(length(Y)),
 # cov.long$ <- gather(cov$DSR[!is.na(df.long$measurement)][,1:41], )
 for(i in 1:length(cov)){
     cov.long <- gather(cov[[i]][,1:41], condition, measurement, "1980":"2019", factor_key=TRUE)
-    # cov.long[which(is.na(cov.long$measurement)),]
-    # cov.long[which(is.na(cov.long$...1))+1,]
-    # cov.long[which(!is.na(df.long$measurement)),]
     fwi.index[,i] <- cov.long$measurement[missing.values]
-    # fwi.scaled[,i] <- cov.long$measurement[missing.values]
     fwi.scaled[,i] <- cov.long$measurement[missing.values]
 }
 fwi.index$date <- as.Date(substr(cov.long$...1[missing.values],1,10), "%Y-%m-%d")
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 fwi.index$month <- factor(format(fwi.index$date,"%b"),
                             levels = c("Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"))
-# as.Date(substr(cov.long$...1[missing.values],1,10))
-# fwi.index$day <- as.Date(substr(cov.long$...1[missing.values],9,10),"%d")
-# with(cov.long[missing.values], paste(substr[...1, 6, 10],month,day,sep="-"))
+
 fwi.scaled <- fwi.scaled[which(Y>u),]
 # fwi.scaled <- as.data.frame(scale(fwi.scaled))
 
 # plot((fwi.scaled[,2]), (log(y)))
 # plot((fwi.scaled[,5]), (log(y)))
 
-fwi.scaled <- as.data.frame(lapply(fwi.scaled, rescale, to=c(-1,1)))
-
-
-
+fwi.scaled <- as.data.frame(lapply(fwi.scaled, rescale, to=c(0,1)))
+fwi.ind <- which(fwi.scaled[,2]>0)
+# plot(sort(hill(y,option="alpha", reverse = FALSE)$y))
+# hill(y, option = "alpha", reverse = FALSE)
+# hill(sort(Y)[13865:14609], option="alpha", reverse = TRUE)$y
+# hill(fwi.scaled[which(fwi.scaled[,2]>0), 2], option = "alpha", reverse = FALSE)
+hill(fwi.scaled[fwi.ind, 2], option = "alpha", reverse = FALSE)
+hill(fwi.scaled[-fwi.ind, 2], option = "alpha", reverse = FALSE)
 
 # pdf(file = "./BRSTIR/application/figures/correlation.pdf")
 # corrplot.mixed(cor(fwi.scaled),
@@ -114,15 +107,8 @@ fwi.scaled <- as.data.frame(lapply(fwi.scaled, rescale, to=c(-1,1)))
 #                 addgrid.col = "black")
 # dev.off()
 # ggsave("./BRSTIR/application/figures/correlation.pdf", plot = replayPlot(p1), width=10, height = 7.78)
-# cov$date <- as.Date(with(cov, paste(year,month,day,sep="-")),"%Y-%m-%d")
-# cov$yearmon <- as.Date(with(cov, paste(year,month,sep="-")),"%Y-%m")
-# special <- gather(fwi.scaled, cols, value) |> spread(cols, value) |> select(colnames(fwi.scaled))
-# ggplot(gather(fwi.scaled, cols, value), aes(x = value)) + 
-#        geom_histogram(binwidth = 0.1) + facet_grid(cols~.)
-# ggplot(gather(fwi.index[which(Y>u),1:7], cols, value), aes(x = value)) + 
-#        geom_histogram(binwidth = 2) + facet_grid(cols~.)
+
 df.extreme <- cbind(y, fwi.scaled)
-# df.extreme <- cbind(date = cov$date[which(Y>u)], df.extreme)
 df.extreme <- as.data.frame(cbind(month = fwi.index$month[which(Y>u)], df.extreme))
 # ggplot(df.extreme, aes(x=month, y=y, color=month)) + geom_point(size=6) + theme_minimal() +
 #     theme(plot.title = element_text(hjust = 0.5, size = 20),
@@ -133,23 +119,6 @@ df.extreme <- as.data.frame(cbind(month = fwi.index$month[which(Y>u)], df.extrem
 #         axis.text = element_text(size = 20),
 #         axis.title = element_text(size = 15))
 # ggsave("./BRSTIR/application/figures/datavis.pdf", width=15)
-
-# # ggplot(as.data.frame(y),aes(x=y))+geom_histogram(aes(y=..density..), bins = 5)
-
-# ggplot(df.extreme, aes(x=y)) +
-#     geom_histogram(stat = "density", n=40, adjust=0.1, fill = "darkgrey") + 
-#     xlab("Area Burnt") + 
-#     # geom_histogram(aes(y=..density..), bins = 10^3) +
-#     # geom_density(aes(y=..density..)) +
-#     theme(plot.title = element_text(hjust = 0.5, size = 20),
-#       legend.title = element_blank(),
-#       legend.text = element_text(size=20),
-#       # axis.ticks.x = element_blank(),
-#       axis.text.x = element_text(hjust=0.35),
-#       axis.text = element_text(size = 25),
-#       axis.title = element_text(size = 30))
-
-
 
 
 n <- dim(fwi.scaled)[[1]]
