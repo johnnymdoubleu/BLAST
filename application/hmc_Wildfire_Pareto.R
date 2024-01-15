@@ -42,8 +42,8 @@ df.long[which(is.na(df.long$...1))+1,]
 Y <- df.long$measurement[!is.na(df.long$measurement)]
 summary(Y) #total burnt area
 length(Y)
-psi <- 20
-threshold <- 0.95
+psi <- 10
+threshold <- 0.99
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
 # x.scale <- x.scale[which(y>quantile(y, threshold)),]
@@ -91,14 +91,14 @@ fwi.scaled <- fwi.scaled[which(Y>u),]
 # plot((fwi.scaled[,2]), (log(y)))
 # plot((fwi.scaled[,5]), (log(y)))
 
-fwi.scaled <- as.data.frame(lapply(fwi.scaled, rescale, to=c(0,1)))
-fwi.ind <- which(fwi.scaled[,2]>0)
-# plot(sort(hill(y,option="alpha", reverse = FALSE)$y))
-# hill(y, option = "alpha", reverse = FALSE)
-# hill(sort(Y)[13865:14609], option="alpha", reverse = TRUE)$y
-# hill(fwi.scaled[which(fwi.scaled[,2]>0), 2], option = "alpha", reverse = FALSE)
-hill(fwi.scaled[fwi.ind, 2], option = "alpha", reverse = FALSE)
-hill(fwi.scaled[-fwi.ind, 2], option = "alpha", reverse = FALSE)
+fwi.scaled <- as.data.frame(lapply(fwi.scaled, rescale, to=c(-1,1)))
+# fwi.ind <- which(fwi.scaled[,2]>0)
+# # plot(sort(hill(y,option="alpha", reverse = FALSE)$y))
+# # hill(y, option = "alpha", reverse = FALSE)
+# # hill(sort(Y)[13865:14609], option="alpha", reverse = TRUE)$y
+# # hill(fwi.scaled[which(fwi.scaled[,2]>0), 2], option = "alpha", reverse = FALSE)
+# hill(fwi.scaled[fwi.ind, 2], option = "alpha", reverse = FALSE)
+# hill(fwi.scaled[-fwi.ind, 2], option = "alpha", reverse = FALSE)
 
 # pdf(file = "./BRSTIR/application/figures/correlation.pdf")
 # corrplot.mixed(cor(fwi.scaled),
