@@ -97,14 +97,12 @@ fwi.index$month <- factor(format(fwi.index$date,"%b"),
 # fwi.index$day <- as.Date(substr(cov.long$...1[missing.values],9,10),"%d")
 # with(cov.long[missing.values], paste(substr[...1, 6, 10],month,day,sep="-"))
 fwi.scaled <- fwi.scaled[which(Y>u),]
-fwi.scaled <- as.data.frame(scale(fwi.scaled))
+# fwi.scaled <- as.data.frame(scale(fwi.scaled))
 
-plot((fwi.scaled[,2]), (log(y)))
-plot((fwi.scaled[,5]), (log(y)))
+# plot((fwi.scaled[,2]), (log(y)))
+# plot((fwi.scaled[,5]), (log(y)))
 
-# min.l <- min(fwi.scaled)
-# max.l <- max(fwi.scaled)
-# fwi.scaled <- as.data.frame(lapply(fwi.scaled, rescale, to=c(-1,1)))
+fwi.scaled <- as.data.frame(lapply(fwi.scaled, rescale, to=c(-1,1)))
 
 
 
