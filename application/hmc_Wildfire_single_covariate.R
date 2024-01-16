@@ -85,7 +85,7 @@ fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 fwi.index$month <- factor(format(fwi.index$date,"%b"),
                             levels = c("Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"))
 
-fwi.scaled <- fwi.scaled[which(Y>u),3]
+fwi.scaled <- fwi.scaled[which(Y>u),7]
 # fwi.scaled <- as.data.frame(scale(fwi.scaled))
 fwi.scaled <- as.data.frame(rescale(fwi.scaled, to = c(-1, 1)))
 
@@ -645,7 +645,7 @@ for(i in 1:p){
                   ylab("") + xlab(names(fwi.scaled)[i]) +
                   scale_fill_manual(values=c("steelblue"), name = "") +
                   scale_color_manual(values=c("steelblue")) +
-                  xlab("BUI") +
+                  xlab("DC") +
                   scale_y_continuous(breaks=equal_breaks(n=5, s=0.1)) + 
                   theme_minimal(base_size = 30) +
                   theme(legend.position = "none",
