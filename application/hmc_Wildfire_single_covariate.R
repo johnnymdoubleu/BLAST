@@ -87,11 +87,12 @@ fwi.index$month <- factor(format(fwi.index$date,"%b"),
 
 fwi.scaled <- fwi.scaled[which(Y>u),2]
 # fwi.scaled <- as.data.frame(scale(fwi.scaled))
+fwi.scaled <- as.data.frame(rescale(fwi.scaled, to = c(-1, 1)))
 
 # plot((fwi.scaled[,2]), (log(y)))
 # plot((fwi.scaled[,5]), (log(y)))
 
-fwi.scaled <- as.data.frame(lapply(fwi.scaled, rescale, to=c(-1,1)))
+# fwi.scaled <- as.data.frame(lapply(fwi.scaled, rescale, to=c(-1,1)))
 # fwi.ind <- which(fwi.scaled[,2]>0)
 # # plot(sort(hill(y,option="alpha", reverse = FALSE)$y))
 # # hill(y, option = "alpha", reverse = FALSE)
