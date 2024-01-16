@@ -42,7 +42,7 @@ df.long[which(is.na(df.long$...1))+1,]
 Y <- df.long$measurement[!is.na(df.long$measurement)]
 summary(Y) #total burnt area
 length(Y)
-psi <- 10
+psi <- 5
 threshold <- 0.99
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
@@ -654,7 +654,7 @@ for(i in 1:p){
   grid.plts[[i]] <- grid.plt
 }
 
-grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
+grid.arrange(grobs = grid.plts, ncol = 1, nrow = 3)
 
 
 # Testing accuracy of estimated alpha(x)
