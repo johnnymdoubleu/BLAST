@@ -85,7 +85,7 @@ fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 fwi.index$month <- factor(format(fwi.index$date,"%b"),
                             levels = c("Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"))
 
-fwi.scaled <- fwi.scaled[which(Y>u),c(2,4)]
+fwi.scaled <- fwi.scaled[which(Y>u),2]
 # fwi.scaled <- as.data.frame(scale(fwi.scaled))
 
 # plot((fwi.scaled[,2]), (log(y)))
@@ -654,7 +654,7 @@ for(i in 1:p){
   grid.plts[[i]] <- grid.plt
 }
 
-grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
+grid.arrange(grobs = grid.plts, ncol = 2, nrow = 3)
 
 
 # Testing accuracy of estimated alpha(x)
