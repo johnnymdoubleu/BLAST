@@ -42,7 +42,7 @@ df.long[which(is.na(df.long$...1))+1,]
 Y <- df.long$measurement[!is.na(df.long$measurement)]
 summary(Y) #total burnt area
 length(Y)
-psi <- 5
+psi <- 10
 threshold <- 0.99
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
@@ -85,7 +85,7 @@ fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 fwi.index$month <- factor(format(fwi.index$date,"%b"),
                             levels = c("Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"))
 
-fwi.scaled <- fwi.scaled[which(Y>u),c(1,2,4)]
+fwi.scaled <- fwi.scaled[which(Y>u),]
 # fwi.scaled <- as.data.frame(scale(fwi.scaled))
 
 # plot((fwi.scaled[,2]), (log(y)))
@@ -245,7 +245,7 @@ init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
 
 # stanc("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/application/model1.stan")
 fit1 <- stan(
-    file = "model.stan",  # Stan program
+    file = "model_pareto.stan",  # Stan program
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
     # init_r = 1,
@@ -654,7 +654,7 @@ for(i in 1:p){
   grid.plts[[i]] <- grid.plt
 }
 
-grid.arrange(grobs = grid.plts, ncol = 1, nrow = 3)
+grid.arrange(grobs = grid.plts, ncol = 2, nrow = 2)
 
 
 # Testing accuracy of estimated alpha(x)

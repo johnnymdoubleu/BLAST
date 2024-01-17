@@ -43,7 +43,7 @@ Y <- df.long$measurement[!is.na(df.long$measurement)]
 summary(Y) #total burnt area
 length(Y)
 psi <- 10
-threshold <- 0.95
+threshold <- 0.99
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
 # x.scale <- x.scale[which(y>quantile(y, threshold)),]
@@ -87,12 +87,11 @@ fwi.index$month <- factor(format(fwi.index$date,"%b"),
 
 fwi.scaled <- fwi.scaled[which(Y>u),]
 # fwi.scaled <- as.data.frame(scale(fwi.scaled))
-fwi.scaled <- as.data.frame(rescale(fwi.scaled, to = c(-1, 1)))
 
 # plot((fwi.scaled[,2]), (log(y)))
 # plot((fwi.scaled[,5]), (log(y)))
 
-# fwi.scaled <- as.data.frame(lapply(fwi.scaled, rescale, to=c(-1,1)))
+fwi.scaled <- as.data.frame(lapply(fwi.scaled, rescale, to=c(-1,1)))
 # fwi.ind <- which(fwi.scaled[,2]>0)
 # # plot(sort(hill(y,option="alpha", reverse = FALSE)$y))
 # # hill(y, option = "alpha", reverse = FALSE)
@@ -166,12 +165,15 @@ parameters {
     real <lower=0> lambda1; // lasso penalty
     real <lower=0> lambda2; // group lasso penalty
     real sigma; //
+    int <lower=0> delta;
     vector[p] tau;
 }
 
 transformed parameters {
     vector[n] alpha; // tail index
-    vector[n] newalpha; // tail index    
+    vector[n] newalpha; // tail index
+    vector[n] alpha2; // tail index
+    vector[n] newalpha2; // tail index        
     matrix[n, p] gnl; // nonlinear component
     matrix[n, p] gl; // linear component
     matrix[n, p] gsmooth; // smooth function
@@ -188,18 +190,21 @@ transformed parameters {
     };
     for (i in 1:n){
         alpha[i] = exp(theta[1] + sum(gsmooth[i,]));
-        newalpha[i] = exp(theta[1] + sum(newgsmooth[i,]));        
+        alpha2[i] = alpha[i] * (1+delta);
+        newalpha[i] = exp(theta[1] + sum(newgsmooth[i,]));
+        newalpha2[i] = newalpha[i]*(1+delta);
     };
 }
 
 model {
     // likelihood
     for (i in 1:n){
-        target += pareto_lpdf(y[i] | u, alpha[i]);
+        target += pareto_lpdf(y[i] | u, alpha2[i]);
     }
     target += gamma_lpdf(lambda1 | 1, 10);
     target += gamma_lpdf(lambda2 | 0.1, 0.1);
     target += normal_lpdf(theta[1] | 0, 1);
+    target += unif_lpdf(delta | 0, 10);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
     target += (newp * log(lambda1) + (p * psi * log(lambda2)));
     for (j in 1:p){
@@ -217,7 +222,7 @@ generated quantities {
     }
 }
 "
-, "model_pareto.stan")
+, "model_two_pareto.stan")
 
 data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, 
                     atau = ((psi+1)/2), newp = (p+1),
@@ -229,24 +234,24 @@ set_cmdstan_path(path = NULL)
 
 # Create a CmdStanModel object from a Stan program,
 # here using the example model that comes with CmdStan
-file <- file.path(cmdstan_path(), "model.stan")
+file <- file.path(cmdstan_path(), "model_pareto.stan")
 
 init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
-                        theta = rep(0, (p+1)), 
+                        theta = rep(0, (p+1)), delta = 0.1,
                         tau = rep(0.1, p), sigma = 0.1, 
                         lambda1 = 0.1, lambda2 = 0.1),
                   list(gamma = array(rep(0.02, (psi*p)), dim=c(psi, p)),
-                        theta = rep(0.01, (p+1)), 
+                        theta = rep(0.01, (p+1)), delta = 1,
                         tau = rep(0.01, p), sigma = 0.001,
                         lambda1 = 0.01, lambda2 = 0.1),
                   list(gamma = array(rep(0.01, (psi*p)), dim=c(psi, p)),
-                        theta = rep(0.05, (p+1)), 
+                        theta = rep(0.05, (p+1)), delta = 0.5,
                         tau = rep(0.01, p), sigma = 0.01,
                         lambda1 = 0.1, lambda2 = 0.01))
 
 # stanc("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/application/model1.stan")
 fit1 <- stan(
-    file = "model.stan",  # Stan program
+    file = "model_two_pareto.stan",  # Stan program
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
     # init_r = 1,
@@ -645,7 +650,7 @@ for(i in 1:p){
                   ylab("") + xlab(names(fwi.scaled)[i]) +
                   scale_fill_manual(values=c("steelblue"), name = "") +
                   scale_color_manual(values=c("steelblue")) +
-                  xlab("DC") +
+                  #ylim(-0.65, 0.3) +
                   scale_y_continuous(breaks=equal_breaks(n=5, s=0.1)) + 
                   theme_minimal(base_size = 30) +
                   theme(legend.position = "none",
@@ -655,7 +660,7 @@ for(i in 1:p){
   grid.plts[[i]] <- grid.plt
 }
 
-grid.arrange(grobs = grid.plts, ncol = 1, nrow = 1)
+grid.arrange(grobs = grid.plts, ncol = 2, nrow = 2)
 
 
 # Testing accuracy of estimated alpha(x)
