@@ -165,7 +165,7 @@ parameters {
     real <lower=0> lambda1; // lasso penalty
     real <lower=0> lambda2; // group lasso penalty
     real sigma; //
-    int <lower=0> delta;
+    real <lower=0> delta;
     vector[p] tau;
 }
 
