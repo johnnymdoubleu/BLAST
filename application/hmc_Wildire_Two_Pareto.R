@@ -43,7 +43,7 @@ Y <- df.long$measurement[!is.na(df.long$measurement)]
 summary(Y) #total burnt area
 length(Y)
 psi <- 10
-threshold <- 0.99
+threshold <- 0.95
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
 # x.scale <- x.scale[which(y>quantile(y, threshold)),]
@@ -204,7 +204,7 @@ model {
     target += gamma_lpdf(lambda1 | 1, 10);
     target += gamma_lpdf(lambda2 | 0.1, 0.1);
     target += normal_lpdf(theta[1] | 0, 1);
-    target += uniform_lpdf(delta | 0, 10);
+    target += uniform_lpdf(delta | 0, 100);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
     target += (newp * log(lambda1) + (p * psi * log(lambda2)));
     for (j in 1:p){
@@ -318,8 +318,10 @@ lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5,
 gl.samples <- summary(fit1, par=c("newgl"), probs = c(0.05, 0.5, 0.95))$summary
 gnl.samples <- summary(fit1, par=c("newgnl"), probs = c(0.05, 0.5, 0.95))$summary
 gsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
-alp.x.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
+alp.x.samples <- summary(fit1, par=c("alpha2"), probs = c(0.05,0.5, 0.95))$summary
 alpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
+delta.samples <- summary(fit1, par=c("delta"), probs = c(0.05, 0.5, 0.95))$summary
+alpha2.samples <- summary(fit1, par=c("newalpha2"), probs = c(0.05, 0.5, 0.95))$summary
 # summary(fit1, par=c("sigma"), probs = c(0.05,0.5, 0.95))$summary
 # summary(fit1, par=c("tau"), probs = c(0.05,0.5, 0.95))$summary
 
@@ -341,84 +343,68 @@ theta.q3 <- theta.samples[,6]
 # theta.samples <- data.frame(apply(posterior$theta, 2, summary))
 
 
-df.theta <- data.frame("seq" = seq(1, (p+1)),
-                        "m" = c(theta.q2),
-                        "l" = c(theta.q1),
-                        "u" = c(theta.q3))
-df.theta$covariate <- factor(c("\u03b8",names(fwi.scaled)), levels = c("\u03b8",colnames(fwi.scaled)))
-df.theta$labels <- factor(c("\u03b8",colnames(fwi.scaled)))
+# df.theta <- data.frame("seq" = seq(1, (p+1)),
+#                         "m" = c(theta.q2),
+#                         "l" = c(theta.q1),
+#                         "u" = c(theta.q3))
+# df.theta$covariate <- factor(c("\u03b8",names(fwi.scaled)), levels = c("\u03b8",colnames(fwi.scaled)))
+# df.theta$labels <- factor(c("\u03b8",colnames(fwi.scaled)))
 
-ggplot(df.theta, aes(x = covariate, y=m, color = covariate)) + ylab("") + xlab('') +
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  geom_point(size = 5) + 
-  geom_errorbar(aes(ymin = l, ymax = u), width = 0.3, linewidth =1.2) + 
-  scale_x_discrete(labels = c(expression(bold(theta[0])),
-                              expression(bold(theta[1])),
-                              expression(bold(theta[2])),
-                              expression(bold(theta[3])),
-                              expression(bold(theta[4])),
-                              expression(bold(theta[5])),
-                              expression(bold(theta[6])),
-                              expression(bold(theta[7])))) + 
-  scale_color_discrete(labels = c(expression(theta[0]),colnames(fwi.scaled))) + 
-  theme_minimal(base_size = 30) +
-  theme(plot.title = element_text(hjust = 0.5, size = 20),
-          legend.text.align = 0,
-          legend.title = element_blank(),
-          legend.text = element_text(size=25),
-          legend.margin=margin(0,0,0,-10),
-          legend.box.margin=margin(-10,0,-10,0),
-          plot.margin = margin(0,0,0,-20),
-          axis.text.x = element_text(hjust=0.35),
-          axis.text = element_text(size = 28))
+# ggplot(df.theta, aes(x = covariate, y=m, color = covariate)) + ylab("") + xlab('') +
+#   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+#   geom_point(size = 5) + 
+#   geom_errorbar(aes(ymin = l, ymax = u), width = 0.3, linewidth =1.2) + 
+#   scale_x_discrete(labels = c(expression(bold(theta[0])),
+#                               expression(bold(theta[1])),
+#                               expression(bold(theta[2])),
+#                               expression(bold(theta[3])),
+#                               expression(bold(theta[4])),
+#                               expression(bold(theta[5])),
+#                               expression(bold(theta[6])),
+#                               expression(bold(theta[7])))) + 
+#   scale_color_discrete(labels = c(expression(theta[0]),colnames(fwi.scaled))) + 
+#   theme_minimal(base_size = 30) +
+#   theme(plot.title = element_text(hjust = 0.5, size = 20),
+#           legend.text.align = 0,
+#           legend.title = element_blank(),
+#           legend.text = element_text(size=25),
+#           legend.margin=margin(0,0,0,-10),
+#           legend.box.margin=margin(-10,0,-10,0),
+#           plot.margin = margin(0,0,0,-20),
+#           axis.text.x = element_text(hjust=0.35),
+#           axis.text = element_text(size = 28))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_theta.pdf"), width=10, height = 7.78)
 
-# ggplot(data.frame(group = factor(1:(p+1)), m=theta.post.mean, l = theta.q1, u = theta.q3), 
-#        aes(group)) +
-#   geom_hline(yintercept = 0, linetype = "dashed", color = "grey", size = 1.4) +
-#   geom_point(aes(x = group, y = m), size = 4.5) + 
-#   #geom_point(aes(x = group, y = beta), shape=8, size = 4.5, col="red")+
-#   geom_errorbar(aes(ymin = l, ymax = u), width = 0.3, size = 1.2) + 
-#   labs(x = "Regression coefficients", y = "") + 
-#   ylim(-5,5) + 
-#   scale_x_discrete(labels = c("DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC"))+
-#                               #,expression(beta[8]),
-#                               #expression(beta[9]))) + 
-#   theme_minimal(base_size = 30) + 
-#   theme(text = element_text(size = 30), 
-#         axis.text.x = element_text(angle = 0, hjust = 0.5))
-
-
-df.gamma <- data.frame("seq" = seq(1, (psi*p)), 
-                  "m" = as.vector(gamma.q2),
-                  "l" = as.vector(gamma.q1),
-                  "u" = as.vector(gamma.q3))
-df.gamma$covariate <- factor(rep(names(fwi.scaled), each = psi, length.out = nrow(df.gamma)), levels = colnames(fwi.scaled))
-df.gamma$labels <- factor(1:(psi*p))
-ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) + 
-  geom_errorbar(aes(ymin = l, ymax = u), alpha = 0.4, width = 4, linewidth = 1.2) +
-  geom_point(size = 4) + ylab("") + xlab("" ) + #xlim(1,(psi*p)) +
-  # geom_ribbon(aes(ymin = l, ymax = u)) +
-  # geom_point(size = 4, color = "black") + 
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  scale_x_discrete(breaks=c(seq(0, (psi*p), psi)+10), 
-                    label = c(expression(bold(gamma[1])), 
-                              expression(bold(gamma[2])), 
-                              expression(bold(gamma[3])), 
-                              expression(bold(gamma[4])), 
-                              expression(bold(gamma[5])), 
-                              expression(bold(gamma[6])), 
-                              expression(bold(gamma[7]))),
-                    expand=c(0,10)) +
-  theme_minimal(base_size = 30) +
-  theme(plot.title = element_text(hjust = 0.5, size = 20),
-          legend.title = element_blank(),
-          legend.text = element_text(size=25),
-          legend.margin=margin(0,0,0,-10),
-          legend.box.margin=margin(-10,0,-10,0),
-          plot.margin = margin(0,0,0,-20),
-          axis.text.x = element_text(hjust=0.5),
-          axis.text = element_text(size = 28))
+# df.gamma <- data.frame("seq" = seq(1, (psi*p)), 
+#                   "m" = as.vector(gamma.q2),
+#                   "l" = as.vector(gamma.q1),
+#                   "u" = as.vector(gamma.q3))
+# df.gamma$covariate <- factor(rep(names(fwi.scaled), each = psi, length.out = nrow(df.gamma)), levels = colnames(fwi.scaled))
+# df.gamma$labels <- factor(1:(psi*p))
+# ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) + 
+#   geom_errorbar(aes(ymin = l, ymax = u), alpha = 0.4, width = 4, linewidth = 1.2) +
+#   geom_point(size = 4) + ylab("") + xlab("" ) + #xlim(1,(psi*p)) +
+#   # geom_ribbon(aes(ymin = l, ymax = u)) +
+#   # geom_point(size = 4, color = "black") + 
+#   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+#   scale_x_discrete(breaks=c(seq(0, (psi*p), psi)+10), 
+#                     label = c(expression(bold(gamma[1])), 
+#                               expression(bold(gamma[2])), 
+#                               expression(bold(gamma[3])), 
+#                               expression(bold(gamma[4])), 
+#                               expression(bold(gamma[5])), 
+#                               expression(bold(gamma[6])), 
+#                               expression(bold(gamma[7]))),
+#                     expand=c(0,10)) +
+#   theme_minimal(base_size = 30) +
+#   theme(plot.title = element_text(hjust = 0.5, size = 20),
+#           legend.title = element_blank(),
+#           legend.text = element_text(size=25),
+#           legend.margin=margin(0,0,0,-10),
+#           legend.box.margin=margin(-10,0,-10,0),
+#           plot.margin = margin(0,0,0,-20),
+#           axis.text.x = element_text(hjust=0.5),
+#           axis.text = element_text(size = 28))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_gamma.pdf"), width=10, height = 7.78)
 
 
@@ -579,13 +565,65 @@ ggplot(data.scenario, aes(x=x)) +
 
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_alpha.pdf"), width=10, height = 7.78)
 
-len <- dim(posterior$alpha)[1]
+delta.scenario <- data.frame("x" = seq(-1, 1, length.out = n),
+                            "post.mean" = (delta.samples[,1]),
+                            "post.median" = (delta.samples[,5]),
+                            "q1" = (delta.samples[,4]),
+                            "q3" = (delta.samples[,6]))
+
+ggplot(delta.scenario, aes(x=x)) + 
+  ylab(expression(delta)) + xlab(expression(c)) + labs(col = "") +
+  geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
+  # geom_line(aes(y = true, col = "True"), linewidth = 2) +
+  # ylim(0, 2500) +
+  geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
+  scale_fill_manual(values=c("steelblue"), name = "") +
+  scale_color_manual(values = c("steelblue")) + 
+  scale_y_log10() + 
+  guides(color = guide_legend(order = 2), 
+          fill = guide_legend(order = 1)) +
+  theme_minimal(base_size = 30) +
+  theme(plot.title = element_text(hjust = 0.5, size = 30),
+        legend.position="none", 
+        legend.key.size = unit(1, 'cm'),
+        legend.text = element_text(size=20),
+        plot.margin = margin(0,0,0,-1),
+        strip.text = element_blank(),
+        axis.title.x = element_text(size = 35))
+
+alpha2.scenario <- data.frame("x" = seq(-1, 1, length.out = n),
+                            "post.mean" = (alpha2.samples[,1]),
+                            "post.median" = (alpha2.samples[,5]),
+                            "q1" = (alpha2.samples[,4]),
+                            "q3" = (alpha2.samples[,6]))
+
+ggplot(alpha2.scenario, aes(x=x)) + 
+  ylab(expression(alpha[2](bold(x)))) + xlab(expression(c)) + labs(col = "") +
+  geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
+  # geom_line(aes(y = true, col = "True"), linewidth = 2) +
+  # ylim(0, 2500) +
+  geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
+  scale_fill_manual(values=c("steelblue"), name = "") +
+  scale_color_manual(values = c("steelblue")) + 
+  scale_y_log10() + 
+  guides(color = guide_legend(order = 2), 
+          fill = guide_legend(order = 1)) +
+  theme_minimal(base_size = 30) +
+  theme(plot.title = element_text(hjust = 0.5, size = 30),
+        legend.position="none", 
+        legend.key.size = unit(1, 'cm'),
+        legend.text = element_text(size=20),
+        plot.margin = margin(0,0,0,-1),
+        strip.text = element_blank(),
+        axis.title.x = element_text(size = 35))        
+
+len <- dim(posterior$alpha2)[1]
 r <- matrix(, nrow = n, ncol = 30)
 # beta <- as.matrix(mcmc[[1]])[, 1:7] 
 T <- 30
 for(i in 1:n){
   for(t in 1:T){
-    r[i, t] <- qnorm(pPareto(y[i], u, alpha = posterior$alpha[round(runif(1,1,len)),i]))
+    r[i, t] <- qnorm(pPareto(y[i], u, alpha = posterior$alpha2[round(runif(1,1,len)),i]))
     # r[i, t] <- qnorm(pPareto(y[i], u, alpha = alpha.new[i]))
   }
 }
@@ -660,7 +698,7 @@ for(i in 1:p){
   grid.plts[[i]] <- grid.plt
 }
 
-grid.arrange(grobs = grid.plts, ncol = 2, nrow = 2)
+grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
 
 
 # Testing accuracy of estimated alpha(x)
