@@ -37,9 +37,9 @@ setwd("C:/Users/Johnny Lee/Documents/GitHub")
 
 rainfall.scaled <- rainfall.index <- madeira[,c(3,4,5,6,7,8)]
 
-rainfall.index$date <- as.Date(substr(rainfall.index$yearmonth,1,10), "%Y-%m-%d")
-fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
-fwi.index$month <- factor(format(fwi.index$date,"%b"),
+rainfall.index$date <- as.Date(madeira$yearmonth, "%Y-%m-%d")
+rainfall.index$year <- substr(as.Date(rainfall.index$, "%Y"),1,4)
+rainfall.index$month <- factor(format(fwi.index$date,"%b"),
                             levels = c("Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"))
 
 rainfall.scaled <- rainfall.scaled[which(madeira$prec>u),]
