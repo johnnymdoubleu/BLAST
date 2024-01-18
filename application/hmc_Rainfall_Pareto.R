@@ -27,9 +27,9 @@ library(DATAstudio)
 
 
 psi <- 10
-threshold <- 0.99
-u <- quantile(Y, threshold)
-y <- Y[Y>u]
+threshold <- 0.95
+u <- quantile(madeira$prec, threshold)
+y <- madeira$prec[madeira$prec>u]
 # x.scale <- x.scale[which(y>quantile(y, threshold)),]
 # u <- quantile(y, threshold)
 
@@ -37,12 +37,12 @@ setwd("C:/Users/Johnny Lee/Documents/GitHub")
 
 rainfall.scaled <- rainfall.index <- madeira[,c(3,4,5,6,7,8)]
 
-fwi.index$date <- as.Date(substr(cov.long$...1[missing.values],1,10), "%Y-%m-%d")
+rainfall.index$date <- as.Date(substr(rainfall.index$yearmonth,1,10), "%Y-%m-%d")
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 fwi.index$month <- factor(format(fwi.index$date,"%b"),
                             levels = c("Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"))
 
-fwi.scaled <- fwi.scaled[which(Y>u),]
+rainfall.scaled <- rainfall.scaled[which(madeira$prec>u),]
 # fwi.scaled <- as.data.frame(scale(fwi.scaled))
 
 # plot((fwi.scaled[,2]), (log(y)))
