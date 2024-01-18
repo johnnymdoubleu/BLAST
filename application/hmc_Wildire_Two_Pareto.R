@@ -43,7 +43,7 @@ Y <- df.long$measurement[!is.na(df.long$measurement)]
 summary(Y) #total burnt area
 length(Y)
 psi <- 10
-threshold <- 0.95
+threshold <- 0.99
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
 # x.scale <- x.scale[which(y>quantile(y, threshold)),]
@@ -565,31 +565,31 @@ ggplot(data.scenario, aes(x=x)) +
 
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_alpha.pdf"), width=10, height = 7.78)
 
-delta.scenario <- data.frame("x" = seq(-1, 1, length.out = n),
-                            "post.mean" = (delta.samples[,1]),
-                            "post.median" = (delta.samples[,5]),
-                            "q1" = (delta.samples[,4]),
-                            "q3" = (delta.samples[,6]))
+# delta.scenario <- data.frame("x" = seq(-1, 1, length.out = n),
+#                             "post.mean" = (delta.samples[,1]),
+#                             "post.median" = (delta.samples[,5]),
+#                             "q1" = (delta.samples[,4]),
+#                             "q3" = (delta.samples[,6]))
 
-ggplot(delta.scenario, aes(x=x)) + 
-  ylab(expression(delta)) + xlab(expression(c)) + labs(col = "") +
-  geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
-  # geom_line(aes(y = true, col = "True"), linewidth = 2) +
-  # ylim(0, 2500) +
-  geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
-  scale_fill_manual(values=c("steelblue"), name = "") +
-  scale_color_manual(values = c("steelblue")) + 
-  scale_y_log10() + 
-  guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) +
-  theme_minimal(base_size = 30) +
-  theme(plot.title = element_text(hjust = 0.5, size = 30),
-        legend.position="none", 
-        legend.key.size = unit(1, 'cm'),
-        legend.text = element_text(size=20),
-        plot.margin = margin(0,0,0,-1),
-        strip.text = element_blank(),
-        axis.title.x = element_text(size = 35))
+# ggplot(delta.scenario, aes(x=x)) + 
+#   ylab(expression(delta)) + xlab(expression(c)) + labs(col = "") +
+#   geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
+#   # geom_line(aes(y = true, col = "True"), linewidth = 2) +
+#   # ylim(0, 2500) +
+#   geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
+#   scale_fill_manual(values=c("steelblue"), name = "") +
+#   scale_color_manual(values = c("steelblue")) + 
+#   scale_y_log10() + 
+#   guides(color = guide_legend(order = 2), 
+#           fill = guide_legend(order = 1)) +
+#   theme_minimal(base_size = 30) +
+#   theme(plot.title = element_text(hjust = 0.5, size = 30),
+#         legend.position="none", 
+#         legend.key.size = unit(1, 'cm'),
+#         legend.text = element_text(size=20),
+#         plot.margin = margin(0,0,0,-1),
+#         strip.text = element_blank(),
+#         axis.title.x = element_text(size = 35))
 
 alpha2.scenario <- data.frame("x" = seq(-1, 1, length.out = n),
                             "post.mean" = (alpha2.samples[,1]),
