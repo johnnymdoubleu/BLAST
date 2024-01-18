@@ -26,8 +26,8 @@ library(DATAstudio)
 
 
 
-psi <- 10
-threshold <- 0.95
+psi <- 5
+threshold <- 0.99
 u <- quantile(madeira$prec, threshold)
 y <- madeira$prec[madeira$prec>u]
 # x.scale <- x.scale[which(y>quantile(y, threshold)),]
@@ -612,7 +612,7 @@ for(i in 1:p){
   grid.plts[[i]] <- grid.plt
 }
 
-grid.arrange(grobs = grid.plts, ncol = 2, nrow = 2)
+grid.arrange(grobs = grid.plts, ncol = 2, nrow = 3)
 
 
 # Testing accuracy of estimated alpha(x)
