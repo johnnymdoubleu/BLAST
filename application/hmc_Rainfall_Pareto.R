@@ -24,8 +24,8 @@ library(DATAstudio)
 # nao : North atlantic oscillation
 
 
-psi <- 7
-threshold <- 0.90
+psi <- 5
+threshold <- 0.95
 u <- quantile(madeira$prec, threshold)
 y <- madeira$prec[madeira$prec>u]
 # x.scale <- x.scale[which(y>quantile(y, threshold)),]
@@ -42,12 +42,12 @@ rainfall.index$month <- factor(format(rainfall.index$date, "%b"),
                             levels = c("Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"))
 
 rainfall.scaled <- rainfall.scaled[which(madeira$prec>u),]
-# rainfall.scaled <- as.data.frame(scale(rainfall.scaled))
+rainfall.scaled <- as.data.frame(scale(rainfall.scaled))
 
 # plot((rainfall.scaled[,2]), (log(y)))
 # plot((rainfall.scaled[,5]), (log(y)))
 
-rainfall.scaled <- as.data.frame(lapply(rainfall.scaled, rescale, to=c(-1,1)))
+# rainfall.scaled <- as.data.frame(lapply(rainfall.scaled, rescale, to=c(-1,1)))
 # fwi.ind <- which(rainfall.scaled[,2]>0)
 # # plot(sort(hill(y,option="alpha", reverse = FALSE)$y))
 # # hill(y, option = "alpha", reverse = FALSE)
@@ -152,7 +152,7 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 1, 100);
+    target += gamma_lpdf(lambda1 | 0.1, 0.1);
     target += gamma_lpdf(lambda2 | 0.1, 0.1);
     target += normal_lpdf(theta[1] | 0, 1);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
@@ -562,8 +562,8 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
   labs(x = "Theoretical quantiles", y = "Sample quantiles") + 
   theme_minimal(base_size = 20) +
   theme(text = element_text(size = 20)) + 
-  coord_fixed(xlim = c(-1.5, 1.5),  
-              ylim = c(-1.5, 1.5))
+  coord_fixed(xlim = c(-2, 2),  
+              ylim = c(-2, 2))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_qqplot.pdf"), width=10, height = 7.78)
              
 # saveRDS(data.scenario, file=paste0("Simulation/BayesianPsplines/results/",date,"-",time, "_sc1_data_samp1.rds"))
