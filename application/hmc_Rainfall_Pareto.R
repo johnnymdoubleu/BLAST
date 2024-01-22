@@ -16,17 +16,15 @@ library(cmdstanr)
 library(scales)
 library(DATAstudio)
 
-# Structure of the FWI System
 # amo : Atlantic multi-decadal oscillation
 # nino34 : El Nino-southern oscillation (ENSO), expressed by NINO343 index
 # np : North pacific index (NPI)
-# pdo : Pacific decadal oscilaltion (PDO)
+# pdo : Pacific decadal oscillaltion (PDO)
 # soi : Southern oscillation index (SOI)
 # nao : North atlantic oscillation
 
 
-
-psi <- 5
+psi <- 7
 threshold <- 0.95
 u <- quantile(madeira$prec, threshold)
 y <- madeira$prec[madeira$prec>u]
