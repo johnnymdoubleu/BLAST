@@ -43,7 +43,7 @@ Y <- df.long$measurement[!is.na(df.long$measurement)]
 summary(Y) #total burnt area
 length(Y)
 psi <- 10
-threshold <- 0.99
+threshold <- 0.95
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
 # x.scale <- x.scale[which(y>quantile(y, threshold)),]
@@ -166,6 +166,7 @@ parameters {
     real <lower=0> lambda2; // group lasso penalty
     real sigma; //
     real <lower=0> delta;
+    real <lower=0> w;
     vector[p] tau;
 }
 
@@ -199,12 +200,13 @@ transformed parameters {
 model {
     // likelihood
     for (i in 1:n){
-        target += pareto_lpdf(y[i] | u, alpha2[i]);
-    }
+        target += log((w * alpha[i] * (y[i]/u)^(-alpha[i]) / y[i]) + ((1-w)*(alpha[i]+delta)*(y[i]/u)^(-alpha[i]-delta)/y[i]));
+    };
     target += gamma_lpdf(lambda1 | 1, 10);
     target += gamma_lpdf(lambda2 | 0.1, 0.1);
     target += normal_lpdf(theta[1] | 0, 1);
     target += uniform_lpdf(delta | 0, 100);
+    target += uniform_lpdf(w | 0, 1);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
     target += (newp * log(lambda1) + (p * psi * log(lambda2)));
     for (j in 1:p){
@@ -234,18 +236,18 @@ set_cmdstan_path(path = NULL)
 
 # Create a CmdStanModel object from a Stan program,
 # here using the example model that comes with CmdStan
-file <- file.path(cmdstan_path(), "model_pareto.stan")
+file <- file.path(cmdstan_path(), "model_two_pareto.stan")
 
 init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
-                        theta = rep(0, (p+1)), delta = 0.1,
+                        theta = rep(0, (p+1)), delta = 0.1, w = 0.1,
                         tau = rep(0.1, p), sigma = 0.1, 
                         lambda1 = 0.1, lambda2 = 0.1),
                   list(gamma = array(rep(0.02, (psi*p)), dim=c(psi, p)),
-                        theta = rep(0.01, (p+1)), delta = 1,
+                        theta = rep(0.01, (p+1)), delta = 1, w = 0.1,
                         tau = rep(0.01, p), sigma = 0.001,
                         lambda1 = 0.01, lambda2 = 0.1),
                   list(gamma = array(rep(0.01, (psi*p)), dim=c(psi, p)),
-                        theta = rep(0.05, (p+1)), delta = 0.5,
+                        theta = rep(0.05, (p+1)), delta = 0.5, w = 0.1,
                         tau = rep(0.01, p), sigma = 0.01,
                         lambda1 = 0.1, lambda2 = 0.01))
 

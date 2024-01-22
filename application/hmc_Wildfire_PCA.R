@@ -14,60 +14,115 @@ library(evir)
 library(mev)
 library(cmdstanr)
 library(scales)
-library(DATAstudio)
+library(factoextra)
 
 # Structure of the FWI System
-# amo : Atlantic multi-decadal oscillation
-# nino34 : El Nino-southern oscillation (ENSO), expressed by NINO343 index
-# np : North pacific index (NPI)
-# pdo : Pacific decadal oscilaltion (PDO)
-# soi : Southern oscillation index (SOI)
-# nao : North atlantic oscillation
+#DSR : Dail Severity Rating
+#FWI : Fire Weather Index
+#BUI : Buildup Index
+#ISI : Initial Spread Index
+#FFMC : Fine FUel Moisture Code
+#DMC : Duff Moisture Code
+#DC : Drough Code
 
 
+setwd("C:/Users/Johnny Lee/Documents/GitHub")
+df <- read_excel("./BRSTIR/application/AADiarioAnual.xlsx", col_types = c("date", rep("numeric",40)))
+df.long <- gather(df, condition, measurement, "1980":"2019", factor_key=TRUE)
+df.long
+head(df.long)
+tail(df.long)
+# View(df.long[is.na(df.long$measurement),])
+missing.values <- which(!is.na(df.long$measurement))
+df.long[which(is.na(df.long$measurement)),]
+df.long[which(is.na(df.long$...1))+1,]
 
-psi <- 5
+#NAs on Feb 29 most years, and Feb 14, 1999
+#considering the case of leap year, the missing values are the 29th of Feb
+#Thus, each year consist of 366 data with either 1 or 0 missing value.
+Y <- df.long$measurement[!is.na(df.long$measurement)]
+summary(Y) #total burnt area
+length(Y)
+psi <- 10
 threshold <- 0.95
-u <- quantile(madeira$prec, threshold)
-y <- madeira$prec[madeira$prec>u]
+u <- quantile(Y, threshold)
+y <- Y[Y>u]
 # x.scale <- x.scale[which(y>quantile(y, threshold)),]
 # u <- quantile(y, threshold)
 
+multiplesheets <- function(fname) {
+    setwd("C:/Users/Johnny Lee/Documents/GitHub")
+    # getting info about all excel sheets
+    sheets <- excel_sheets(fname)
+    tibble <- lapply(sheets, function(x) read_excel(fname, sheet = x, col_types = c("date", rep("numeric", 41))))
+    # print(tibble)
+    data_frame <- lapply(tibble, as.data.frame)
+    # assigning names to data frames
+    names(data_frame) <- sheets
+    return(data_frame)
+}
 setwd("C:/Users/Johnny Lee/Documents/GitHub")
+path <- "./BRSTIR/application/DadosDiariosPT_FWI.xlsx"
+# importing fire weather index
+cov <- multiplesheets(path)
 
-rainfall.scaled <- rainfall.index <- madeira[,c(3,4,5,6,7,8)]
 
-
-rainfall.index$date <- as.Date(paste(as.character(madeira$yearmonth),"01"), "%Y%m%d")
-rainfall.index$year <- substr(as.Date(madeira$yearmonth, "%Y"),1,4)
-rainfall.index$month <- factor(format(rainfall.index$date, "%b"),
+fwi.scaled <- fwi.index <- data.frame(DSR = double(length(Y)),
+                                        FWI = double(length(Y)),
+                                        BUI = double(length(Y)),
+                                        ISI = double(length(Y)),
+                                        FFMC = double(length(Y)),
+                                        DMC = double(length(Y)),
+                                        DC = double(length(Y)),
+                                        stringsAsFactors = FALSE)
+# cov.long$ <- gather(cov$DSR[!is.na(df.long$measurement)][,1:41], )
+for(i in 1:length(cov)){
+    cov.long <- gather(cov[[i]][,1:41], condition, measurement, "1980":"2019", factor_key=TRUE)
+    fwi.index[,i] <- cov.long$measurement[missing.values]
+    fwi.scaled[,i] <- cov.long$measurement[missing.values]
+}
+fwi.index$date <- as.Date(substr(cov.long$...1[missing.values],1,10), "%Y-%m-%d")
+fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
+fwi.index$month <- factor(format(fwi.index$date,"%b"),
                             levels = c("Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"))
 
-rainfall.scaled <- rainfall.scaled[which(madeira$prec>u),]
-# rainfall.scaled <- as.data.frame(scale(rainfall.scaled))
+fwi.scaled <- fwi.scaled[which(Y>u),]
+fwi.scaled <- as.data.frame(lapply(fwi.scaled, rescale, to=c(-1,1)))
+pca.res <- prcomp(fwi.scaled)
+fviz_eig(pca.res)
+fviz_pca_var(pca.res,
+              col.ind = "cos2",
+              gradient.cols = c("darkorchid4", "gold", "darkorange"),
+              repel = TRUE)
+var <- get_pca_var(pca.res)
+#cos2 is called square cosine (squared coordinates) and corresponds to the quality of representation of variables. 
+corrplot(var$cos2, is.corr = FALSE)
+fwi.scaled <- as.data.frame(pca.res$x)
 
-# plot((rainfall.scaled[,2]), (log(y)))
-# plot((rainfall.scaled[,5]), (log(y)))
+# fwi.scaled <- as.data.frame(scale(fwi.scaled))
+# plot((fwi.scaled[,2]), (log(y)))
+# plot((fwi.scaled[,5]), (log(y)))
 
-rainfall.scaled <- as.data.frame(lapply(rainfall.scaled, rescale, to=c(-1,1)))
-# fwi.ind <- which(rainfall.scaled[,2]>0)
+
+
+# fwi.ind <- which(fwi.scaled[,2]>0)
 # # plot(sort(hill(y,option="alpha", reverse = FALSE)$y))
 # # hill(y, option = "alpha", reverse = FALSE)
 # # hill(sort(Y)[13865:14609], option="alpha", reverse = TRUE)$y
-# # hill(rainfall.scaled[which(rainfall.scaled[,2]>0), 2], option = "alpha", reverse = FALSE)
-# hill(rainfall.scaled[fwi.ind, 2], option = "alpha", reverse = FALSE)
-# hill(rainfall.scaled[-fwi.ind, 2], option = "alpha", reverse = FALSE)
+# # hill(fwi.scaled[which(fwi.scaled[,2]>0), 2], option = "alpha", reverse = FALSE)
+# hill(fwi.scaled[fwi.ind, 2], option = "alpha", reverse = FALSE)
+# hill(fwi.scaled[-fwi.ind, 2], option = "alpha", reverse = FALSE)
 
-# pdf(file = "./BRSTIR/application/figures/rainfallcorrelation.pdf")
-# corrplot.mixed(cor(rainfall.scaled),
+# pdf(file = "./BRSTIR/application/figures/correlation.pdf")
+# corrplot.mixed(cor(fwi.scaled),
 #                 upper = "circle",
 #                 lower = "number",
 #                 addgrid.col = "black")
 # dev.off()
 # ggsave("./BRSTIR/application/figures/correlation.pdf", plot = replayPlot(p1), width=10, height = 7.78)
 
-df.extreme <- cbind(y, rainfall.scaled)
-df.extreme <- as.data.frame(cbind(month = rainfall.index$month[which(madeira$prec>u)], df.extreme))
+df.extreme <- cbind(y, fwi.scaled)
+df.extreme <- as.data.frame(cbind(month = fwi.index$month[which(Y>u)], df.extreme))
 # ggplot(df.extreme, aes(x=month, y=y, color=month)) + geom_point(size=6) + theme_minimal() +
 #     theme(plot.title = element_text(hjust = 0.5, size = 20),
 #         legend.title = element_blank(),
@@ -79,24 +134,21 @@ df.extreme <- as.data.frame(cbind(month = rainfall.index$month[which(madeira$pre
 # ggsave("./BRSTIR/application/figures/datavis.pdf", width=15)
 
 
-n <- dim(rainfall.scaled)[[1]]
-p <- dim(rainfall.scaled)[[2]]
+
+n <- dim(fwi.scaled)[[1]]
+p <- dim(fwi.scaled)[[2]]
 no.theta <- 1
 newx <- seq(0, 1, length.out=n)
 xholder.linear <- xholder.nonlinear <- bs.linear <- bs.nonlinear <- matrix(,nrow=n, ncol=0)
 xholder <- matrix(nrow=n, ncol=p)
 for(i in 1:p){
-  # xholder[,i] <- seq(min(rainfall.scaled[,i]), max(rainfall.scaled[,i]), length.out = n)
-  # test.knot <- seq(min(rainfall.scaled[,i]), max(rainfall.scaled[,i]), length.out = psi)
-  # splines <- basis.tps(seq(min(rainfall.scaled[,i]), max(rainfall.scaled[,i]), length.out = n), test.knot, m=2, rk=FALSE, intercept = TRUE)
-  xholder[,i] <- seq(min(rainfall.scaled[,i]), max(rainfall.scaled[,i]), length.out = n)
-  test.knot <- seq(min(rainfall.scaled[,i]), max(rainfall.scaled[,i]), length.out = psi)
+  xholder[,i] <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n)
+  test.knot <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
   splines <- basis.tps(xholder[,i], test.knot, m=2, rk=FALSE, intercept = FALSE)
   xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
   xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
-  knots <- seq(min(rainfall.scaled[,i]), max(rainfall.scaled[,i]), length.out = psi)
-  tps <- basis.tps(rainfall.scaled[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
-  # tps <- mSpline(x.origin[,i], df=psi, Boundary.knots = range(x.origin[,i]), degree = 3, intercept=TRUE)
+  knots <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
+  tps <- basis.tps(fwi.scaled[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
   bs.linear <- cbind(bs.linear, tps[,1:no.theta])
   bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])
 }
@@ -154,7 +206,7 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 1, 100);
+    target += gamma_lpdf(lambda1 | 1, 10);
     target += gamma_lpdf(lambda2 | 0.1, 0.1);
     target += normal_lpdf(theta[1] | 0, 1);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
@@ -293,36 +345,36 @@ theta.q3 <- theta.samples[,6]
 # theta.samples <- data.frame(apply(posterior$theta, 2, summary))
 
 
-df.theta <- data.frame("seq" = seq(1, (p+1)),
-                        "m" = c(theta.q2),
-                        "l" = c(theta.q1),
-                        "u" = c(theta.q3))
-df.theta$covariate <- factor(c("\u03b8",names(rainfall.scaled)), levels = c("\u03b8",colnames(rainfall.scaled)))
-df.theta$labels <- factor(c("\u03b8",colnames(rainfall.scaled)))
+# df.theta <- data.frame("seq" = seq(1, (p+1)),
+#                         "m" = c(theta.q2),
+#                         "l" = c(theta.q1),
+#                         "u" = c(theta.q3))
+# df.theta$covariate <- factor(c("\u03b8",names(fwi.scaled)), levels = c("\u03b8",colnames(fwi.scaled)))
+# df.theta$labels <- factor(c("\u03b8",colnames(fwi.scaled)))
 
-ggplot(df.theta, aes(x = covariate, y=m, color = covariate)) + ylab("") + xlab('') +
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  geom_point(size = 5) + 
-  geom_errorbar(aes(ymin = l, ymax = u), width = 0.3, linewidth =1.2) + 
-  scale_x_discrete(labels = c(expression(bold(theta[0])),
-                              expression(bold(theta[1])),
-                              expression(bold(theta[2])),
-                              expression(bold(theta[3])),
-                              expression(bold(theta[4])),
-                              expression(bold(theta[5])),
-                              expression(bold(theta[6])),
-                              expression(bold(theta[7])))) + 
-  scale_color_discrete(labels = c(expression(theta[0]),colnames(rainfall.scaled))) + 
-  theme_minimal(base_size = 30) +
-  theme(plot.title = element_text(hjust = 0.5, size = 20),
-          legend.text.align = 0,
-          legend.title = element_blank(),
-          legend.text = element_text(size=25),
-          legend.margin=margin(0,0,0,-10),
-          legend.box.margin=margin(-10,0,-10,0),
-          plot.margin = margin(0,0,0,-20),
-          axis.text.x = element_text(hjust=0.35),
-          axis.text = element_text(size = 28))
+# ggplot(df.theta, aes(x = covariate, y=m, color = covariate)) + ylab("") + xlab('') +
+#   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+#   geom_point(size = 5) + 
+#   geom_errorbar(aes(ymin = l, ymax = u), width = 0.3, linewidth =1.2) + 
+#   scale_x_discrete(labels = c(expression(bold(theta[0])),
+#                               expression(bold(theta[1])),
+#                               expression(bold(theta[2])),
+#                               expression(bold(theta[3])),
+#                               expression(bold(theta[4])),
+#                               expression(bold(theta[5])),
+#                               expression(bold(theta[6])),
+#                               expression(bold(theta[7])))) + 
+#   scale_color_discrete(labels = c(expression(theta[0]),colnames(fwi.scaled))) + 
+#   theme_minimal(base_size = 30) +
+#   theme(plot.title = element_text(hjust = 0.5, size = 20),
+#           legend.text.align = 0,
+#           legend.title = element_blank(),
+#           legend.text = element_text(size=25),
+#           legend.margin=margin(0,0,0,-10),
+#           legend.box.margin=margin(-10,0,-10,0),
+#           plot.margin = margin(0,0,0,-20),
+#           axis.text.x = element_text(hjust=0.35),
+#           axis.text = element_text(size = 28))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_theta.pdf"), width=10, height = 7.78)
 
 # ggplot(data.frame(group = factor(1:(p+1)), m=theta.post.mean, l = theta.q1, u = theta.q3), 
@@ -341,36 +393,36 @@ ggplot(df.theta, aes(x = covariate, y=m, color = covariate)) + ylab("") + xlab('
 #         axis.text.x = element_text(angle = 0, hjust = 0.5))
 
 
-df.gamma <- data.frame("seq" = seq(1, (psi*p)), 
-                  "m" = as.vector(gamma.q2),
-                  "l" = as.vector(gamma.q1),
-                  "u" = as.vector(gamma.q3))
-df.gamma$covariate <- factor(rep(names(rainfall.scaled), each = psi, length.out = nrow(df.gamma)), levels = colnames(rainfall.scaled))
-df.gamma$labels <- factor(1:(psi*p))
-ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) + 
-  geom_errorbar(aes(ymin = l, ymax = u), alpha = 0.4, width = 4, linewidth = 1.2) +
-  geom_point(size = 4) + ylab("") + xlab("" ) + #xlim(1,(psi*p)) +
-  # geom_ribbon(aes(ymin = l, ymax = u)) +
-  # geom_point(size = 4, color = "black") + 
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  scale_x_discrete(breaks=c(seq(0, (psi*p), psi)+10), 
-                    label = c(expression(bold(gamma[1])), 
-                              expression(bold(gamma[2])), 
-                              expression(bold(gamma[3])), 
-                              expression(bold(gamma[4])), 
-                              expression(bold(gamma[5])), 
-                              expression(bold(gamma[6])), 
-                              expression(bold(gamma[7]))),
-                    expand=c(0,10)) +
-  theme_minimal(base_size = 30) +
-  theme(plot.title = element_text(hjust = 0.5, size = 20),
-          legend.title = element_blank(),
-          legend.text = element_text(size=25),
-          legend.margin=margin(0,0,0,-10),
-          legend.box.margin=margin(-10,0,-10,0),
-          plot.margin = margin(0,0,0,-20),
-          axis.text.x = element_text(hjust=0.5),
-          axis.text = element_text(size = 28))
+# df.gamma <- data.frame("seq" = seq(1, (psi*p)), 
+#                   "m" = as.vector(gamma.q2),
+#                   "l" = as.vector(gamma.q1),
+#                   "u" = as.vector(gamma.q3))
+# df.gamma$covariate <- factor(rep(names(fwi.scaled), each = psi, length.out = nrow(df.gamma)), levels = colnames(fwi.scaled))
+# df.gamma$labels <- factor(1:(psi*p))
+# ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) + 
+#   geom_errorbar(aes(ymin = l, ymax = u), alpha = 0.4, width = 4, linewidth = 1.2) +
+#   geom_point(size = 4) + ylab("") + xlab("" ) + #xlim(1,(psi*p)) +
+#   # geom_ribbon(aes(ymin = l, ymax = u)) +
+#   # geom_point(size = 4, color = "black") + 
+#   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+#   scale_x_discrete(breaks=c(seq(0, (psi*p), psi)+10), 
+#                     label = c(expression(bold(gamma[1])), 
+#                               expression(bold(gamma[2])), 
+#                               expression(bold(gamma[3])), 
+#                               expression(bold(gamma[4])), 
+#                               expression(bold(gamma[5])), 
+#                               expression(bold(gamma[6])), 
+#                               expression(bold(gamma[7]))),
+#                     expand=c(0,10)) +
+#   theme_minimal(base_size = 30) +
+#   theme(plot.title = element_text(hjust = 0.5, size = 20),
+#           legend.title = element_blank(),
+#           legend.text = element_text(size=25),
+#           legend.margin=margin(0,0,0,-10),
+#           legend.box.margin=margin(-10,0,-10,0),
+#           plot.margin = margin(0,0,0,-20),
+#           axis.text.x = element_text(hjust=0.5),
+#           axis.text = element_text(size = 28))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_gamma.pdf"), width=10, height = 7.78)
 
 
@@ -417,13 +469,9 @@ data.smooth <- data.frame("x"= as.vector(xholder),
                           "q1" = as.vector(g.smooth.q1),
                           "q2" = as.vector(g.smooth.q2),
                           "q3" = as.vector(g.smooth.q3),
-                          # "post.mean" = as.vector(sort(g.smooth.mean)),
-                          # "q1" = as.vector(sort(g.smooth.q1)),
-                          # "q2" = as.vector(sort(g.smooth.q2)),
-                          # "q3" = as.vector(sort(g.smooth.q3)),
-                          "covariates" = gl(p, n, (p*n), labels = names(rainfall.scaled)),
-                          # "fakelab" = rep(1, (p*n)),
-                          "replicate" = gl(p, n, (p*n), labels = names(rainfall.scaled)))
+                          "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)),
+                          "fakelab" = rep(1, (p*n)),
+                          "replicate" = gl(p, n, (p*n), labels = names(fwi.scaled)))
 
 ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
@@ -449,9 +497,9 @@ data.linear <- data.frame("x"= as.vector(xholder),
                           "q1" = as.vector(g.linear.q1),
                           "q2" = as.vector(g.linear.q2),
                           "q3" = as.vector(g.linear.q3),
-                          "covariates" = gl(p, n, (p*n), labels = names(rainfall.scaled)),
+                          "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)),
                           "fakelab" = rep(1, (p*n)),
-                          "replicate" = gl(p, n, (p*n), labels = names(rainfall.scaled)))
+                          "replicate" = gl(p, n, (p*n), labels = names(fwi.scaled)))
 
 ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
@@ -479,9 +527,9 @@ data.nonlinear <- data.frame("x"=as.vector(xholder),
                           "q1" = as.vector(g.nonlinear.q1),
                           "q2" = as.vector(g.nonlinear.q2),
                           "q3" = as.vector(g.nonlinear.q3),
-                          "covariates" = gl(p, n, (p*n), labels = names(rainfall.scaled)),
+                          "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)),
                           "fakelab" = rep(1, (p*n)),
-                          "replicate" = gl(p, n, (p*n), labels = names(rainfall.scaled)))
+                          "replicate" = gl(p, n, (p*n), labels = names(fwi.scaled)))
 
 ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
@@ -593,13 +641,13 @@ plot(fwi.loo, label_points = TRUE)
 
 grid.plts <- list()
 for(i in 1:p){
-  grid.plt <- ggplot(data = data.frame(data.smooth[((((i-1)*n)+1):(i*n)),], origin = rainfall.scaled[,i]), aes(x=x)) + 
+  grid.plt <- ggplot(data = data.frame(data.smooth[((((i-1)*n)+1):(i*n)),], origin = fwi.scaled[,i]), aes(x=x)) + 
                   # geom_point(aes(x= origin, y=q2), alpha = 0.3) + 
                   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
                   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
                   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
                   geom_rug(aes(x= origin, y=q2), sides = "b") +
-                  ylab("") + xlab(names(rainfall.scaled)[i]) +
+                  ylab("") + xlab(names(fwi.scaled)[i]) +
                   scale_fill_manual(values=c("steelblue"), name = "") +
                   scale_color_manual(values=c("steelblue")) +
                   #ylim(-0.65, 0.3) +
@@ -612,7 +660,7 @@ for(i in 1:p){
   grid.plts[[i]] <- grid.plt
 }
 
-grid.arrange(grobs = grid.plts, ncol = 2, nrow = 3)
+grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
 
 
 # Testing accuracy of estimated alpha(x)
