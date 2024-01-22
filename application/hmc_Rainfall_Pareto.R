@@ -25,7 +25,7 @@ library(DATAstudio)
 
 
 psi <- 7
-threshold <- 0.95
+threshold <- 0.90
 u <- quantile(madeira$prec, threshold)
 y <- madeira$prec[madeira$prec>u]
 # x.scale <- x.scale[which(y>quantile(y, threshold)),]
@@ -530,9 +530,9 @@ ggplot(data.scenario, aes(x=x)) +
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_alpha.pdf"), width=10, height = 7.78)
 
 len <- dim(posterior$alpha)[1]
-r <- matrix(, nrow = n, ncol = 30)
-# beta <- as.matrix(mcmc[[1]])[, 1:7] 
 T <- 30
+r <- matrix(, nrow = n, ncol = T)
+# beta <- as.matrix(mcmc[[1]])[, 1:7] 
 for(i in 1:n){
   for(t in 1:T){
     r[i, t] <- qnorm(pPareto(y[i], u, alpha = posterior$alpha[round(runif(1,1,len)),i]))
@@ -562,8 +562,8 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
   labs(x = "Theoretical quantiles", y = "Sample quantiles") + 
   theme_minimal(base_size = 20) +
   theme(text = element_text(size = 20)) + 
-  coord_fixed(xlim = c(-3, 3),  
-              ylim = c(-3, 3))
+  coord_fixed(xlim = c(-1.5, 1.5),  
+              ylim = c(-1.5, 1.5))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_qqplot.pdf"), width=10, height = 7.78)
              
 # saveRDS(data.scenario, file=paste0("Simulation/BayesianPsplines/results/",date,"-",time, "_sc1_data_samp1.rds"))
