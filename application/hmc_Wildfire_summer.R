@@ -43,7 +43,7 @@ Y <- df.long$measurement[!is.na(df.long$measurement)]
 summary(Y) #total burnt area
 length(Y)
 psi <- 5
-threshold <- 0.99
+threshold <- 0.95
 
 # x.scale <- x.scale[which(y>quantile(y, threshold)),]
 # u <- quantile(y, threshold)
@@ -86,7 +86,7 @@ fwi.index$month <- factor(format(fwi.index$date,"%b"),
 
 Y <- Y[which(fwi.index$month %in% c("Jun", "Jul", "Aug", "Sep"))]
 u <- quantile(Y, threshold)
-y <- Y[Y>u]
+y <- Y[Y>u]/10
 fwi.scaled <- fwi.scaled[which(fwi.index$month %in% c("Jun", "Jul", "Aug", "Sep")),]
 
 fwi.scaled <- fwi.scaled[which(Y>u),]

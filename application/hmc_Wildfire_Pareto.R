@@ -80,11 +80,12 @@ for(i in 1:length(cov)){
     fwi.index[,i] <- cov.long$measurement[missing.values]
     fwi.scaled[,i] <- cov.long$measurement[missing.values]
 }
-fwi.index$date <- as.Date(substr(cov.long$...1[missing.values],1,10), "%Y-%m-%d")
-fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
-fwi.index$month <- factor(format(fwi.index$date,"%b"),
+# fwi.index$date <- 
+fwi.index$date <- substr(cov.long$...1[missing.values],9,10)
+fwi.index$month <- factor(format(as.Date(substr(cov.long$...1[missing.values],1,10), "%Y-%m-%d"),"%b"),
                             levels = c("Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"))
-
+fwi.index$date <- as.numeric(fwi.index$date)
+fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 fwi.scaled <- fwi.scaled[which(Y>u),]
 # fwi.scaled <- as.data.frame(scale(fwi.scaled))
 
@@ -107,6 +108,35 @@ fwi.scaled <- as.data.frame(lapply(fwi.scaled, rescale, to=c(-1,1)))
 #                 addgrid.col = "black")
 # dev.off()
 # ggsave("./BRSTIR/application/figures/correlation.pdf", plot = replayPlot(p1), width=10, height = 7.78)
+first.extreme <- which(Y==max(y))
+second.extreme <- which(Y==max(y[-which.max(y)]))
+tenth.extreme <- which(Y==sort(y, decreasing = TRUE)[10])
+ggplot(fwi.index[second.extreme:(second.extreme+12),], aes(x=date)) +
+  geom_line(aes(y=DSR, color = "DSR"), linetype = 1) + 
+  geom_line(aes(y=FWI, color = "FWI"), linetype = 2) +
+  geom_line(aes(y=BUI, color = "BUI"), linetype = 3) +
+  geom_line(aes(y=ISI, color = "ISI"), linetype = 4) +
+  geom_line(aes(y=FFMC, color = "FFMC"), linetype = 5) + 
+  geom_line(aes(y=DMC, color = "DMC"), linetype = 6) +
+  geom_line(aes(y=DC, color = "DC"), linetype = 7)  + 
+  ylab("indices") + xlab("days after extreme fire (sorted by burnt area)") + 
+  scale_color_manual(name = "Indices", values = c(
+    "DSR" = "darkblue", 
+    "FWI" = "red",
+    "BUI" = "green",
+    "ISI" = "yellow",
+    "FFMC" = "orange",
+    "DMC" = "purple",
+    "DC" = "skyblue")) +
+  theme(legend.position="right", 
+      legend.key.size = unit(1, 'cm'),
+      legend.text = element_text(size=20),
+      # plot.margin = margin(0,0,0,-1),
+      axis.title = element_text(size = 20))
+
+fwi.index[((first.extreme):(first.extreme+12)),]
+fwi.index[13682:13694,]
+fwi.index[second.extreme:(second.extreme+12),]
 
 df.extreme <- cbind(y, fwi.scaled)
 df.extreme <- as.data.frame(cbind(month = fwi.index$month[which(Y>u)], df.extreme))
