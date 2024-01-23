@@ -23,11 +23,11 @@ library(DATAstudio)
 # soi : Southern oscillation index (SOI)
 # nao : North atlantic oscillation
 
-
-psi <- 5
+psi <- 10
 threshold <- 0.95
 u <- quantile(madeira$prec, threshold)
 y <- madeira$prec[madeira$prec>u]
+# y <- madeira$prec
 # x.scale <- x.scale[which(y>quantile(y, threshold)),]
 # u <- quantile(y, threshold)
 
@@ -44,13 +44,13 @@ rainfall.index$month <- factor(format(rainfall.index$date, "%b"),
 rainfall.scaled <- rainfall.scaled[which(madeira$prec>u),]
 rainfall.scaled <- as.data.frame(scale(rainfall.scaled))
 
-# plot((rainfall.scaled[,2]), (log(y)))
-# plot((rainfall.scaled[,5]), (log(y)))
+# plot((rainfall.scaled[,2]), y)
+# plot((rainfall.scaled[,5]), y)
 
 # rainfall.scaled <- as.data.frame(lapply(rainfall.scaled, rescale, to=c(-1,1)))
 # fwi.ind <- which(rainfall.scaled[,2]>0)
-# # plot(sort(hill(y,option="alpha", reverse = FALSE)$y))
-# # hill(y, option = "alpha", reverse = FALSE)
+# plot(sort(hill(y,option="alpha", reverse = FALSE)$y))
+# hill(y, option = "alpha", reverse = FALSE)
 # # hill(sort(Y)[13865:14609], option="alpha", reverse = TRUE)$y
 # # hill(rainfall.scaled[which(rainfall.scaled[,2]>0), 2], option = "alpha", reverse = FALSE)
 # hill(rainfall.scaled[fwi.ind, 2], option = "alpha", reverse = FALSE)
