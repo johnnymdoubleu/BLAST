@@ -23,8 +23,8 @@ library(DATAstudio)
 # soi : Southern oscillation index (SOI)
 # nao : North atlantic oscillation
 
-psi <- 10
-threshold <- 0.95
+psi <- 5
+threshold <- 0.70
 u <- quantile(madeira$prec, threshold)
 y <- madeira$prec[madeira$prec>u]
 # y <- madeira$prec

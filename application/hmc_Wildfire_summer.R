@@ -42,8 +42,8 @@ df.long[which(is.na(df.long$...1))+1,]
 Y <- df.long$measurement[!is.na(df.long$measurement)]
 summary(Y) #total burnt area
 length(Y)
-psi <- 10
-threshold <- 0.95
+psi <- 5
+threshold <- 0.99
 
 # x.scale <- x.scale[which(y>quantile(y, threshold)),]
 # u <- quantile(y, threshold)
