@@ -108,35 +108,38 @@ fwi.scaled <- as.data.frame(lapply(fwi.scaled, rescale, to=c(-1,1)))
 #                 addgrid.col = "black")
 # dev.off()
 # ggsave("./BRSTIR/application/figures/correlation.pdf", plot = replayPlot(p1), width=10, height = 7.78)
-first.extreme <- which(Y==max(y))
-second.extreme <- which(Y==max(y[-which.max(y)]))
-tenth.extreme <- which(Y==sort(y, decreasing = TRUE)[10])
-ggplot(fwi.index[((first.extreme):(first.extreme+12)),], aes(x=date)) +
-  geom_line(aes(y=DSR, color = "DSR"), linetype = 1) + 
-  geom_line(aes(y=FWI, color = "FWI"), linetype = 2) +
-  geom_line(aes(y=BUI, color = "BUI"), linetype = 3) +
-  geom_line(aes(y=ISI, color = "ISI"), linetype = 4) +
-  geom_line(aes(y=FFMC, color = "FFMC"), linetype = 5) + 
-  geom_line(aes(y=DMC, color = "DMC"), linetype = 6) +
-  geom_line(aes(y=DC, color = "DC"), linetype = 7)  + 
-  ylab("indices") + xlab("dates after extreme fire (sorted by burnt area)") + 
-  scale_color_manual(name = "Indices", values = c(
-    "DSR" = "darkblue", 
-    "FWI" = "red",
-    "BUI" = "green",
-    "ISI" = "yellow",
-    "FFMC" = "orange",
-    "DMC" = "purple",
-    "DC" = "skyblue")) +
-  theme(legend.position="right", 
-      legend.key.size = unit(1, 'cm'),
-      legend.text = element_text(size=20),
-      # plot.margin = margin(0,0,0,-1),
-      axis.title = element_text(size = 20))
 
-fwi.index[((first.extreme):(first.extreme+12)),]
-fwi.index[13682:13694,]
-fwi.index[second.extreme:(second.extreme+12),]
+
+# ------------- Explanatory Analaysis
+# first.extreme <- which(Y==max(y))
+# second.extreme <- which(Y==max(y[-which.max(y)]))
+# tenth.extreme <- which(Y==sort(y, decreasing = TRUE)[10])
+# ggplot(fwi.index[((first.extreme):(first.extreme+12)),], aes(x=date)) +
+#   geom_line(aes(y=DSR, color = "DSR"), linetype = 1) + 
+#   geom_line(aes(y=FWI, color = "FWI"), linetype = 2) +
+#   geom_line(aes(y=BUI, color = "BUI"), linetype = 3) +
+#   geom_line(aes(y=ISI, color = "ISI"), linetype = 4) +
+#   geom_line(aes(y=FFMC, color = "FFMC"), linetype = 5) + 
+#   geom_line(aes(y=DMC, color = "DMC"), linetype = 6) +
+#   geom_line(aes(y=DC, color = "DC"), linetype = 7)  + 
+#   ylab("indices") + xlab("dates after extreme fire (sorted by burnt area)") + 
+#   scale_color_manual(name = "Indices", values = c(
+#     "DSR" = "darkblue", 
+#     "FWI" = "red",
+#     "BUI" = "green",
+#     "ISI" = "yellow",
+#     "FFMC" = "orange",
+#     "DMC" = "purple",
+#     "DC" = "skyblue")) +
+#   theme(legend.position="right", 
+#       legend.key.size = unit(1, 'cm'),
+#       legend.text = element_text(size=20),
+#       # plot.margin = margin(0,0,0,-1),
+#       axis.title = element_text(size = 20))
+
+# fwi.index[((first.extreme):(first.extreme+12)),]
+# fwi.index[13682:13694,]
+# fwi.index[second.extreme:(second.extreme+12),]
 
 df.extreme <- cbind(y, fwi.scaled)
 df.extreme <- as.data.frame(cbind(month = fwi.index$month[which(Y>u)], df.extreme))
