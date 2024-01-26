@@ -24,7 +24,7 @@ library(DATAstudio)
 # nao : North atlantic oscillation
 
 psi <- 5
-threshold <- 0.50
+threshold <- 0.95
 u <- quantile(madeira$prec, threshold)
 y <- madeira$prec[madeira$prec>u]
 # y <- madeira$prec

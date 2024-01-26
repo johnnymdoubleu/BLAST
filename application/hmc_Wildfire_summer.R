@@ -86,7 +86,7 @@ fwi.index$month <- factor(format(fwi.index$date,"%b"),
 
 Y <- Y[which(fwi.index$month %in% c("Jun", "Jul", "Aug", "Sep"))]
 u <- quantile(Y, threshold)
-y <- Y[Y>u] * 0.1
+y <- Y[Y>u]
 fwi.scaled <- fwi.scaled[which(fwi.index$month %in% c("Jun", "Jul", "Aug", "Sep")),]
 
 fwi.scaled <- fwi.scaled[which(Y>u),]
@@ -262,8 +262,8 @@ init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
 fit1 <- stan(
     file = "model_pareto.stan",  # Stan program
     data = data.stan,    # named list of data
-    # init = init.alpha,      # initial value
-    init_r = 29,
+    init = init.alpha,      # initial value
+    # init_r = 29,
     chains = 3,             # number of Markov chains
     warmup = 1500,          # number of warmup iterations per chain
     iter = 3000,            # total number of iterations per chain
