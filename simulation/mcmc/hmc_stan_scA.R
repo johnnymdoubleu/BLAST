@@ -21,7 +21,7 @@ library(cmdstanr)
 library(ggh4x)
 
 #Scenario 1
-set.seed(9)
+set.seed(10)
 
 n <- 5000
 psi <- 10
@@ -413,7 +413,7 @@ ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) +
 
 data.nonlinear <- data.frame("x"=newx,
                           "true" = as.vector(f.nonlinear.new),
-                          "post.mean" = as.vector(g.nonlinear.new),
+                          "post.mean" = as.vector(g.nonlinear.mean),
                           "q1" = as.vector(g.nonlinear.q1),
                           "q2" = as.vector(g.nonlinear.q2),
                           "q3" = as.vector(g.nonlinear.q3),
