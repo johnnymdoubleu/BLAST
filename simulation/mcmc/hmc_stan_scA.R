@@ -231,6 +231,7 @@ lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5,
 alpha.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
 newgl.samples <- summary(fit1, par=c("newgl"), probs = c(0.05, 0.5, 0.95))$summary
 newgnl.samples <- summary(fit1, par=c("newgnl"), probs = c(0.05, 0.5, 0.95))$summary
+newgsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
 newalpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
 
 gamma.post.mean <- gamma.samples[,1]
@@ -450,18 +451,18 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
 
 data.scenario <- data.frame("x" = c(1:n),
                             "constant" = newx,
-                            "true" = sort(alp.new),
-                            "post.mean" = sort(newalpha.samples[,1]),
-                            "post.median" = sort(newalpha.samples[,5]),
-                            "q1" = sort(newalpha.samples[,4]),
-                            "q3" = sort(newalpha.samples[,6]))
+                            "true" = (alp.new),
+                            "post.mean" = (newalpha.samples[,1]),
+                            "post.median" = (newalpha.samples[,5]),
+                            "q1" = (newalpha.samples[,4]),
+                            "q3" = (newalpha.samples[,6]))
                             # "post.mean" = sort(alpha.smooth.new),
                             # "post.median" = sort(newalpha.samples[,5]),
                             # "q1" = sort(alpha.smooth.q1),
                             # "q3" = sort(alpha.smooth.q3))                            
 
 ggplot(data.scenario, aes(x=x)) + 
-  ylab(expression(alpha(c*bold("1")))) + xlab(expression(c)) + labs(col = "")
+  ylab(expression(alpha(c*bold("1")))) + xlab(expression(c)) + labs(col = "") +
   geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
   geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
 #   geom_line(aes(y=post.mean, col = "Posterior Mean"), linewidth=2, linetype = 2) + 
@@ -470,7 +471,8 @@ ggplot(data.scenario, aes(x=x)) +
   # geom_line(aes(y=chain2, col = "Chian 2"), linetype=3) +
   # facet_grid(covariates ~ .) + 
   # scale_y_continuous(breaks=c(0)) + 
-  scale_color_manual(values = c("#e0b430","red"))+
+  scale_fill_manual(values=c("steelblue"), name = "") +
+  scale_color_manual(values=c("steelblue", "red")) + 
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 30),
         legend.position="top", 

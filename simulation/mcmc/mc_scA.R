@@ -15,10 +15,10 @@ library(cmdstanr)
 
 # Scenario A
 
-total.iter <- 10
+total.iter <- 2
 
-n <- 15000
-psi <- 5
+n <- 2500
+psi <- 10
 threshold <- 0.95
 p <- 5
 newp <- p+1
@@ -126,7 +126,7 @@ alpha.lower.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol =
 alpha.upper.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total.iter))
 
 for(iter in 1:total.iter){
-    n <- 15000
+    n <- 2500
     x.origin <- pnorm(matrix(rnorm(n*p), ncol = p) %*% chol(C))
     xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
     for(i in 1:p){
@@ -223,9 +223,9 @@ for(iter in 1:total.iter){
     newgsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
     newalpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
 
-    alpha.lower.container[,iter] <- sort(newalpha.samples[,4])
-    alpha.container[,iter] <- sort(newalpha.samples[,5])
-    alpha.upper.container[,iter] <- sort(newalpha.samples[,6])
+    alpha.lower.container[,iter] <- (newalpha.samples[,4])
+    alpha.container[,iter] <- (newalpha.samples[,5])
+    alpha.upper.container[,iter] <- (newalpha.samples[,6])
     # theta.container[,iter] <- theta.samples[,5]
     # gamma.container[,iter] <- gamma.samples[,5]
     newgl.container[,iter] <- as.vector(matrix(newgl.samples[,5], nrow = n, byrow=TRUE))
