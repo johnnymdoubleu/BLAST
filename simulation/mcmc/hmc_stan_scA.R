@@ -461,29 +461,17 @@ data.scenario <- data.frame("x" = c(1:n),
                             # "q1" = sort(alpha.smooth.q1),
                             # "q3" = sort(alpha.smooth.q3))                            
 
-ggplot(data.scenario, aes(x=x)) + 
+ggplot(data.scenario, aes(x=newx)) + 
   ylab(expression(alpha(c*bold("1")))) + xlab(expression(c)) + labs(col = "") +
-  geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
+  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
-#   geom_line(aes(y=post.mean, col = "Posterior Mean"), linewidth=2, linetype = 2) + 
-  # ylim(0, (max(data.scenario$q3)+10)) +
   geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=2) +
-  # geom_line(aes(y=chain2, col = "Chian 2"), linetype=3) +
-  # facet_grid(covariates ~ .) + 
-  # scale_y_continuous(breaks=c(0)) + 
-  scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values=c("steelblue", "red")) + 
+  scale_fill_manual(values=c("steelblue"), name = "") +
   theme_minimal(base_size = 30) +
-  theme(plot.title = element_text(hjust = 0.5, size = 30),
-        legend.position="top", 
-        legend.key.size = unit(1, 'cm'),
-        legend.text = element_text(size=18),
-        plot.margin = margin(0,0,0,-10),
+  theme(legend.position = "none",
         strip.text = element_blank(),
-        axis.text.x = element_blank(),
-        axis.ticks.x = element_blank(),
-        axis.text.y = element_text(size=33),
-        axis.title.x = element_text(size = 35))
+        axis.text = element_text(size = 35))
 
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_test_sc1-wi.pdf"), width=10, height = 7.78)
