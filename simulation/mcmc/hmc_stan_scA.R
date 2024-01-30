@@ -21,10 +21,11 @@ library(cmdstanr)
 library(ggh4x)
 
 #Scenario 1
-set.seed(10)
+# set.seed(10)
 # set.seed(9)
+# set.seed(3)
 
-n <- 5000
+n <- 20000
 psi <- 10
 threshold <- 0.95
 p <- 5
@@ -350,13 +351,13 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   geom_line(aes(y=true, colour = "True"), linewidth=2) + 
   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
-  ylab("") + xlab("") +
+  ylab("") + xlab(expression(c)) +
   facet_wrap(covariates ~ ., scales = "free_x", nrow = 5,
               labeller = label_parsed, strip.position = "left") + 
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values=c("steelblue", "red")) + 
   guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) + ylim(-0.65, 0.3) +
+          fill = guide_legend(order = 1)) + ylim(-0.65, 0.35) +
   # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 15),
@@ -460,7 +461,7 @@ data.scenario <- data.frame("x" = c(1:n),
                             # "post.mean" = sort(alpha.smooth.new),
                             # "post.median" = sort(newalpha.samples[,5]),
                             # "q1" = sort(alpha.smooth.q1),
-                            # "q3" = sort(alpha.smooth.q3))                            
+                            # "q3" = sort(alpha.smooth.q3))
 
 ggplot(data.scenario, aes(x=newx)) + 
   ylab(expression(alpha(c*bold("1")))) + xlab(expression(c)) + labs(col = "") +
@@ -472,8 +473,7 @@ ggplot(data.scenario, aes(x=newx)) +
   theme_minimal(base_size = 30) +
   theme(legend.position = "none",
         strip.text = element_blank(),
-        axis.text = element_text(size = 35))
-
+        axis.text = element_text(size = 18))
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_test_sc1-wi.pdf"), width=10, height = 7.78)
 
