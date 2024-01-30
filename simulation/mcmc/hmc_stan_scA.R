@@ -466,8 +466,8 @@ data.scenario <- data.frame("x" = c(1:n),
 ggplot(data.scenario, aes(x=newx)) + 
   ylab(expression(alpha(c*bold("1")))) + xlab(expression(c)) + labs(col = "") +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
-  geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
-  geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=2) +
+  geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2) + 
+  geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1.5) +
   scale_color_manual(values=c("steelblue", "red")) + 
   scale_fill_manual(values=c("steelblue"), name = "") +
   theme_minimal(base_size = 30) + ylim(0, 3) +
@@ -475,7 +475,7 @@ ggplot(data.scenario, aes(x=newx)) +
         strip.text = element_blank(),
         axis.text = element_text(size = 18))
 
-ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_test_sc1-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_test_sc1-wi.pdf"), width=10, height = 7.78)
 
 
 mcmc.alpha <- posterior$alpha
