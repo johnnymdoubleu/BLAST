@@ -481,7 +481,7 @@ ggplot(data.scenario, aes(x=newx)) +
   geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1.5) +
   scale_color_manual(values=c("steelblue", "red")) + 
   scale_fill_manual(values=c("steelblue"), name = "") +
-  theme_minimal(base_size = 30) + ylim(0.5, 2.5) +
+  theme_minimal(base_size = 30) + ylim(0.5, 3) +
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 18))
