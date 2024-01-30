@@ -1,4 +1,4 @@
-// Stan model for simple linear regression
+// Stan model for BRSTIR Pareto correlated samples
 
 data {
     int <lower=1> n; // Sample size
@@ -27,11 +27,11 @@ transformed parameters {
     array[n] real <lower=0> alpha; // tail index
     matrix[n, p] gnl; // nonlinear component
     matrix[n, p] gl; // linear component
-    matrix[n, p] gsmooth; // linear component
+    matrix[n, p] gsmooth; // smooth function
     array[n] real <lower=0> newalpha; // new tail index
     matrix[n, p] newgnl; // nonlinear component
     matrix[n, p] newgl; // linear component
-    matrix[n, p] newgsmooth; // linear component
+    matrix[n, p] newgsmooth; // smooth function
     for (j in 1:p){
         gnl[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
         newgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];

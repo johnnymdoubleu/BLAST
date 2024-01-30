@@ -23,8 +23,8 @@ library(ggh4x)
 # library(ggplotify)
 
 #Scenario 2
-# set.seed(2)
-set.seed(36)
+set.seed(2)
+# set.seed(36)
 
 n <- 5000
 psi <- 10
@@ -241,6 +241,7 @@ theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summar
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
 lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
 alpha.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
+newgsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
 newgl.samples <- summary(fit1, par=c("newgl"), probs = c(0.05, 0.5, 0.95))$summary
 newgnl.samples <- summary(fit1, par=c("newgnl"), probs = c(0.05, 0.5, 0.95))$summary
 newalpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
@@ -361,13 +362,13 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   geom_line(aes(y=true, colour = "True"), linewidth=2) + 
   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
-  ylab("") + xlab("") +
+  ylab("") + xlab(expression(c)) +
   facet_wrap(covariates ~ ., scales = "free_x", nrow = 5,
               labeller = label_parsed, strip.position = "left") + 
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values=c("steelblue", "red")) + 
   guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) + ylim(-0.65, 0.3) +
+          fill = guide_legend(order = 1)) + ylim(-1, 0.7) +
   # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 15),
@@ -399,13 +400,13 @@ ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   geom_line(aes(y=true, colour = "True"), linewidth=2) + 
   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
-  ylab("") + xlab("") +
+  ylab("") + xlab(expression(c)) +
   facet_wrap(covariates ~ ., scales = "free_x", nrow = 5,
               labeller = label_parsed, strip.position = "left") + 
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values=c("steelblue", "red")) + 
   guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) + ylim(-0.65, 0.3) +
+          fill = guide_legend(order = 1)) + ylim(-1, 0.7) +
   # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 15),
@@ -425,7 +426,7 @@ ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) +
 
 data.nonlinear <- data.frame("x"=newx,
                           "true" = as.vector(f.nonlinear.new),
-                          "post.mean" = as.vector(g.nonlinear.new),
+                          "post.mean" = as.vector(g.nonlinear.mean),
                           "q1" = as.vector(g.nonlinear.q1),
                           "q2" = as.vector(g.nonlinear.q2),
                           "q3" = as.vector(g.nonlinear.q3),
@@ -438,13 +439,13 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   geom_line(aes(y=true, colour = "True"), linewidth=2) + 
   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
-  ylab("") + xlab("") +
+  ylab("") + xlab(expression(c)) +
   facet_wrap(covariates ~ ., scales = "free_x", nrow = 5,
               labeller = label_parsed, strip.position = "left") + 
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values=c("steelblue", "red")) + 
   guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) + ylim(-0.55, 0.5) +
+          fill = guide_legend(order = 1)) + ylim(-1, 0.7) +
   # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) +
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 15),
@@ -463,38 +464,27 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
 
 data.scenario <- data.frame("x" = c(1:n),
                             "constant" = newx,
-                            "true" = sort(alp.new),
-                            "post.mean" = sort(newalpha.samples[,1]),
-                            "post.median" = sort(newalpha.samples[,5]),
-                            "q1" = sort(newalpha.samples[,4]),
-                            "q3" = sort(newalpha.samples[,6]))
+                            "true" = (alp.new),
+                            "post.mean" = (newalpha.samples[,1]),
+                            "post.median" = (newalpha.samples[,5]),
+                            "q1" = (newalpha.samples[,4]),
+                            "q3" = (newalpha.samples[,6]))
                             # "post.mean" = sort(alpha.smooth.new),
                             # "post.median" = sort(newalpha.samples[,5]),
                             # "q1" = sort(alpha.smooth.q1),
                             # "q3" = sort(alpha.smooth.q3))                            
 
-ggplot(data.scenario, aes(x=x)) + 
-  ylab(expression(alpha(c*bold("1")))) + xlab(expression(c)) + labs(col = "")
-  geom_ribbon(aes(ymin = q1, ymax = q3), alpha = 0.5) +
-  geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2.5) + 
-#   geom_line(aes(y=post.mean, col = "Posterior Mean"), linewidth=2, linetype = 2) + 
-  # ylim(0, (max(data.scenario$q3)+10)) +
-  geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=2) +
-  # geom_line(aes(y=chain2, col = "Chian 2"), linetype=3) +
-  # facet_grid(covariates ~ .) + 
-  # scale_y_continuous(breaks=c(0)) + 
-  scale_color_manual(values = c("#e0b430","red"))+
-  theme_minimal(base_size = 30) +
-  theme(plot.title = element_text(hjust = 0.5, size = 30),
-        legend.position="top", 
-        legend.key.size = unit(1, 'cm'),
-        legend.text = element_text(size=18),
-        plot.margin = margin(0,0,0,-10),
+ggplot(data.scenario, aes(x=newx)) + 
+  ylab(expression(alpha(c*bold("1")))) + xlab(expression(c)) + labs(col = "") +
+  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
+  geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2) + 
+  geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1.5) +
+  scale_color_manual(values=c("steelblue", "red")) + 
+  scale_fill_manual(values=c("steelblue"), name = "") +
+  theme_minimal(base_size = 30) + ylim(0, 3) +
+  theme(legend.position = "none",
         strip.text = element_blank(),
-        axis.text.x = element_blank(),
-        axis.ticks.x = element_blank(),
-        axis.text.y = element_text(size=33),
-        axis.title.x = element_text(size = 35))
+        axis.text = element_text(size = 18))
 
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_test_sc2-wi.pdf"), width=10, height = 7.78)
