@@ -21,9 +21,9 @@ library(cmdstanr)
 library(ggh4x)
 
 #Scenario 1
-# set.seed(10)
+set.seed(10)
 # set.seed(9)
-set.seed(2)
+
 
 n <- 10000
 psi <- 10

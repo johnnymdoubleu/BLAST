@@ -23,8 +23,9 @@ library(ggh4x)
 # library(ggplotify)
 
 #Scenario 2
-# set.seed(2)
-set.seed(36)
+set.seed(2)
+# set.seed(36)
+# set.seed(4)
 
 n <- 5000
 psi <- 10
