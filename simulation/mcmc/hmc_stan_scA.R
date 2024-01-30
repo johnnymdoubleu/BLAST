@@ -23,9 +23,9 @@ library(ggh4x)
 #Scenario 1
 # set.seed(10)
 # set.seed(9)
-set.seed(36)
+set.seed(2)
 
-n <- 10000
+n <- 20000
 psi <- 10
 threshold <- 0.95
 p <- 5
@@ -389,7 +389,7 @@ ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   geom_line(aes(y=true, colour = "True"), linewidth=2) + 
   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
-  ylab("") + xlab("") +
+  ylab("") + xlab(expression(c)) +
   facet_wrap(covariates ~ ., scales = "free_x", nrow = 5,
               labeller = label_parsed, strip.position = "left") + 
   scale_fill_manual(values=c("steelblue"), name = "") +
@@ -470,12 +470,12 @@ ggplot(data.scenario, aes(x=newx)) +
   geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=2) +
   scale_color_manual(values=c("steelblue", "red")) + 
   scale_fill_manual(values=c("steelblue"), name = "") +
-  theme_minimal(base_size = 30) +
+  theme_minimal(base_size = 30) + ylim(0, 3) +
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 18))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_test_sc1-wi.pdf"), width=10, height = 7.78)
+ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_test_sc1-wi.pdf"), width=10, height = 7.78)
 
 
 mcmc.alpha <- posterior$alpha
