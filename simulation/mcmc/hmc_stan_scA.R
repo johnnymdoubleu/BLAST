@@ -23,7 +23,7 @@ library(ggh4x)
 #Scenario 1
 # set.seed(10)
 # set.seed(9)
-# set.seed(3)
+set.seed(3)
 
 n <- 20000
 psi <- 10
