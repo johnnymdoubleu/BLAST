@@ -475,8 +475,6 @@ ggplot(data.scenario, aes(x=newx)) +
         strip.text = element_blank(),
         axis.text = element_text(size = 18))
 
-
-
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_test_sc1-wi.pdf"), width=10, height = 7.78)
 
 

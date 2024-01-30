@@ -23,7 +23,7 @@ library(ggh4x)
 # library(ggplotify)
 
 #Scenario 2
-set.seed(2)
+set.seed(3)
 # set.seed(36)
 # set.seed(4)
 
@@ -482,11 +482,10 @@ ggplot(data.scenario, aes(x=newx)) +
   geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1.5) +
   scale_color_manual(values=c("steelblue", "red")) + 
   scale_fill_manual(values=c("steelblue"), name = "") +
-  theme_minimal(base_size = 30) + ylim(0.5, 3) +
+  theme_minimal(base_size = 30) + ylim(0.5, 2.5) +
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 18))
-
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_test_sc2-wi.pdf"), width=10, height = 7.78)
 
