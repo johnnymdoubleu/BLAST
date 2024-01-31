@@ -23,11 +23,11 @@ library(ggh4x)
 # library(ggplotify)
 
 #Scenario 2
-set.seed(3)
-# set.seed(36)
+# set.seed(3)
+set.seed(36)
 # set.seed(4)
 
-n <- 5000
+n <- 10000
 psi <- 10
 threshold <- 0.90
 p <- 5

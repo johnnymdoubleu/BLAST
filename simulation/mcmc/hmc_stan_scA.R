@@ -21,11 +21,11 @@ library(cmdstanr)
 library(ggh4x)
 
 #Scenario 1
-set.seed(10)
-# set.seed(9)
+# set.seed(10)
+set.seed(4)
 
 
-n <- 15000
+n <- 20000
 psi <- 10
 threshold <- 0.95
 p <- 5
@@ -372,7 +372,7 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
         axis.title.x = element_text(size = 35),
         axis.text = element_text(size=18))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_smooth_sc1-wi.pdf"), width=12.5, height = 15)
+ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_smooth_sc1-wi.pdf"), width=12.5, height = 15)
 
 data.linear <- data.frame("x"=newx,
                           "true" = as.vector(f.linear.new),
