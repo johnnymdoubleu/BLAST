@@ -95,39 +95,42 @@ fwi.scaled <- fwi.scaled[which(Y>u),]
 fwi.scaled <- as.data.frame(lapply(fwi.scaled, rescale, to=c(-1,1)))
 # fwi.ind <- which(fwi.scaled[,2]>0)
 
-ordered <- rev(sort(Y)[13865:14609])
-n.hill <- length(ordered)
-k <- 1:n.hill
-loggs <- logb(ordered)
-avesumlog <- cumsum(loggs)/k
-xihat <- c(NA, (avesumlog-loggs)[2:n.hill])
-alphahat <- 1/xihat
-ses <- alphahat/sqrt(k)
-xx <- trunc(seq(from = n.hill, to = 15))
-y.alpha <- alphahat[xx]
-# ylabel <- alphahat
-yrange <- range(y.alpha)
-qq <- qnorm(1-(1-0.95)/2)
-u <- y.alpha + ses[xx] * qq
-l <- y.alpha - ses[xx] * qq
-yrange <- range(u, l)
-data.hill <- data.frame(k = c(15:n.hill),
-                        u = u,
-                        l = l,
-                        alpha = y.alpha,
-                        order = xx)
-ggplot(data = data.hill) + 
-  geom_ribbon(aes(x = order, ymin = l, ymax = u, fill = "confidenceband"),
-              alpha = 0.2, linetype = "dashed") + 
-  geom_line(aes(x = order, y = alpha, color="hillestimator" ), linewidth = 1.2) + 
-  xlim(15, n.hill) +
-  labs(x = "Order Statistics", y = "Tail Index") + 
-  scale_color_manual(values=c("steelblue")) + 
-  scale_fill_manual(values=c("steelblue"), name = "") +
-  theme_minimal(base_size = 30) +
-  theme(text = element_text(size = 18), 
-        axis.text.x = element_text(angle = 0, hjust = 0.5),
-        legend.position = "none")
+
+# ---------------------------------------------------------------------------
+# Computing Hills Estimator plot
+# ordered <- rev(sort(Y)[13865:14609])
+# n.hill <- length(ordered)
+# k <- 1:n.hill
+# loggs <- logb(ordered)
+# avesumlog <- cumsum(loggs)/k
+# xihat <- c(NA, (avesumlog-loggs)[2:n.hill])
+# alphahat <- 1/xihat
+# ses <- alphahat/sqrt(k)
+# xx <- trunc(seq(from = n.hill, to = 15))
+# y.alpha <- alphahat[xx]
+# # ylabel <- alphahat
+# yrange <- range(y.alpha)
+# qq <- qnorm(1-(1-0.95)/2)
+# u <- y.alpha + ses[xx] * qq
+# l <- y.alpha - ses[xx] * qq
+# yrange <- range(u, l)
+# data.hill <- data.frame(k = c(15:n.hill),
+#                         u = u,
+#                         l = l,
+#                         alpha = y.alpha,
+#                         order = xx)
+# ggplot(data = data.hill) + 
+#   geom_ribbon(aes(x = order, ymin = l, ymax = u, fill = "confidenceband"),
+#               alpha = 0.2, linetype = "dashed") + 
+#   geom_line(aes(x = order, y = alpha, color="hillestimator" ), linewidth = 1.2) + 
+#   xlim(15, n.hill) +
+#   labs(x = "Order Statistics", y = "Tail Index") + 
+#   scale_color_manual(values=c("steelblue")) + 
+#   scale_fill_manual(values=c("steelblue"), name = "") +
+#   theme_minimal(base_size = 30) +
+#   theme(text = element_text(size = 18), 
+#         axis.text.x = element_text(angle = 0, hjust = 0.5),
+#         legend.position = "none")
 # ggsave("./BRSTIR/application/figures/hillestimator.pdf", width=10, height = 7.78)
 
 
@@ -138,7 +141,7 @@ ggplot(data = data.hill) +
 #                 addgrid.col = "black")
 # dev.off()
 # ggsave("./BRSTIR/application/figures/correlation.pdf", plot = replayPlot(p1), width=10, height = 7.78)
-
+# -------------------------------------------------------------------
 
 # ------------- Explanatory Analaysis
 # first.extreme <- which(Y==max(y))
@@ -273,7 +276,6 @@ model {
 generated quantities {
     // Used in Posterior predictive check
     vector[n] log_lik;
-    real y_rep[n] = pareto_rng(u, alpha);
     for (i in 1:n) {
         log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
     }
@@ -689,6 +691,7 @@ plot(fwi.loo, label_points = TRUE)
 # fwi.waic <- waic(posterior$log_lik)
 # fwi.waic
 
+#https://discourse.mc-staqan.org/t/four-questions-about-information-criteria-cross-validation-and-hmc-in-relation-to-a-manuscript-review/13841/3
 # y.rep <- as.matrix(fit1, pars = "y_rep")
 # ppc_loo_pit_overlay(
 #   y = y,
@@ -717,7 +720,7 @@ for(i in 1:p){
   grid.plts[[i]] <- grid.plt
 }
 
-grid.arrange(grobs = grid.plts, ncol = 2, nrow = 2)
+grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
 
 
 # Testing accuracy of estimated alpha(x)
