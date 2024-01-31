@@ -219,7 +219,7 @@ init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
                         lambda1 = 0.1, lambda2 = 0.01))
 
 fit1 <- stan(
-    file = "model_simulation_sc3.stan",  # Stan program
+    file = "model_simulation_sc2.stan",  # Stan program
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
     chains = 3,             # number of Markov chains
