@@ -23,7 +23,8 @@ library(ggh4x)
 # library(ggplotify)
 
 #Scenario 2
-set.seed(3)
+set.seed(10)
+# set.seed(3)
 # set.seed(36)
 
 n <- 15000
