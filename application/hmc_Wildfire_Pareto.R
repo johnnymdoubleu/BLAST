@@ -679,17 +679,14 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
 
 cat("Finished Running")
 
-
-fwi.loo <- loo(fit1)
-fwi.loo
-y.psis <- fwi.loo$pointwise[,1]
-print(paste("RMSE (PSIS) =",round(sqrt(mean((y-y.psis)^2)) ,2)))
-print(paste("ELPD (PSIS)=",round(sum(y.psis),2)))
-print(paste("ELPD (brute force)=",round(sum(y),2)))
-
+fit.log.lik <- extract_log_lik(fit1)
+fwi.loo <- loo(fit.log.lik, cores = 2)
 plot(fwi.loo, label_points = TRUE)
-# fwi.waic <- waic(posterior$log_lik)
-# fwi.waic
+
+loo(fit.log.lik, is_method = "sis", cores = 2)
+# loo(fit.log.lik)
+waic(fit.log.lik, cores = 2)
+plot(, label_points = TRUE)
 
 #https://discourse.mc-staqan.org/t/four-questions-about-information-criteria-cross-validation-and-hmc-in-relation-to-a-manuscript-review/13841/3
 # y.rep <- as.matrix(fit1, pars = "y_rep")
@@ -724,15 +721,15 @@ grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
 
 
 # Testing accuracy of estimated alpha(x)
-data.alpha <- data.frame(type=c(rep("Median", n), rep("Interval.Diff", n)),
-                          value = c(alp.x.samples[,5], abs(alp.x.samples[,6]-alp.x.samples[,4])))
+# data.alpha <- data.frame(type=c(rep("Median", n), rep("Interval.Diff", n)),
+#                           value = c(alp.x.samples[,5], abs(alp.x.samples[,6]-alp.x.samples[,4])))
 
-ggplot(data = data.alpha, aes(x=value, fill=type)) +
-  geom_histogram(alpha=0.4, bins = 250) +
-  theme_minimal(base_size = 30) +
-  theme(legend.position = "top",
-        plot.margin = margin(0,0,0,-20),
-        axis.text = element_text(size = 20),
-        axis.title.x = element_text(size = 15)) +
-  labs(fill="")
+# ggplot(data = data.alpha, aes(x=value, fill=type)) +
+#   geom_histogram(alpha=0.4, bins = 250) +
+#   theme_minimal(base_size = 30) +
+#   theme(legend.position = "top",
+#         plot.margin = margin(0,0,0,-20),
+#         axis.text = element_text(size = 20),
+#         axis.title.x = element_text(size = 15)) +
+#   labs(fill="")
 
