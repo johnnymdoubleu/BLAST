@@ -15,9 +15,9 @@ library(cmdstanr)
 
 # Scenario A
 
-total.iter <- 2
+total.iter <- 250
 
-n <- 2500
+n <- 15000
 psi <- 10
 threshold <- 0.95
 p <- 5
@@ -126,7 +126,7 @@ alpha.lower.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol =
 alpha.upper.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total.iter))
 
 for(iter in 1:total.iter){
-    n <- 2500
+    n <- 15000
     x.origin <- pnorm(matrix(rnorm(n*p), ncol = p) %*% chol(C))
     xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
     for(i in 1:p){
@@ -234,7 +234,7 @@ for(iter in 1:total.iter){
 }
 
 alpha.container$x <- seq(0,1, length.out = n)
-alpha.container$true <- sort(alp.new)
+alpha.container$true <- alp.new
 alpha.container <- cbind(alpha.container, t(apply(alpha.container[,1:total.iter], 1, quantile, c(0.05, .5, .95))))
 colnames(alpha.container)[(dim(alpha.container)[2]-2):(dim(alpha.container)[2])] <- c("q1","q2","q3")
 alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
@@ -359,7 +359,7 @@ newgsmooth.container$mean <- rowMeans(newgsmooth.container[,1:total.iter])
 newgsmooth.container$covariate <- gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]", "g[6]"))
 newgsmooth.container <- as.data.frame(newgsmooth.container)
 
-plt <- ggplot(data = newgsmooth.container, aes(x = x, group = covariate)) + ylab("") + xlab(expression(x))
+plt <- ggplot(data = newgsmooth.container, aes(x = x, group = covariate)) + ylab("") + xlab(expression(c))
 if(total.iter <= 50){
   for(i in 1:total.iter){
     plt <- plt + geom_line(aes(y = .data[[names(newgsmooth.container)[i]]]), alpha = 0.2, linewidth = 0.7)
@@ -374,11 +374,11 @@ if(total.iter <= 50){
 print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
         geom_line(aes(y=true, col = "True"), linewidth = 2) + 
         geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5, linetype = 2) + 
+        facet_wrap(covariate ~ ., scales = "free_x", nrow = 5,
+                    labeller = label_parsed, strip.position = "left") +
         ylim(-0.23, 0.2) +
-        # facet_wrap(covariate ~ ., scales = "free_x", nrow = 5,
-        #             labeller = label_parsed, strip.position = "left") +
-        facet_grid(covariate ~ ., scales = "free_x", switch = "y",
-                    labeller = label_parsed) +        
+        # facet_grid(covariate ~ ., scales = "free_x", switch = "y",
+        #             labeller = label_parsed) +        
         # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
         #scale_fill_manual(values=c("steelblue"), name = "") +
         scale_color_manual(values = c("steelblue", "red"))+
@@ -387,10 +387,11 @@ print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha 
         theme_minimal(base_size = 30) +
         theme(legend.position = "none",
                 plot.margin = margin(0,0,0,-20),
-                strip.text = element_blank(),
+                strip.text.y = element_text(size = 25, colour = "black", angle = 0, face = "bold.italic"),
+                strip.placement = "outside",
                 axis.text = element_text(size = 20)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_sc1-wi.pdf"), width=10, height = 7.78)                
+ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_sc1-wi.pdf"), width=12.5, height = 15)                
 
 
 newgl.container$x <- seq(0,1, length.out = n)
