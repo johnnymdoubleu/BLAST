@@ -128,7 +128,7 @@ fwi.scaled <- as.data.frame(lapply(fwi.scaled, rescale, to=c(-1,1)))
 #   scale_color_manual(values=c("steelblue")) + 
 #   scale_fill_manual(values=c("steelblue"), name = "") +
 #   theme_minimal(base_size = 30) +
-#   theme(text = element_text(size = 18), 
+#   theme(text = element_text(size = 20), 
 #         axis.text.x = element_text(angle = 0, hjust = 0.5),
 #         legend.position = "none")
 # ggsave("./BRSTIR/application/figures/hillestimator.pdf", width=10, height = 7.78)
