@@ -672,7 +672,8 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
   geom_abline(intercept = 0, slope = 1, linewidth = 1.2) + 
   labs(x = "Theoretical quantiles", y = "Sample quantiles") + 
   theme_minimal(base_size = 20) +
-  theme(text = element_text(size = 20)) + 
+  theme(axis.text = element_text(size = 35),
+        axis.title = element_text(size = 45)) + 
   coord_fixed(xlim = c(-3, 3),  
               ylim = c(-3, 3))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_qqplot.pdf"), width=10, height = 7.78)
@@ -707,20 +708,20 @@ for(i in 1:p){
                   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
                   geom_rug(aes(x= origin, y=q2), sides = "b") +
                   ylab("") + xlab(names(fwi.scaled)[i]) +
-                  scale_fill_manual(values=c("steelblue"), name = "") + ylim(-3,3) +
+                  scale_fill_manual(values=c("steelblue"), name = "") + ylim(-3.5,3) +
                   scale_color_manual(values=c("steelblue")) +
                   #ylim(-0.65, 0.3) +
                   # scale_y_continuous(breaks=equal_breaks(n=5, s=0.1)) + 
                   theme_minimal(base_size = 30) +
                   theme(legend.position = "none",
                           plot.margin = margin(0,0,0,-20),
-                          axis.text = element_text(size = 20),
-                          axis.title.x = element_text(size = 15))
+                          axis.text = element_text(size = 35),
+                          axis.title.x = element_text(size = 45))
   grid.plts[[i]] <- grid.plt
 }
 
 grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
-# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=15, height = 12.5)
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=10, height = 7.78)
 
 # Testing accuracy of estimated alpha(x)
 # data.alpha <- data.frame(type=c(rep("Median", n), rep("Interval.Diff", n)),
