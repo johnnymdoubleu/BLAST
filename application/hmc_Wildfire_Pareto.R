@@ -707,10 +707,10 @@ for(i in 1:p){
                   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
                   geom_rug(aes(x= origin, y=q2), sides = "b") +
                   ylab("") + xlab(names(fwi.scaled)[i]) +
-                  scale_fill_manual(values=c("steelblue"), name = "") +
+                  scale_fill_manual(values=c("steelblue"), name = "") + ylim(-3,3) +
                   scale_color_manual(values=c("steelblue")) +
                   #ylim(-0.65, 0.3) +
-                  scale_y_continuous(breaks=equal_breaks(n=5, s=0.1)) + 
+                  # scale_y_continuous(breaks=equal_breaks(n=5, s=0.1)) + 
                   theme_minimal(base_size = 30) +
                   theme(legend.position = "none",
                           plot.margin = margin(0,0,0,-20),
@@ -719,8 +719,8 @@ for(i in 1:p){
   grid.plts[[i]] <- grid.plt
 }
 
-grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
-
+grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=15, height = 12.5)
 
 # Testing accuracy of estimated alpha(x)
 # data.alpha <- data.frame(type=c(rep("Median", n), rep("Interval.Diff", n)),
