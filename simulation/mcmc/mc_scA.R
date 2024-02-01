@@ -391,7 +391,7 @@ print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha 
                 strip.placement = "outside",
                 axis.text = element_text(size = 20)))
 
-ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_sc1-wi.pdf"), width=12.5, height = 15)                
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_sc1-wi.pdf"), width=12.5, height = 15)                
 
 
 newgl.container$x <- seq(0,1, length.out = n)

@@ -101,7 +101,7 @@ fwi.scaled <- as.data.frame(pca.res$x)
 
 plot(pca.res$x[,1], pca.res$xp[,2], xlab="PC1", ylab="PC2")
 # plot(fwi.index[which(Y>u),1], fwi.index[which(Y>u),2])
-plot(pca.res$x[,1], log(y))
+plot(pca.res$x[,1], y)
 plot(fwi.index[which(Y>u),1], log(y))
 plot(pca.res$x[,2], log(y))
 plot(fwi.index[which(Y>u),2], log(y))

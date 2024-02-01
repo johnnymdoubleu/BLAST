@@ -686,7 +686,7 @@ plot(fwi.loo, label_points = TRUE)
 loo(fit.log.lik, is_method = "sis", cores = 2)
 # loo(fit.log.lik)
 waic(fit.log.lik, cores = 2)
-plot(, label_points = TRUE)
+
 
 #https://discourse.mc-staqan.org/t/four-questions-about-information-criteria-cross-validation-and-hmc-in-relation-to-a-manuscript-review/13841/3
 # y.rep <- as.matrix(fit1, pars = "y_rep")
