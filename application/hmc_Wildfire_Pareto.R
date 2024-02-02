@@ -672,8 +672,8 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
   geom_abline(intercept = 0, slope = 1, linewidth = 1.2) + 
   labs(x = "Theoretical quantiles", y = "Sample quantiles") + 
   theme_minimal(base_size = 20) +
-  theme(axis.text = element_text(size = 35),
-        axis.title = element_text(size = 45)) + 
+  theme(axis.text = element_text(size = 30),
+        axis.title = element_text(size = 30)) + 
   coord_fixed(xlim = c(-3, 3),  
               ylim = c(-3, 3))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_qqplot.pdf"), width=10, height = 7.78)
