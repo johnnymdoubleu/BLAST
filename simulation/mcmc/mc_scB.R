@@ -15,7 +15,7 @@ library(cmdstanr)
 
 # Scenario B
 
-total.iter <- 50
+total.iter <- 2
 
 n <- 15000
 psi <- 10
@@ -120,8 +120,8 @@ model {
 # theta.container <- as.data.frame(matrix(, nrow = newp, ncol= total.iter))
 # gamma.container <- as.data.frame(matrix(, nrow = (p*psi), ncol = total.iter))
 newgsmooth.container <- as.data.frame(matrix(, nrow = (p*(n*(1-threshold))), ncol = total.iter))
-newgl.container <- as.data.frame(matrix(, nrow = (p*(n*(1-threshold))), ncol = total.iter))
-newgnl.container <- as.data.frame(matrix(, nrow = (p*(n*(1-threshold))), ncol = total.iter))
+# newgl.container <- as.data.frame(matrix(, nrow = (p*(n*(1-threshold))), ncol = total.iter))
+# newgnl.container <- as.data.frame(matrix(, nrow = (p*(n*(1-threshold))), ncol = total.iter))
 alpha.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total.iter))
 alpha.lower.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total.iter))
 alpha.upper.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total.iter))
@@ -218,9 +218,9 @@ for(iter in 1:total.iter){
 
     # theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
     # gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
-    lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
-    newgl.samples <- summary(fit1, par=c("newgl"), probs = c(0.05, 0.5, 0.95))$summary
-    newgnl.samples <- summary(fit1, par=c("newgnl"), probs = c(0.05, 0.5, 0.95))$summary
+    # lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
+    # newgl.samples <- summary(fit1, par=c("newgl"), probs = c(0.05, 0.5, 0.95))$summary
+    # newgnl.samples <- summary(fit1, par=c("newgnl"), probs = c(0.05, 0.5, 0.95))$summary
     newgsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
     newalpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
 
@@ -229,8 +229,8 @@ for(iter in 1:total.iter){
     alpha.upper.container[,iter] <- newalpha.samples[,6]
     # theta.container[,iter] <- theta.samples[,5]
     # gamma.container[,iter] <- gamma.samples[,5]
-    newgl.container[,iter] <- as.vector(matrix(newgl.samples[,5], nrow = n, byrow=TRUE))
-    newgnl.container[,iter] <- as.vector(matrix(newgnl.samples[,5], nrow = n, byrow=TRUE))
+    # newgl.container[,iter] <- as.vector(matrix(newgl.samples[,5], nrow = n, byrow=TRUE))
+    # newgnl.container[,iter] <- as.vector(matrix(newgnl.samples[,5], nrow = n, byrow=TRUE))
     newgsmooth.container[,iter] <- as.vector(matrix(newgsmooth.samples[,5], nrow = n, byrow=TRUE))
 }
 
@@ -249,7 +249,8 @@ if(total.iter <= 50){
     plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.2, linewidth = 0.7)
   }
 } else{
-  for(i in 50:100){
+  for(i in 1:total.iter){
+  # for(i in 50:100){
     plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.2, linewidth = 0.7)
   }
 }
@@ -477,6 +478,6 @@ print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha 
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_nonlinear_sc2-wi.pdf"), width=10, height = 7.78) 
 
-save(alpha.container, newgsmooth.container, file = (paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_sc2.Rdata")))
+# save(alpha.container, newgsmooth.container, file = (paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_sc2.Rdata")))
 # total.iter <- 100
-# load(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_sc1.Rdata"))
+# load(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_sc2.Rdata"))
