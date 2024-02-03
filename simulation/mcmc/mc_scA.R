@@ -15,7 +15,7 @@ library(cmdstanr)
 
 # Scenario A
 
-total.iter <- 100
+total.iter <- 250
 
 n <- 15000
 psi <- 10
@@ -205,7 +205,7 @@ for(iter in 1:total.iter){
                             lambda1 = 0.1, lambda2 = 0.01))
 
     fit1 <- stan(
-        file = "model_simulation_sc2.stan",  # Stan program
+        file = "model_simulation_sc1.stan",  # Stan program
         data = data.stan,    # named list of data
         init = init.alpha,      # initial value
         chains = 3,             # number of Markov chains
@@ -248,7 +248,8 @@ if(total.iter <= 50){
     plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.2, linewidth = 0.7)
   }
 } else{
-  for(i in 50:100){
+  for(i in 1:total.iter){
+  # for(i in 50:100){
     plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.2, linewidth = 0.7)
   }
 }
@@ -475,3 +476,7 @@ print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha 
 #                 axis.text = element_text(size = 20)))
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_nonlinear_sc1-wi.pdf"), width=10, height = 7.78)
+
+save(alpha.container, newgsmooth.container, file = (paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_sc1.Rdata")))
+# total.iter <- 100
+# load(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_sc1.Rdata"))
