@@ -15,7 +15,7 @@ library(cmdstanr)
 
 # Scenario B
 
-total.iter <- 2
+total.iter <- 250
 
 n <- 15000
 psi <- 10
@@ -478,6 +478,6 @@ print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha 
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_nonlinear_sc2-wi.pdf"), width=10, height = 7.78) 
 
-# save(alpha.container, newgsmooth.container, file = (paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_sc2.Rdata")))
+save(alpha.container, newgsmooth.container, file = (paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_sc2.Rdata")))
 # total.iter <- 100
 # load(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_sc2.Rdata"))
