@@ -393,7 +393,7 @@ print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha 
                 strip.text = element_blank(),
                 axis.text = element_text(size = 20)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_sc2-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_sc2-wi.pdf"), width=12.5, height = 15)
 
 
 # newgl.container$x <- seq(0,1, length.out = n)
@@ -479,5 +479,5 @@ print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_nonlinear_sc2-wi.pdf"), width=10, height = 7.78) 
 
 save(alpha.container, newgsmooth.container, file = (paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_sc2.Rdata")))
-# total.iter <- 100
-# load(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_sc2.Rdata"))
+total.iter <- 100
+load(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_sc2.Rdata"))
