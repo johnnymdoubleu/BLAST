@@ -382,6 +382,8 @@ alpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$sum
 # summary(fit1, par=c("sigma"), probs = c(0.05,0.5, 0.95))$summary
 # summary(fit1, par=c("tau"), probs = c(0.05,0.5, 0.95))$summary
 
+
+
 # plot(x = ((data.smooth[1:n,4] + data.smooth[((n+1):(2*n)),4] + data.smooth[(((3*n)+1):(4*n)),4])), type = "l", ylab = "DSR + FWI + ISI")
 # plot(x = ((data.smooth[1:n,4] + data.smooth[((n+1):(2*n)),4])), type = "l", ylab = "DSR + FWI")
 # plot(x = ((data.smooth[((n+1):(2*n)),4] + data.smooth[(((3*n)+1):(4*n)),4])), type = "l", ylab = "FWI + ISI")
@@ -736,3 +738,33 @@ grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
 #         axis.title.x = element_text(size = 15)) +
 #   labs(fill="")
 
+#Predictive Distribution check
+alpha.container <- as.data.frame(matrix(, nrow = n, ncol = nrow(posterior$alpha)))
+
+head(posterior$alpha[[1]])
+alpha.container$x <- seq(1,n)
+alpha.container$true <- alp.new
+alpha.container <- as.data.frame(alpha.container)
+
+plt <- ggplot(data = alpha.container, aes(x = x)) + ylab(expression(alpha(c*bold("1")))) + xlab(expression(c)) + labs(col = "")
+if(total.iter <= 50){
+  for(i in 1:total.iter){
+    plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.2, linewidth = 0.7)
+  }
+} else{
+  for(i in 1:total.iter){
+  # for(i in 50:100){
+    plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.2, linewidth = 0.7)
+  }
+}
+print(plt + geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) + ylim(0.5, 2.5) + 
+        geom_line(aes(y=true, col = "True"), linewidth = 2) + 
+        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5, linetype = 2) +
+        scale_fill_manual(values=c("steelblue"), name = "") +
+        scale_color_manual(values = c("steelblue", "red"))+
+        guides(color = guide_legend(order = 2), 
+          fill = guide_legend(order = 1)) +
+        theme_minimal(base_size = 30) +
+        theme(legend.position = "none",
+                strip.text = element_blank(),
+                axis.text = element_text(size = 35)))
