@@ -720,7 +720,7 @@ for(i in 1:p){
   grid.plts[[i]] <- grid.plt
 }
 
-grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
+grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=10, height = 7.78)
 
 # Testing accuracy of estimated alpha(x)
