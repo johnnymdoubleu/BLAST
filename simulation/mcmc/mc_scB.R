@@ -362,7 +362,7 @@ newgsmooth.container$mean <- rowMeans(newgsmooth.container[,1:total.iter])
 newgsmooth.container$covariate <- gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]", "g[6]"))
 newgsmooth.container <- as.data.frame(newgsmooth.container)
 
-plt <- ggplot(data = newgsmooth.container, aes(x = x, group = covariate)) + ylab("") + xlab(expression(x))
+plt <- ggplot(data = newgsmooth.container, aes(x = x, group = covariate)) + ylab("") + xlab(expression(c))
 if(total.iter <= 50){
   for(i in 1:total.iter){
     plt <- plt + geom_line(aes(y = .data[[names(newgsmooth.container)[i]]]), alpha = 0.2, linewidth = 0.7)
@@ -480,4 +480,5 @@ print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha 
 
 save(alpha.container, newgsmooth.container, file = (paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_sc2.Rdata")))
 # total.iter <- 100
-# load(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_sc2.Rdata"))
+# load(paste0("./simulation/results/MC-Scenario_B/",Sys.Date(),"_",total.iter,"_MC_sc2.Rdata"))
+# load(paste0("./simulation/results/MC-Scenario_B/2024-02-04","_",total.iter,"_MC_sc2.Rdata"))
