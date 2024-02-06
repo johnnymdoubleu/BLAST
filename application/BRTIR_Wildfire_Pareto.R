@@ -87,13 +87,10 @@ fwi.index$month <- factor(format(as.Date(substr(cov.long$...1[missing.values],1,
 fwi.index$date <- as.numeric(fwi.index$date)
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 fwi.scaled <- fwi.scaled[which(Y>u),]
-# fwi.scaled <- as.data.frame(scale(fwi.scaled))
+fwi.scaled <- as.data.frame(scale(fwi.scaled))
 
-# plot((fwi.scaled[,2]), (log(y)))
-# plot((fwi.scaled[,5]), (log(y)))
+# fwi.scaled <- as.data.frame(lapply(fwi.scaled, rescale, to=c(-1,1)))
 
-fwi.scaled <- as.data.frame(lapply(fwi.scaled, rescale, to=c(-1,1)))
-# fwi.ind <- which(fwi.scaled[,2]>0)
 
 
 # ---------------------------------------------------------------------------
