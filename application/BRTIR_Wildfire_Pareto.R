@@ -233,7 +233,7 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 0.1, 0.1);
+    target += gamma_lpdf(lambda1 | 1, 10);
     target += normal_lpdf(theta[1] | 0, 1);
     target += newp * log(lambda1);
     for (j in 1:p){
@@ -346,16 +346,17 @@ ggplot(df.theta, aes(x = covariate, y=m, color = covariate)) + ylab("") + xlab('
   geom_point(size = 5) + 
   geom_errorbar(aes(ymin = l, ymax = u), width = 0.3, linewidth =1.2) + 
   scale_x_discrete(labels = c(expression(bold(theta[0])),
-                              expression(bold(theta[1])),
-                              expression(bold(theta[2])),
-                              expression(bold(theta[3])),
-                              expression(bold(theta[4])),
-                              expression(bold(theta[5])),
-                              expression(bold(theta[6])),
-                              expression(bold(theta[7])))) + 
+                              "DSR",
+                              "FWI",
+                              "BUI",
+                              "ISI",
+                              "FFMC",
+                              "DMC",
+                              "DC")) + 
   scale_color_discrete(labels = c(expression(theta[0]),colnames(fwi.scaled))) + 
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 20),
+          legend.position = "none",
           legend.text.align = 0,
           legend.title = element_blank(),
           legend.text = element_text(size=25),
