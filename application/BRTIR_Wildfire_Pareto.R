@@ -507,7 +507,7 @@ for(i in names(y.container)[random.alpha.idx]){
 }
 
 print(plt + geom_density(aes(x=logy), color = "red", linewidth = 2) +
-        theme_minimal(base_size = 30) +
+        theme_minimal(base_size = 30) + ylim(0, 3) +
         theme(legend.position = "none",
                 axis.text = element_text(size = 35)))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRTIR_predictive_distribution.pdf"), width=10, height = 7.78)
