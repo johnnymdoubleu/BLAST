@@ -343,7 +343,7 @@ df.theta$labels <- factor(c("\u03b8",colnames(fwi.scaled)))
 
 ggplot(df.theta, aes(x = covariate, y=m)) + ylab("") + xlab('') +
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  geom_point(size = 5) + 
+  geom_point(size = 5) + ylim(-0.5, 0.5) +
   geom_errorbar(aes(ymin = l, ymax = u), width = 0.3, linewidth =1.2) + 
   scale_x_discrete(labels = c(expression(bold(theta[0])),
                               "DSR",
