@@ -343,7 +343,7 @@ df.theta$labels <- factor(c("\u03b8",colnames(fwi.scaled)))
 
 ggplot(df.theta, aes(x = covariate, y=m)) + ylab("") + xlab('') +
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  geom_point(size = 5) + ylim(-0.5, 0.5) +
+  geom_point(size = 5) + #ylim(-0.5, 0.5) +
   geom_errorbar(aes(ymin = l, ymax = u), width = 0.3, linewidth =1.2) + 
   scale_x_discrete(labels = c(expression(bold(theta[0])),
                               "DSR",
@@ -507,7 +507,7 @@ for(i in names(y.container)[random.alpha.idx]){
 }
 
 print(plt + geom_density(aes(x=logy), color = "red", linewidth = 2) +
-        theme_minimal(base_size = 30) + ylim(0, 3) +
+        theme_minimal(base_size = 30) + ylim(0, 2) +
         theme(legend.position = "none",
                 axis.text = element_text(size = 35)))
-# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRTIR_predictive_distribution.pdf"), width=10, height = 7.78)
+ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRTIR_predictive_distribution.pdf"), width=10, height = 7.78)
