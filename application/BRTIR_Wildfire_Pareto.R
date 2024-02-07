@@ -233,7 +233,7 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 1, 100);
+    target += gamma_lpdf(lambda1 | 0.1, 10);
     target += normal_lpdf(theta[1] | 0, 1);
     target += newp * log(lambda1);
     for (j in 1:p){
@@ -341,7 +341,7 @@ df.theta <- data.frame("seq" = seq(1, (p+1)),
 df.theta$covariate <- factor(c("\u03b8",names(fwi.scaled)), levels = c("\u03b8",colnames(fwi.scaled)))
 df.theta$labels <- factor(c("\u03b8",colnames(fwi.scaled)))
 
-ggplot(df.theta, aes(x = covariate, y=m, color = covariate)) + ylab("") + xlab('') +
+ggplot(df.theta, aes(x = covariate, y=m)) + ylab("") + xlab('') +
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_point(size = 5) + 
   geom_errorbar(aes(ymin = l, ymax = u), width = 0.3, linewidth =1.2) + 
@@ -353,7 +353,7 @@ ggplot(df.theta, aes(x = covariate, y=m, color = covariate)) + ylab("") + xlab('
                               "FFMC",
                               "DMC",
                               "DC")) + 
-  scale_color_discrete(labels = c(expression(theta[0]),colnames(fwi.scaled))) + 
+  # scale_color_discrete(labels = c(expression(theta[0]),colnames(fwi.scaled))) + 
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 20),
           legend.position = "none",
