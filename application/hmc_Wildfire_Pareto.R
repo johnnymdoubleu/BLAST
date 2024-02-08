@@ -144,33 +144,33 @@ fwi.scaled <- as.data.frame(lapply(fwi.scaled, rescale, to=c(-1,1)))
 # -------------------------------------------------------------------
 
 # ------------- Explanatory Analaysis
-# first.extreme <- which(Y==max(y))
+first.extreme <- which(Y==max(y))
 # second.extreme <- which(Y==max(y[-which.max(y)]))
 # tenth.extreme <- which(Y==sort(y, decreasing = TRUE)[10])
-# ggplot(fwi.index[((first.extreme):(first.extreme+12)),], aes(x=date)) +
-#   geom_line(aes(y=DSR, color = "DSR"), linetype = 1) + 
-#   geom_line(aes(y=FWI, color = "FWI"), linetype = 2) +
-#   geom_line(aes(y=BUI, color = "BUI"), linetype = 3) +
-#   geom_line(aes(y=ISI, color = "ISI"), linetype = 4) +
-#   geom_line(aes(y=FFMC, color = "FFMC"), linetype = 5) + 
-#   geom_line(aes(y=DMC, color = "DMC"), linetype = 6) +
-#   geom_line(aes(y=DC, color = "DC"), linetype = 7)  + 
-#   ylab("indices") + xlab("dates after extreme fire (sorted by burnt area)") + 
-#   scale_color_manual(name = "Indices", values = c(
-#     "DSR" = "darkblue", 
-#     "FWI" = "red",
-#     "BUI" = "green",
-#     "ISI" = "yellow",
-#     "FFMC" = "orange",
-#     "DMC" = "purple",
-#     "DC" = "skyblue")) +
-#   theme(legend.position="right", 
-#       legend.key.size = unit(1, 'cm'),
-#       legend.text = element_text(size=20),
-#       # plot.margin = margin(0,0,0,-1),
-#       axis.title = element_text(size = 20))
+ggplot(fwi.index[((first.extreme):(first.extreme+12)),], aes(x=date)) +
+  geom_line(aes(y=DSR, color = "DSR"), linetype = 1) + 
+  geom_line(aes(y=FWI, color = "FWI"), linetype = 2) +
+  geom_line(aes(y=BUI, color = "BUI"), linetype = 3) +
+  geom_line(aes(y=ISI, color = "ISI"), linetype = 4) +
+  geom_line(aes(y=FFMC, color = "FFMC"), linetype = 5) + 
+  geom_line(aes(y=DMC, color = "DMC"), linetype = 6) +
+  geom_line(aes(y=DC, color = "DC"), linetype = 7)  + 
+  ylab("indices") + xlab("dates after extreme fire (sorted by burnt area)") + 
+  scale_color_manual(name = "Indices", values = c(
+    "DSR" = "darkblue", 
+    "FWI" = "red",
+    "BUI" = "green",
+    "ISI" = "yellow",
+    "FFMC" = "orange",
+    "DMC" = "purple",
+    "DC" = "skyblue")) +
+  theme(legend.position="right", 
+      legend.key.size = unit(1, 'cm'),
+      legend.text = element_text(size=20),
+      # plot.margin = margin(0,0,0,-1),
+      axis.title = element_text(size = 20))
 
-# fwi.index[((first.extreme):(first.extreme+12)),]
+fwi.index[((first.extreme):(first.extreme+12)),]
 # fwi.index[13682:13694,]
 # fwi.index[second.extreme:(second.extreme+12),]
 
@@ -691,8 +691,8 @@ plot(fwi.loo, label_points = TRUE)
 loo(fit.log.lik, is_method = "sis", cores = 2)
 # loo(fit.log.lik)
 waic(fit.log.lik, cores = 2)
-
-
+fit.log.lik <- extract_log_lik(fit1, merge_chains = FALSE)
+# relative_eff(exp(fit.log.lik))
 #https://discourse.mc-staqan.org/t/four-questions-about-information-criteria-cross-validation-and-hmc-in-relation-to-a-manuscript-review/13841/3
 # y.rep <- as.matrix(fit1, pars = "y_rep")
 # ppc_loo_pit_overlay(
@@ -752,11 +752,32 @@ plt <- ggplot(data = y.container, aes(x = x)) + ylab("density") + xlab("log(Burn
 random.alpha.idx <- floor(runif(100, 1, ncol(t(posterior$alpha))))
 for(i in names(y.container)[random.alpha.idx]){
   # plt <- plt + geom_line(aes(y = .data[[i]]), alpha = 0.2, linewidth = 0.7)
-  plt <- plt + geom_density(aes(x=.data[[i]]), color = "grey23", alpha = 0.2, linewidht = 0.7)
+  plt <- plt + geom_density(aes(x=.data[[i]]), color = "slategray1", alpha = 0.1, linewidht = 0.7)
 }
 
-print(plt + geom_density(aes(x=logy), color = "red", linewidth = 2) +
-        theme_minimal(base_size = 30) + ylim(0, 2) +
+print(plt + geom_density(aes(x=logy), color = "steelblue", linewidth = 2) +
+        theme_minimal(base_size = 30) + ylim(0, 2) + xlim(6.8,25) +
         theme(legend.position = "none",
                 axis.text = element_text(size = 35)))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRSTIR_predictive_distribution.pdf"), width=10, height = 7.78)
+
+ev.linear <- as.vector(bs.linear[which.max(y),])
+ev.nonlinear <- t(matrix(bs.nonlinear[which.max(y),], ncol = 10))
+ev.y <- as.data.frame(matrix(, nrow = 1, ncol = 0))
+for(i in 1:ncol(t(posterior$theta))){
+  ev.alpha.single <- exp(sum(t(posterior$theta)[i]*ev.linear) + 
+                              sum(posterior$gamma[i,,] %*% ev.nonlinear))
+  ev.y <- cbind(ev.y, log(rPareto(1, u, ev.alpha.single)))
+}
+# colnames(ev.y) <- paste("col", 1:ncol(t(posterior$theta)), sep="")
+ev.y <- as.data.frame(t(ev.y))
+colnames(ev.y) <- c("yrep")
+# ev.y$x <- seq(1,nrow(ev.y))
+ev.y$logy <- rep(log(max(y)), nrow(ev.y))
+ev.y <- ev.y[!is.infinite(rowSums(ev.y)),]
+ggplot(data = ev.y, aes(x = yrep)) + ylab("density") + xlab("log(Burnt Area)") + labs(col = "") +
+  geom_density() + geom_vline(xintercept = log(max(y)), linetype="dotted", color = "blue",) +
+  geom_rug(alpha = 0.1) +
+  theme_minimal(base_size = 30) + 
+  theme(legend.position = "none",
+          axis.text = element_text(size = 35))

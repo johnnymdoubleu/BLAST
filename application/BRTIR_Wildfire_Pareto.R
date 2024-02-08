@@ -42,7 +42,7 @@ df.long[which(is.na(df.long$...1))+1,]
 Y <- df.long$measurement[!is.na(df.long$measurement)]
 summary(Y) #total burnt area
 length(Y)
-psi <- 10
+
 threshold <- 0.95
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
@@ -198,8 +198,7 @@ write("// Stan model for simple linear regression
 data {
     int <lower=1> n; // Sample size
     int <lower=1> p; // regression coefficient size
-    int <lower=1> newp; 
-    int <lower=1> psi; // splines coefficient size
+    int <lower=1> newp;
     real <lower=0> u; // large threshold value
     matrix[n,p] bsLinear; // fwi dataset
     matrix[n,p] xholderLinear; // fwi datasetbasis    
@@ -250,8 +249,7 @@ generated quantities {
 "
 , "model_BRTIR.stan")
 
-data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, 
-                    newp = (p+1),
+data.stan <- list(y = as.vector(y), u = u, p = p, n= n, newp = (p+1),
                     bsLinear = fwi.scaled, 
                     xholderLinear = xholder)
 init.alpha <- list(list(theta = rep(0, (p+1)), lambda1 = 0.1),
@@ -499,15 +497,15 @@ for(i in 1:ncol(t(posterior$alpha))){
 colnames(y.container) <- paste("col", 1:ncol(t(posterior$alpha)), sep="")
 y.container$x <- seq(1,n)
 y.container$logy <- log(y)
-plt <- ggplot(data = y.container, aes(x = x)) + ylab("density") + xlab("log(Burnt Area)") + labs(col = "")
+plt <- ggplot(data = y.container, aes(x = logy)) + ylab("density") + xlab("log(Burnt Area)") + labs(col = "")
 random.alpha.idx <- floor(runif(100, 1, ncol(t(posterior$alpha))))
 for(i in names(y.container)[random.alpha.idx]){
   # plt <- plt + geom_line(aes(y = .data[[i]]), alpha = 0.2, linewidth = 0.7)
-  plt <- plt + geom_density(aes(x=.data[[i]]), color = "grey23", alpha = 0.2, linewidht = 0.7)
+  plt <- plt + geom_density(aes(x=.data[[i]]), color = "slategray1", alpha = 0.1, linewidht = 0.7)
 }
 
-print(plt + geom_density(aes(x=logy), color = "red", linewidth = 2) +
-        theme_minimal(base_size = 30) + ylim(0, 2) +
+print(plt + geom_density(aes(x=logy), color = "steelblue", linewidth = 2) +
+        theme_minimal(base_size = 30) + ylim(0, 2) + xlim(6.8,25) +
         theme(legend.position = "none",
                 axis.text = element_text(size = 35)))
-ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRTIR_predictive_distribution.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRTIR_predictive_distribution.pdf"), width=10, height = 7.78)
