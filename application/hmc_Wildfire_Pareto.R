@@ -762,22 +762,24 @@ print(plt + geom_density(aes(x=logy), color = "steelblue", linewidth = 2) +
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRSTIR_predictive_distribution.pdf"), width=10, height = 7.78)
 
 ev.linear <- as.vector(bs.linear[which.max(y),])
-ev.nonlinear <- t(matrix(bs.nonlinear[which.max(y),], ncol = 10))
+ev.nonlinear <- (matrix(bs.nonlinear[which.max(y),], ncol = 10))
 ev.y <- as.data.frame(matrix(, nrow = 1, ncol = 0))
 for(i in 1:ncol(t(posterior$theta))){
   ev.alpha.single <- exp(sum(t(posterior$theta)[i]*ev.linear) + 
-                              sum(posterior$gamma[i,,] %*% ev.nonlinear))
+                              sum(t(posterior$gamma[i,,]) %*% ev.nonlinear))
   ev.y <- cbind(ev.y, log(rPareto(1, u, ev.alpha.single)))
 }
 # colnames(ev.y) <- paste("col", 1:ncol(t(posterior$theta)), sep="")
-ev.y <- as.data.frame(t(ev.y))
+ev.y <- as.data.frame(as.numeric(t(ev.y)))
+ev.y <- as.data.frame(ev.y[!is.infinite(rowSums(ev.y)),])
 colnames(ev.y) <- c("yrep")
-# ev.y$x <- seq(1,nrow(ev.y))
-ev.y$logy <- rep(log(max(y)), nrow(ev.y))
-ev.y <- ev.y[!is.infinite(rowSums(ev.y)),]
-ggplot(data = ev.y, aes(x = yrep)) + ylab("density") + xlab("log(Burnt Area)") + labs(col = "") +
-  geom_density() + geom_vline(xintercept = log(max(y)), linetype="dotted", color = "blue",) +
-  geom_rug(alpha = 0.1) +
+
+plt <- ggplot(data = ev.y, aes(x = yrep)) + ylab("density") + xlab("log(Burnt Area)") + labs(col = "") +
+  geom_density(color = "steelblue", linewidth = 1.2) + geom_rug(alpha = 0.1) +
+  # geom_vline(xintercept = log(max(y)), linetype="dotted", color = "blue",) +
   theme_minimal(base_size = 30) + 
   theme(legend.position = "none",
           axis.text = element_text(size = 35))
+
+d <- ggplot_build(plt)$data[[1]]
+print(plt + geom_area(data = subset(d, x>12.44009), aes(x=x,y=y), fill = "slategray1", alpha = 0.5))
