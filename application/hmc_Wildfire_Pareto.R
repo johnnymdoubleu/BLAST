@@ -776,7 +776,7 @@ colnames(ev.y) <- c("yrep")
 
 plt <- ggplot(data = ev.y, aes(x = yrep)) + ylab("density") + xlab("log(Burnt Area)") + labs(col = "") +
   geom_density(color = "steelblue", linewidth = 1.2) + geom_rug(alpha = 0.1) +
-  # geom_vline(xintercept = log(max(y)), linetype="dotted", color = "blue",) +
+  geom_vline(xintercept = log(max(y)), linetype="dotted", color = "red",) +
   theme_minimal(base_size = 30) + 
   theme(legend.position = "none",
           axis.text = element_text(size = 35))
