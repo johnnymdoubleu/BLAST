@@ -1,4 +1,4 @@
-// Stan model for simple linear regression
+// Stan model for BRSTIR Student-t Uncorrelated Samples
 
 data {
     int <lower=1> n; // Sample size

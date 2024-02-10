@@ -17,7 +17,7 @@ library(cmdstanr)
 
 # Scenario C
 
-total.iter <- 50
+total.iter <- 250
 
 n <- 15000
 psi <- 10
@@ -122,8 +122,8 @@ model {
 # theta.container <- as.data.frame(matrix(, nrow = newp, ncol= total.iter))
 # gamma.container <- as.data.frame(matrix(, nrow = (p*psi), ncol = total.iter))
 newgsmooth.container <- as.data.frame(matrix(, nrow = (p*(n*(1-threshold))), ncol = total.iter))
-newgl.container <- as.data.frame(matrix(, nrow = (p*(n*(1-threshold))), ncol = total.iter))
-newgnl.container <- as.data.frame(matrix(, nrow = (p*(n*(1-threshold))), ncol = total.iter))
+# newgl.container <- as.data.frame(matrix(, nrow = (p*(n*(1-threshold))), ncol = total.iter))
+# newgnl.container <- as.data.frame(matrix(, nrow = (p*(n*(1-threshold))), ncol = total.iter))
 alpha.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total.iter))
 alpha.lower.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total.iter))
 alpha.upper.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total.iter))
@@ -251,10 +251,12 @@ if(total.iter <= 50){
     plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.2, linewidth = 0.7)
   }
 } else{
-  for(i in 50:100){
+  for(i in 1:total.iter){
+  # for(i in 50:100){
     plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.2, linewidth = 0.7)
   }
 }
+
 print(plt + geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) + ylim(0.5, 2.5) +
         geom_line(aes(y=true, col = "True"), linewidth = 2) + 
         geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5, linetype = 2) +
@@ -395,87 +397,88 @@ print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha 
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_sc3-wi.pdf"), width=10, height = 7.78) 
 
-newgl.container$x <- seq(0,1, length.out = n)
-newgl.container$true <- as.vector(f.linear.new)
-newgl.container <- cbind(newgl.container, t(apply(newgl.container[,1:total.iter], 1, quantile, c(0.05, .5, .95))))
-colnames(newgl.container)[(dim(newgl.container)[2]-2):(dim(newgl.container)[2])] <- c("q1","q2","q3")
-newgl.container$mean <- rowMeans(newgl.container[,1:total.iter])
-newgl.container$covariate <- gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]", "g[6]"))
-newgl.container <- as.data.frame(newgl.container)
+# newgl.container$x <- seq(0,1, length.out = n)
+# newgl.container$true <- as.vector(f.linear.new)
+# newgl.container <- cbind(newgl.container, t(apply(newgl.container[,1:total.iter], 1, quantile, c(0.05, .5, .95))))
+# colnames(newgl.container)[(dim(newgl.container)[2]-2):(dim(newgl.container)[2])] <- c("q1","q2","q3")
+# newgl.container$mean <- rowMeans(newgl.container[,1:total.iter])
+# newgl.container$covariate <- gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]", "g[6]"))
+# newgl.container <- as.data.frame(newgl.container)
 
-plt <- ggplot(data = newgl.container, aes(x = x, group = covariate)) + ylab("") + xlab(expression(x))
-if(total.iter <= 50){
-  for(i in 1:total.iter){
-    plt <- plt + geom_line(aes(y = .data[[names(newgl.container)[i]]]), alpha = 0.2, linewidth = 0.7)
-    # plt <- plt + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
-  }
-}else{
-  for(i in 1:50){
-    plt <- plt + geom_line(aes(y = .data[[names(newgl.container)[i]]]), alpha = 0.2, linewidth = 0.7)
-    # plt <- plt + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
-  }
-}
-print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
-        geom_line(aes(y=true, col = "True"), linewidth = 2) + 
-        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5, linetype = 2) + 
-        ylim(-0.23, 0.2) +
-        # facet_wrap(covariate ~ ., scales = "free_x", nrow = 5,
-        #             labeller = label_parsed, strip.position = "left") +
-        facet_grid(covariate ~ ., scales = "free_x", switch = "y",
-                    labeller = label_parsed) +  
-        # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
-        #scale_fill_manual(values=c("steelblue"), name = "") +
-        scale_color_manual(values = c("steelblue", "red"))+
-        guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) +
-        theme_minimal(base_size = 30) +
-        theme(legend.position = "none",
-                plot.margin = margin(0,0,0,-20),
-                strip.text = element_blank(),
-                axis.text = element_text(size = 20)))
+# plt <- ggplot(data = newgl.container, aes(x = x, group = covariate)) + ylab("") + xlab(expression(x))
+# if(total.iter <= 50){
+#   for(i in 1:total.iter){
+#     plt <- plt + geom_line(aes(y = .data[[names(newgl.container)[i]]]), alpha = 0.2, linewidth = 0.7)
+#     # plt <- plt + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
+#   }
+# }else{
+#   for(i in 1:50){
+#     plt <- plt + geom_line(aes(y = .data[[names(newgl.container)[i]]]), alpha = 0.2, linewidth = 0.7)
+#     # plt <- plt + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
+#   }
+# }
+# print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
+#         geom_line(aes(y=true, col = "True"), linewidth = 2) + 
+#         geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5, linetype = 2) + 
+#         ylim(-0.23, 0.2) +
+#         # facet_wrap(covariate ~ ., scales = "free_x", nrow = 5,
+#         #             labeller = label_parsed, strip.position = "left") +
+#         facet_grid(covariate ~ ., scales = "free_x", switch = "y",
+#                     labeller = label_parsed) +  
+#         # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
+#         #scale_fill_manual(values=c("steelblue"), name = "") +
+#         scale_color_manual(values = c("steelblue", "red"))+
+#         guides(color = guide_legend(order = 2), 
+#           fill = guide_legend(order = 1)) +
+#         theme_minimal(base_size = 30) +
+#         theme(legend.position = "none",
+#                 plot.margin = margin(0,0,0,-20),
+#                 strip.text = element_blank(),
+#                 axis.text = element_text(size = 20)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_linear_sc3-wi.pdf"), width=10, height = 7.78) 
+# # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_linear_sc3-wi.pdf"), width=10, height = 7.78) 
 
-newgnl.container$x <- seq(0,1, length.out = n)
-newgnl.container$true <- as.vector(f.nonlinear.new)
-newgnl.container <- cbind(newgnl.container, t(apply(newgnl.container[,1:total.iter], 1, quantile, c(0.05, .5, .95))))
-colnames(newgnl.container)[(dim(newgnl.container)[2]-2):(dim(newgnl.container)[2])] <- c("q1","q2","q3")
-newgnl.container$mean <- rowMeans(newgnl.container[,1:total.iter])
-newgnl.container$covariate <- gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]", "g[6]"))
-newgnl.container <- as.data.frame(newgnl.container)
+# newgnl.container$x <- seq(0,1, length.out = n)
+# newgnl.container$true <- as.vector(f.nonlinear.new)
+# newgnl.container <- cbind(newgnl.container, t(apply(newgnl.container[,1:total.iter], 1, quantile, c(0.05, .5, .95))))
+# colnames(newgnl.container)[(dim(newgnl.container)[2]-2):(dim(newgnl.container)[2])] <- c("q1","q2","q3")
+# newgnl.container$mean <- rowMeans(newgnl.container[,1:total.iter])
+# newgnl.container$covariate <- gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]", "g[6]"))
+# newgnl.container <- as.data.frame(newgnl.container)
 
-plt <- ggplot(data = newgnl.container, aes(x = x, group = covariate)) + ylab("") + xlab(expression(x))
-if(total.iter <= 50){
-  for(i in 1:total.iter){
-    plt <- plt + geom_line(aes(y = .data[[names(newgnl.container)[i]]]), alpha = 0.2, linewidth = 0.7)
-    # plt <- plt + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
-  }
-}else{
-  for(i in 1:50){
-    plt <- plt + geom_line(aes(y = .data[[names(newgnl.container)[i]]]), alpha = 0.2, linewidth = 0.7)
-    # plt <- plt + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
-  }
-}
-print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
-        geom_line(aes(y=true, col = "True"), linewidth = 2) + 
-        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5, linetype = 2) + 
-        ylim(-0.23, 0.2) +
-        # facet_wrap(covariate ~ ., scales = "free_x", nrow = 5,
-        #             labeller = label_parsed, strip.position = "left") +
-        facet_grid(covariate ~ ., scales = "free_x", switch = "y",
-                    labeller = label_parsed) +  
-        # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
-        #scale_fill_manual(values=c("steelblue"), name = "") +
-        scale_color_manual(values = c("steelblue", "red"))+
-        guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) +
-        theme_minimal(base_size = 30) +
-        theme(legend.position = "none",
-                plot.margin = margin(0,0,0,-20),
-                strip.text = element_blank(),
-                axis.text = element_text(size = 20)))
+# plt <- ggplot(data = newgnl.container, aes(x = x, group = covariate)) + ylab("") + xlab(expression(x))
+# if(total.iter <= 50){
+#   for(i in 1:total.iter){
+#     plt <- plt + geom_line(aes(y = .data[[names(newgnl.container)[i]]]), alpha = 0.2, linewidth = 0.7)
+#     # plt <- plt + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
+#   }
+# }else{
+#   for(i in 1:50){
+#     plt <- plt + geom_line(aes(y = .data[[names(newgnl.container)[i]]]), alpha = 0.2, linewidth = 0.7)
+#     # plt <- plt + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
+#   }
+# }
+# print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
+#         geom_line(aes(y=true, col = "True"), linewidth = 2) + 
+#         geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5, linetype = 2) + 
+#         ylim(-0.23, 0.2) +
+#         # facet_wrap(covariate ~ ., scales = "free_x", nrow = 5,
+#         #             labeller = label_parsed, strip.position = "left") +
+#         facet_grid(covariate ~ ., scales = "free_x", switch = "y",
+#                     labeller = label_parsed) +  
+#         # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
+#         #scale_fill_manual(values=c("steelblue"), name = "") +
+#         scale_color_manual(values = c("steelblue", "red"))+
+#         guides(color = guide_legend(order = 2), 
+#           fill = guide_legend(order = 1)) +
+#         theme_minimal(base_size = 30) +
+#         theme(legend.position = "none",
+#                 plot.margin = margin(0,0,0,-20),
+#                 strip.text = element_blank(),
+#                 axis.text = element_text(size = 20)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_nonlinear_sc3-wi.pdf"), width=10, height = 7.78) 
+# # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_nonlinear_sc3-wi.pdf"), width=10, height = 7.78) 
+
 save(alpha.container, newgsmooth.container, file = (paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_sc3.Rdata")))
 # total.iter <- 100
 # load(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_sc1.Rdata"))
