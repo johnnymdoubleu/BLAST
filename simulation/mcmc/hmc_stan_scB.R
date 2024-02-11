@@ -231,9 +231,9 @@ fit1 <- stan(
 posterior <- extract(fit1)
 str(posterior)
 
-plot(fit1, plotfun = "trace", pars = c("theta"), nrow = 3)
+# plot(fit1, plotfun = "trace", pars = c("theta"), nrow = 3)
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_theta_trace_sc2-wi.pdf"), width=10, height = 7.78)
-plot(fit1, plotfun = "trace", pars = c("lambda1", "lambda2"), nrow = 2)
+# plot(fit1, plotfun = "trace", pars = c("lambda1", "lambda2"), nrow = 2)
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_lambda_sc2-wi.pdf"), width=10, height = 7.78)
 
 
