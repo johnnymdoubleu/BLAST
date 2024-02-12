@@ -98,7 +98,7 @@ fwi.scaled <- as.data.frame(lapply(fwi.scaled, rescale, to=c(-1,1)))
 # ordered <- rev(sort(Y)[13865:14609])
 # n.hill <- length(ordered)
 # k <- 1:n.hill
-# loggs <- logb(ordered)
+# loggs <- logb(ordered/u)
 # avesumlog <- cumsum(loggs)/k
 # xihat <- c(NA, (avesumlog-loggs)[2:n.hill])
 # alphahat <- 1/xihat
