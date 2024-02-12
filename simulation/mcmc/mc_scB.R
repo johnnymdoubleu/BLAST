@@ -377,11 +377,11 @@ if(total.iter <= 50){
 print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
         geom_line(aes(y=true, col = "True"), linewidth = 2) + 
         geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5, linetype = 2) + 
+        facet_wrap(covariate ~ ., scales = "free_x", nrow = 5,
+                    labeller = label_parsed, strip.position = "left") +
         ylim(-0.23, 0.2) +
-        # facet_wrap(covariate ~ ., scales = "free_x", nrow = 5,
-        #             labeller = label_parsed, strip.position = "left") +
-        facet_grid(covariate ~ ., scales = "free_x", switch = "y",
-                    labeller = label_parsed) +        
+        # facet_grid(covariate ~ ., scales = "free_x", switch = "y",
+        #             labeller = label_parsed) +        
         # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
         #scale_fill_manual(values=c("steelblue"), name = "") +
         scale_color_manual(values = c("steelblue", "red"))+
@@ -390,7 +390,8 @@ print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha 
         theme_minimal(base_size = 30) +
         theme(legend.position = "none",
                 plot.margin = margin(0,0,0,-20),
-                strip.text = element_blank(),
+                strip.text.y = element_text(size = 25, colour = "black", angle = 0, face = "bold.italic"),
+                strip.placement = "outside",
                 axis.text = element_text(size = 20)))
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_sc2-wi.pdf"), width=12.5, height = 15)
@@ -479,6 +480,6 @@ print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_nonlinear_sc2-wi.pdf"), width=10, height = 7.78) 
 
 save(alpha.container, newgsmooth.container, file = (paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_sc2.Rdata")))
-# total.iter <- 100
+# total.iter <- 250
 # load(paste0("./simulation/results/MC-Scenario_B/",Sys.Date(),"_",total.iter,"_MC_sc2.Rdata"))
-# load(paste0("./simulation/results/MC-Scenario_B/2024-02-04","_",total.iter,"_MC_sc2.Rdata"))
+# load(paste0("./simulation/results/MC-Scenario_B/2024-02-05","_",total.iter,"_MC_sc2.Rdata"))

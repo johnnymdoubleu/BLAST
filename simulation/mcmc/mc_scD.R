@@ -388,23 +388,19 @@ if(total.iter <= 50){
     # plt <- plt + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
   }
 }
-print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
-        geom_line(aes(y=true, col = "True"), linewidth = 2) + 
+print(plt + geom_line(aes(y=true, col = "True"), linewidth = 2) + 
         geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5, linetype = 2) + 
+        facet_wrap(covariate ~ ., scales = "free_x", nrow = 5,
+                    labeller = label_parsed, strip.position = "left") +
         ylim(-0.23, 0.2) +
-        # facet_wrap(covariate ~ ., scales = "free_x", nrow = 5,
-        #             labeller = label_parsed, strip.position = "left") +
-        facet_grid(covariate ~ ., scales = "free_x", switch = "y",
-                    labeller = label_parsed) +        
-        # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
-        #scale_fill_manual(values=c("steelblue"), name = "") +
         scale_color_manual(values = c("steelblue", "red"))+
         guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) +
         theme_minimal(base_size = 30) +
         theme(legend.position = "none",
                 plot.margin = margin(0,0,0,-20),
-                strip.text = element_blank(),
+                strip.text.y = element_text(size = 25, colour = "black", angle = 0, face = "bold.italic"),
+                strip.placement = "outside",
                 axis.text = element_text(size = 20)))
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_sc4-wi.pdf"), width=12.5, height = 15)
@@ -429,23 +425,19 @@ print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha 
 #     # plt <- plt + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
 #   }
 # }
-# print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
-#         geom_line(aes(y=true, col = "True"), linewidth = 2) + 
+# print(plt + geom_line(aes(y=true, col = "True"), linewidth = 2) + 
 #         geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5, linetype = 2) + 
+#         facet_wrap(covariate ~ ., scales = "free_x", nrow = 5,
+#                     labeller = label_parsed, strip.position = "left") +
 #         ylim(-0.23, 0.2) +
-#         # facet_wrap(covariate ~ ., scales = "free_x", nrow = 5,
-#         #             labeller = label_parsed, strip.position = "left") +
-#         facet_grid(covariate ~ ., scales = "free_x", switch = "y",
-#                     labeller = label_parsed) +  
-#         # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
-#         #scale_fill_manual(values=c("steelblue"), name = "") +
 #         scale_color_manual(values = c("steelblue", "red"))+
 #         guides(color = guide_legend(order = 2), 
 #           fill = guide_legend(order = 1)) +
 #         theme_minimal(base_size = 30) +
 #         theme(legend.position = "none",
 #                 plot.margin = margin(0,0,0,-20),
-#                 strip.text = element_blank(),
+#                 strip.text.y = element_text(size = 25, colour = "black", angle = 0, face = "bold.italic"),
+#                 strip.placement = "outside",
 #                 axis.text = element_text(size = 20)))
 
 # # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_linear_sc4-wi.pdf"), width=12.5, height = 15)
@@ -470,23 +462,19 @@ print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha 
 #     # plt <- plt + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
 #   }
 # }
-# print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
-#         geom_line(aes(y=true, col = "True"), linewidth = 2) + 
+# print(plt + geom_line(aes(y=true, col = "True"), linewidth = 2) + 
 #         geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5, linetype = 2) + 
+#         facet_wrap(covariate ~ ., scales = "free_x", nrow = 5,
+#                     labeller = label_parsed, strip.position = "left") +
 #         ylim(-0.23, 0.2) +
-#         # facet_wrap(covariate ~ ., scales = "free_x", nrow = 5,
-#         #             labeller = label_parsed, strip.position = "left") +
-#         facet_grid(covariate ~ ., scales = "free_x", switch = "y",
-#                     labeller = label_parsed) +  
-#         # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
-#         #scale_fill_manual(values=c("steelblue"), name = "") +
 #         scale_color_manual(values = c("steelblue", "red"))+
 #         guides(color = guide_legend(order = 2), 
 #           fill = guide_legend(order = 1)) +
 #         theme_minimal(base_size = 30) +
 #         theme(legend.position = "none",
 #                 plot.margin = margin(0,0,0,-20),
-#                 strip.text = element_blank(),
+#                 strip.text.y = element_text(size = 25, colour = "black", angle = 0, face = "bold.italic"),
+#                 strip.placement = "outside",
 #                 axis.text = element_text(size = 20)))
 
 # # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_nonlinear_sc4-wi.pdf"), width=12.5, height = 15)
