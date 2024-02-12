@@ -281,7 +281,7 @@ print(plt + geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha =
                 strip.text = element_blank(),
                 axis.text = element_text(size = 35)))
 
-ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_sc4-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_sc4-wi.pdf"), width=10, height = 7.78)
 
 
 # resg <- gather(theta.container,
@@ -407,7 +407,7 @@ print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha 
                 strip.text = element_blank(),
                 axis.text = element_text(size = 20)))
 
-ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_sc4-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_sc4-wi.pdf"), width=12.5, height = 15)
 
 # newgl.container$x <- seq(0,1, length.out = n)
 # newgl.container$true <- as.vector(f.linear.new)
@@ -448,7 +448,7 @@ ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_sc4-
 #                 strip.text = element_blank(),
 #                 axis.text = element_text(size = 20)))
 
-# # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_linear_sc4-wi.pdf"), width=10, height = 7.78)
+# # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_linear_sc4-wi.pdf"), width=12.5, height = 15)
 
 # newgnl.container$x <- seq(0,1, length.out = n)
 # newgnl.container$true <- as.vector(f.nonlinear.new)
@@ -489,8 +489,8 @@ ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_sc4-
 #                 strip.text = element_blank(),
 #                 axis.text = element_text(size = 20)))
 
-# # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_nonlinear_sc4-wi.pdf"), width=10, height = 7.78)
+# # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_nonlinear_sc4-wi.pdf"), width=12.5, height = 15)
 
 # save(alpha.container, newgsmooth.container, file = (paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_sc4.Rdata")))
-# total.iter <- 100
-# load(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_sc1.Rdata"))
+total.iter <- 250
+# load(paste0("./simulation/results/MC-Scenario_D/",Sys.Date(),"_",total.iter,"_MC_sc4.Rdata"))
