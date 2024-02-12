@@ -791,22 +791,22 @@ d <- ggplot_build(plt)$data[[1]]
 print(plt + geom_area(data = subset(d, x>12.44009), aes(x=x,y=y), fill = "slategray1", alpha = 0.5) +
         geom_segment(x=12.44009, xend=12.44009, 
               y=0, yend=approx(x = d$x, y = d$y, xout = 12.4409)$y,
-              colour="red", linewidth=0.7, linetype = "dotted"))
+              colour="red", linewidth=1.2, linetype = "dotted"))
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRSTIR_generative.pdf"), width=10, height = 7.78)
+# scaleFUN <- function(x) sprintf("%.1f", x)
 
-scaleFUN <- function(x) sprintf("%.1f", x)
-
-p <- ggplot(data= ev.y, aes(x=yrep, y = logy)) +
-      geom_vline(xintercept = log(max(y)), color = "red", linewidth = 0.7, linetype = "dotted") +
-      geom_point(size = 0.8, color = "steelblue", alpha = 0.2) +
-      geom_point(aes(x=max(log(y))), size = 3.5, color = "steelblue") + 
-      ylab("True log(Burnt Area)") + xlab("") +
-      #xlab("Generated log(Burnt Area)") + 
-      theme_minimal(base_size = 30) + xlim(min(ev.y$yrep), 200) +
-      ylim(min(ev.y$yrep), 200) +
-      # scale_y_continuous(labels=scaleFUN) +  
-      theme(legend.position = "none",
-              axis.text = element_text(size = 35))
-grid.arrange(p, (plt+scale_y_reverse() + theme(axis.text.x=element_text(size=10))), nrow=2, ncol=1, widths=4, heights = c(4,1))
+# p <- ggplot(data= ev.y, aes(x=yrep, y = logy)) +
+#       geom_vline(xintercept = log(max(y)), color = "red", linewidth = 0.7, linetype = "dotted") +
+#       geom_point(size = 0.8, color = "steelblue", alpha = 0.2) +
+#       geom_point(aes(x=max(log(y))), size = 3.5, color = "steelblue") + 
+#       ylab("True log(Burnt Area)") + xlab("") +
+#       #xlab("Generated log(Burnt Area)") + 
+#       theme_minimal(base_size = 30) + xlim(min(ev.y$yrep), 200) +
+#       ylim(min(ev.y$yrep), 200) +
+#       # scale_y_continuous(labels=scaleFUN) +  
+#       theme(legend.position = "none",
+#               axis.text = element_text(size = 35))
+# grid.arrange(p, (plt+scale_y_reverse() + theme(axis.text.x=element_text(size=10))), nrow=2, ncol=1, widths=4, heights = c(4,1))
 
 # library(ggExtra)
 # p <- p %>% ggMarginal(margins = 'y', color="steelblue", size=10)
