@@ -103,13 +103,13 @@ fwi.scaled <- as.data.frame(lapply(fwi.scaled, rescale, to=c(-1,1)))
 # # ordered <- rev(sort(Y))
 # n.hill <- length(ordered)
 # k <- 1:n.hill
-# loggs <- logb(ordered)
+# loggs <- logb(ordered/u)
 # avesumlog <- cumsum(loggs)/k
 # xihat <- c(NA, (avesumlog-loggs)[2:n.hill])
 # alphahat <- 1/xihat
 # ses <- alphahat/sqrt(k)
 # xx <- trunc(seq(from = n.hill, to = 15))
-# y.alpha <- exp(alphahat[xx])
+# y.alpha <- alphahat[xx]
 # # ylabel <- alphahat
 # yrange <- range(y.alpha)
 # qq <- qnorm(1-(1-0.95)/2)
