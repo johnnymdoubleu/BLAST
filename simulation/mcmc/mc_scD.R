@@ -480,5 +480,5 @@ print(plt + geom_line(aes(y=true, col = "True"), linewidth = 2) +
 # # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_nonlinear_sc4-wi.pdf"), width=12.5, height = 15)
 
 # save(alpha.container, newgsmooth.container, file = (paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_sc4.Rdata")))
-total.iter <- 250
+# total.iter <- 250
 # load(paste0("./simulation/results/MC-Scenario_D/",Sys.Date(),"_",total.iter,"_MC_sc4.Rdata"))
