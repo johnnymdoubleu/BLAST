@@ -14,6 +14,7 @@ library(evir)
 library(mev)
 library(cmdstanr)
 library(scales)
+# library(ggExtra)
 
 # Structure of the FWI System
 #DSR : Dail Severity Rating
@@ -773,14 +774,41 @@ for(i in 1:ncol(t(posterior$theta))){
 # colnames(ev.y) <- paste("col", 1:ncol(t(posterior$theta)), sep="")
 ev.y <- as.data.frame(as.numeric(t(ev.y)))
 ev.y <- as.data.frame(ev.y[!is.infinite(rowSums(ev.y)),])
+ev.y$logy <- max(log(y))
 colnames(ev.y) <- c("yrep")
 
 plt <- ggplot(data = ev.y, aes(x = yrep)) + ylab("density") + xlab("log(Burnt Area)") + labs(col = "") +
-  geom_density(color = "steelblue", linewidth = 1.2) + geom_rug(alpha = 0.1) +
-  geom_vline(xintercept = log(max(y)), linetype="dotted", color = "red",) +
-  theme_minimal(base_size = 30) + xlim(min(ev.y$yrep), 200) + 
+  geom_density(color = "steelblue", linewidth = 1.2) + 
+  geom_rug(alpha = 0.1) +
+  # geom_point(aes(x=yrep,y=-Inf),color="steelblue", size = 3.5, alpha = 0.2) +
+  xlim(min(ev.y$yrep), 200) +
+  theme_minimal(base_size = 30) +  
   theme(legend.position = "none",
-          axis.text = element_text(size = 35))
+  axis.text = element_text(size = 35))
+  # geom_vline(xintercept = log(max(y)), linetype="dotted", color = "red",) +
 
 d <- ggplot_build(plt)$data[[1]]
-print(plt + geom_area(data = subset(d, x>12.44009), aes(x=x,y=y), fill = "slategray1", alpha = 0.5))
+print(plt + geom_area(data = subset(d, x>12.44009), aes(x=x,y=y), fill = "slategray1", alpha = 0.5) +
+        geom_segment(x=12.44009, xend=12.44009, 
+              y=0, yend=approx(x = d$x, y = d$y, xout = 12.4409)$y,
+              colour="red", linewidth=0.7, linetype = "dotted"))
+
+scaleFUN <- function(x) sprintf("%.1f", x)
+
+p <- ggplot(data= ev.y, aes(x=yrep, y = logy)) +
+      geom_vline(xintercept = log(max(y)), color = "red", linewidth = 0.7, linetype = "dotted") +
+      geom_point(size = 0.8, color = "steelblue", alpha = 0.2) +
+      geom_point(aes(x=max(log(y))), size = 3.5, color = "steelblue") + 
+      ylab("True log(Burnt Area)") + xlab("") +
+      #xlab("Generated log(Burnt Area)") + 
+      theme_minimal(base_size = 30) + xlim(min(ev.y$yrep), 200) +
+      ylim(min(ev.y$yrep), 200) +
+      # scale_y_continuous(labels=scaleFUN) +  
+      theme(legend.position = "none",
+              axis.text = element_text(size = 35))
+grid.arrange(p, (plt+scale_y_reverse() + theme(axis.text.x=element_text(size=10))), nrow=2, ncol=1, widths=4, heights = c(4,1))
+
+# library(ggExtra)
+# p <- p %>% ggMarginal(margins = 'y', color="steelblue", size=10)
+# print(p, newpage = TRUE)
+# detach("package:ggExtra", unload = TRUE)
