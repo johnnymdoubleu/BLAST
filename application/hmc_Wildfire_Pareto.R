@@ -43,8 +43,8 @@ df.long[which(is.na(df.long$...1))+1,]
 Y <- df.long$measurement[!is.na(df.long$measurement)]
 summary(Y) #total burnt area
 length(Y)
-psi <- 20
-threshold <- 0.95
+psi <- 5
+threshold <- 0.99
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
 # x.scale <- x.scale[which(y>quantile(y, threshold)),]
@@ -99,11 +99,11 @@ fwi.scaled <- as.data.frame(lapply(fwi.scaled, rescale, to=c(-1,1)))
 
 # ---------------------------------------------------------------------------
 # Computing Hills Estimator plot
-# ordered <- rev(sort(Y)[13865:14609])
+# orderred <- rev(sort(Y)[13865:14609])
 # # ordered <- rev(sort(Y))
-# n.hill <- length(ordered)
+# n.hill <- length(orderred)
 # k <- 1:n.hill
-# loggs <- logb(ordered/u)
+# loggs <- logb(orderred/u)
 # avesumlog <- cumsum(loggs)/k
 # xihat <- c(NA, (avesumlog-loggs)[2:n.hill])
 # alphahat <- 1/xihat
@@ -112,7 +112,7 @@ fwi.scaled <- as.data.frame(lapply(fwi.scaled, rescale, to=c(-1,1)))
 # y.alpha <- alphahat[xx]
 # # ylabel <- alphahat
 # yrange <- range(y.alpha)
-# qq <- qnorm(1-(1-0.95)/2)
+# qq <- qnorm(1-(1-threshold)/2)
 # u <- y.alpha + ses[xx] * qq
 # l <- y.alpha - ses[xx] * qq
 # yrange <- range(u, l)
@@ -237,25 +237,25 @@ parameters {
 }
 
 transformed parameters {
-    vector[n] alpha; // tail index
-    vector[n] newalpha; // tail index    
+    array[n] real <lower=0> alpha; // tail index
     matrix[n, p] gnl; // nonlinear component
     matrix[n, p] gl; // linear component
-    matrix[n, p] gsmooth; // smooth function
+    matrix[n, p] gsmooth; // linear component
+    array[n] real <lower=0> newalpha; // new tail index
     matrix[n, p] newgnl; // nonlinear component
     matrix[n, p] newgl; // linear component
-    matrix[n, p] newgsmooth; // smooth function    
+    matrix[n, p] newgsmooth; // linear component
     for (j in 1:p){
         gnl[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
-        gl[,j] = bsLinear[,j] * theta[j+1];
-        gsmooth[,j] = gl[,j] + gnl[,j];
         newgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
+        gl[,j] = bsLinear[,j] * theta[j+1];
         newgl[,j] = xholderLinear[,j] * theta[j+1];
-        newgsmooth[,j] = newgl[,j] + newgnl[,j];        
+        gsmooth[,j] = gl[,j] + gnl[,j];
+        newgsmooth[,j] = newgl[,j] + newgnl[,j];
     };
     for (i in 1:n){
-        alpha[i] = exp(theta[1] + sum(gsmooth[i,]));
-        newalpha[i] = exp(theta[1] + sum(newgsmooth[i,]));        
+        alpha[i] = exp(theta[1] + sum(gnl[i,]) + sum(gl[i,]));
+        newalpha[i] = exp(theta[1] + sum(newgnl[i,]) + sum(newgl[i,]));
     };
 }
 
@@ -616,11 +616,16 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
           axis.text = element_text(size = 20))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_nonlinear.pdf"), width=12.5, height = 15)
 
+# data.scenario <- data.frame("x" = seq(-1, 1, length.out = n),
+#                             "post.mean" = (alpha.samples[,1]),
+#                             "post.median" = (alpha.samples[,5]),
+#                             "q1" = (alpha.samples[,4]),
+#                             "q3" = (alpha.samples[,6]))
 data.scenario <- data.frame("x" = seq(-1, 1, length.out = n),
-                            "post.mean" = (alpha.samples[,1]),
-                            "post.median" = (alpha.samples[,5]),
-                            "q1" = (alpha.samples[,4]),
-                            "q3" = (alpha.samples[,6]))
+                            "post.mean" = (alp.x.samples[,1]),
+                            "post.median" = (alp.x.samples[,5]),
+                            "q1" = (alp.x.samples[,4]),
+                            "q3" = (alp.x.samples[,6]))
 
 ggplot(data.scenario, aes(x=x)) + 
   ylab(expression(alpha(bold(x)))) + xlab(expression(c)) + labs(col = "") +
