@@ -14,7 +14,7 @@ library(rmutil)
 
 # Scenario D
 
-total.iter <- 250
+total.iter <- 50
 
 n <- 15000
 psi <- 10
