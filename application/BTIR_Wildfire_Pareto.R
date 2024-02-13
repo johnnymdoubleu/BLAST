@@ -181,8 +181,8 @@ parameters {
 }
 
 transformed parameters {
-    vector[n] alpha; // tail index
-    vector[n] newalpha; // tail index
+    array[n] real <lower=0, upper = 6.5> alpha; // tail index
+    array[n] real <lower=0, upper=6.5> newalpha; // new tail index
     matrix[n, p] gl; // linear component
     matrix[n, p] newgnl; // nonlinear component
     matrix[n, p] newgl; // linear component

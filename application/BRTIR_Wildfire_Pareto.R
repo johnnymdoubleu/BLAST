@@ -43,7 +43,7 @@ Y <- df.long$measurement[!is.na(df.long$measurement)]
 summary(Y) #total burnt area
 length(Y)
 
-threshold <- 0.99
+threshold <- 0.95
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
 # x.scale <- x.scale[which(y>quantile(y, threshold)),]
@@ -211,8 +211,8 @@ parameters {
 }
 
 transformed parameters {
-    vector[n] alpha; // tail index
-    vector[n] newalpha; // tail index
+    array[n] real <lower=0, upper = 6.5> alpha; // tail index
+    array[n] real <lower=0, upper = 6.5> newalpha; // new tail index
     matrix[n, p] gl; // linear component
     matrix[n, p] newgnl; // nonlinear component
     matrix[n, p] newgl; // linear component
