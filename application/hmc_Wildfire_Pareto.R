@@ -93,7 +93,7 @@ fwi.scaled <- fwi.scaled[which(Y>u),]
 # plot((fwi.scaled[,2]), (log(y)))
 # plot((fwi.scaled[,5]), (log(y)))
 
-fwi.scaled <- as.data.frame(lapply(fwi.scaled, rescale, to=c(-1,1)))
+fwi.scaled <- as.data.frame(lapply(fwi.scaled, rescale, to=c(0,1)))
 # fwi.ind <- which(fwi.scaled[,2]>0)
 
 
@@ -146,33 +146,33 @@ fwi.scaled <- as.data.frame(lapply(fwi.scaled, rescale, to=c(-1,1)))
 # -------------------------------------------------------------------
 
 # ------------- Explanatory Analaysis
-first.extreme <- which(Y==max(y))
+# first.extreme <- which(Y==max(y))
 # second.extreme <- which(Y==max(y[-which.max(y)]))
 # tenth.extreme <- which(Y==sort(y, decreasing = TRUE)[10])
-ggplot(fwi.index[((first.extreme):(first.extreme+12)),], aes(x=date)) +
-  geom_line(aes(y=DSR, color = "DSR"), linetype = 1) + 
-  geom_line(aes(y=FWI, color = "FWI"), linetype = 2) +
-  geom_line(aes(y=BUI, color = "BUI"), linetype = 3) +
-  geom_line(aes(y=ISI, color = "ISI"), linetype = 4) +
-  geom_line(aes(y=FFMC, color = "FFMC"), linetype = 5) + 
-  geom_line(aes(y=DMC, color = "DMC"), linetype = 6) +
-  geom_line(aes(y=DC, color = "DC"), linetype = 7)  + 
-  ylab("indices") + xlab("dates after extreme fire (sorted by burnt area)") + 
-  scale_color_manual(name = "Indices", values = c(
-    "DSR" = "darkblue", 
-    "FWI" = "red",
-    "BUI" = "green",
-    "ISI" = "yellow",
-    "FFMC" = "orange",
-    "DMC" = "purple",
-    "DC" = "skyblue")) +
-  theme(legend.position="right", 
-      legend.key.size = unit(1, 'cm'),
-      legend.text = element_text(size=20),
-      # plot.margin = margin(0,0,0,-1),
-      axis.title = element_text(size = 20))
+# ggplot(fwi.index[((first.extreme):(first.extreme+12)),], aes(x=date)) +
+#   geom_line(aes(y=DSR, color = "DSR"), linetype = 1) + 
+#   geom_line(aes(y=FWI, color = "FWI"), linetype = 2) +
+#   geom_line(aes(y=BUI, color = "BUI"), linetype = 3) +
+#   geom_line(aes(y=ISI, color = "ISI"), linetype = 4) +
+#   geom_line(aes(y=FFMC, color = "FFMC"), linetype = 5) + 
+#   geom_line(aes(y=DMC, color = "DMC"), linetype = 6) +
+#   geom_line(aes(y=DC, color = "DC"), linetype = 7)  + 
+#   ylab("indices") + xlab("dates after extreme fire (sorted by burnt area)") + 
+#   scale_color_manual(name = "Indices", values = c(
+#     "DSR" = "darkblue", 
+#     "FWI" = "red",
+#     "BUI" = "green",
+#     "ISI" = "yellow",
+#     "FFMC" = "orange",
+#     "DMC" = "purple",
+#     "DC" = "skyblue")) +
+#   theme(legend.position="right", 
+#       legend.key.size = unit(1, 'cm'),
+#       legend.text = element_text(size=20),
+#       # plot.margin = margin(0,0,0,-1),
+#       axis.title = element_text(size = 20))
 
-fwi.index[((first.extreme):(first.extreme+12)),]
+# fwi.index[((first.extreme):(first.extreme+12)),]
 # fwi.index[13682:13694,]
 # fwi.index[second.extreme:(second.extreme+12),]
 
@@ -266,7 +266,7 @@ model {
     }
     target += gamma_lpdf(lambda1 | 1, 10);
     target += gamma_lpdf(lambda2 | 0.1, 0.1);
-    target += normal_lpdf(theta[1] | 0, 0.001);
+    target += normal_lpdf(theta[1] | 0, 0.1);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
     target += (p * log(lambda1) + (p * psi * log(lambda2)));
     for (j in 1:p){
@@ -300,15 +300,15 @@ file <- file.path(cmdstan_path(), "model.stan")
 init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
                         theta = rep(0, (p+1)), 
                         tau = rep(0.1, p), sigma = 0.1, 
-                        lambda1 = 0.1, lambda2 = 0.1),
+                        lambda1 = 0.01, lambda2 = 0.01),
                   list(gamma = array(rep(0.02, (psi*p)), dim=c(psi, p)),
                         theta = rep(0.01, (p+1)), 
                         tau = rep(0.01, p), sigma = 0.001,
-                        lambda1 = 0.01, lambda2 = 0.1),
+                        lambda1 = 0.01, lambda2 = 0.001),
                   list(gamma = array(rep(0.01, (psi*p)), dim=c(psi, p)),
                         theta = rep(0.05, (p+1)), 
                         tau = rep(0.01, p), sigma = 0.01,
-                        lambda1 = 0.1, lambda2 = 0.01))
+                        lambda1 = 0.001, lambda2 = 0.001))
 
 # stanc("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/application/model1.stan")
 fit1 <- stan(
@@ -616,16 +616,16 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
           axis.text = element_text(size = 20))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_nonlinear.pdf"), width=12.5, height = 15)
 
-# data.scenario <- data.frame("x" = seq(-1, 1, length.out = n),
-#                             "post.mean" = (alpha.samples[,1]),
-#                             "post.median" = (alpha.samples[,5]),
-#                             "q1" = (alpha.samples[,4]),
-#                             "q3" = (alpha.samples[,6]))
 data.scenario <- data.frame("x" = seq(-1, 1, length.out = n),
-                            "post.mean" = (alp.x.samples[,1]),
-                            "post.median" = (alp.x.samples[,5]),
-                            "q1" = (alp.x.samples[,4]),
-                            "q3" = (alp.x.samples[,6]))
+                            "post.mean" = (alpha.samples[,1]),
+                            "post.median" = (alpha.samples[,5]),
+                            "q1" = (alpha.samples[,4]),
+                            "q3" = (alpha.samples[,6]))
+# data.scenario <- data.frame("x" = seq(-1, 1, length.out = n),
+#                             "post.mean" = sort(alp.x.samples[,1]),
+#                             "post.median" = sort(alp.x.samples[,5]),
+#                             "q1" = sort(alp.x.samples[,4]),
+#                             "q3" = sort(alp.x.samples[,6]))
 
 ggplot(data.scenario, aes(x=x)) + 
   ylab(expression(alpha(bold(x)))) + xlab(expression(c)) + labs(col = "") +
