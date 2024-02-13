@@ -283,7 +283,7 @@ generated quantities {
     }
 }
 "
-, "model_pareto.stan")
+, "model_BRSTIR.stan")
 
 data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, 
                     atau = ((psi+1)/2), newp = (p+1),
@@ -312,7 +312,7 @@ init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
 
 # stanc("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/application/model1.stan")
 fit1 <- stan(
-    file = "model_pareto.stan",  # Stan program
+    file = "model_BRSTIR.stan",  # Stan program
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
     # init_r = 1,
