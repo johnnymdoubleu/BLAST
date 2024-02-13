@@ -43,7 +43,7 @@ df.long[which(is.na(df.long$...1))+1,]
 Y <- df.long$measurement[!is.na(df.long$measurement)]
 summary(Y) #total burnt area
 length(Y)
-psi <- 10
+psi <- 5
 threshold <- 0.95
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
@@ -88,23 +88,24 @@ fwi.index$month <- factor(format(as.Date(substr(cov.long$...1[missing.values],1,
 fwi.index$date <- as.numeric(fwi.index$date)
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 fwi.scaled <- fwi.scaled[which(Y>u),]
-# fwi.scaled <- as.data.frame(scale(fwi.scaled))
+fwi.scaled <- as.data.frame(scale(fwi.scaled))
 
 # plot((fwi.scaled[,2]), (log(y)))
 # plot((fwi.scaled[,5]), (log(y)))
-
-fwi.scaled <- as.data.frame(lapply(fwi.scaled, rescale, to=c(0,1)))
-# fwi.ind <- which(fwi.scaled[,2]>0)
-
+# range01 <- function(x){(x-min(x))/(max(x)-min(x))}
+# fwi.scaled <- as.data.frame(sapply(fwi.scaled, FUN = range01))
+# fwi.scaled <- as.data.frame(lapply(fwi.scaled, rescale, to=c(-1,1)))
 
 # ---------------------------------------------------------------------------
 # Computing Hills Estimator plot
-# orderred <- rev(sort(Y)[13865:14609])
-# # ordered <- rev(sort(Y))
+# orderred <- rev(sort(Y)[14462:14609])
+# orderred <- rev(sort(Y)[13863:14609])
+# ordered <- rev(sort(Y))
 # n.hill <- length(orderred)
 # k <- 1:n.hill
 # loggs <- logb(orderred/u)
 # avesumlog <- cumsum(loggs)/k
+# # xihat <- c(NA, (avesumlog)[2:n.hill])
 # xihat <- c(NA, (avesumlog-loggs)[2:n.hill])
 # alphahat <- 1/xihat
 # ses <- alphahat/sqrt(k)
@@ -113,12 +114,12 @@ fwi.scaled <- as.data.frame(lapply(fwi.scaled, rescale, to=c(0,1)))
 # # ylabel <- alphahat
 # yrange <- range(y.alpha)
 # qq <- qnorm(1-(1-threshold)/2)
-# u <- y.alpha + ses[xx] * qq
-# l <- y.alpha - ses[xx] * qq
+# uu <- y.alpha + ses[xx] * qq
+# ll <- y.alpha - ses[xx] * qq
 # yrange <- range(u, l)
 # data.hill <- data.frame(k = c(15:n.hill),
-#                         u = u,
-#                         l = l,
+#                         u = uu,
+#                         l = ll,
 #                         alpha = y.alpha,
 #                         order = xx)
 # ggplot(data = data.hill) + 
@@ -196,8 +197,8 @@ newx <- seq(0, 1, length.out=n)
 xholder.linear <- xholder.nonlinear <- bs.linear <- bs.nonlinear <- matrix(,nrow=n, ncol=0)
 xholder <- matrix(nrow=n, ncol=p)
 for(i in 1:p){
-  xholder[,i] <- seq(0.0000001, 1, length.out = n)
-  test.knot <- seq(0.0000001, 1, length.out = psi)
+  xholder[,i] <- seq(0, 1, length.out = n)
+  test.knot <- seq(0, 1, length.out = psi)
   # splines <- basis.tps(seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n), test.knot, m=2, rk=FALSE, intercept = TRUE)
   # xholder[,i] <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n)
   # test.knot <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
@@ -237,7 +238,7 @@ parameters {
 }
 
 transformed parameters {
-    array[n] real <lower=0> alpha; // tail index
+    array[n] real <lower=0, upper=6> alpha; // tail index
     matrix[n, p] gnl; // nonlinear component
     matrix[n, p] gl; // linear component
     matrix[n, p] gsmooth; // linear component
@@ -264,11 +265,11 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 0.1, 10);
-    target += gamma_lpdf(lambda2 | 0.1, 100);
-    target += normal_lpdf(theta[1] | 0, 0.1);
-    target += inv_gamma_lpdf(sigma | 0.1, 0.1); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
-    target += ((p+1) * log(lambda1) + (p * psi * log(lambda2)));
+    target += gamma_lpdf(lambda1 | 1, 10);
+    target += gamma_lpdf(lambda2 | 0.1, 0.1);
+    target += normal_lpdf(theta[1] | 0, 0.1); //target += double_exponential_lpdf(theta[1] | 0, lambda1)
+    target += inv_gamma_lpdf(sigma | 0.1, 0.1);
+    target += ((newp * log(lambda1)) + (p * psi * log(lambda2)));
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, lambda2/sqrt(2));
@@ -379,6 +380,7 @@ gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summar
 # gl.samples <- summary(fit1, par=c("newgl"), probs = c(0.05, 0.5, 0.95))$summary
 # gnl.samples <- summary(fit1, par=c("newgnl"), probs = c(0.05, 0.5, 0.95))$summary
 gsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
+# smooth.samples <- summary(fit1,par=c("gsmooth"), probs = c(0.05, 0.5, 0.95))$summary
 # alp.x.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
 alpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
 # summary(fit1, par=c("sigma"), probs = c(0.05,0.5, 0.95))$summary
@@ -489,23 +491,6 @@ g.smooth.q1 <- as.vector(matrix(gsmooth.samples[,4], nrow = n, byrow=TRUE))
 g.smooth.q2 <- as.vector(matrix(gsmooth.samples[,5], nrow = n, byrow=TRUE))
 g.smooth.q3 <- as.vector(matrix(gsmooth.samples[,6], nrow = n, byrow=TRUE))
 
-# g.nonlinear.q2 <- g.linear.q2 <- g.q2 <- g.nonlinear.q1 <- g.linear.q1 <- g.q1 <- g.nonlinear.q3 <- g.linear.q3 <- g.q3 <- g.nonlinear.new <- g.linear.new <- g.new <- matrix(, nrow = n, ncol=p)
-# for (j in 1:p){
-#   g.linear.new[,j] <- xholder.linear[,j] * theta.post.mean[(j+1)]
-#   g.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.post.mean, nrow=psi)[,j] 
-#   g.new[1:n, j] <- g.linear.new[,j] + g.nonlinear.new[,j]
-#   g.linear.q1[,j] <- xholder.linear[,j] * theta.q1[(j+1)]
-#   g.nonlinear.q1[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.q1, nrow=psi)[,j] 
-#   g.q1[1:n, j] <- g.linear.q1[,j] + g.nonlinear.q1[,j]
-#   g.linear.q2[,j] <- xholder.linear[,j] * theta.q2[(j+1)]
-#   g.nonlinear.q2[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.q2, nrow=psi)[,j] 
-#   g.q2[1:n, j] <- g.linear.q2[,j] + g.nonlinear.q2[,j]  
-#   g.linear.q3[,j] <- xholder.linear[,j] * theta.q3[(j+1)]
-#   g.nonlinear.q3[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.q3, nrow=psi)[,j] 
-#   g.q3[1:n, j] <- g.linear.q3[,j] + g.nonlinear.q3[,j]
-# }
-
-
 equal_breaks <- function(n = 3, s = 0.1,...){
   function(x){
     d <- s * diff(range(x)) / (1+2*s)
@@ -607,26 +592,49 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
 #           axis.text = element_text(size = 20))
 # #ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_nonlinear.pdf"), width=12.5, height = 15)
 
+# g.nonlinear.q1 <- g.linear.q1 <- g.q1 <- g.nonlinear.q3 <- g.linear.q3 <- g.q3 <- g.nonlinear.q2 <- g.linear.q2 <- g.q2 <- matrix(, nrow = n, ncol=p)
+# for (j in 1:p){
+#   g.linear.q1[,j] <- bs.linear[,j] * theta.samples[(j+1), 3]
+#   g.nonlinear.q1[,j] <- bs.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.samples[,4], nrow=psi)[,j]
+#   g.q1[1:n, j] <- g.linear.q1[,j] + g.nonlinear.q1[,j]
+#   g.linear.q2[,j] <- bs.linear[,j] * theta.samples[(j+1), 5]
+#   g.nonlinear.q2[,j] <- bs.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.samples[,5], nrow=psi)[,j]
+#   g.q2[1:n, j] <- g.linear.q2[,j] + g.nonlinear.q2[,j]
+#   g.linear.q3[,j] <- bs.linear[,j] * theta.samples[(j+1), 6]
+#   g.nonlinear.q3[,j] <- bs.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.samples[,6], nrow=psi)[,j]
+#   g.q3[1:n, j] <- g.linear.q3[,j] + g.nonlinear.q3[,j]    
+# }
+
+# data.smooth <- data.frame("x"= as.vector(as.matrix(apply(fwi.index[which(Y>u),c(1:7)], 2, sort))),
+#                           # "post.mean" = as.vector(sort(g.smooth.mean)),
+#                           "q1" = as.vector(as.matrix(apply(matrix(smooth.samples[,4], nrow = n, ncol = p), 2, sort, decreasing= TRUE))),
+#                           "q2" = as.vector(as.matrix(apply(matrix(smooth.samples[,5], nrow = n, ncol = p), 2, sort, decreasing= TRUE))),
+#                           "q3" = as.vector(as.matrix(apply(matrix(smooth.samples[,6], nrow = n, ncol = p), 2, sort, decreasing= TRUE))),
+#                           "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)),
+#                           "replicate" = gl(p, n, (p*n), labels = names(fwi.scaled)))
+
+
 data.scenario <- data.frame("x" = seq(-1, 1, length.out = n),
                             "post.mean" = (alpha.samples[,1]),
                             "post.median" = (alpha.samples[,5]),
+                            # "post.median" = sort(exp(rowSums(g.q2) + rep(theta.samples[1,5], n)), decreasing = TRUE),
                             "q1" = (alpha.samples[,4]),
                             "q3" = (alpha.samples[,6]))
 # data.scenario <- data.frame("x" = seq(-1, 1, length.out = n),
-#                             "post.mean" = sort(alp.x.samples[,1]),
-#                             "post.median" = sort(alp.x.samples[,5]),
-#                             "q1" = sort(alp.x.samples[,4]),
-#                             "q3" = sort(alp.x.samples[,6]))
+#                             "post.mean" = sort(alp.x.samples[,1], decreasing = TRUE),
+#                             "post.median" = sort(alp.x.samples[,5], decreasing = TRUE),
+#                             "q1" = sort(alp.x.samples[,4], decreasing = TRUE),
+#                             "q3" = sort(alp.x.samples[,6], decreasing = TRUE))
 
 ggplot(data.scenario, aes(x=x)) + 
   ylab(expression(alpha(bold(x)))) + xlab(expression(c)) + labs(col = "") +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
   # geom_line(aes(y = true, col = "True"), linewidth = 2) +
-  # ylim(0, 2500) +
+  xlim(-1,1) + ylim(0, 6.2) + 
   geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values = c("steelblue")) + 
-  scale_y_log10() + 
+  # scale_y_log10() + 
   guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) +
   theme_minimal(base_size = 30) +
@@ -702,13 +710,15 @@ fit.log.lik <- extract_log_lik(fit1, merge_chains = FALSE)
 grid.plts <- list()
 for(i in 1:p){
   grid.plt <- ggplot(data = data.frame(data.smooth[((((i-1)*n)+1):(i*n)),], origin = fwi.scaled[,i]), aes(x=x)) + 
+  # grid.plt <- ggplot(data = data.frame(data.smooth[((((i-1)*n)+1):(i*n)),], origin = fwi.index[which(Y>u),i]), aes(x=x)) +   
                   # geom_point(aes(x= origin, y=q2), alpha = 0.3) + 
                   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
                   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
                   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
                   geom_rug(aes(x= origin, y=q2), sides = "b") +
                   ylab("") + xlab(names(fwi.scaled)[i]) +
-                  scale_fill_manual(values=c("steelblue"), name = "") + ylim(-3.5,3) +
+                  scale_fill_manual(values=c("steelblue"), name = "") + 
+                  # ylim(-3.5,3) +
                   scale_color_manual(values=c("steelblue")) +
                   #ylim(-0.65, 0.3) +
                   # scale_y_continuous(breaks=equal_breaks(n=5, s=0.1)) + 
@@ -759,11 +769,11 @@ print(plt + geom_density(aes(x=logy), color = "steelblue", linewidth = 2) +
                 axis.text = element_text(size = 35)))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRSTIR_predictive_distribution.pdf"), width=10, height = 7.78)
 
-ev.linear <- as.vector(bs.linear[which.max(y),])
+ev.linear <- as.vector(c(1,bs.linear[which.max(y),]))
 ev.nonlinear <- (matrix(bs.nonlinear[which.max(y),], ncol = 10))
 ev.y <- as.data.frame(matrix(, nrow = 1, ncol = 0))
 for(i in 1:ncol(t(posterior$theta))){
-  ev.alpha.single <- exp(sum(t(posterior$theta)[i]*ev.linear) + 
+  ev.alpha.single <- exp(sum(t(posterior$theta)[,i]*ev.linear) + 
                               sum(t(posterior$gamma[i,,]) %*% ev.nonlinear))
   ev.y <- cbind(ev.y, log(rPareto(1, u, ev.alpha.single)))
 }

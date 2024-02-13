@@ -480,7 +480,7 @@ print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha 
 # # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_nonlinear_sc3-wi.pdf"), width=10, height = 7.78) 
 
 save(alpha.container, newgsmooth.container, file = (paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_sc3.Rdata")))
-total.iter <- 250
+# total.iter <- 250
 # load(paste0("./simulation/results/MC-Scenario_C/",Sys.Date(),"_",total.iter,"_MC_sc3.Rdata"))
 
 
