@@ -238,11 +238,11 @@ parameters {
 }
 
 transformed parameters {
-    array[n] real <lower=0, upper = 5> alpha; // tail index
+    array[n] real <lower=0, upper = 4.5> alpha; // tail index
     matrix[n, p] gnl; // nonlinear component
     matrix[n, p] gl; // linear component
     matrix[n, p] gsmooth; // linear component
-    array[n] real <lower=0, upper = 5> newalpha; // new tail index
+    array[n] real <lower=0, upper = 4.5> newalpha; // new tail index
     matrix[n, p] newgnl; // nonlinear component
     matrix[n, p] newgl; // linear component
     matrix[n, p] newgsmooth; // linear component
@@ -318,8 +318,8 @@ fit1 <- stan(
     init = init.alpha,      # initial value
     # init_r = 1,
     chains = 3,             # number of Markov chains
-    warmup = 2500,          # number of warmup iterations per chain
-    iter = 4000,            # total number of iterations per chain
+    warmup = 2000,          # number of warmup iterations per chain
+    iter = 3500,            # total number of iterations per chain
     cores = 4,              # number of cores (could use one per chain)
     refresh = 500           # no progress shown
 )
@@ -524,7 +524,7 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
   guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) + 
   # scale_y_continuous(breaks=c(-3,-2,-1,1,2)) +        
-          ylim(-3.5, 2) +
+          ylim(-3.5, 2.8) +
   # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
   theme_minimal(base_size = 30) +
   theme(legend.position = "none",
@@ -654,8 +654,8 @@ r <- matrix(, nrow = n, ncol = 30)
 T <- 30
 for(i in 1:n){
   for(t in 1:T){
-    r[i, t] <- qnorm(pPareto(y[i], u, alpha = posterior$alpha[round(runif(1,1,len)),i]))
-    # r[i, t] <- qnorm(pPareto(y[i], u, alpha = posterior$newalpha[round(runif(1,1,len)),i]))
+    # r[i, t] <- qnorm(pPareto(y[i], u, alpha = posterior$alpha[round(runif(1,1,len)),i]))
+    r[i, t] <- qnorm(pPareto(y[i], u, alpha = posterior$newalpha[round(runif(1,1,len)),i]))
   }
 }
 lgrid <- n
@@ -731,8 +731,8 @@ for(i in 1:p){
 }
 
 grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
-grid.plts[[1]]
-# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=10, height = 7.78)
+grid.plts[[7]]
+ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=10, height = 7.78)
 
 # Testing accuracy of estimated alpha(x)
 # data.alpha <- data.frame(type=c(rep("Median", n), rep("Interval.Diff", n)),
@@ -777,7 +777,7 @@ ev.y <- as.data.frame(matrix(, nrow = 1, ncol = 0))
 for(i in 1:ncol(t(posterior$theta))){
   ev.alpha.single <- exp(sum(t(posterior$theta)[,i]*ev.linear) + 
                               sum(t(posterior$gamma[i,,]) %*% ev.nonlinear))
-  ev.y <- cbind(ev.y, log(rPareto(1, u, ev.alpha.single)))
+  ev.y <- cbind(ev.y, log(rPareto(1, t = u, alpha = ev.alpha.single)))
 }
 # colnames(ev.y) <- paste("col", 1:ncol(t(posterior$theta)), sep="")
 ev.y <- as.data.frame(as.numeric(t(ev.y)))
@@ -789,7 +789,7 @@ plt <- ggplot(data = ev.y, aes(x = yrep)) + ylab("density") + xlab("log(Burnt Ar
   geom_density(color = "steelblue", linewidth = 1.2) + 
   geom_rug(alpha = 0.1) +
   # geom_point(aes(x=yrep,y=-Inf),color="steelblue", size = 3.5, alpha = 0.2) +
-  xlim(min(ev.y$yrep), 200) +
+  xlim(min(ev.y$yrep), 300) +
   theme_minimal(base_size = 30) +  
   theme(legend.position = "none",
   axis.text = element_text(size = 35))
