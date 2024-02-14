@@ -443,8 +443,8 @@ r <- matrix(, nrow = n, ncol = 30)
 T <- 30
 for(i in 1:n){
   for(t in 1:T){
-    r[i, t] <- qnorm(pPareto(y[i], u, alpha = posterior$alpha[round(runif(1,1,len)),i]))
-    # r[i, t] <- qnorm(pPareto(y[i], u, alpha = alpha.new[i]))
+    # r[i, t] <- qnorm(pPareto(y[i], u, alpha = posterior$alpha[round(runif(1,1,len)),i]))
+    r[i, t] <- qnorm(pPareto(y[i], u, alpha = posterior$newalpha[round(runif(1,1,len)),i]))
   }
 }
 lgrid <- n
@@ -491,16 +491,17 @@ waic(fit.log.lik, cores = 2)
 #Predictive Distribution check
 y.container <- as.data.frame(matrix(, nrow = n, ncol = 0))
 # for(i in random.alpha.idx){
-for(i in 1:ncol(t(posterior$alpha))){
+random.alpha.idx <- floor(runif(100, 1, ncol(t(posterior$alpha))))
+for(i in random.alpha.idx){
   # y.container <- cbind(y.container, dPareto(y, u, t(posterior$alpha)[i]))
   y.container <- cbind(y.container, log(rPareto(n, u, t(posterior$alpha)[i])))
 }
-colnames(y.container) <- paste("col", 1:ncol(t(posterior$alpha)), sep="")
+colnames(y.container) <- paste("col", 1:100, sep="")
 y.container$x <- seq(1,n)
 y.container$logy <- log(y)
-plt <- ggplot(data = y.container, aes(x = logy)) + ylab("density") + xlab("log(Burnt Area)") + labs(col = "")
-random.alpha.idx <- floor(runif(100, 1, ncol(t(posterior$alpha))))
-for(i in names(y.container)[random.alpha.idx]){
+plt <- ggplot(data = y.container, aes(x = x)) + ylab("density") + xlab("log(Burnt Area)") + labs(col = "")
+
+for(i in names(y.container)){
   # plt <- plt + geom_line(aes(y = .data[[i]]), alpha = 0.2, linewidth = 0.7)
   plt <- plt + geom_density(aes(x=.data[[i]]), color = "slategray1", alpha = 0.1, linewidht = 0.7)
 }
@@ -509,4 +510,4 @@ print(plt + geom_density(aes(x=logy), color = "steelblue", linewidth = 2) +
         theme_minimal(base_size = 30) + ylim(0, 2) + xlim(6.8,25) +
         theme(legend.position = "none",
                 axis.text = element_text(size = 35)))
-# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRTIR_predictive_distribution.pdf"), width=10, height = 7.78)
+ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRTIR_predictive_distribution.pdf"), width=10, height = 7.78)
