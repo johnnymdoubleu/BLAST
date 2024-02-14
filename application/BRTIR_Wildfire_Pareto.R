@@ -88,8 +88,9 @@ fwi.index$date <- as.numeric(fwi.index$date)
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 fwi.scaled <- fwi.scaled[which(Y>u),]
 # fwi.scaled <- as.data.frame(scale(fwi.scaled))
-
-fwi.scaled <- as.data.frame(lapply(fwi.scaled, rescale, to=c(-1,1)))
+range01 <- function(x){(x-min(x))/(max(x)-min(x))}
+fwi.scaled <- as.data.frame(sapply(fwi.scaled, FUN = range01))
+# fwi.scaled <- as.data.frame(lapply(fwi.scaled, rescale, to=c(-1,1)))
 
 
 
@@ -211,8 +212,8 @@ parameters {
 }
 
 transformed parameters {
-    array[n] real <lower=0, upper = 6.5> alpha; // tail index
-    array[n] real <lower=0, upper = 6.5> newalpha; // new tail index
+    array[n] real <lower=0, upper = 5> alpha; // tail index
+    array[n] real <lower=0, upper = 5> newalpha; // new tail index
     matrix[n, p] gl; // linear component
     matrix[n, p] newgnl; // nonlinear component
     matrix[n, p] newgl; // linear component
@@ -263,8 +264,8 @@ fit1 <- stan(
     init = init.alpha,      # initial value
     # init_r = 1,
     chains = 3,             # number of Markov chains
-    warmup = 1500,          # number of warmup iterations per chain
-    iter = 3000,            # total number of iterations per chain
+    warmup = 2500,          # number of warmup iterations per chain
+    iter = 4000,            # total number of iterations per chain
     cores = 4,              # number of cores (could use one per chain)
     refresh = 500           # no progress shown
 )
