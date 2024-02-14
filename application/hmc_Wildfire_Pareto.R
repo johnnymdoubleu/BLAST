@@ -238,7 +238,7 @@ parameters {
 }
 
 transformed parameters {
-    array[n] real <lower=0, upper = 6.5> alpha; // tail index
+    array[n] real <lower=0, upper = 5> alpha; // tail index
     matrix[n, p] gnl; // nonlinear component
     matrix[n, p] gl; // linear component
     matrix[n, p] gsmooth; // linear component
@@ -255,8 +255,8 @@ transformed parameters {
         newgsmooth[,j] = newgl[,j] + newgnl[,j];
     };
     for (i in 1:n){
-        alpha[i] = exp(theta[1] + sum(gnl[i,]) + sum(gl[i,]));
-        newalpha[i] = exp(theta[1] + sum(newgnl[i,]) + sum(newgl[i,]));
+        alpha[i] = exp(theta[1] + sum(gsmooth[i,]));
+        newalpha[i] = exp(theta[1] + sum(newgsmooth[i,])); 
     };
 }
 
@@ -265,9 +265,9 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 1, 100);
+    target += gamma_lpdf(lambda1 | 1, 10);
     target += gamma_lpdf(lambda2 | 0.1, 0.1);
-    target += normal_lpdf(theta[1] | 0, 1); //target += double_exponential_lpdf(theta[1] | 0, lambda1)
+    target += normal_lpdf(theta[1] | 0, 0.1); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     target += ((newp * log(lambda1)) + (p * psi * log(lambda2)));
     for (j in 1:p){
@@ -305,7 +305,7 @@ init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
                   list(gamma = array(rep(0.02, (psi*p)), dim=c(psi, p)),
                         theta = rep(0.01, (p+1)), 
                         tau = rep(0.01, p), sigma = 0.001,
-                        lambda1 = 0.01, lambda2 = 0.001),
+                        lambda1 = 0.1, lambda2 = 0.001),
                   list(gamma = array(rep(0.01, (psi*p)), dim=c(psi, p)),
                         theta = rep(0.05, (p+1)), 
                         tau = rep(0.01, p), sigma = 0.01,
@@ -318,8 +318,8 @@ fit1 <- stan(
     init = init.alpha,      # initial value
     # init_r = 1,
     chains = 3,             # number of Markov chains
-    warmup = 1000,          # number of warmup iterations per chain
-    iter = 2500,            # total number of iterations per chain
+    warmup = 2500,          # number of warmup iterations per chain
+    iter = 4000,            # total number of iterations per chain
     cores = 4,              # number of cores (could use one per chain)
     refresh = 500           # no progress shown
 )
@@ -655,7 +655,7 @@ T <- 30
 for(i in 1:n){
   for(t in 1:T){
     r[i, t] <- qnorm(pPareto(y[i], u, alpha = posterior$alpha[round(runif(1,1,len)),i]))
-    # r[i, t] <- qnorm(pPareto(y[i], u, alpha = alpha.new[i]))
+    # r[i, t] <- qnorm(pPareto(y[i], u, alpha = posterior$newalpha[round(runif(1,1,len)),i]))
   }
 }
 lgrid <- n
@@ -750,16 +750,17 @@ grid.plts[[1]]
 #Predictive Distribution check
 y.container <- as.data.frame(matrix(, nrow = n, ncol = 0))
 # for(i in random.alpha.idx){
-for(i in 1:ncol(t(posterior$alpha))){
+random.alpha.idx <- floor(runif(100, 1, ncol(t(posterior$alpha))))
+for(i in random.alpha.idx){
   # y.container <- cbind(y.container, dPareto(y, u, t(posterior$alpha)[i]))
   y.container <- cbind(y.container, log(rPareto(n, u, t(posterior$alpha)[i])))
 }
-colnames(y.container) <- paste("col", 1:ncol(t(posterior$alpha)), sep="")
+colnames(y.container) <- paste("col", 1:100, sep="")
 y.container$x <- seq(1,n)
 y.container$logy <- log(y)
 plt <- ggplot(data = y.container, aes(x = x)) + ylab("density") + xlab("log(Burnt Area)") + labs(col = "")
-random.alpha.idx <- floor(runif(100, 1, ncol(t(posterior$alpha))))
-for(i in names(y.container)[random.alpha.idx]){
+
+for(i in names(y.container)){
   # plt <- plt + geom_line(aes(y = .data[[i]]), alpha = 0.2, linewidth = 0.7)
   plt <- plt + geom_density(aes(x=.data[[i]]), color = "slategray1", alpha = 0.1, linewidht = 0.7)
 }
