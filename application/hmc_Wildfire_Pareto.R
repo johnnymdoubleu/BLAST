@@ -226,6 +226,7 @@ data {
     matrix[n, (psi*p)] xholderNonlinear; // thin plate splines basis    
     vector[n] y; // extreme response
     real <lower=0> atau;
+    real <lower=0,upper=5> rho; //softplus parameter
 }
 
 parameters {
@@ -235,7 +236,6 @@ parameters {
     real <lower=0> lambda2; // group lasso penalty
     real sigma; //
     vector[p] tau;
-    real <lower=0,upper=10> rho; //softplus parameter
 }
 
 transformed parameters {
@@ -270,8 +270,7 @@ model {
     target += gamma_lpdf(lambda2 | 0.1, 0.1);
     target += normal_lpdf(theta[1] | 0, 1); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
-    target += ((newp * log(lambda1)) + (p * psi * log(lambda2))); 
-    target += uniform_lpdf(rho | 0, 10);
+    target += ((newp * log(lambda1)) + (p * psi * log(lambda2))); // target += uniform_lpdf(rho | 0, 5)
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, lambda2/sqrt(2));
@@ -289,7 +288,7 @@ generated quantities {
 , "model_BRSTIR.stan")
 
 data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, 
-                    atau = ((psi+1)/2), newp = (p+1), 
+                    atau = ((psi+1)/2), newp = (p+1), rho=1,
                     bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
                     xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear)
 
@@ -301,15 +300,15 @@ set_cmdstan_path(path = NULL)
 file <- file.path(cmdstan_path(), "model.stan")
 
 init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
-                        theta = rep(0, (p+1)), rho = 0.1,
+                        theta = rep(0, (p+1)), #rho = 0.1,
                         tau = rep(0.1, p), sigma = 0.1, 
                         lambda1 = 0.01, lambda2 = 0.01),
                   list(gamma = array(rep(0.02, (psi*p)), dim=c(psi, p)),
-                        theta = rep(0.01, (p+1)), rho = 2, 
+                        theta = rep(0.01, (p+1)), #rho = 2, 
                         tau = rep(0.01, p), sigma = 0.001,
                         lambda1 = 0.1, lambda2 = 0.001),
                   list(gamma = array(rep(0.01, (psi*p)), dim=c(psi, p)),
-                        theta = rep(0.05, (p+1)), rho = 0.5, 
+                        theta = rep(0.05, (p+1)), #rho = 0.5, 
                         tau = rep(0.01, p), sigma = 0.01,
                         lambda1 = 1, lambda2 = 0.01))
 
