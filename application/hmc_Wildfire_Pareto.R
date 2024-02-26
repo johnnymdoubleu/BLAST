@@ -235,14 +235,15 @@ parameters {
     real <lower=0> lambda2; // group lasso penalty
     real sigma; //
     vector[p] tau;
+    real <lower=0,upper=5> rho; //softplus parameter
 }
 
 transformed parameters {
-    array[n] real <lower=0, upper = 4.5> alpha; // tail index
+    array[n] real <lower=0> alpha; // tail index
     matrix[n, p] gnl; // nonlinear component
     matrix[n, p] gl; // linear component
     matrix[n, p] gsmooth; // linear component
-    array[n] real <lower=0, upper = 4.5> newalpha; // new tail index
+    array[n] real <lower=0> newalpha; // new tail index
     matrix[n, p] newgnl; // nonlinear component
     matrix[n, p] newgl; // linear component
     matrix[n, p] newgsmooth; // linear component
@@ -255,8 +256,8 @@ transformed parameters {
         newgsmooth[,j] = newgl[,j] + newgnl[,j];
     };
     for (i in 1:n){
-        alpha[i] = exp(theta[1] + sum(gsmooth[i,]));
-        newalpha[i] = exp(theta[1] + sum(newgsmooth[i,])); 
+        alpha[i] = log(1+exp(rho * (theta[1] + sum(gsmooth[i,]))))/rho;
+        newalpha[i] = log(1+exp(rho * (theta[1] + sum(newgsmooth[i,]))))/rho; 
     };
 }
 
@@ -267,9 +268,9 @@ model {
     }
     target += gamma_lpdf(lambda1 | 0.1, 10);
     target += gamma_lpdf(lambda2 | 0.1, 0.1);
-    target += normal_lpdf(theta[1] | 0, 0.1); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
+    target += normal_lpdf(theta[1] | 0, 1); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
-    target += ((newp * log(lambda1)) + (p * psi * log(lambda2)));
+    target += ((newp * log(lambda1)) + (p * psi * log(lambda2))); //target += uniform_lpdf(rho | 0, 10);
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, lambda2/sqrt(2));
@@ -287,7 +288,7 @@ generated quantities {
 , "model_BRSTIR.stan")
 
 data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, 
-                    atau = ((psi+1)/2), newp = (p+1),
+                    atau = ((psi+1)/2), newp = (p+1), 
                     bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
                     xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear)
 
@@ -299,15 +300,15 @@ set_cmdstan_path(path = NULL)
 file <- file.path(cmdstan_path(), "model.stan")
 
 init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
-                        theta = rep(0, (p+1)), 
+                        theta = rep(0, (p+1)), rho = 0.1,
                         tau = rep(0.1, p), sigma = 0.1, 
                         lambda1 = 0.01, lambda2 = 0.01),
                   list(gamma = array(rep(0.02, (psi*p)), dim=c(psi, p)),
-                        theta = rep(0.01, (p+1)), 
+                        theta = rep(0.01, (p+1)), rho = 2, 
                         tau = rep(0.01, p), sigma = 0.001,
                         lambda1 = 0.1, lambda2 = 0.001),
                   list(gamma = array(rep(0.01, (psi*p)), dim=c(psi, p)),
-                        theta = rep(0.05, (p+1)), 
+                        theta = rep(0.05, (p+1)), rho = 0.5, 
                         tau = rep(0.01, p), sigma = 0.01,
                         lambda1 = 1, lambda2 = 0.01))
 
@@ -318,8 +319,8 @@ fit1 <- stan(
     init = init.alpha,      # initial value
     # init_r = 1,
     chains = 3,             # number of Markov chains
-    warmup = 2000,          # number of warmup iterations per chain
-    iter = 3500,            # total number of iterations per chain
+    warmup = 1000,          # number of warmup iterations per chain
+    iter = 2000,            # total number of iterations per chain
     cores = 4,              # number of cores (could use one per chain)
     refresh = 500           # no progress shown
 )
@@ -381,7 +382,7 @@ gl.samples <- summary(fit1, par=c("newgl"), probs = c(0.05, 0.5, 0.95))$summary
 gnl.samples <- summary(fit1, par=c("newgnl"), probs = c(0.05, 0.5, 0.95))$summary
 gsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
 # smooth.samples <- summary(fit1,par=c("gsmooth"), probs = c(0.05, 0.5, 0.95))$summary
-# alp.x.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
+alp.x.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
 alpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
 # summary(fit1, par=c("sigma"), probs = c(0.05,0.5, 0.95))$summary
 # summary(fit1, par=c("tau"), probs = c(0.05,0.5, 0.95))$summary
@@ -634,7 +635,7 @@ ggplot(data.scenario, aes(x=x)) +
   geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values = c("steelblue")) + 
-  scale_y_log10() + 
+  # scale_y_log10() + 
   guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) +
   theme_minimal(base_size = 30) +
@@ -649,13 +650,14 @@ ggplot(data.scenario, aes(x=x)) +
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_alpha.pdf"), width=10, height = 7.78)
 
 len <- dim(posterior$alpha)[1]
-r <- matrix(, nrow = n, ncol = 30)
+r <- matrix(, nrow = n, ncol = 100)
 # beta <- as.matrix(mcmc[[1]])[, 1:7] 
-T <- 30
+T <- 100
 for(i in 1:n){
   for(t in 1:T){
-    # r[i, t] <- qnorm(pPareto(y[i], u, alpha = posterior$alpha[round(runif(1,1,len)),i]))
-    r[i, t] <- qnorm(pPareto(y[i], u, alpha = posterior$newalpha[round(runif(1,1,len)),i]))
+    # r[i, t] <- qnorm(pPareto(y[i], u, alpha = alp.x.samples[i,5]))
+    r[i, t] <- qnorm(pPareto(y[i], u, alpha = posterior$alpha[round(runif(1,1,len)),i]))
+    # r[i, t] <- qnorm(pPareto(y[i], u, alpha = posterior$newalpha[round(runif(1,1,len)),i]))
   }
 }
 lgrid <- n
@@ -690,14 +692,6 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
 
 cat("Finished Running")
 
-fit.log.lik <- extract_log_lik(fit1)
-fwi.loo <- loo(fit.log.lik, cores = 2)
-plot(fwi.loo, label_points = TRUE)
-
-loo(fit.log.lik, is_method = "sis", cores = 2)
-# loo(fit.log.lik)
-waic(fit.log.lik, cores = 2)
-fit.log.lik <- extract_log_lik(fit1, merge_chains = FALSE)
 # relative_eff(exp(fit.log.lik))
 #https://discourse.mc-staqan.org/t/four-questions-about-information-criteria-cross-validation-and-hmc-in-relation-to-a-manuscript-review/13841/3
 # y.rep <- as.matrix(fit1, pars = "y_rep")
@@ -718,9 +712,8 @@ for(i in 1:p){
                   geom_rug(aes(x= origin, y=q2), sides = "b") +
                   ylab("") + xlab(names(fwi.scaled)[i]) +
                   scale_fill_manual(values=c("steelblue"), name = "") + 
-                  ylim(-3.5,3) +
                   scale_color_manual(values=c("steelblue")) +
-                  #ylim(-0.65, 0.3) +
+                  ylim(-7.5, 1.2) +
                   # scale_y_continuous(breaks=equal_breaks(n=5, s=0.1)) + 
                   theme_minimal(base_size = 30) +
                   theme(legend.position = "none",
@@ -820,3 +813,15 @@ print(plt + geom_area(data = subset(d, x>12.44009), aes(x=x,y=y), fill = "slateg
 # p <- p %>% ggMarginal(margins = 'y', color="steelblue", size=10)
 # print(p, newpage = TRUE)
 # detach("package:ggExtra", unload = TRUE)
+
+# library(ismev)
+# gpd.fit(y, u)
+
+fit.log.lik <- extract_log_lik(fit1)
+fwi.loo <- loo(fit.log.lik, cores = 2)
+plot(fwi.loo, label_points = TRUE)
+
+loo(fit.log.lik, is_method = "sis", cores = 2)
+loo(fit.log.lik)
+waic(fit.log.lik, cores = 2)
+fit.log.lik <- extract_log_lik(fit1, merge_chains = FALSE)

@@ -25,7 +25,7 @@ library(ggh4x)
 set.seed(6)
 
 
-n <- 10000
+n <- 5000
 psi <- 10
 threshold <- 0.95
 p <- 5
@@ -189,20 +189,21 @@ data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi,
                     xholderNonlinear = xholder.nonlinear)
 
 init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
-                        theta = rep(0, (p+1)), 
+                        theta = rep(0, (p+1)),
                         tau = rep(0.1, p), sigma = 0.1, 
                         lambda1 = 0.1, lambda2 = 0.1),
                   list(gamma = array(rep(0.02, (psi*p)), dim=c(psi, p)),
-                        theta = rep(0.01, (p+1)), 
+                        theta = rep(0.01, (p+1)),
                         tau = rep(0.01, p), sigma = 0.001,
                         lambda1 = 0.01, lambda2 = 0.1),
                   list(gamma = array(rep(0.01, (psi*p)), dim=c(psi, p)),
-                        theta = rep(0.05, (p+1)), 
+                        theta = rep(0.05, (p+1)),
                         tau = rep(0.01, p), sigma = 0.01,
                         lambda1 = 0.1, lambda2 = 0.01))
-
+# setwd("C:/Users/Johnny Lee/Documents/GitHub")
 fit1 <- stan(
-    file = "model_simulation_sc3.stan",  # Stan program
+    file = "model_simulation_sc1.stan",  # Stan program
+    # file = "model_BRSTIR.stan",  # Stan program
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
     chains = 3,             # number of Markov chains
