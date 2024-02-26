@@ -713,7 +713,7 @@ for(i in 1:p){
                   ylab("") + xlab(names(fwi.scaled)[i]) +
                   scale_fill_manual(values=c("steelblue"), name = "") + 
                   scale_color_manual(values=c("steelblue")) +
-                  ylim(-7.5, 1.2) +
+                  ylim(-2.3, 1.2) +
                   # scale_y_continuous(breaks=equal_breaks(n=5, s=0.1)) + 
                   theme_minimal(base_size = 30) +
                   theme(legend.position = "none",
