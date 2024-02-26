@@ -235,7 +235,7 @@ parameters {
     real <lower=0> lambda2; // group lasso penalty
     real sigma; //
     vector[p] tau;
-    real <lower=0,upper=5> rho; //softplus parameter
+    real <lower=0,upper=10> rho; //softplus parameter
 }
 
 transformed parameters {
@@ -270,7 +270,8 @@ model {
     target += gamma_lpdf(lambda2 | 0.1, 0.1);
     target += normal_lpdf(theta[1] | 0, 1); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
-    target += ((newp * log(lambda1)) + (p * psi * log(lambda2))); //target += uniform_lpdf(rho | 0, 5);
+    target += ((newp * log(lambda1)) + (p * psi * log(lambda2))); 
+    target += uniform_lpdf(rho | 0, 10);
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, lambda2/sqrt(2));
