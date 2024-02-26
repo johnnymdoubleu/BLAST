@@ -266,12 +266,11 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 0.1, 10);
+    target += gamma_lpdf(lambda1 | 1, 10);
     target += gamma_lpdf(lambda2 | 0.1, 0.1);
     target += normal_lpdf(theta[1] | 0, 1); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
-    target += ((newp * log(lambda1)) + (p * psi * log(lambda2))); 
-    target += uniform_lpdf(rho | 0, 100);
+    target += ((newp * log(lambda1)) + (p * psi * log(lambda2))); // target += uniform_lpdf(rho | 0, 100)
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, lambda2/sqrt(2));
@@ -378,7 +377,7 @@ posterior <- extract(fit1)
 
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
-lambda.samples <- summary(fit1, par=c("lambda1", "lambda2", "rho"), probs = c(0.05,0.5, 0.95))$summary
+lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
 gl.samples <- summary(fit1, par=c("newgl"), probs = c(0.05, 0.5, 0.95))$summary
 gnl.samples <- summary(fit1, par=c("newgnl"), probs = c(0.05, 0.5, 0.95))$summary
 gsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
