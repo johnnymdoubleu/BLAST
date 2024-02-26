@@ -234,8 +234,7 @@ parameters {
     real <lower=0> lambda1; // lasso penalty
     real <lower=0> lambda2; // group lasso penalty
     real sigma; //
-    vector[p] tau;
-    real <lower=0,upper=100> rho; //softplus parameter
+    vector[p] tau; //real <lower=0,upper=100> rho //softplus parameter
 }
 
 transformed parameters {
@@ -256,8 +255,9 @@ transformed parameters {
         newgsmooth[,j] = newgl[,j] + newgnl[,j];
     };
     for (i in 1:n){
-        alpha[i] = log(1+exp(rho * (theta[1] + sum(gsmooth[i,]))))/rho;
-        newalpha[i] = log(1+exp(rho * (theta[1] + sum(newgsmooth[i,]))))/rho; 
+        alpha[i] = exp(theta[1] + sum(gsmooth[i,]));
+        newalpha[i] = exp(theta[1] + sum(newgsmooth[i,]));
+        //alpha[i] = log(1+exp(rho * (theta[1] + sum(gsmooth[i,]))))/rho newalpha[i] = log(1+exp(rho * (theta[1] + sum(newgsmooth[i,]))))/rho 
     };
 }
 
@@ -301,15 +301,15 @@ set_cmdstan_path(path = NULL)
 file <- file.path(cmdstan_path(), "model.stan")
 
 init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
-                        theta = rep(0, (p+1)), rho = 0.1,
+                        theta = rep(0, (p+1)),
                         tau = rep(0.1, p), sigma = 0.1, 
                         lambda1 = 0.01, lambda2 = 0.01),
                   list(gamma = array(rep(0.02, (psi*p)), dim=c(psi, p)),
-                        theta = rep(0.01, (p+1)), rho = 2, 
+                        theta = rep(0.01, (p+1)),
                         tau = rep(0.01, p), sigma = 0.001,
                         lambda1 = 0.1, lambda2 = 0.001),
                   list(gamma = array(rep(0.01, (psi*p)), dim=c(psi, p)),
-                        theta = rep(0.05, (p+1)), rho = 0.5, 
+                        theta = rep(0.05, (p+1)),
                         tau = rep(0.01, p), sigma = 0.01,
                         lambda1 = 1, lambda2 = 0.01))
 
