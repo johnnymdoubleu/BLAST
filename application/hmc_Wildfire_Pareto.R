@@ -44,7 +44,7 @@ Y <- df.long$measurement[!is.na(df.long$measurement)]
 summary(Y) #total burnt area
 length(Y)
 psi <- 10
-threshold <- 0.99
+threshold <- 0.95
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
 # x.scale <- x.scale[which(y>quantile(y, threshold)),]
@@ -266,10 +266,10 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 10, 100);
+    target += gamma_lpdf(lambda1 | 1, 10);
     target += gamma_lpdf(lambda2 | 0.1, 0.1);
-    target += normal_lpdf(theta[1] | log(1.2), 0.5);
-    //target += normal_lpdf(theta[1] | 0, 1) target += double_exponential_lpdf(theta[1] | 0, lambda1)
+    target += normal_lpdf(theta[1] | log(1.2), 0.1);
+    // target += normal_lpdf(theta[1] | log(1.2), 0.1) target += double_exponential_lpdf(theta[1] | 0, lambda1)
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     target += ((newp * log(lambda1)) + (p * psi * log(lambda2))); // target += uniform_lpdf(rho | 0, 100)
     for (j in 1:p){
