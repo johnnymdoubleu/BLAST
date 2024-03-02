@@ -16,6 +16,8 @@ library(cmdstanr)
 library(scales)
 # library(ggExtra)
 
+options(mc.cores = parallel::detectCores())
+
 # Structure of the FWI System
 #DSR : Dail Severity Rating
 #FWI : Fire Weather Index
@@ -266,10 +268,10 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 0.1, 10);
-    target += gamma_lpdf(lambda2 | 0.1, 0.1);
-    target += normal_lpdf(theta[1] | log(1.2), 0.001);
-    // target += normal_lpdf(theta[1] | 0, 1) target += double_exponential_lpdf(theta[1] | 0, lambda1)
+    target += gamma_lpdf(lambda1 | 0.1, 100);
+    target += gamma_lpdf(lambda2 | 0.01, 0.01);
+    target += normal_lpdf(theta[1] | 0, 0.1);
+    // target += normal_lpdf(theta[1] | log(1.2), 0.01) target += double_exponential_lpdf(theta[1] | 0, lambda1)
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     target += ((newp * log(lambda1)) + (p * psi * log(lambda2))); // target += uniform_lpdf(rho | 0, 100)
     for (j in 1:p){
@@ -321,8 +323,8 @@ fit1 <- stan(
     # init_r = 1,
     chains = 3,             # number of Markov chains
     # warmup = 1000,          # number of warmup iterations per chain
-    iter = 2000,            # total number of iterations per chain
-    cores = 4,              # number of cores (could use one per chain)
+    iter = 4000,            # total number of iterations per chain
+    cores = parallel::detectCores(), # number of cores (could use one per chain)
     refresh = 500           # no progress shown
 )
 
@@ -826,3 +828,5 @@ loo(fit.log.lik, is_method = "sis", cores = 2)
 loo(fit.log.lik)
 waic(fit.log.lik, cores = 2)
 fit.log.lik <- extract_log_lik(fit1, merge_chains = FALSE)
+
+see$
