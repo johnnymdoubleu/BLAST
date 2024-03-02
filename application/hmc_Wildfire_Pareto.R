@@ -323,7 +323,7 @@ fit1 <- stan(
     # init_r = 1,
     chains = 3,             # number of Markov chains
     # warmup = 1000,          # number of warmup iterations per chain
-    iter = 4000,            # total number of iterations per chain
+    iter = 8000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
     refresh = 500           # no progress shown
 )
@@ -829,4 +829,3 @@ loo(fit.log.lik)
 waic(fit.log.lik, cores = 2)
 fit.log.lik <- extract_log_lik(fit1, merge_chains = FALSE)
 
-see$
