@@ -268,9 +268,9 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 0.1, 100);
+    target += gamma_lpdf(lambda1 | 10, 100);
     target += gamma_lpdf(lambda2 | 0.01, 0.01);
-    target += normal_lpdf(theta[1] | 0, 0.1);
+    target += normal_lpdf(theta[1] | 0, 0.5);
     // target += normal_lpdf(theta[1] | log(1.2), 0.01) target += double_exponential_lpdf(theta[1] | 0, lambda1)
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     target += ((newp * log(lambda1)) + (p * psi * log(lambda2))); // target += uniform_lpdf(rho | 0, 100)
