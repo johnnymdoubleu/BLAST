@@ -46,7 +46,7 @@ Y <- df.long$measurement[!is.na(df.long$measurement)]
 summary(Y) #total burnt area
 length(Y)
 psi <- 10
-threshold <- 0.95
+threshold <- 0.99
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
 # x.scale <- x.scale[which(y>quantile(y, threshold)),]
@@ -727,7 +727,7 @@ for(i in 1:p){
 }
 
 grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
-
+# grid.plts[[7]]
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=10, height = 7.78)
 
 # Testing accuracy of estimated alpha(x)
