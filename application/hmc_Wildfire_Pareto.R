@@ -16,6 +16,7 @@ library(cmdstanr)
 library(scales)
 # library(ggExtra)
 
+
 options(mc.cores = parallel::detectCores())
 
 # Structure of the FWI System
@@ -214,6 +215,9 @@ for(i in 1:p){
   bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])
 }
 
+sese <- basis.tps(fwi.scaled[,c(1,2)], data.frame(test.knot, test.knot), rk=FALSE)
+
+penal <- penalty.tps(fwi.scaled[,1])
 
 write("// Stan model for simple linear regression
 data {
