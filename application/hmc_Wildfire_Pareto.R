@@ -46,7 +46,7 @@ Y <- df.long$measurement[!is.na(df.long$measurement)]
 summary(Y) #total burnt area
 length(Y)
 psi <- 10
-threshold <- 0.99
+threshold <- 0.95
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
 # x.scale <- x.scale[which(y>quantile(y, threshold)),]
@@ -258,8 +258,7 @@ transformed parameters {
     };
     for (i in 1:n){
         alpha[i] = exp(theta[1] + sum(gsmooth[i,]));
-        newalpha[i] = exp(theta[1] + sum(newgsmooth[i,]));
-        //alpha[i] = log(1+exp(rho * (theta[1] + sum(gsmooth[i,]))))/rho newalpha[i] = log(1+exp(rho * (theta[1] + sum(newgsmooth[i,]))))/rho 
+        newalpha[i] = exp(theta[1] + sum(newgsmooth[i,]));  
     };
 }
 
@@ -268,12 +267,12 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 10, 100);
-    target += gamma_lpdf(lambda2 | 0.01, 0.01);
-    target += normal_lpdf(theta[1] | 0, 0.5);
+    target += gamma_lpdf(lambda1 | 1, 10);
+    target += gamma_lpdf(lambda2 | 0.1, 0.1);
+    target += normal_lpdf(theta[1] | log(1.2), 0.01);
     // target += normal_lpdf(theta[1] | log(1.2), 0.01) target += double_exponential_lpdf(theta[1] | 0, lambda1)
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
-    target += ((newp * log(lambda1)) + (p * psi * log(lambda2))); // target += uniform_lpdf(rho | 0, 100)
+    target += ((newp * log(lambda1)) + (p * psi * log(lambda2)));
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, lambda2/sqrt(2));
