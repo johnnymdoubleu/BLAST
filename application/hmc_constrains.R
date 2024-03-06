@@ -199,6 +199,7 @@ no.theta <- 1
 newx <- seq(0, 1, length.out=n)
 xholder.linear <- xholder.nonlinear <- bs.linear <- bs.nonlinear <- matrix(,nrow=n, ncol=0)
 xholder <- matrix(nrow=n, ncol=p)
+knots <- matrix(nrow = psi, ncol= p)
 for(i in 1:p){
   # xholder[,i] <- seq(0, 1, length.out = n)
   # test.knot <- seq(0, 1, length.out = psi)
@@ -208,8 +209,8 @@ for(i in 1:p){
   splines <- basis.tps(xholder[,i], test.knot, m=2, rk=FALSE, intercept = FALSE)
   xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
   xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
-  knots <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
-  tps <- basis.tps(fwi.scaled[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
+  knots[,i] <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
+  tps <- basis.tps(fwi.scaled[,i], knots[,i], m = 2, rk = FALSE, intercept = FALSE)
   # tps <- mSpline(x.origin[,i], df=psi, Boundary.knots = range(x.origin[,i]), degree = 3, intercept=TRUE)
   bs.linear <- cbind(bs.linear, tps[,1:no.theta])
   bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])
@@ -228,6 +229,7 @@ data {
     matrix[n, (psi*p)] xholderNonlinear; // thin plate splines basis    
     vector[n] y; // extreme response
     real <lower=0> atau;
+    matrix[psi, p] knots; // knots matrix
 }
 
 parameters {
@@ -236,7 +238,8 @@ parameters {
     real <lower=0> lambda1; // lasso penalty
     real <lower=0> lambda2; // group lasso penalty
     real sigma; //
-    vector[p] tau; //real <lower=0,upper=100> rho //softplus parameter
+    vector[p] tau; //
+
 }
 
 transformed parameters {
@@ -248,6 +251,7 @@ transformed parameters {
     matrix[n, p] newgnl; // nonlinear component
     matrix[n, p] newgl; // linear component
     matrix[n, p] newgsmooth; // linear component
+    real <lower=0> gammaknots; // identifiability constraints
     for (j in 1:p){
         gnl[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
         newgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
@@ -260,6 +264,7 @@ transformed parameters {
         alpha[i] = exp(theta[1] + sum(gsmooth[i,]));
         newalpha[i] = exp(theta[1] + sum(newgsmooth[i,]));  
     };
+    gammaknots = 
 }
 
 model {
@@ -269,8 +274,8 @@ model {
     }
     target += gamma_lpdf(lambda1 | 1, 10);
     target += gamma_lpdf(lambda2 | 0.1, 0.1);
-    target += normal_lpdf(theta[1] | log(1.2), 0.1);
-    // target += normal_lpdf(theta[1] | log(1.2), 0.01) target += double_exponential_lpdf(theta[1] | 0, lambda1)
+    target += normal_lpdf(theta[1] | 0, 1);
+    // target += normal_lpdf(theta[1] | log(1.2), 0.01)
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     target += ((newp * log(lambda1)) + (p * psi * log(lambda2)));
     for (j in 1:p){
@@ -278,6 +283,7 @@ model {
         target += gamma_lpdf(tau[j] | atau, lambda2/sqrt(2));
         target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * sqrt(tau[j]) * sqrt(sigma));
     }
+    target += normal_lpdf(gammaknots)
 }
 generated quantities {
     // Used in Posterior predictive check
@@ -290,7 +296,7 @@ generated quantities {
 , "model_BRSTIR.stan")
 
 data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, 
-                    atau = ((psi+1)/2), newp = (p+1), 
+                    atau = ((psi+1)/2), newp = (p+1), knots = knots,
                     bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
                     xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear)
 
