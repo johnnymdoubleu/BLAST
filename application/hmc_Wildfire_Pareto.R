@@ -823,8 +823,8 @@ fit.log.lik <- extract_log_lik(fit1)
 fwi.loo <- loo(fit.log.lik, cores = 2)
 plot(fwi.loo, label_points = TRUE)
 
-elpd.loo <- loo(fit.log.lik, is_method = "sis", cores = 2)
-waic <- waic(fit.log.lik, cores = 2)
-save(elpd.loo, waic, file = (paste0("./BRSTIR/application/BRSTIR_",Sys.Date(),"_",floor(threshold*100),"quantile_IC.Rdata")))
+brstir.elpd.loo <- loo(fit.log.lik, is_method = "sis", cores = 2)
+brstir.waic <- waic(fit.log.lik, cores = 2)
+save(brstir.elpd.loo, brstir.waic, file = (paste0("./BRSTIR/application/BRSTIR_",Sys.Date(),"_",floor(threshold*100),"quantile_IC.Rdata")))
 
 loo(fit.log.lik)

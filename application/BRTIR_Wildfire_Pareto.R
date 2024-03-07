@@ -43,7 +43,7 @@ Y <- df.long$measurement[!is.na(df.long$measurement)]
 summary(Y) #total burnt area
 length(Y)
 
-threshold <- 0.95
+threshold <- 0.955
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
 # x.scale <- x.scale[which(y>quantile(y, threshold)),]
@@ -481,9 +481,9 @@ fit.log.lik <- extract_log_lik(fit1)
 fwi.loo <- loo(fit.log.lik, cores = 2)
 plot(fwi.loo, label_points = TRUE)
 
-elpd.loo <- loo(fit.log.lik, is_method = "sis", cores = 2)
-waic <- waic(fit.log.lik, cores = 2)
-save(elpd.loo, waic, file = (paste0("./BRSTIR/application/BRTIR_",Sys.Date(),"_",floor(threshold*100),"quantile_IC.Rdata")))
+brtir.elpd.loo <- loo(fit.log.lik, is_method = "sis", cores = 2)
+brtir.waic <- waic(fit.log.lik, cores = 2)
+save(brtir.elpd.loo, brtir.waic, file = (paste0("./BRSTIR/application/BRTIR_",Sys.Date(),"_",floor(threshold*100),"quantile_IC.Rdata")))
 
 #https://discourse.mc-stan.org/t/four-questions-about-information-criteria-cross-validation-and-hmc-in-relation-to-a-manuscript-review/13841
 
