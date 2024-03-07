@@ -14,58 +14,174 @@ library(evir)
 library(mev)
 library(cmdstanr)
 library(scales)
-library(DATAstudio)
+# library(ggExtra)
 
-# amo : Atlantic multi-decadal oscillation
-# nino34 : El Nino-southern oscillation (ENSO), expressed by NINO343 index
-# np : North pacific index (NPI)
-# pdo : Pacific decadal oscillaltion (PDO)
-# soi : Southern oscillation index (SOI)
-# nao : North atlantic oscillation
 
-psi <- 5
+options(mc.cores = parallel::detectCores())
+
+# Structure of the FWI System
+#DSR : Dail Severity Rating
+#FWI : Fire Weather Index
+#BUI : Buildup Index
+#ISI : Initial Spread Index
+#FFMC : Fine FUel Moisture Code
+#DMC : Duff Moisture Code
+#DC : Drough Code
+
+
+setwd("C:/Users/Johnny Lee/Documents/GitHub")
+df <- read_excel("./BRSTIR/application/AADiarioAnual.xlsx", col_types = c("date", rep("numeric",40)))
+df.long <- gather(df, condition, measurement, "1980":"2019", factor_key=TRUE)
+df.long
+head(df.long)
+tail(df.long)
+# View(df.long[is.na(df.long$measurement),])
+missing.values <- which(!is.na(df.long$measurement))
+df.long[which(is.na(df.long$measurement)),]
+df.long[which(is.na(df.long$...1))+1,]
+
+#NAs on Feb 29 most years, and Feb 14, 1999
+#considering the case of leap year, the missing values are the 29th of Feb
+#Thus, each year consist of 366 data with either 1 or 0 missing value.
+Y <- df.long$measurement[!is.na(df.long$measurement)]
+summary(Y) #total burnt area
+length(Y)
+psi <- 10
 threshold <- 0.95
-u <- quantile(madeira$prec, threshold)
-y <- madeira$prec[madeira$prec>u]
-# y <- madeira$prec
+u <- quantile(Y, threshold)
+y <- Y[Y>u]
 # x.scale <- x.scale[which(y>quantile(y, threshold)),]
 # u <- quantile(y, threshold)
 
+multiplesheets <- function(fname) {
+    setwd("C:/Users/Johnny Lee/Documents/GitHub")
+    # getting info about all excel sheets
+    sheets <- excel_sheets(fname)
+    tibble <- lapply(sheets, function(x) read_excel(fname, sheet = x, col_types = c("date", rep("numeric", 41))))
+    # print(tibble)
+    data_frame <- lapply(tibble, as.data.frame)
+    # assigning names to data frames
+    names(data_frame) <- sheets
+    return(data_frame)
+}
 setwd("C:/Users/Johnny Lee/Documents/GitHub")
+path <- "./BRSTIR/application/DadosDiariosPT_FWI.xlsx"
+# importing fire weather index
+cov <- multiplesheets(path)
 
-rainfall.scaled <- rainfall.index <- madeira[,c(3,4,5,6,7,8)]
 
-
-rainfall.index$date <- as.Date(paste(as.character(madeira$yearmonth),"01"), "%Y%m%d")
-rainfall.index$year <- substr(as.Date(madeira$yearmonth, "%Y"),1,4)
-rainfall.index$month <- factor(format(rainfall.index$date, "%b"),
+fwi.scaled <- fwi.index <- data.frame(DSR = double(length(Y)),
+                                        FWI = double(length(Y)),
+                                        BUI = double(length(Y)),
+                                        ISI = double(length(Y)),
+                                        FFMC = double(length(Y)),
+                                        DMC = double(length(Y)),
+                                        DC = double(length(Y)),
+                                        stringsAsFactors = FALSE)
+# cov.long$ <- gather(cov$DSR[!is.na(df.long$measurement)][,1:41], )
+for(i in 1:length(cov)){
+    cov.long <- gather(cov[[i]][,1:41], condition, measurement, "1980":"2019", factor_key=TRUE)
+    fwi.index[,i] <- cov.long$measurement[missing.values]
+    fwi.scaled[,i] <- cov.long$measurement[missing.values]
+}
+# fwi.index$date <- 
+fwi.index$date <- substr(cov.long$...1[missing.values],9,10)
+fwi.index$month <- factor(format(as.Date(substr(cov.long$...1[missing.values],1,10), "%Y-%m-%d"),"%b"),
                             levels = c("Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"))
+fwi.index$date <- as.numeric(fwi.index$date)
+fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
+fwi.scaled <- fwi.scaled[which(Y>u),]
+# fwi.scaled <- as.data.frame(scale(fwi.scaled))
 
-rainfall.scaled <- rainfall.scaled[which(madeira$prec>u),]
-rainfall.scaled <- as.data.frame(scale(rainfall.scaled))
+# plot((fwi.scaled[,2]), (log(y)))
+# plot((fwi.scaled[,5]), (log(y)))
+range01 <- function(x){(x-min(x))/(max(x)-min(x))}
+fwi.scaled <- as.data.frame(sapply(fwi.scaled, FUN = range01))
+# fwi.scaled <- as.data.frame(lapply(fwi.scaled, rescale, to=c(-1,1)))
 
-# plot((rainfall.scaled[,2]), y)
-# plot((rainfall.scaled[,5]), y)
+# ---------------------------------------------------------------------------
+# Computing Hills Estimator plot
+# orderred <- rev(sort(Y)[14462:14609])
+# orderred <- rev(sort(Y)[13863:14609])
+# ordered <- rev(sort(Y))
+# n.hill <- length(orderred)
+# k <- 1:n.hill
+# loggs <- logb(orderred/u)
+# avesumlog <- cumsum(loggs)/k
+# # xihat <- c(NA, (avesumlog)[2:n.hill])
+# xihat <- c(NA, (avesumlog-loggs)[2:n.hill])
+# alphahat <- 1/xihat
+# ses <- alphahat/sqrt(k)
+# xx <- trunc(seq(from = n.hill, to = 15))
+# y.alpha <- alphahat[xx]
+# # ylabel <- alphahat
+# yrange <- range(y.alpha)
+# qq <- qnorm(1-(1-threshold)/2)
+# uu <- y.alpha + ses[xx] * qq
+# ll <- y.alpha - ses[xx] * qq
+# yrange <- range(u, l)
+# data.hill <- data.frame(k = c(15:n.hill),
+#                         u = uu,
+#                         l = ll,
+#                         alpha = y.alpha,
+#                         order = xx)
+# ggplot(data = data.hill) + 
+#   geom_ribbon(aes(x = order, ymin = l, ymax = u, fill = "confidenceband"),
+#               alpha = 0.2, linetype = "dashed") + 
+#   geom_line(aes(x = order, y = alpha, color="hillestimator" ), linewidth = 1.2) + 
+#   xlim(15, n.hill) +
+#   labs(x = "Order Statistics", y = "Tail Index") + 
+#   scale_color_manual(values=c("steelblue")) + 
+#   scale_fill_manual(values=c("steelblue"), name = "") +
+#   theme_minimal(base_size = 30) +
+#   theme(text = element_text(size = 30), 
+#         axis.text.x = element_text(angle = 0, hjust = 0.5),
+#         legend.position = "none")
+# ggsave("./BRSTIR/application/figures/hillestimator.pdf", width=10, height = 7.78)
 
-# rainfall.scaled <- as.data.frame(lapply(rainfall.scaled, rescale, to=c(-1,1)))
-# fwi.ind <- which(rainfall.scaled[,2]>0)
-# plot(sort(hill(y,option="alpha", reverse = FALSE)$y))
-# hill(y, option = "alpha", reverse = FALSE)
-# # hill(sort(Y)[13865:14609], option="alpha", reverse = TRUE)$y
-# # hill(rainfall.scaled[which(rainfall.scaled[,2]>0), 2], option = "alpha", reverse = FALSE)
-# hill(rainfall.scaled[fwi.ind, 2], option = "alpha", reverse = FALSE)
-# hill(rainfall.scaled[-fwi.ind, 2], option = "alpha", reverse = FALSE)
 
-# pdf(file = "./BRSTIR/application/figures/rainfallcorrelation.pdf")
-# corrplot.mixed(cor(rainfall.scaled),
+# pdf(file = "./BRSTIR/application/figures/correlation.pdf")
+# corrplot.mixed(cor(fwi.scaled),
 #                 upper = "circle",
 #                 lower = "number",
 #                 addgrid.col = "black")
 # dev.off()
 # ggsave("./BRSTIR/application/figures/correlation.pdf", plot = replayPlot(p1), width=10, height = 7.78)
+# -------------------------------------------------------------------
 
-df.extreme <- cbind(y, rainfall.scaled)
-df.extreme <- as.data.frame(cbind(month = rainfall.index$month[which(madeira$prec>u)], df.extreme))
+# ------------- Explanatory Analaysis
+# first.extreme <- which(Y==max(y))
+# second.extreme <- which(Y==max(y[-which.max(y)]))
+# tenth.extreme <- which(Y==sort(y, decreasing = TRUE)[10])
+# ggplot(fwi.index[((first.extreme):(first.extreme+12)),], aes(x=date)) +
+#   geom_line(aes(y=DSR, color = "DSR"), linetype = 1) + 
+#   geom_line(aes(y=FWI, color = "FWI"), linetype = 2) +
+#   geom_line(aes(y=BUI, color = "BUI"), linetype = 3) +
+#   geom_line(aes(y=ISI, color = "ISI"), linetype = 4) +
+#   geom_line(aes(y=FFMC, color = "FFMC"), linetype = 5) + 
+#   geom_line(aes(y=DMC, color = "DMC"), linetype = 6) +
+#   geom_line(aes(y=DC, color = "DC"), linetype = 7)  + 
+#   ylab("indices") + xlab("dates after extreme fire (sorted by burnt area)") + 
+#   scale_color_manual(name = "Indices", values = c(
+#     "DSR" = "darkblue", 
+#     "FWI" = "red",
+#     "BUI" = "green",
+#     "ISI" = "yellow",
+#     "FFMC" = "orange",
+#     "DMC" = "purple",
+#     "DC" = "skyblue")) +
+#   theme(legend.position="right", 
+#       legend.key.size = unit(1, 'cm'),
+#       legend.text = element_text(size=20),
+#       # plot.margin = margin(0,0,0,-1),
+#       axis.title = element_text(size = 20))
+
+# fwi.index[((first.extreme):(first.extreme+12)),]
+# fwi.index[13682:13694,]
+# fwi.index[second.extreme:(second.extreme+12),]
+
+df.extreme <- cbind(y, fwi.scaled)
+df.extreme <- as.data.frame(cbind(month = fwi.index$month[which(Y>u)], df.extreme))
 # ggplot(df.extreme, aes(x=month, y=y, color=month)) + geom_point(size=6) + theme_minimal() +
 #     theme(plot.title = element_text(hjust = 0.5, size = 20),
 #         legend.title = element_blank(),
@@ -77,28 +193,27 @@ df.extreme <- as.data.frame(cbind(month = rainfall.index$month[which(madeira$pre
 # ggsave("./BRSTIR/application/figures/datavis.pdf", width=15)
 
 
-n <- dim(rainfall.scaled)[[1]]
-p <- dim(rainfall.scaled)[[2]]
+n <- dim(fwi.scaled)[[1]]
+p <- dim(fwi.scaled)[[2]]
 no.theta <- 1
 newx <- seq(0, 1, length.out=n)
 xholder.linear <- xholder.nonlinear <- bs.linear <- bs.nonlinear <- matrix(,nrow=n, ncol=0)
 xholder <- matrix(nrow=n, ncol=p)
 for(i in 1:p){
-  # xholder[,i] <- seq(min(rainfall.scaled[,i]), max(rainfall.scaled[,i]), length.out = n)
-  # test.knot <- seq(min(rainfall.scaled[,i]), max(rainfall.scaled[,i]), length.out = psi)
-  # splines <- basis.tps(seq(min(rainfall.scaled[,i]), max(rainfall.scaled[,i]), length.out = n), test.knot, m=2, rk=FALSE, intercept = TRUE)
-  xholder[,i] <- seq(min(rainfall.scaled[,i]), max(rainfall.scaled[,i]), length.out = n)
-  test.knot <- seq(min(rainfall.scaled[,i]), max(rainfall.scaled[,i]), length.out = psi)
+  # xholder[,i] <- seq(0, 1, length.out = n)
+  # test.knot <- seq(0, 1, length.out = psi)
+  # splines <- basis.tps(seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n), test.knot, m=2, rk=FALSE, intercept = TRUE)
+  xholder[,i] <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n)
+  test.knot <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
   splines <- basis.tps(xholder[,i], test.knot, m=2, rk=FALSE, intercept = FALSE)
   xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
   xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
-  knots <- seq(min(rainfall.scaled[,i]), max(rainfall.scaled[,i]), length.out = psi)
-  tps <- basis.tps(rainfall.scaled[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
+  knots <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
+  tps <- basis.tps(fwi.scaled[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
   # tps <- mSpline(x.origin[,i], df=psi, Boundary.knots = range(x.origin[,i]), degree = 3, intercept=TRUE)
   bs.linear <- cbind(bs.linear, tps[,1:no.theta])
   bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])
 }
-
 
 write("// Stan model for simple linear regression
 data {
@@ -121,29 +236,29 @@ parameters {
     real <lower=0> lambda1; // lasso penalty
     real <lower=0> lambda2; // group lasso penalty
     real sigma; //
-    vector[p] tau;
+    vector[p] tau; //real <lower=0,upper=100> rho //softplus parameter
 }
 
 transformed parameters {
-    vector[n] alpha; // tail index
-    vector[n] newalpha; // tail index    
+    array[n] real <lower=0> alpha; // tail index
     matrix[n, p] gnl; // nonlinear component
     matrix[n, p] gl; // linear component
-    matrix[n, p] gsmooth; // smooth function
+    matrix[n, p] gsmooth; // linear component
+    array[n] real <lower=0> newalpha; // new tail index
     matrix[n, p] newgnl; // nonlinear component
     matrix[n, p] newgl; // linear component
-    matrix[n, p] newgsmooth; // smooth function    
+    matrix[n, p] newgsmooth; // linear component
     for (j in 1:p){
         gnl[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
-        gl[,j] = bsLinear[,j] * theta[j+1];
-        gsmooth[,j] = gl[,j] + gnl[,j];
         newgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
+        gl[,j] = bsLinear[,j] * theta[j+1];
         newgl[,j] = xholderLinear[,j] * theta[j+1];
-        newgsmooth[,j] = newgl[,j] + newgnl[,j];        
+        gsmooth[,j] = gl[,j] + gnl[,j];
+        newgsmooth[,j] = newgl[,j] + newgnl[,j];
     };
     for (i in 1:n){
         alpha[i] = exp(theta[1] + sum(gsmooth[i,]));
-        newalpha[i] = exp(theta[1] + sum(newgsmooth[i,]));        
+        newalpha[i] = exp(theta[1] + sum(newgsmooth[i,]));  
     };
 }
 
@@ -152,11 +267,12 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 0.1, 0.1);
+    target += gamma_lpdf(lambda1 | 1, 10);
     target += gamma_lpdf(lambda2 | 0.1, 0.1);
     target += normal_lpdf(theta[1] | 0, 1);
-    target += inv_gamma_lpdf(sigma | 0.01, 0.01); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
-    target += (newp * log(lambda1) + (p * psi * log(lambda2)));
+    // target += normal_lpdf(theta[1] | log(1.2), 0.01) target += double_exponential_lpdf(theta[1] | 0, lambda1)
+    target += inv_gamma_lpdf(sigma | 0.01, 0.01);
+    target += ((newp * log(lambda1)) + (p * psi * log(lambda2)));
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, lambda2/sqrt(2));
@@ -166,16 +282,15 @@ model {
 generated quantities {
     // Used in Posterior predictive check
     vector[n] log_lik;
-    real y_rep[n] = pareto_rng(u, alpha);
     for (i in 1:n) {
         log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
     }
 }
 "
-, "model_pareto.stan")
+, "model_BRSTIR.stan")
 
 data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, 
-                    atau = ((psi+1)/2), newp = (p+1),
+                    atau = ((psi+1)/2), newp = (p+1), 
                     bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
                     xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear)
 
@@ -187,28 +302,28 @@ set_cmdstan_path(path = NULL)
 file <- file.path(cmdstan_path(), "model.stan")
 
 init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
-                        theta = rep(0, (p+1)), 
+                        theta = rep(0, (p+1)),
                         tau = rep(0.1, p), sigma = 0.1, 
-                        lambda1 = 0.1, lambda2 = 0.1),
+                        lambda1 = 0.01, lambda2 = 0.01),
                   list(gamma = array(rep(0.02, (psi*p)), dim=c(psi, p)),
-                        theta = rep(0.01, (p+1)), 
+                        theta = rep(0.01, (p+1)),
                         tau = rep(0.01, p), sigma = 0.001,
-                        lambda1 = 0.01, lambda2 = 0.1),
+                        lambda1 = 0.1, lambda2 = 0.001),
                   list(gamma = array(rep(0.01, (psi*p)), dim=c(psi, p)),
-                        theta = rep(0.05, (p+1)), 
+                        theta = rep(0.05, (p+1)),
                         tau = rep(0.01, p), sigma = 0.01,
-                        lambda1 = 0.1, lambda2 = 0.01))
+                        lambda1 = 1, lambda2 = 0.01))
 
 # stanc("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/application/model1.stan")
 fit1 <- stan(
-    file = "model_pareto.stan",  # Stan program
+    file = "model_BRSTIR.stan",  # Stan program
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
     # init_r = 1,
     chains = 3,             # number of Markov chains
-    warmup = 1500,          # number of warmup iterations per chain
-    iter = 3000,            # total number of iterations per chain
-    cores = 4,              # number of cores (could use one per chain)
+    # warmup = 1000,          # number of warmup iterations per chain
+    iter = 2000,            # total number of iterations per chain
+    cores = parallel::detectCores(), # number of cores (could use one per chain)
     refresh = 500           # no progress shown
 )
 
@@ -268,15 +383,12 @@ lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5,
 gl.samples <- summary(fit1, par=c("newgl"), probs = c(0.05, 0.5, 0.95))$summary
 gnl.samples <- summary(fit1, par=c("newgnl"), probs = c(0.05, 0.5, 0.95))$summary
 gsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
+# smooth.samples <- summary(fit1,par=c("gsmooth"), probs = c(0.05, 0.5, 0.95))$summary
 alp.x.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
 alpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
 # summary(fit1, par=c("sigma"), probs = c(0.05,0.5, 0.95))$summary
 # summary(fit1, par=c("tau"), probs = c(0.05,0.5, 0.95))$summary
 
-# plot(x = ((data.smooth[1:n,4] + data.smooth[((n+1):(2*n)),4] + data.smooth[(((3*n)+1):(4*n)),4])), type = "l", ylab = "DSR + FWI + ISI")
-# plot(x = ((data.smooth[1:n,4] + data.smooth[((n+1):(2*n)),4])), type = "l", ylab = "DSR + FWI")
-# plot(x = ((data.smooth[((n+1):(2*n)),4] + data.smooth[(((3*n)+1):(4*n)),4])), type = "l", ylab = "FWI + ISI")
-# plot(x = ((data.smooth[1:n,4] + data.smooth[(((3*n)+1):(4*n)),4])), type = "l", ylab = "DSR + ISI")
 
 gamma.post.mean <- gamma.samples[,1]
 gamma.q1 <- gamma.samples[,4]
@@ -288,15 +400,12 @@ theta.q2 <- theta.samples[,5]
 theta.q3 <- theta.samples[,6]
 
 
-# theta.samples <- data.frame(apply(posterior$theta, 2, summary))
-
-
 df.theta <- data.frame("seq" = seq(1, (p+1)),
                         "m" = c(theta.q2),
                         "l" = c(theta.q1),
                         "u" = c(theta.q3))
-df.theta$covariate <- factor(c("\u03b8",names(rainfall.scaled)), levels = c("\u03b8",colnames(rainfall.scaled)))
-df.theta$labels <- factor(c("\u03b8",colnames(rainfall.scaled)))
+df.theta$covariate <- factor(c("\u03b8",names(fwi.scaled)), levels = c("\u03b8",colnames(fwi.scaled)))
+df.theta$labels <- factor(c("\u03b8",colnames(fwi.scaled)))
 
 ggplot(df.theta, aes(x = covariate, y=m, color = covariate)) + ylab("") + xlab('') +
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
@@ -310,7 +419,7 @@ ggplot(df.theta, aes(x = covariate, y=m, color = covariate)) + ylab("") + xlab('
                               expression(bold(theta[5])),
                               expression(bold(theta[6])),
                               expression(bold(theta[7])))) + 
-  scale_color_discrete(labels = c(expression(theta[0]),colnames(rainfall.scaled))) + 
+  scale_color_discrete(labels = c(expression(theta[0]),colnames(fwi.scaled))) + 
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 20),
           legend.text.align = 0,
@@ -343,7 +452,7 @@ df.gamma <- data.frame("seq" = seq(1, (psi*p)),
                   "m" = as.vector(gamma.q2),
                   "l" = as.vector(gamma.q1),
                   "u" = as.vector(gamma.q3))
-df.gamma$covariate <- factor(rep(names(rainfall.scaled), each = psi, length.out = nrow(df.gamma)), levels = colnames(rainfall.scaled))
+df.gamma$covariate <- factor(rep(names(fwi.scaled), each = psi, length.out = nrow(df.gamma)), levels = colnames(fwi.scaled))
 df.gamma$labels <- factor(1:(psi*p))
 ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) + 
   geom_errorbar(aes(ymin = l, ymax = u), alpha = 0.4, width = 4, linewidth = 1.2) +
@@ -385,23 +494,6 @@ g.smooth.q1 <- as.vector(matrix(gsmooth.samples[,4], nrow = n, byrow=TRUE))
 g.smooth.q2 <- as.vector(matrix(gsmooth.samples[,5], nrow = n, byrow=TRUE))
 g.smooth.q3 <- as.vector(matrix(gsmooth.samples[,6], nrow = n, byrow=TRUE))
 
-# g.nonlinear.q2 <- g.linear.q2 <- g.q2 <- g.nonlinear.q1 <- g.linear.q1 <- g.q1 <- g.nonlinear.q3 <- g.linear.q3 <- g.q3 <- g.nonlinear.new <- g.linear.new <- g.new <- matrix(, nrow = n, ncol=p)
-# for (j in 1:p){
-#   g.linear.new[,j] <- xholder.linear[,j] * theta.post.mean[(j+1)]
-#   g.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.post.mean, nrow=psi)[,j] 
-#   g.new[1:n, j] <- g.linear.new[,j] + g.nonlinear.new[,j]
-#   g.linear.q1[,j] <- xholder.linear[,j] * theta.q1[(j+1)]
-#   g.nonlinear.q1[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.q1, nrow=psi)[,j] 
-#   g.q1[1:n, j] <- g.linear.q1[,j] + g.nonlinear.q1[,j]
-#   g.linear.q2[,j] <- xholder.linear[,j] * theta.q2[(j+1)]
-#   g.nonlinear.q2[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.q2, nrow=psi)[,j] 
-#   g.q2[1:n, j] <- g.linear.q2[,j] + g.nonlinear.q2[,j]  
-#   g.linear.q3[,j] <- xholder.linear[,j] * theta.q3[(j+1)]
-#   g.nonlinear.q3[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.q3, nrow=psi)[,j] 
-#   g.q3[1:n, j] <- g.linear.q3[,j] + g.nonlinear.q3[,j]
-# }
-
-
 equal_breaks <- function(n = 3, s = 0.1,...){
   function(x){
     d <- s * diff(range(x)) / (1+2*s)
@@ -419,9 +511,9 @@ data.smooth <- data.frame("x"= as.vector(xholder),
                           # "q1" = as.vector(sort(g.smooth.q1)),
                           # "q2" = as.vector(sort(g.smooth.q2)),
                           # "q3" = as.vector(sort(g.smooth.q3)),
-                          "covariates" = gl(p, n, (p*n), labels = names(rainfall.scaled)),
+                          "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)),
                           # "fakelab" = rep(1, (p*n)),
-                          "replicate" = gl(p, n, (p*n), labels = names(rainfall.scaled)))
+                          "replicate" = gl(p, n, (p*n), labels = names(fwi.scaled)))
 
 ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
@@ -433,8 +525,10 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values=c("steelblue")) + 
   guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) + #ylim(-0.65, 0.3) +
-  scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
+          fill = guide_legend(order = 1)) + 
+  # scale_y_continuous(breaks=c(-3,-2,-1,1,2)) +        
+          ylim(-3.5, 2.8) +
+  # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
   theme_minimal(base_size = 30) +
   theme(legend.position = "none",
           plot.margin = margin(0,0,0,-20),
@@ -447,9 +541,9 @@ data.linear <- data.frame("x"= as.vector(xholder),
                           "q1" = as.vector(g.linear.q1),
                           "q2" = as.vector(g.linear.q2),
                           "q3" = as.vector(g.linear.q3),
-                          "covariates" = gl(p, n, (p*n), labels = names(rainfall.scaled)),
+                          "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)),
                           "fakelab" = rep(1, (p*n)),
-                          "replicate" = gl(p, n, (p*n), labels = names(rainfall.scaled)))
+                          "replicate" = gl(p, n, (p*n), labels = names(fwi.scaled)))
 
 ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
@@ -469,7 +563,7 @@ ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) +
           plot.margin = margin(0,0,0,-20),
           # strip.text = element_blank(),
           axis.text = element_text(size = 20))
-# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_linear.pdf"), width=12.5, height = 15)
+# #ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_linear.pdf"), width=12.5, height = 15)
 
 
 data.nonlinear <- data.frame("x"=as.vector(xholder),
@@ -477,9 +571,9 @@ data.nonlinear <- data.frame("x"=as.vector(xholder),
                           "q1" = as.vector(g.nonlinear.q1),
                           "q2" = as.vector(g.nonlinear.q2),
                           "q3" = as.vector(g.nonlinear.q3),
-                          "covariates" = gl(p, n, (p*n), labels = names(rainfall.scaled)),
+                          "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)),
                           "fakelab" = rep(1, (p*n)),
-                          "replicate" = gl(p, n, (p*n), labels = names(rainfall.scaled)))
+                          "replicate" = gl(p, n, (p*n), labels = names(fwi.scaled)))
 
 ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
@@ -499,23 +593,51 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
           plot.margin = margin(0,0,0,-20),
           # strip.text = element_blank(),
           axis.text = element_text(size = 20))
-# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_nonlinear.pdf"), width=12.5, height = 15)
+# #ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_nonlinear.pdf"), width=12.5, height = 15)
 
-data.scenario <- data.frame("x" = seq(-1, 1, length.out = n),
+# g.nonlinear.q1 <- g.linear.q1 <- g.q1 <- g.nonlinear.q3 <- g.linear.q3 <- g.q3 <- g.nonlinear.q2 <- g.linear.q2 <- g.q2 <- matrix(, nrow = n, ncol=p)
+# for (j in 1:p){
+#   g.linear.q1[,j] <- bs.linear[,j] * theta.samples[(j+1), 3]
+#   g.nonlinear.q1[,j] <- bs.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.samples[,4], nrow=psi)[,j]
+#   g.q1[1:n, j] <- g.linear.q1[,j] + g.nonlinear.q1[,j]
+#   g.linear.q2[,j] <- bs.linear[,j] * theta.samples[(j+1), 5]
+#   g.nonlinear.q2[,j] <- bs.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.samples[,5], nrow=psi)[,j]
+#   g.q2[1:n, j] <- g.linear.q2[,j] + g.nonlinear.q2[,j]
+#   g.linear.q3[,j] <- bs.linear[,j] * theta.samples[(j+1), 6]
+#   g.nonlinear.q3[,j] <- bs.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% matrix(gamma.samples[,6], nrow=psi)[,j]
+#   g.q3[1:n, j] <- g.linear.q3[,j] + g.nonlinear.q3[,j]    
+# }
+
+# data.smooth <- data.frame("x"= as.vector(as.matrix(apply(fwi.index[which(Y>u),c(1:7)], 2, sort))),
+#                           # "post.mean" = as.vector(sort(g.smooth.mean)),
+#                           "q1" = as.vector(as.matrix(apply(matrix(smooth.samples[,4], nrow = n, ncol = p), 2, sort, decreasing= TRUE))),
+#                           "q2" = as.vector(as.matrix(apply(matrix(smooth.samples[,5], nrow = n, ncol = p), 2, sort, decreasing= TRUE))),
+#                           "q3" = as.vector(as.matrix(apply(matrix(smooth.samples[,6], nrow = n, ncol = p), 2, sort, decreasing= TRUE))),
+#                           "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)),
+#                           "replicate" = gl(p, n, (p*n), labels = names(fwi.scaled)))
+
+
+data.scenario <- data.frame("x" = seq(0, 1, length.out = n),
                             "post.mean" = (alpha.samples[,1]),
                             "post.median" = (alpha.samples[,5]),
+                            # "post.median" = sort(exp(rowSums(g.q2) + rep(theta.samples[1,5], n)), decreasing = TRUE),
                             "q1" = (alpha.samples[,4]),
                             "q3" = (alpha.samples[,6]))
+# data.scenario <- data.frame("x" = seq(-1, 1, length.out = n),
+#                             "post.mean" = sort(alp.x.samples[,1], decreasing = TRUE),
+#                             "post.median" = sort(alp.x.samples[,5], decreasing = TRUE),
+#                             "q1" = sort(alp.x.samples[,4], decreasing = TRUE),
+#                             "q3" = sort(alp.x.samples[,6], decreasing = TRUE))
 
 ggplot(data.scenario, aes(x=x)) + 
   ylab(expression(alpha(bold(x)))) + xlab(expression(c)) + labs(col = "") +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
   # geom_line(aes(y = true, col = "True"), linewidth = 2) +
-  # ylim(0, 2500) +
+  # xlim(-1,1) + #ylim(0, 6.2) + 
   geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values = c("steelblue")) + 
-  scale_y_log10() + 
+  # scale_y_log10() + 
   guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) +
   theme_minimal(base_size = 30) +
@@ -530,13 +652,14 @@ ggplot(data.scenario, aes(x=x)) +
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_alpha.pdf"), width=10, height = 7.78)
 
 len <- dim(posterior$alpha)[1]
-T <- 30
-r <- matrix(, nrow = n, ncol = T)
+r <- matrix(, nrow = n, ncol = 100)
 # beta <- as.matrix(mcmc[[1]])[, 1:7] 
+T <- 100
 for(i in 1:n){
   for(t in 1:T){
+    # r[i, t] <- qnorm(pPareto(y[i], u, alpha = alp.x.samples[i,5]))
     r[i, t] <- qnorm(pPareto(y[i], u, alpha = posterior$alpha[round(runif(1,1,len)),i]))
-    # r[i, t] <- qnorm(pPareto(y[i], u, alpha = alpha.new[i]))
+    # r[i, t] <- qnorm(pPareto(y[i], u, alpha = posterior$newalpha[round(runif(1,1,len)),i]))
   }
 }
 lgrid <- n
@@ -561,27 +684,18 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
   geom_abline(intercept = 0, slope = 1, linewidth = 1.2) + 
   labs(x = "Theoretical quantiles", y = "Sample quantiles") + 
   theme_minimal(base_size = 20) +
-  theme(text = element_text(size = 20)) + 
-  coord_fixed(xlim = c(-2, 2),  
-              ylim = c(-2, 2))
+  theme(axis.text = element_text(size = 30),
+        axis.title = element_text(size = 30)) + 
+  coord_fixed(xlim = c(-3, 3),  
+              ylim = c(-3, 3))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_qqplot.pdf"), width=10, height = 7.78)
              
 # saveRDS(data.scenario, file=paste0("Simulation/BayesianPsplines/results/",date,"-",time, "_sc1_data_samp1.rds"))
 
 cat("Finished Running")
 
-
-fwi.loo <- loo(fit1)
-fwi.loo
-y.psis <- fwi.loo$pointwise[,1]
-print(paste("RMSE (PSIS) =",round(sqrt(mean((y-y.psis)^2)) ,2)))
-print(paste("ELPD (PSIS)=",round(sum(y.psis),2)))
-print(paste("ELPD (brute force)=",round(sum(y),2)))
-
-plot(fwi.loo, label_points = TRUE)
-# fwi.waic <- waic(posterior$log_lik)
-# fwi.waic
-
+# relative_eff(exp(fit.log.lik))
+#https://discourse.mc-staqan.org/t/four-questions-about-information-criteria-cross-validation-and-hmc-in-relation-to-a-manuscript-review/13841/3
 # y.rep <- as.matrix(fit1, pars = "y_rep")
 # ppc_loo_pit_overlay(
 #   y = y,
@@ -591,38 +705,126 @@ plot(fwi.loo, label_points = TRUE)
 
 grid.plts <- list()
 for(i in 1:p){
-  grid.plt <- ggplot(data = data.frame(data.smooth[((((i-1)*n)+1):(i*n)),], origin = rainfall.scaled[,i]), aes(x=x)) + 
+  grid.plt <- ggplot(data = data.frame(data.smooth[((((i-1)*n)+1):(i*n)),], origin = fwi.scaled[,i]), aes(x=x)) + 
+  # grid.plt <- ggplot(data = data.frame(data.smooth[((((i-1)*n)+1):(i*n)),], origin = fwi.index[which(Y>u),i]), aes(x=x)) +   
                   # geom_point(aes(x= origin, y=q2), alpha = 0.3) + 
                   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
                   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
                   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
                   geom_rug(aes(x= origin, y=q2), sides = "b") +
-                  ylab("") + xlab(names(rainfall.scaled)[i]) +
-                  scale_fill_manual(values=c("steelblue"), name = "") +
+                  ylab("") + xlab(names(fwi.scaled)[i]) +
+                  scale_fill_manual(values=c("steelblue"), name = "") + 
                   scale_color_manual(values=c("steelblue")) +
-                  #ylim(-0.65, 0.3) +
-                  scale_y_continuous(breaks=equal_breaks(n=5, s=0.1)) + 
+                  ylim(-2.3, 1.2) +
+                  # scale_y_continuous(breaks=equal_breaks(n=5, s=0.1)) + 
                   theme_minimal(base_size = 30) +
                   theme(legend.position = "none",
                           plot.margin = margin(0,0,0,-20),
-                          axis.text = element_text(size = 20),
-                          axis.title.x = element_text(size = 15))
+                          axis.text = element_text(size = 35),
+                          axis.title.x = element_text(size = 45))
   grid.plts[[i]] <- grid.plt
 }
 
-grid.arrange(grobs = grid.plts, ncol = 2, nrow = 3)
-
+grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
+# grid.plts[[7]]
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=10, height = 7.78)
 
 # Testing accuracy of estimated alpha(x)
-data.alpha <- data.frame(type=c(rep("Median", n), rep("Interval.Diff", n)),
-                          value = c(alp.x.samples[,5], abs(alp.x.samples[,6]-alp.x.samples[,4])))
+# data.alpha <- data.frame(type=c(rep("Median", n), rep("Interval.Diff", n)),
+#                           value = c(alp.x.samples[,5], abs(alp.x.samples[,6]-alp.x.samples[,4])))
 
-ggplot(data = data.alpha, aes(x=value, fill=type)) +
-  geom_histogram(alpha=0.4, bins = 250) +
-  theme_minimal(base_size = 30) +
-  theme(legend.position = "top",
-        plot.margin = margin(0,0,0,-20),
-        axis.text = element_text(size = 20),
-        axis.title.x = element_text(size = 15)) +
-  labs(fill="")
+# ggplot(data = data.alpha, aes(x=value, fill=type)) +
+#   geom_histogram(alpha=0.4, bins = 250) +
+#   theme_minimal(base_size = 30) +
+#   theme(legend.position = "top",
+#         plot.margin = margin(0,0,0,-20),
+#         axis.text = element_text(size = 20),
+#         axis.title.x = element_text(size = 15)) +
+#   labs(fill="")
 
+#Predictive Distribution check
+y.container <- as.data.frame(matrix(, nrow = n, ncol = 0))
+# for(i in random.alpha.idx){
+random.alpha.idx <- floor(runif(100, 1, ncol(t(posterior$alpha))))
+for(i in random.alpha.idx){
+  # y.container <- cbind(y.container, dPareto(y, u, t(posterior$alpha)[i]))
+  y.container <- cbind(y.container, log(rPareto(n, u, t(posterior$alpha)[i])))
+}
+colnames(y.container) <- paste("col", 1:100, sep="")
+y.container$x <- seq(1,n)
+y.container$logy <- log(y)
+plt <- ggplot(data = y.container, aes(x = x)) + ylab("density") + xlab("log(Burnt Area)") + labs(col = "")
+
+for(i in names(y.container)){
+  # plt <- plt + geom_line(aes(y = .data[[i]]), alpha = 0.2, linewidth = 0.7)
+  plt <- plt + geom_density(aes(x=.data[[i]]), color = "slategray1", alpha = 0.1, linewidht = 0.7)
+}
+
+print(plt + geom_density(aes(x=logy), color = "steelblue", linewidth = 2) +
+        theme_minimal(base_size = 30) + ylim(0, 2) + xlim(6.8,25) +
+        theme(legend.position = "none",
+                axis.text = element_text(size = 35)))
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRSTIR_predictive_distribution.pdf"), width=10, height = 7.78)
+
+ev.linear <- as.vector(c(1,bs.linear[which.max(y),]))
+ev.nonlinear <- (matrix(bs.nonlinear[which.max(y),], ncol = 10))
+ev.y <- as.data.frame(matrix(, nrow = 1, ncol = 0))
+for(i in 1:ncol(t(posterior$theta))){
+  ev.alpha.single <- exp(sum(t(posterior$theta)[,i]*ev.linear) + 
+                              sum(t(posterior$gamma[i,,]) %*% ev.nonlinear))
+  ev.y <- cbind(ev.y, log(rPareto(1, t = u, alpha = ev.alpha.single)))
+}
+# colnames(ev.y) <- paste("col", 1:ncol(t(posterior$theta)), sep="")
+ev.y <- as.data.frame(as.numeric(t(ev.y)))
+ev.y <- as.data.frame(ev.y[!is.infinite(rowSums(ev.y)),])
+ev.y$logy <- max(log(y))
+colnames(ev.y) <- c("yrep")
+
+plt <- ggplot(data = ev.y, aes(x = yrep)) + ylab("density") + xlab("log(Burnt Area)") + labs(col = "") +
+  geom_density(color = "steelblue", linewidth = 1.2) + 
+  geom_rug(alpha = 0.1) +
+  # geom_point(aes(x=yrep,y=-Inf),color="steelblue", size = 3.5, alpha = 0.2) +
+  xlim(min(ev.y$yrep), 300) +
+  theme_minimal(base_size = 30) +  
+  theme(legend.position = "none",
+  axis.text = element_text(size = 35))
+  # geom_vline(xintercept = log(max(y)), linetype="dotted", color = "red",) +
+
+d <- ggplot_build(plt)$data[[1]]
+print(plt + geom_area(data = subset(d, x>12.44009), aes(x=x,y=y), fill = "slategray1", alpha = 0.5) +
+        geom_segment(x=12.44009, xend=12.44009, 
+              y=0, yend=approx(x = d$x, y = d$y, xout = 12.4409)$y,
+              colour="red", linewidth=1.2, linetype = "dotted"))
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRSTIR_generative.pdf"), width=10, height = 7.78)
+# scaleFUN <- function(x) sprintf("%.1f", x)
+
+# p <- ggplot(data= ev.y, aes(x=yrep, y = logy)) +
+#       geom_vline(xintercept = log(max(y)), color = "red", linewidth = 0.7, linetype = "dotted") +
+#       geom_point(size = 0.8, color = "steelblue", alpha = 0.2) +
+#       geom_point(aes(x=max(log(y))), size = 3.5, color = "steelblue") + 
+#       ylab("True log(Burnt Area)") + xlab("") +
+#       #xlab("Generated log(Burnt Area)") + 
+#       theme_minimal(base_size = 30) + xlim(min(ev.y$yrep), 200) +
+#       ylim(min(ev.y$yrep), 200) +
+#       # scale_y_continuous(labels=scaleFUN) +  
+#       theme(legend.position = "none",
+#               axis.text = element_text(size = 35))
+# grid.arrange(p, (plt+scale_y_reverse() + theme(axis.text.x=element_text(size=10))), nrow=2, ncol=1, widths=4, heights = c(4,1))
+
+# library(ggExtra)
+# p <- p %>% ggMarginal(margins = 'y', color="steelblue", size=10)
+# print(p, newpage = TRUE)
+# detach("package:ggExtra", unload = TRUE)
+
+# library(ismev)
+# gpd.fit(y, u)
+
+fit.log.lik <- extract_log_lik(fit1)
+fwi.loo <- loo(fit.log.lik, cores = 2)
+plot(fwi.loo, label_points = TRUE)
+
+brstir.elpd.loo <- loo(fit.log.lik, is_method = "sis", cores = 2)
+brstir.waic <- waic(fit.log.lik, cores = 2)
+save(brstir.elpd.loo, brstir.waic, file = (paste0("./BRSTIR/application/BRSTIR_",Sys.Date(),"_",floor(threshold*100),"quantile_IC.Rdata")))
+
+loo(fit.log.lik)
