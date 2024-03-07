@@ -264,8 +264,8 @@ fit1 <- stan(
     init = init.alpha,      # initial value
     # init_r = 1,
     chains = 3,             # number of Markov chains
-    warmup = 2500,          # number of warmup iterations per chain
-    iter = 4000,            # total number of iterations per chain
+    # warmup = 2500,          # number of warmup iterations per chain
+    iter = 2000,            # total number of iterations per chain
     cores = 4,              # number of cores (could use one per chain)
     refresh = 500           # no progress shown
 )
@@ -443,8 +443,8 @@ r <- matrix(, nrow = n, ncol = 30)
 T <- 30
 for(i in 1:n){
   for(t in 1:T){
-    # r[i, t] <- qnorm(pPareto(y[i], u, alpha = posterior$alpha[round(runif(1,1,len)),i]))
-    r[i, t] <- qnorm(pPareto(y[i], u, alpha = posterior$newalpha[round(runif(1,1,len)),i]))
+    r[i, t] <- qnorm(pPareto(y[i], u, alpha = posterior$alpha[round(runif(1,1,len)),i]))
+    # r[i, t] <- qnorm(pPareto(y[i], u, alpha = posterior$newalpha[round(runif(1,1,len)),i]))
   }
 }
 lgrid <- n
@@ -481,10 +481,9 @@ fit.log.lik <- extract_log_lik(fit1)
 fwi.loo <- loo(fit.log.lik, cores = 2)
 plot(fwi.loo, label_points = TRUE)
 
-loo(fit.log.lik, is_method = "sis", cores = 2)
-# loo(fit.log.lik)
-waic(fit.log.lik, cores = 2)
-
+elpd.loo <- loo(fit.log.lik, is_method = "sis", cores = 2)
+waic <- waic(fit.log.lik, cores = 2)
+save(elpd.loo, waic, file = (paste0("./BRSTIR/application/BRTIR_",Sys.Date(),"_",floor(threshold*100),"quantile_IC.Rdata")))
 
 #https://discourse.mc-stan.org/t/four-questions-about-information-criteria-cross-validation-and-hmc-in-relation-to-a-manuscript-review/13841
 
@@ -510,4 +509,4 @@ print(plt + geom_density(aes(x=logy), color = "steelblue", linewidth = 2) +
         theme_minimal(base_size = 30) + ylim(0, 2) + xlim(6.8,25) +
         theme(legend.position = "none",
                 axis.text = element_text(size = 35)))
-ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRTIR_predictive_distribution.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRTIR_predictive_distribution.pdf"), width=10, height = 7.78)

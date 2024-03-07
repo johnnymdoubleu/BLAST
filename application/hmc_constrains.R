@@ -47,7 +47,7 @@ Y <- df.long$measurement[!is.na(df.long$measurement)]
 summary(Y) #total burnt area
 length(Y)
 psi <- 10
-threshold <- 0.90
+threshold <- 0.95
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
 # x.scale <- x.scale[which(y>quantile(y, threshold)),]
@@ -239,7 +239,6 @@ parameters {
     real <lower=0> lambda2; // group lasso penalty
     real sigma; //
     vector[p] tau; //
-
 }
 
 transformed parameters {
@@ -251,7 +250,7 @@ transformed parameters {
     matrix[n, p] newgnl; // nonlinear component
     matrix[n, p] newgl; // linear component
     matrix[n, p] newgsmooth; // linear component
-    real <lower=0> gammaknots; // identifiability constraints
+    array[p] real gammaknots; // identifiability constraints
     for (j in 1:p){
         gnl[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
         newgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
@@ -264,7 +263,6 @@ transformed parameters {
         alpha[i] = exp(theta[1] + sum(gsmooth[i,]));
         newalpha[i] = exp(theta[1] + sum(newgsmooth[i,]));  
     };
-    gammaknots = 
 }
 
 model {
@@ -282,8 +280,9 @@ model {
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, lambda2/sqrt(2));
         target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * sqrt(tau[j]) * sqrt(sigma));
+        target += normal_lpdf(dot_product(knots[,j], gamma[j]) | 0, 0.0001);
+        target += normal_lpdf(sum(gamma[j]) | 0, 0.0001);
     }
-    target += normal_lpdf(gammaknots)
 }
 generated quantities {
     // Used in Posterior predictive check
@@ -293,7 +292,7 @@ generated quantities {
     }
 }
 "
-, "model_BRSTIR.stan")
+, "model_BRSTIR_constraint.stan")
 
 data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, 
                     atau = ((psi+1)/2), newp = (p+1), knots = knots,
@@ -322,7 +321,7 @@ init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
 
 # stanc("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/application/model1.stan")
 fit1 <- stan(
-    file = "model_BRSTIR.stan",  # Stan program
+    file = "model_BRSTIR_constraint.stan",  # Stan program
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
     # init_r = 1,
