@@ -241,6 +241,8 @@ parameters {
 
 transformed parameters {
     array[n] real <lower=0> alpha; // tail index
+    vector[(psi-2)] gammaTemp[p]; // constraint gamma from 2 to psi-1
+    vector[2] gammaFandL[p]; //constaint gamma[1] and gamma[psi]
     matrix[n, p] gnl; // nonlinear component
     matrix[n, p] gl; // linear component
     matrix[n, p] gsmooth; // linear component
@@ -248,9 +250,15 @@ transformed parameters {
     matrix[n, p] newgnl; // nonlinear component
     matrix[n, p] newgl; // linear component
     matrix[n, p] newgsmooth; // linear component
+    for(j in 1:p){
+        gammaTemp[j] = gamma[(2:(psi-1)),j];
+        
+    }
+
     for (j in 1:p){
-        gnl[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
-        newgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
+        
+        gnl[,j] = bsNonlinear[,(((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] * gammaTemp[j];
+        newgnl[,j] = xholderNonlinear[,(((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] * gammaTemp[j];
         gl[,j] = bsLinear[,j] * theta[j+1];
         newgl[,j] = xholderLinear[,j] * theta[j+1];
         gsmooth[,j] = gl[,j] + gnl[,j];
