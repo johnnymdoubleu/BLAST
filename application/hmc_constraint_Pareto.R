@@ -203,7 +203,7 @@ for(i in 1:p){
   # xholder[,i] <- seq(0, 1, length.out = n)
   # test.knot <- seq(0, 1, length.out = psi)
   # splines <- basis.tps(seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n), test.knot, m=2, rk=FALSE, intercept = TRUE)
-  xholder[,i] <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n)
+  # xholder[,i] <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n)
   test.knot <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
   splines <- basis.tps(xholder[,i], test.knot, m=2, rk=FALSE, intercept = FALSE)
   xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
@@ -256,7 +256,6 @@ transformed parameters {
     }
 
     for (j in 1:p){
-        
         gnl[,j] = bsNonlinear[,(((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] * gammaTemp[j];
         newgnl[,j] = xholderNonlinear[,(((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] * gammaTemp[j];
         gl[,j] = bsLinear[,j] * theta[j+1];
