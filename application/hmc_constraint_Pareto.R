@@ -199,7 +199,13 @@ no.theta <- 1
 newx <- seq(0, 1, length.out=n)
 xholder.linear <- xholder.nonlinear <- bs.linear <- bs.nonlinear <- matrix(,nrow=n, ncol=0)
 xholder <- matrix(nrow=n, ncol=p)
-# basis.holder <- matrix(, nrow = 2, ncol =0)
+basis.holder <- matrix(, nrow = 2, ncol =0)
+index.holder <- matrix(, nrow = 0, ncol = 2)
+for(i in 1:p){
+  index.holder <- rbind(index.holder, 
+                      matrix(c(which.min(fwi.scaled[,i]),
+                              which.max(fwi.scaled[,i])), ncol=2))
+}
 for(i in 1:p){
   # xholder[,i] <- seq(0, 1, length.out = n)
   # test.knot <- seq(0, 1, length.out = psi)
@@ -211,18 +217,23 @@ for(i in 1:p){
   xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
   knots <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
   tps <- basis.tps(fwi.scaled[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
-  # tps <- mSpline(x.origin[,i], df=psi, Boundary.knots = range(x.origin[,i]), degree = 3, intercept=TRUE)
+  basis.holder <- cbind(basis.holder, 
+          solve(matrix(c(splines[index.holder[i,1], no.theta+1],
+                  splines[index.holder[i,1], no.theta+psi],
+                  splines[index.holder[i,2], no.theta+1],
+                  splines[index.holder[i,2], no.theta+psi]), 
+                  nrow = 2, ncol = 2)))
   bs.linear <- cbind(bs.linear, tps[,1:no.theta])
   bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])
 }
 
-basis.holder <- matrix(c(splines[1, no.theta+1],
-          splines[1, no.theta+psi],
-          splines[n, no.theta+1],
-          splines[n, no.theta+psi]), nrow = 2, ncol = 2)
+    # array[n] real <lower=0> newalpha; // new tail index
+    # matrix[n, p] newgnl; // nonlinear component
+    # matrix[n, p] newgl; // linear component
+    # matrix[n, p] newgsmooth; // linear component
 
-write("// Stan model for simple linear regression
-data {
+
+write("data {
     int <lower=1> n; // Sample size
     int <lower=1> p; // regression coefficient size
     int <lower=1> newp; 
@@ -234,8 +245,9 @@ data {
     matrix[n, (psi*p)] xholderNonlinear; // thin plate splines basis    
     vector[n] y; // extreme response
     real <lower=0> atau;
+    matrix[2, (2*p)] basisFL;
+    array[p, 2] int indexFL;
 }
-
 parameters {
     vector[newp] theta; // linear predictor
     vector[psi] gamma[p]; // splines coefficient
@@ -244,36 +256,33 @@ parameters {
     real sigma; //
     vector[p] tau; //real <lower=0,upper=100> rho //softplus parameter
 }
-
 transformed parameters {
     array[n] real <lower=0> alpha; // tail index
     vector[(psi-2)] gammaTemp[p]; // constraint gamma from 2 to psi-1
-    real gammaone;
-    real gammapsi;
+    vector[2] gammaFL[p];
     matrix[n, p] gnl; // nonlinear component
+    matrix[2, p] subgnl;
+    matrix[n, 1] gfnl;
+    matrix[n, 1] glnl;
     matrix[n, p] gl; // linear component
     matrix[n, p] gsmooth; // linear component
-    array[n] real <lower=0> newalpha; // new tail index
-    matrix[n, p] newgnl; // nonlinear component
-    matrix[n, p] newgl; // linear component
-    matrix[n, p] newgsmooth; // linear component
+
     for(j in 1:p){
-        gammaTemp[j] = gamma[(2:(psi-1)),j];
-        xholderNonlinear[,(((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] * gammaTemp[j]
-        gamma
-    }
+        gammaTemp[j][1:(psi-2)] = gamma[j][2:(psi-1)];
+        subgnl[,j] = bsNonlinear[indexFL[1,], (((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] * gammaTemp[j];
+        gammaFL[j] = basisFL[, (((j-1)*2)+1):(((j-1)*2)+2)] * -1 * subgnl[,j];
+    };
 
     for (j in 1:p){
-        gnl[,j] = bsNonlinear[,(((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] * gammaTemp[j];
-        newgnl[,j] = xholderNonlinear[,(((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] * gammaTemp[j];
-        gl[,j] = bsLinear[,j] * theta[j+1];
-        newgl[,j] = xholderLinear[,j] * theta[j+1];
-        gsmooth[,j] = gl[,j] + gnl[,j];
-        newgsmooth[,j] = newgl[,j] + newgnl[,j];
+        gnl[,j] = bsNonlinear[,(((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] * gammaTemp[j]; // newgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j]
+        gl[,j] = bsLinear[,j] * theta[j+1]; // newgl[,j] = xholderLinear[,j] * theta[j+1]
+        gfnl[,1] = bsNonlinear[,(((j-1)*psi)+1)] * gammaFL[j][1];
+        glnl[,1] = bsNonlinear[,(((j-1)*psi)+psi)] * gammaFL[j][2];
+        gsmooth[,j] = gl[,j] + gnl[,j] + gfnl[,1] + glnl[,1]; // newgsmooth[,j] = newgl[,j] + newgnl[,j]
     };
+
     for (i in 1:n){
-        alpha[i] = exp(theta[1] + sum(gsmooth[i,]));
-        newalpha[i] = exp(theta[1] + sum(newgsmooth[i,]));  
+        alpha[i] = exp(theta[1] + sum(gsmooth[i,])); // newalpha[i] = exp(theta[1] + sum(newgsmooth[i,]))
     };
 }
 
@@ -302,12 +311,13 @@ generated quantities {
     }
 }
 "
-, "model_BRSTIR.stan")
+, "model_BRSTIR_constraint.stan")
 
 data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, 
                     atau = ((psi+1)/2), newp = (p+1), 
+                    indexFL = index.holder, 
                     bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
-                    xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear)
+                    xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear, basisFL = basis.holder)
 
 set_cmdstan_path(path = NULL)
 #> CmdStan path set to: /Users/jgabry/.cmdstan/cmdstan-2.32.2
@@ -331,7 +341,7 @@ init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
 
 # stanc("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/application/model1.stan")
 fit1 <- stan(
-    file = "model_BRSTIR.stan",  # Stan program
+    file = "model_BRSTIR_constraint.stan",  # Stan program
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
     # init_r = 1,
