@@ -199,11 +199,12 @@ no.theta <- 1
 newx <- seq(0, 1, length.out=n)
 xholder.linear <- xholder.nonlinear <- bs.linear <- bs.nonlinear <- matrix(,nrow=n, ncol=0)
 xholder <- matrix(nrow=n, ncol=p)
+# basis.holder <- matrix(, nrow = 2, ncol =0)
 for(i in 1:p){
   # xholder[,i] <- seq(0, 1, length.out = n)
   # test.knot <- seq(0, 1, length.out = psi)
   # splines <- basis.tps(seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n), test.knot, m=2, rk=FALSE, intercept = TRUE)
-  # xholder[,i] <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n)
+  xholder[,i] <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n)
   test.knot <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
   splines <- basis.tps(xholder[,i], test.knot, m=2, rk=FALSE, intercept = FALSE)
   xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
@@ -214,6 +215,11 @@ for(i in 1:p){
   bs.linear <- cbind(bs.linear, tps[,1:no.theta])
   bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])
 }
+
+basis.holder <- matrix(c(splines[1, no.theta+1],
+          splines[1, no.theta+psi],
+          splines[n, no.theta+1],
+          splines[n, no.theta+psi]), nrow = 2, ncol = 2)
 
 write("// Stan model for simple linear regression
 data {
@@ -242,7 +248,8 @@ parameters {
 transformed parameters {
     array[n] real <lower=0> alpha; // tail index
     vector[(psi-2)] gammaTemp[p]; // constraint gamma from 2 to psi-1
-    vector[2] gammaFandL[p]; //constaint gamma[1] and gamma[psi]
+    real gammaone;
+    real gammapsi;
     matrix[n, p] gnl; // nonlinear component
     matrix[n, p] gl; // linear component
     matrix[n, p] gsmooth; // linear component
@@ -252,7 +259,8 @@ transformed parameters {
     matrix[n, p] newgsmooth; // linear component
     for(j in 1:p){
         gammaTemp[j] = gamma[(2:(psi-1)),j];
-        
+        xholderNonlinear[,(((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] * gammaTemp[j]
+        gamma
     }
 
     for (j in 1:p){
