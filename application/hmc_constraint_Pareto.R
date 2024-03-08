@@ -227,10 +227,7 @@ for(i in 1:p){
   bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])
 }
 
-    # array[n] real <lower=0> newalpha; // new tail index
-    # matrix[n, p] newgnl; // nonlinear component
-    # matrix[n, p] newgl; // linear component
-    # matrix[n, p] newgsmooth; // linear component
+
 
 
 write("data {
@@ -266,6 +263,12 @@ transformed parameters {
     matrix[n, 1] glnl;
     matrix[n, p] gl; // linear component
     matrix[n, p] gsmooth; // linear component
+    array[n] real <lower=0> newalpha; // new tail index
+    matrix[n, p] newgnl; // nonlinear component
+    matrix[n, 1] newgfnl;
+    matrix[n, 1] newglnl;    
+    matrix[n, p] newgl; // linear component
+    matrix[n, p] newgsmooth; // linear component
 
     for(j in 1:p){
         gammaTemp[j][1:(psi-2)] = gamma[j][2:(psi-1)];
@@ -274,15 +277,21 @@ transformed parameters {
     };
 
     for (j in 1:p){
-        gnl[,j] = bsNonlinear[,(((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] * gammaTemp[j]; // newgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j]
-        gl[,j] = bsLinear[,j] * theta[j+1]; // newgl[,j] = xholderLinear[,j] * theta[j+1]
+        gnl[,j] = bsNonlinear[,(((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] * gammaTemp[j]; 
+        newgnl[,j] = xholderNonlinear[,(((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] * gammaTemp[j];
+        gl[,j] = bsLinear[,j] * theta[j+1]; 
+        newgl[,j] = xholderLinear[,j] * theta[j+1];
         gfnl[,1] = bsNonlinear[,(((j-1)*psi)+1)] * gammaFL[j][1];
         glnl[,1] = bsNonlinear[,(((j-1)*psi)+psi)] * gammaFL[j][2];
-        gsmooth[,j] = gl[,j] + gnl[,j] + gfnl[,1] + glnl[,1]; // newgsmooth[,j] = newgl[,j] + newgnl[,j]
+        newgfnl[,1] = xholderNonlinear[,(((j-1)*psi)+1)] * gammaFL[j][1];
+        newglnl[,1] = xholderNonlinear[,(((j-1)*psi)+psi)] * gammaFL[j][2];        
+        gsmooth[,j] = gl[,j] + gnl[,j] + gfnl[,1] + glnl[,1]; 
+        newgsmooth[,j] = newgl[,j] + newgnl[,j] + gfnl[,1] + glnl[,1];
     };
 
     for (i in 1:n){
-        alpha[i] = exp(theta[1] + sum(gsmooth[i,])); // newalpha[i] = exp(theta[1] + sum(newgsmooth[i,]))
+        alpha[i] = exp(theta[1] + sum(gsmooth[i,])); 
+        newalpha[i] = exp(theta[1] + sum(newgsmooth[i,]));
     };
 }
 
@@ -347,7 +356,7 @@ fit1 <- stan(
     # init_r = 1,
     chains = 3,             # number of Markov chains
     # warmup = 1000,          # number of warmup iterations per chain
-    iter = 2000,            # total number of iterations per chain
+    iter = 3000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
     refresh = 500           # no progress shown
 )
