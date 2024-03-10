@@ -224,7 +224,7 @@ for(i in 1:p){
                   splines[index.holder[i,2], no.theta+1],
                   splines[index.holder[i,2], no.theta+psi]), 
                   nrow = 2, ncol = 2)))
-  end.holder <- cbind(b.holder, 
+  end.holder <- cbind(end.holder, 
                 matrix(c(splines[index.holder[i,1], no.theta+1],
                   splines[index.holder[i,1], no.theta+psi],
                   splines[index.holder[i,2], no.theta+1],
@@ -310,7 +310,7 @@ model {
     }
     target += gamma_lpdf(lambda1 | 1, 10);
     target += gamma_lpdf(lambda2 | 0.1, 0.1);
-    target += normal_lpdf(theta[1] | 0, 1);
+    target += normal_lpdf(theta[1] | log(1.2), 0.1);
     // target += normal_lpdf(theta[1] | log(1.2), 0.01) target += double_exponential_lpdf(theta[1] | 0, lambda1)
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     target += ((newp * log(lambda1)) + (p * (psi-2) * log(lambda2)));
@@ -434,7 +434,7 @@ alpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$sum
 # summary(fit1, par=c("tau"), probs = c(0.05,0.5, 0.95))$summary
 gammafl.samples <- summary(fit1, par=c("gammaFL"), probs = c(0.05,0.5, 0.95))$summary
 
-sampled <- b.holder[,1:2] %*% gammafl.samples[1:2, 1]
+sampled <- end.holder[,1:2] %*% gammafl.samples[1:2, 1]
 trued <- as.matrix(c(bs.nonlinear[index.holder[1,1], 2:9] %*% gamma.samples[1:8, 1], bs.nonlinear[index.holder[1,2], 2:9] %*% gamma.samples[1:8, 1]), nrow = 2)
 sampled + trued
 
