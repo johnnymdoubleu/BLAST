@@ -16,10 +16,10 @@ library(cmdstanr)
 # library(ggplotify)
 
 #Scenario 1
-# set.seed(2)
-set.seed(36)
+set.seed(10)
+# set.seed(36)
 
-n <- 5000
+n <- 15000
 psi <- 10
 threshold <- 0.95
 p <- 5
@@ -190,7 +190,7 @@ model {
         target += -1*log(1-burr_cdf(u, alpha[i]));
     }
     target += gamma_lpdf(lambda1 | 1, 10);
-    target += gamma_lpdf(lambda2 | 0.1, 100);
+    target += gamma_lpdf(lambda2 | 0.1, 10);
     target += normal_lpdf(theta[1] | 0, 100);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
     target += (newp * log(lambda1) + (p * psi * log(lambda2)));
@@ -395,7 +395,7 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
         axis.title.x = element_text(size = 35),
         axis.text = element_text(size=18))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_smooth_sc4-wi.pdf"), width=10.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_smooth_sc4-wi.pdf"), width=12.5, height = 15)
 data.linear <- data.frame("x"=newx,
                           "true" = as.vector(f.linear.new),
                           "post.mean" = as.vector(g.linear.mean),
@@ -431,7 +431,7 @@ ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) +
         strip.placement = "outside",
         axis.title.x = element_text(size = 35),
         axis.text = element_text(size=18))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_linear_sc4-wi.pdf"), width=10.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_linear_sc4-wi.pdf"), width=12.5, height = 15)
 
 data.nonlinear <- data.frame("x"=newx,
                           "true" = as.vector(f.nonlinear.new),
@@ -485,7 +485,7 @@ ggplot(data.scenario, aes(x=newx)) +
   geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1.5) +
   scale_color_manual(values=c("steelblue", "red")) + 
   scale_fill_manual(values=c("steelblue"), name = "") +
-  theme_minimal(base_size = 30) + ylim(0.5, 3.2) +
+  theme_minimal(base_size = 30) + ylim(0.5, 2.5) +
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 18))
