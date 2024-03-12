@@ -479,4 +479,4 @@ print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha 
 
 save(alpha.container, newgsmooth.container, file = (paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_sc1.Rdata")))
 # total.iter <- 100
-# load(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_sc1.Rdata"))
+load(paste0("./simulation/results/MC-Scenario_A/2024-02-04_",total.iter,"_MC_sc1.Rdata"))

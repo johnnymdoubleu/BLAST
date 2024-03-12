@@ -423,7 +423,7 @@ ggplot(data.scenario, aes(x=x)) +
   geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values = c("steelblue")) + 
-  scale_y_log10() + 
+  # scale_y_log10() + 
   guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) +
   theme_minimal(base_size = 30) +
