@@ -384,7 +384,7 @@ if(total.iter <= 50){
     # plt <- plt + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
   }
 } else{
-  for(i in 1:50){
+  for(i in 1:total.iter){
     plt <- plt + geom_line(aes(y = .data[[names(newgsmooth.container)[i]]]), alpha = 0.2, linewidth = 0.7)
     # plt <- plt + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
   }
@@ -404,7 +404,7 @@ print(plt +
                 strip.text = element_blank(),
                 axis.text = element_text(size = 20)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_sc4-wi.pdf"), width=12.5, height = 15)
+ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_sc4-wi.pdf"), width=12.5, height = 15)
 
 # newgl.container$x <- seq(0,1, length.out = n)
 # newgl.container$true <- as.vector(f.linear.new)
