@@ -257,17 +257,17 @@ ggplot(df.theta, aes(x = covariate, y=m, color = covariate)) + ylab("") + xlab('
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_point(size = 5) + geom_point(aes(y = true), color="red", size = 4) +
   geom_errorbar(aes(ymin = l, ymax = u), width = 0.3, linewidth =1.2) + 
-  scale_x_discrete(labels = c(expression(bold(theta[0])),
-                              expression(bold(theta[1])),
-                              expression(bold(theta[2])),
-                              expression(bold(theta[3])),
-                              expression(bold(theta[4])),
-                              expression(bold(theta[5])),
-                              expression(bold(theta[6])),
-                              expression(bold(theta[7])),
-                              expression(bold(theta[8])),
-                              expression(bold(theta[9])),
-                              expression(bold(theta[10])))) + 
+  scale_x_discrete(labels = c(expression(bold(beta[0])),
+                              expression(bold(beta[1])),
+                              expression(bold(beta[2])),
+                              expression(bold(beta[3])),
+                              expression(bold(beta[4])),
+                              expression(bold(beta[5])),
+                              expression(bold(beta[6])),
+                              expression(bold(beta[7])),
+                              expression(bold(beta[8])),
+                              expression(bold(beta[9])),
+                              expression(bold(beta[10])))) + 
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 20),
           legend.text.align = 0,
@@ -278,7 +278,7 @@ ggplot(df.theta, aes(x = covariate, y=m, color = covariate)) + ylab("") + xlab('
           plot.margin = margin(0,0,0,-20),
           axis.text.x = element_text(hjust=0.35),
           axis.text = element_text(size = 28))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_theta_sc1-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_beta_sc1-wi.pdf"), width=10, height = 7.78)
 
 df.gamma <- data.frame("seq" = seq(1, (psi*p)), 
                   "true" = as.vector(gamma.origin),
