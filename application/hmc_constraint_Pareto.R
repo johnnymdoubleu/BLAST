@@ -47,7 +47,7 @@ Y <- df.long$measurement[!is.na(df.long$measurement)]
 summary(Y) #total burnt area
 length(Y)
 psi <- 10
-threshold <- 0.99
+threshold <- 0.95
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
 # x.scale <- x.scale[which(y>quantile(y, threshold)),]
@@ -364,7 +364,7 @@ fit1 <- stan(
     # init_r = 1,
     chains = 3,             # number of Markov chains
     # warmup = 1000,          # number of warmup iterations per chain
-    iter = 2500,            # total number of iterations per chain
+    iter = 2000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
     refresh = 500           # no progress shown
 )
