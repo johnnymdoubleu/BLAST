@@ -14,7 +14,7 @@ library(rmutil)
 
 # Scenario D
 
-total.iter <- 50
+total.iter <- 250
 
 n <- 15000
 psi <- 10
@@ -257,7 +257,7 @@ alpha.container$q1 <- apply(alpha.lower.container[,1:total.iter], 1, quantile, c
 alpha.container$q3 <- apply(alpha.upper.container[,1:total.iter], 1, quantile, c(.5))
 alpha.container <- as.data.frame(alpha.container)
 
-plt <- ggplot(data = alpha.container, aes(x = x)) + ylab(expression(alpha(c*bold("1")))) + xlab(expression(c)) + labs(col = "")
+plt <- ggplot(data = alpha.container, aes(x = x)) + ylab(expression(alpha(bold("c"),"...",bold("c")))) + xlab(expression(c)) + labs(col = "")
 if(total.iter <= 50){
   for(i in 1:total.iter){
     plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.2, linewidth = 0.7)
@@ -269,17 +269,18 @@ if(total.iter <= 50){
   }
 }
 
-print(plt + geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) + ylim(0.5, 2.5) +
+print(plt + 
+        #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) + ylim(0.5, 2.5) +
         geom_line(aes(y=true, col = "True"), linewidth = 2) + 
         geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5, linetype = 2) +
         scale_fill_manual(values=c("steelblue"), name = "") +
         scale_color_manual(values = c("steelblue", "red"))+
         guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) +
-        theme_minimal(base_size = 30) +
+        theme_minimal(base_size = 30) + ylim(0,2.4)+
         theme(legend.position = "none",
                 strip.text = element_blank(),
-                axis.text = element_text(size = 35)))
+                axis.text = element_text(size = 20)))
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_sc4-wi.pdf"), width=10, height = 7.78)
 
@@ -388,19 +389,19 @@ if(total.iter <= 50){
     # plt <- plt + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
   }
 }
-print(plt + geom_line(aes(y=true, col = "True"), linewidth = 2) + 
+print(plt + 
+        geom_line(aes(y=true, col = "True"), linewidth = 2) + 
         geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5, linetype = 2) + 
-        facet_wrap(covariate ~ ., scales = "free_x", nrow = 5,
-                    labeller = label_parsed, strip.position = "left") +
         ylim(-0.23, 0.2) +
+        facet_grid(covariate ~ ., scales = "free_x", switch = "y", 
+        labeller = label_parsed) +
         scale_color_manual(values = c("steelblue", "red"))+
         guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) +
         theme_minimal(base_size = 30) +
         theme(legend.position = "none",
                 plot.margin = margin(0,0,0,-20),
-                strip.text.y = element_text(size = 25, colour = "black", angle = 0, face = "bold.italic"),
-                strip.placement = "outside",
+                strip.text = element_blank(),
                 axis.text = element_text(size = 20)))
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_sc4-wi.pdf"), width=12.5, height = 15)
@@ -481,4 +482,4 @@ print(plt + geom_line(aes(y=true, col = "True"), linewidth = 2) +
 
 # save(alpha.container, newgsmooth.container, file = (paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_sc4.Rdata")))
 # total.iter <- 250
-# load(paste0("./simulation/results/MC-Scenario_D/",Sys.Date(),"_",total.iter,"_MC_sc4.Rdata"))
+# load(paste0("./simulation/results/MC-Scenario_D/2024-02-12_",total.iter,"_MC_sc4.Rdata"))

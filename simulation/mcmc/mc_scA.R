@@ -242,7 +242,7 @@ alpha.container$q1 <- apply(alpha.lower.container[,1:total.iter], 1, quantile, c
 alpha.container$q3 <- apply(alpha.upper.container[,1:total.iter], 1, quantile, c(.5))
 alpha.container <- as.data.frame(alpha.container)
 
-plt <- ggplot(data = alpha.container, aes(x = x)) + ylab(expression(alpha(c*bold("1")))) + xlab(expression(c)) + labs(col = "")
+plt <- ggplot(data = alpha.container, aes(x = x)) + ylab(expression(alpha(bold("c"),"...",bold("c")))) + xlab(expression(c)) + labs(col = "")
 if(total.iter <= 50){
   for(i in 1:total.iter){
     plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.2, linewidth = 0.7)
@@ -253,17 +253,18 @@ if(total.iter <= 50){
     plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.2, linewidth = 0.7)
   }
 }
-print(plt + geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) + ylim(0.5, 2.5) + 
+print(plt +
+        # geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) + ylim(0.5, 2.5) + 
         geom_line(aes(y=true, col = "True"), linewidth = 2) + 
         geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5, linetype = 2) +
         scale_fill_manual(values=c("steelblue"), name = "") +
         scale_color_manual(values = c("steelblue", "red"))+
         guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) +
-        theme_minimal(base_size = 30) +
+        theme_minimal(base_size = 30) + ylim(0, 2.4) +
         theme(legend.position = "none",
                 strip.text = element_blank(),
-                axis.text = element_text(size = 35)))
+                axis.text = element_text(size = 20)))
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_sc1-wi.pdf"), width=10, height = 7.78)
 
@@ -367,7 +368,7 @@ if(total.iter <= 50){
     # plt <- plt + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
   }
 } else{
-  for(i in 1:50){
+  for(i in 1:total.iter){
     plt <- plt + geom_line(aes(y = .data[[names(newgsmooth.container)[i]]]), alpha = 0.2, linewidth = 0.7)
     # plt <- plt + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
   }
@@ -392,7 +393,7 @@ print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha 
                 strip.placement = "outside",
                 axis.text = element_text(size = 20)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_sc1-wi.pdf"), width=12.5, height = 15)                
+ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_sc1-wi.pdf"), width=12.5, height = 15)                
 
 
 # newgl.container$x <- seq(0,1, length.out = n)
@@ -479,4 +480,4 @@ print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha 
 
 save(alpha.container, newgsmooth.container, file = (paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_sc1.Rdata")))
 # total.iter <- 100
-load(paste0("./simulation/results/MC-Scenario_A/2024-02-04_",total.iter,"_MC_sc1.Rdata"))
+# load(paste0("./simulation/results/MC-Scenario_A/2024-02-04_",total.iter,"_MC_sc1.Rdata"))
