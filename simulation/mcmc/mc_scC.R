@@ -245,7 +245,7 @@ alpha.container$q1 <- apply(alpha.lower.container[,1:total.iter], 1, quantile, c
 alpha.container$q3 <- apply(alpha.upper.container[,1:total.iter], 1, quantile, c(.5))
 alpha.container <- as.data.frame(alpha.container)
 
-plt <- ggplot(data = alpha.container, aes(x = x)) + ylab(expression(alpha(bold("c"),"...",bold("c")))) + xlab(expression(c)) + labs(col = "")
+plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab("")#+ ylab(expression(alpha(bold("c"),"...",bold("c"))))
 if(total.iter <= 50){
   for(i in 1:total.iter){
     plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.2, linewidth = 0.7)
@@ -268,7 +268,7 @@ print(plt +
         theme_minimal(base_size = 30) + ylim(0, 2.4) +
         theme(legend.position = "none",
                 strip.text = element_blank(),
-                axis.text = element_text(size = 20)))
+                axis.text = element_text(size = 18)))
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_sc3-wi.pdf"), width=10, height = 7.78)
 
@@ -394,9 +394,9 @@ print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha 
         theme(legend.position = "none",
                 plot.margin = margin(0,0,0,-20),
                 strip.text = element_blank(),
-                axis.text = element_text(size = 20)))
+                axis.text = element_text(size = 18)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_sc3-wi.pdf"), width=12.5, height = 15) 
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_sc3-wi.pdf"), width=11.5, height = 15) 
 
 # newgl.container$x <- seq(0,1, length.out = n)
 # newgl.container$true <- as.vector(f.linear.new)
@@ -482,6 +482,6 @@ print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha 
 
 save(alpha.container, newgsmooth.container, file = (paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_sc3.Rdata")))
 # total.iter <- 250
-load(paste0("./simulation/results/MC-Scenario_C/",Sys.Date(),"_",total.iter,"_MC_sc3.Rdata"))
+load(paste0("./simulation/results/MC-Scenario_C/2024-02-13_",total.iter,"_MC_sc3.Rdata"))
 
 

@@ -24,10 +24,10 @@ library(ggh4x)
 # library(ggplotify)
 
 #Scenario 1
-set.seed(9)
-# set.seed(36)
+# set.seed(9)
+set.seed(36)
 
-n <- 5000
+n <- 15000
 psi <-10
 threshold <- 0.95
 p <- 5
@@ -357,12 +357,14 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
   geom_line(aes(y=true, colour = "True"), linewidth=2) + 
   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
   ylab("") + xlab(expression(c)) +
-  facet_wrap(covariates ~ ., scales = "free_x", nrow = 5,
-              labeller = label_parsed, strip.position = "left") + 
+#   facet_wrap(covariates ~ ., scales = "free_x", nrow = 5,
+#               labeller = label_parsed, strip.position = "left") + 
+  facet_grid(covariates ~ ., scales = "free_x", switch = "y", 
+              labeller = label_parsed) +                  
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values=c("steelblue", "red")) + 
   guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) + ylim(-1, 0.7) +
+          fill = guide_legend(order = 1)) + ylim(-0.7, 0.7) +
   # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 15),
@@ -372,12 +374,11 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
         legend.margin=margin(t = 1, unit='cm'),
         legend.box.margin=margin(-10,0,-10,0),
         plot.margin = margin(0,0,0,-20),
-        strip.text.y = element_text(size = 25, colour = "black", angle = 0, face = "bold.italic"),
-        strip.placement = "outside",
+        strip.text = element_blank(),
         axis.title.x = element_text(size = 35),
         axis.text = element_text(size=18))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_smooth_sc3-wi.pdf"), width=12.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_smooth_sc3-wi.pdf"), width=11.5, height = 15)
 
 data.linear <- data.frame("x"=newx,
                           "true" = as.vector(f.linear.new),
@@ -463,14 +464,14 @@ data.scenario <- data.frame("x" = c(1:n),
                             "q1" = (newalpha.samples[,4]),
                             "q3" = (newalpha.samples[,6]))                         
 
-ggplot(data.scenario, aes(x=newx)) + 
-  ylab(expression(alpha(c*bold("1")))) + xlab(expression(c)) + labs(col = "") +
+ggplot(data.scenario, aes(x=newx)) + #ylab(expression(alpha(c*bold("1")))) + 
+  ylab("") + xlab(expression(c)) + labs(col = "") +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2) + 
   geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1.5) +
   scale_color_manual(values=c("steelblue", "red")) + 
   scale_fill_manual(values=c("steelblue"), name = "") +
-  theme_minimal(base_size = 30) + ylim(0.5, 3.2) +
+  theme_minimal(base_size = 30) + ylim(0, 2.4) +
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 18))
@@ -512,5 +513,5 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
   coord_fixed(xlim = c(-3, 3),  
               ylim = c(-3, 3))
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_qqplot_sc3-wi.pdf"), width=10, height = 7.78)
-cat("sc3_Alp Done")
+cat("Scenario C Done")
 

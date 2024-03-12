@@ -264,7 +264,7 @@ print(plt +
         theme_minimal(base_size = 30) + ylim(0, 2.4) +
         theme(legend.position = "none",
                 strip.text = element_blank(),
-                axis.text = element_text(size = 20)))
+                axis.text = element_text(size = 18)))
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_sc1-wi.pdf"), width=10, height = 7.78)
 
@@ -376,11 +376,11 @@ if(total.iter <= 50){
 print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
         geom_line(aes(y=true, col = "True"), linewidth = 2) + 
         geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5, linetype = 2) + 
-        facet_wrap(covariate ~ ., scales = "free_x", nrow = 5,
-                    labeller = label_parsed, strip.position = "left") +
+        # facet_wrap(covariate ~ ., scales = "free_x", nrow = 5,
+        #             labeller = label_parsed, strip.position = "left") +
         ylim(-0.23, 0.2) +
-        # facet_grid(covariate ~ ., scales = "free_x", switch = "y",
-        #             labeller = label_parsed) +        
+        facet_grid(covariate ~ ., scales = "free_x", switch = "y",
+                    labeller = label_parsed) +        
         # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
         #scale_fill_manual(values=c("steelblue"), name = "") +
         scale_color_manual(values = c("steelblue", "red"))+
@@ -391,9 +391,9 @@ print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha 
                 plot.margin = margin(0,0,0,-20),
                 strip.text.y = element_text(size = 25, colour = "black", angle = 0, face = "bold.italic"),
                 strip.placement = "outside",
-                axis.text = element_text(size = 20)))
+                axis.text = element_text(size = 18)))
 
-ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_sc1-wi.pdf"), width=12.5, height = 15)                
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_sc1-wi.pdf"), width=12.5, height = 15)                
 
 
 # newgl.container$x <- seq(0,1, length.out = n)
