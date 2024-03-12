@@ -370,10 +370,10 @@ data.smooth <- data.frame("x"=newx,
                           "replicate" = gl(p, n, (p*n), labels = c("x[1]", "x[2]", "x[3]", "x[4]", "x[5]", "x[6]")))
 
 ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) + 
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+#   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   geom_line(aes(y=true, colour = "True"), linewidth=2) + 
-  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
+  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1.8) + 
   ylab("") + xlab(expression(c)) +
 #   facet_wrap(covariates ~ ., scales = "free_x", nrow = 5,
 #               labeller = label_parsed, strip.position = "left") + 
@@ -397,6 +397,7 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
         axis.text = element_text(size=18))
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_smooth_sc4-wi.pdf"), width=11.5, height = 15)
+
 data.linear <- data.frame("x"=newx,
                           "true" = as.vector(f.linear.new),
                           "post.mean" = as.vector(g.linear.mean),
