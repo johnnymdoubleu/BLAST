@@ -21,11 +21,11 @@ library(cmdstanr)
 library(ggh4x)
 
 #Scenario 1
-# set.seed(10)
-set.seed(6)
+set.seed(10)
+# set.seed(6)
 
 
-n <- 5000
+n <- 15000
 psi <- 10
 threshold <- 0.95
 p <- 5
