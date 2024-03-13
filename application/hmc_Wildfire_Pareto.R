@@ -90,8 +90,8 @@ fwi.index$month <- factor(format(as.Date(substr(cov.long$...1[missing.values],1,
                             levels = c("Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"))
 fwi.index$day <- as.numeric(fwi.index$day)
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
-fwi <- cbind("Burnt.Area"=Y, fwi.index)
-save(fwi, file = (paste0("./BRSTIR/application/Portugal_ForestWeatherIndex.Rdata")))
+wildfire <- cbind("Burnt_Area"=Y, fwi.index)
+save(wildfire, file = (paste0("./BRSTIR/application/Portugal_Wildfire.Rdata")))
 fwi.scaled <- fwi.scaled[which(Y>u),]
 # fwi.scaled <- as.data.frame(scale(fwi.scaled))
 
