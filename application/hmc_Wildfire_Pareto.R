@@ -85,11 +85,13 @@ for(i in 1:length(cov)){
     fwi.scaled[,i] <- cov.long$measurement[missing.values]
 }
 # fwi.index$date <- 
-fwi.index$date <- substr(cov.long$...1[missing.values],9,10)
+fwi.index$day <- substr(cov.long$...1[missing.values],9,10)
 fwi.index$month <- factor(format(as.Date(substr(cov.long$...1[missing.values],1,10), "%Y-%m-%d"),"%b"),
                             levels = c("Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"))
-fwi.index$date <- as.numeric(fwi.index$date)
+fwi.index$day <- as.numeric(fwi.index$day)
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
+fwi <- cbind("Burnt.Area"=Y, fwi.index)
+save(fwi, file = (paste0("./BRSTIR/application/Portugal_ForestWeatherIndex.Rdata")))
 fwi.scaled <- fwi.scaled[which(Y>u),]
 # fwi.scaled <- as.data.frame(scale(fwi.scaled))
 
