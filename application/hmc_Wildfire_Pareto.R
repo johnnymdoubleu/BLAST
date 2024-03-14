@@ -91,7 +91,7 @@ fwi.index$month <- factor(format(as.Date(substr(cov.long$...1[missing.values],1,
 fwi.index$day <- as.numeric(fwi.index$day)
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 wildfire <- cbind("Burnt_Area"=Y, fwi.index)
-save(wildfire, file = (paste0("./BRSTIR/application/Portugal_Wildfire.Rdata")))
+# save(wildfire, file = (paste0("./BRSTIR/application/Portugal_Wildfire.Rdata")))
 fwi.scaled <- fwi.scaled[which(Y>u),]
 # fwi.scaled <- as.data.frame(scale(fwi.scaled))
 
@@ -184,7 +184,7 @@ fwi.scaled <- as.data.frame(sapply(fwi.scaled, FUN = range01))
 
 df.extreme <- cbind(y, fwi.scaled)
 df.extreme <- as.data.frame(cbind(month = fwi.index$month[which(Y>u)], df.extreme))
-# ggplot(df.extreme, aes(x=month, y=y, color=month)) + geom_point(size=6) + theme_minimal() +
+# ggplot(wildfire, aes(x=month, y=Burnt_Area, color=month)) + geom_point(size=6) + theme_minimal() +
 #     theme(plot.title = element_text(hjust = 0.5, size = 20),
 #         legend.title = element_blank(),
 #         legend.text = element_text(size=20),
