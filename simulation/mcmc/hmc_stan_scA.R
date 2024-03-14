@@ -467,7 +467,7 @@ data.scenario <- data.frame("x" = c(1:n),
                             # "q3" = sort(alpha.smooth.q3))
 
 ggplot(data.scenario, aes(x=newx)) + 
-  ylab(expression(alpha(bold("c"),"...",bold("c")))) + xlab(expression(c)) + labs(col = "") +
+  ylab(expression(alpha(c,...,c)))) + xlab(expression(c)) + labs(col = "") +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2) + 
   geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1.5) +
