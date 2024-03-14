@@ -139,7 +139,6 @@ write("// Stan model for BRSTIR Pareto Uncorrelated Samples
 data {
     int <lower=1> n; // Sample size
     int <lower=1> p; // regression coefficient size
-    int <lower=1> newp; 
     int <lower=1> psi; // splines coefficient size
     real <lower=0> u; // large threshold value
     matrix[n,p] bsLinear; // fwi dataset
@@ -152,16 +151,16 @@ data {
     array[p, 2] int indexFL;
 }
 parameters {
-    vector[newp] theta; // linear predictor
-    vector[(psi-2)] gammaTemp[p]; // splines coefficient
+    vector[(p+1)] theta; // linear predictor
+    vector[(psi-2)] gammaTemp[p]; // constraint splines coefficient from 2 to psi-1
     real <lower=0> lambda1; // lasso penalty
     real <lower=0> lambda2; // group lasso penalty
-    real sigma; //
+    real sigma;
     vector[p] tau;
 }
 transformed parameters {
-    array[n] real <lower=0> alpha; // tail index
-    vector[psi] gamma[p]; // constraint gamma from 1 to psi
+    array[n] real <lower=0> alpha; // covariate-adjusted tail index
+    vector[psi] gamma[p]; // splines coefficient
     vector[2] gammaFL[p];
     matrix[n, p] gnl; // nonlinear component
     matrix[2, p] subgnl;
@@ -200,12 +199,11 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 1, 10);
-    target += gamma_lpdf(lambda2 | 0.1, 0.1);
+    target += gamma_lpdf(lambda1 | 0.01, 0.01);
+    target += gamma_lpdf(lambda2 | 0.001, 0.001);
     target += normal_lpdf(theta[1] | 0, 1);
-    // target += normal_lpdf(theta[1] | log(1.2), 0.01) target += double_exponential_lpdf(theta[1] | 0, lambda1)
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
-    target += ((newp * log(lambda1)) + (p * (psi-2) * log(lambda2)));
+    target += ((p * log(lambda1)) + (p * psi * log(lambda2)));
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, lambda2/sqrt(2));
@@ -216,10 +214,10 @@ model {
 , "model_simulation_sc1_constraint.stan")
 
 data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, 
-                    atau = ((psi+1)/2), newp = (p+1), 
+                    atau = ((psi+1)/2), basisFL = basis.holder,
                     indexFL = index.holder, 
                     bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
-                    xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear, basisFL = basis.holder)
+                    xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear)
 
 init.alpha <- list(list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c((psi-2), p)),
                         theta = rep(0, (p+1)),
