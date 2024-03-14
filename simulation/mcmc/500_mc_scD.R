@@ -1,26 +1,19 @@
 library(npreg)
-library(Pareto)
 suppressMessages(library(tidyverse))
-library(JOPS)
-library(readxl)
-library(gridExtra)
-library(colorspace)
-library(corrplot)
 library(ReIns)
-library(evir)
 library(rstan)
-library(cmdstanr)
 
-# Scenario A
-total.iter <- 2
+# Scenario D
+total.iter <- 500
 
-n <- 5000
+n <- 15000
 psi <- 10
 threshold <- 0.95
 p <- 5
 newp <- p+1
 no.theta <- 1
 
+# Function to generate Gaussian copula
 C <- diag(p)
 ## Generate sample
 gamma.origin <- matrix(, nrow = psi, ncol = p)
@@ -40,11 +33,27 @@ for(j in 1:p){
 
 theta.origin <- c(0.5, 0, -0.2, -0.2, 0, 0)
 
-write("// Stan model for BRSTIR Pareto Uncorrelated Samples
+write("// Stan model for BRSTIR Burr Uncorrelated Samples
+functions{
+    real burr_lpdf(real y, real c){
+        // Burr distribution log pdf
+        return log(c)+((c-1)*log(y)) - ((1+1)*log1p(y^c));
+    }
+
+    real burr_cdf(real y, real c){
+        // Bur distribution cdf
+        return 1 - (1 + y^c)^(-1);
+    }    
+
+    real burr_rng(real c){
+        return ((1-uniform_rng(0,1))^(-1)-1)^(1/c);
+    }
+}
 
 data {
     int <lower=1> n; // Sample size
     int <lower=1> p; // regression coefficient size
+    int <lower=1> newp; 
     int <lower=1> psi; // splines coefficient size
     real <lower=0> u; // large threshold value
     matrix[n,p] bsLinear; // fwi dataset
@@ -56,7 +65,7 @@ data {
 }
 
 parameters {
-    vector[(p+1)] theta; // linear predictor
+    vector[newp] theta; // linear predictor
     array[p] vector[psi] gamma; // splines coefficient
     real <lower=0> lambda1; // lasso penalty
     real <lower=0> lambda2; // group lasso penalty
@@ -90,10 +99,11 @@ transformed parameters {
 model {
     // likelihood
     for (i in 1:n){
-        target += pareto_lpdf(y[i] | u, alpha[i]);
+        target += burr_lpdf(y[i] | alpha[i]); // pareto_lpdf(y[i] | u, alpha[i]) burr_lpdf(y[i] | alpha[i], 1) student_t_lpdf(y[i] | alpha[i], 0, 1)
+        target += -1*log(1-burr_cdf(u, alpha[i]));
     }
-    target += gamma_lpdf(lambda1 | 0.01, 0.01);
-    target += gamma_lpdf(lambda2 | 0.01, 0.01);
+    target += gamma_lpdf(lambda1 | 0.1, 0.1);
+    target += gamma_lpdf(lambda2 | 0.1, 0.1);
     target += normal_lpdf(theta[1] | 0, 100);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
     target += (newp * log(lambda1) + (p * psi * log(lambda2)));
@@ -104,7 +114,7 @@ model {
     }
 }
 "
-, "model_simulation_scA.stan")
+, "model_simulation_scD.stan")
 
 newgsmooth.container <- as.data.frame(matrix(, nrow = (p*(n*(1-threshold))), ncol = total.iter))
 alpha.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total.iter))
@@ -132,7 +142,7 @@ for(iter in 1:total.iter){
     alp.origin <- y.origin <- NULL
     for(i in 1:n){
         alp.origin[i] <- exp(theta.origin[1] + sum(g.origin[i,]))
-        y.origin[i] <- rPareto(1, 1, alpha = alp.origin[i])
+        y.origin[i] <- rburr(1, m=1, s=alp.origin[i], f=1)
     }
 
     u <- quantile(y.origin, threshold)
@@ -158,7 +168,7 @@ for(iter in 1:total.iter){
     g.nonlinear.new <- g.linear.new <- g.new <- g.nonlinear.origin <- g.linear.origin <- g.origin <- matrix(, nrow = n, ncol = p)
     for(j in 1:p){
         g.linear.origin[,j] <- bs.linear[, j] * theta.origin[j+1]
-        g.nonlinear.origin[,j] <- bs.nonlinear[1:n,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
+        g.nonlinear.origin[,j] <- bs.nonlinear[1:n, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
         g.origin[, j] <- g.linear.origin[,j] + g.nonlinear.origin[,j]
         g.linear.new[,j] <- xholder.linear[, j] * theta.origin[j+1]
         g.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
@@ -191,7 +201,7 @@ for(iter in 1:total.iter){
                             lambda1 = 0.1, lambda2 = 0.01))
 
     fit1 <- stan(
-        file = "model_simulation_scA.stan",  # Stan program
+        file = "model_simulation_scD.stan",  # Stan program
         data = data.stan,    # named list of data
         init = init.alpha,      # initial value
         chains = 3,             # number of Markov chains
@@ -233,5 +243,4 @@ newgsmooth.container$mean <- rowMeans(newgsmooth.container[,1:total.iter])
 newgsmooth.container$covariate <- gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]"))
 newgsmooth.container <- as.data.frame(newgsmooth.container)
          
-save(alpha.container, newgsmooth.container, file = (paste0("./",Sys.Date(),"_",total.iter,"_MC_scA.Rdata")))
-
+save(alpha.container, newgsmooth.container, file = (paste0("./",Sys.Date(),"_",total.iter,"_MC_scD.Rdata")))

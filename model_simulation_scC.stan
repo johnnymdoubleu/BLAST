@@ -53,7 +53,7 @@ model {
         target += -1*log(1-student_t_cdf(u, alpha[i], 0, 1));
     }
     target += gamma_lpdf(lambda1 | 0.1, 0.1);
-    target += gamma_lpdf(lambda2 | 0.01, 0.01);
+    target += gamma_lpdf(lambda2 | 0.1, 0.1);
     target += normal_lpdf(theta[1] | 0, 100);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
     target += (newp * log(lambda1) + (p * psi * log(lambda2)));

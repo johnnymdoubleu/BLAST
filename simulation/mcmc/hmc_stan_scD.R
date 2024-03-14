@@ -189,8 +189,8 @@ model {
         target += burr_lpdf(y[i] | alpha[i]); // pareto_lpdf(y[i] | u, alpha[i]) burr_lpdf(y[i] | alpha[i], 1) student_t_lpdf(y[i] | alpha[i], 0, 1)
         target += -1*log(1-burr_cdf(u, alpha[i]));
     }
-    target += gamma_lpdf(lambda1 | 1, 10);
-    target += gamma_lpdf(lambda2 | 0.1, 10);
+    target += gamma_lpdf(lambda1 | 0.1, 0.1);
+    target += gamma_lpdf(lambda2 | 0.1, 0.1);
     target += normal_lpdf(theta[1] | 0, 100);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
     target += (newp * log(lambda1) + (p * psi * log(lambda2)));

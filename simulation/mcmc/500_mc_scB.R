@@ -1,8 +1,6 @@
 library(npreg)
 library(Pareto)
 suppressMessages(library(tidyverse))
-library(JOPS)
-library(readxl)
 library(gridExtra)
 library(colorspace)
 library(corrplot)
@@ -11,17 +9,22 @@ library(evir)
 library(rstan)
 library(cmdstanr)
 
-# Scenario A
-total.iter <- 2
+# Scenario B
+total.iter <- 500
 
-n <- 5000
+n <- 15000
 psi <- 10
 threshold <- 0.95
 p <- 5
 newp <- p+1
 no.theta <- 1
 
-C <- diag(p)
+# Function to generate Gaussian copula
+C <- matrix(c(1, 0.3, 0.5, 0.3, 0.3,
+            0.3, 1, 0.95, 0.4, 0.4,
+            0.5, 0.95, 1, 0.5, 0.1,
+            0.3, 0.4, 0.5 , 1, 0.5,
+            0.3, 0.4, 0.5, 0.5, 1), nrow = p)
 ## Generate sample
 gamma.origin <- matrix(, nrow = psi, ncol = p)
 for(j in 1:p){
@@ -47,9 +50,9 @@ data {
     int <lower=1> p; // regression coefficient size
     int <lower=1> psi; // splines coefficient size
     real <lower=0> u; // large threshold value
-    matrix[n,p] bsLinear; // fwi dataset
+    matrix[n,p] bsLinear; // 
     matrix[n, (psi*p)] bsNonlinear; // thin plate splines basis
-    matrix[n,p] xholderLinear; // fwi dataset
+    matrix[n,p] xholderLinear; // 
     matrix[n, (psi*p)] xholderNonlinear; // thin plate splines basis    
     vector[n] y; // extreme response
     real <lower=0> atau;
@@ -104,7 +107,7 @@ model {
     }
 }
 "
-, "model_simulation_scA.stan")
+, "model_simulation_scB.stan")
 
 newgsmooth.container <- as.data.frame(matrix(, nrow = (p*(n*(1-threshold))), ncol = total.iter))
 alpha.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total.iter))
@@ -191,7 +194,7 @@ for(iter in 1:total.iter){
                             lambda1 = 0.1, lambda2 = 0.01))
 
     fit1 <- stan(
-        file = "model_simulation_scA.stan",  # Stan program
+        file = "model_simulation_scB.stan",  # Stan program
         data = data.stan,    # named list of data
         init = init.alpha,      # initial value
         chains = 3,             # number of Markov chains
@@ -233,5 +236,5 @@ newgsmooth.container$mean <- rowMeans(newgsmooth.container[,1:total.iter])
 newgsmooth.container$covariate <- gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]"))
 newgsmooth.container <- as.data.frame(newgsmooth.container)
          
-save(alpha.container, newgsmooth.container, file = (paste0("./",Sys.Date(),"_",total.iter,"_MC_scA.Rdata")))
+save(alpha.container, newgsmooth.container, file = (paste0("./",Sys.Date(),"_",total.iter,"_MC_scB.Rdata")))
 
