@@ -21,8 +21,8 @@ library(cmdstanr)
 library(ggh4x)
 
 #Scenario 1
-# set.seed(10)
-set.seed(6)
+set.seed(10)
+# set.seed(6)
 
 
 n <- 5000
@@ -199,9 +199,9 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 0.01, 0.01);
-    target += gamma_lpdf(lambda2 | 0.001, 0.001);
-    target += normal_lpdf(theta[1] | 0, 1);
+    target += gamma_lpdf(lambda1 | 0.1, 0.1);
+    target += gamma_lpdf(lambda2 | 0.1, 0.1);
+    target += normal_lpdf(theta[1] | 0, 100);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     target += ((p * log(lambda1)) + (p * psi * log(lambda2)));
     for (j in 1:p){
@@ -223,11 +223,11 @@ init.alpha <- list(list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c((psi-2), p)
                         theta = rep(0, (p+1)),
                         tau = rep(0.1, p), sigma = 0.1, 
                         lambda1 = 0.01, lambda2 = 0.01),
-                  list(gammaTemp = array(rep(0.02, ((psi-2)*p)), dim=c((psi-2), p)),
+                  list(gammaTemp = array(rep(0.2, ((psi-2)*p)), dim=c((psi-2), p)),
                         theta = rep(0.01, (p+1)),
                         tau = rep(0.01, p), sigma = 0.001,
                         lambda1 = 0.1, lambda2 = 0.001),
-                  list(gammaTemp = array(rep(0.01, ((psi-2)*p)), dim=c((psi-2), p)),
+                  list(gammaTemp = array(rep(0.1, ((psi-2)*p)), dim=c((psi-2), p)),
                         theta = rep(0.05, (p+1)),
                         tau = rep(0.01, p), sigma = 0.01,
                         lambda1 = 1, lambda2 = 0.01))
