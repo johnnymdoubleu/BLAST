@@ -72,7 +72,7 @@ for(j in 1:p){
 alp.origin <- y.origin <- NULL
 for(i in 1:n){
     alp.origin[i] <- exp(theta.origin[1] + sum(f.origin[i,]))
-    y.origin[i] <- rPareto(1, 1, alpha = alp.origin[i])
+    y.origin[i] <- rPareto(1, 1, alpha = alp.origin[i]) 
 }
 
 u <- quantile(y.origin, threshold)
@@ -85,9 +85,17 @@ n <- length(y.origin)
 xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
 newx <- seq(0, 1, length.out=n)
 xholder <- bs.x <- matrix(, nrow = n, ncol = p)
+end.holder <- basis.holder <- matrix(, nrow = 2, ncol =0)
+index.holder <- matrix(, nrow = 0, ncol = 2)
+for(i in 1:p){
+  index.holder <- rbind(index.holder, 
+                      matrix(c(which.min(x.origin[,i]),
+                              which.max(x.origin[,i])), ncol=2))
+}
+
 for(i in 1:p){
     # xholder[,i] <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = n)  
-    # test.knot <- seq(min(xholder[,i]), max(xholder[,i]), length.out = psi)  
+    # test.knot <- seq(min(xholder[,i]), max(xholder[,i]), length.out = psi)
     xholder[,i] <- seq(0, 1, length.out = n)  
     test.knot <- seq(0, 1, length.out = psi)
     splines <- basis.tps(xholder[,i], test.knot, m=2, rk=FALSE, intercept = FALSE)
@@ -95,6 +103,18 @@ for(i in 1:p){
     xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
     knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)  
     tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
+    basis.holder <- cbind(basis.holder, 
+            solve(matrix(c(tps[index.holder[i,1], no.theta+1],
+                    tps[index.holder[i,1], no.theta+psi],
+                    tps[index.holder[i,2], no.theta+1],
+                    tps[index.holder[i,2], no.theta+psi]), 
+                    nrow = 2, ncol = 2)))
+    end.holder <- cbind(end.holder, 
+                matrix(c(tps[index.holder[i,1], no.theta+1],
+                    tps[index.holder[i,1], no.theta+psi],
+                    tps[index.holder[i,2], no.theta+1],
+                    tps[index.holder[i,2], no.theta+psi]), 
+                    nrow = 2, ncol = 2))
     bs.linear <- cbind(bs.linear, tps[,1:no.theta])
     bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)]) 
 }
@@ -116,7 +136,6 @@ for(i in 1:n){
 }
 
 write("// Stan model for BRSTIR Pareto Uncorrelated Samples
-
 data {
     int <lower=1> n; // Sample size
     int <lower=1> p; // regression coefficient size
@@ -129,26 +148,38 @@ data {
     matrix[n, (psi*p)] xholderNonlinear; // thin plate splines basis    
     vector[n] y; // extreme response
     real <lower=0> atau;
+    matrix[2, (2*p)] basisFL;
+    array[p, 2] int indexFL;
 }
-
 parameters {
     vector[newp] theta; // linear predictor
-    array[p] vector[psi] gamma; // splines coefficient
+    vector[(psi-2)] gammaTemp[p]; // splines coefficient
     real <lower=0> lambda1; // lasso penalty
     real <lower=0> lambda2; // group lasso penalty
-    real <lower=0> sigma; //
-    array[p] real <lower=0> tau;
+    real sigma; //
+    vector[p] tau;
 }
-
 transformed parameters {
     array[n] real <lower=0> alpha; // tail index
+    vector[psi] gamma[p]; // constraint gamma from 1 to psi
+    vector[2] gammaFL[p];
     matrix[n, p] gnl; // nonlinear component
+    matrix[2, p] subgnl;
     matrix[n, p] gl; // linear component
     matrix[n, p] gsmooth; // linear component
     array[n] real <lower=0> newalpha; // new tail index
     matrix[n, p] newgnl; // nonlinear component
     matrix[n, p] newgl; // linear component
     matrix[n, p] newgsmooth; // linear component
+
+    for(j in 1:p){
+        gamma[j][2:(psi-1)] = gammaTemp[j][1:(psi-2)];
+        subgnl[,j] = bsNonlinear[indexFL[1,], (((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] * gammaTemp[j];
+        gammaFL[j] = basisFL[, (((j-1)*2)+1):(((j-1)*2)+2)] * -1 * subgnl[,j];
+        gamma[j][1] = gammaFL[j][1];
+        gamma[j][psi] = gammaFL[j][2];
+    };
+
     for (j in 1:p){
         gnl[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
         newgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
@@ -157,9 +188,10 @@ transformed parameters {
         gsmooth[,j] = gl[,j] + gnl[,j];
         newgsmooth[,j] = newgl[,j] + newgnl[,j];
     };
+
     for (i in 1:n){
-        alpha[i] = exp(theta[1] + sum(gnl[i,]) + sum(gl[i,]));
-        newalpha[i] = exp(theta[1] + sum(newgnl[i,]) + sum(newgl[i,]));
+        alpha[i] = exp(theta[1] + sum(gsmooth[i,])); 
+        newalpha[i] = exp(theta[1] + sum(newgsmooth[i,]));
     };
 }
 
@@ -168,11 +200,12 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 0.01, 0.01);
-    target += gamma_lpdf(lambda2 | 0.01, 0.01);
-    target += normal_lpdf(theta[1] | 0, 100);
-    target += inv_gamma_lpdf(sigma | 0.01, 0.01); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
-    target += (newp * log(lambda1) + (p * psi * log(lambda2)));
+    target += gamma_lpdf(lambda1 | 1, 10);
+    target += gamma_lpdf(lambda2 | 0.1, 0.1);
+    target += normal_lpdf(theta[1] | 0, 1);
+    // target += normal_lpdf(theta[1] | log(1.2), 0.01) target += double_exponential_lpdf(theta[1] | 0, lambda1)
+    target += inv_gamma_lpdf(sigma | 0.01, 0.01);
+    target += ((newp * log(lambda1)) + (p * (psi-2) * log(lambda2)));
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, lambda2/sqrt(2));
@@ -180,53 +213,46 @@ model {
     }
 }
 "
-, "model_simulation_sc1.stan")
+, "model_simulation_sc1_constraint.stan")
 
 data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, 
-                    atau = ((psi+1)/2), newp = (p+1),
+                    atau = ((psi+1)/2), newp = (p+1), 
+                    indexFL = index.holder, 
                     bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
-                    xholderLinear = xholder.linear, 
-                    xholderNonlinear = xholder.nonlinear)
+                    xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear, basisFL = basis.holder)
 
-init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
+init.alpha <- list(list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c((psi-2), p)),
                         theta = rep(0, (p+1)),
                         tau = rep(0.1, p), sigma = 0.1, 
-                        lambda1 = 0.1, lambda2 = 0.1),
-                  list(gamma = array(rep(0.02, (psi*p)), dim=c(psi, p)),
+                        lambda1 = 0.01, lambda2 = 0.01),
+                  list(gammaTemp = array(rep(0.02, ((psi-2)*p)), dim=c((psi-2), p)),
                         theta = rep(0.01, (p+1)),
                         tau = rep(0.01, p), sigma = 0.001,
-                        lambda1 = 0.01, lambda2 = 0.1),
-                  list(gamma = array(rep(0.01, (psi*p)), dim=c(psi, p)),
+                        lambda1 = 0.1, lambda2 = 0.001),
+                  list(gammaTemp = array(rep(0.01, ((psi-2)*p)), dim=c((psi-2), p)),
                         theta = rep(0.05, (p+1)),
                         tau = rep(0.01, p), sigma = 0.01,
-                        lambda1 = 0.1, lambda2 = 0.01))
+                        lambda1 = 1, lambda2 = 0.01))
 # setwd("C:/Users/Johnny Lee/Documents/GitHub")
 fit1 <- stan(
-    file = "model_simulation_sc1.stan",  # Stan program
+    file = "model_simulation_sc1_constraint.stan",  # Stan program
     # file = "model_BRSTIR.stan",  # Stan program
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
     chains = 3,             # number of Markov chains
-    warmup = 1000,          # number of warmup iterations per chain
+    # warmup = 1000,          # number of warmup iterations per chain
     iter = 2000,            # total number of iterations per chain
-    cores = 4,              # number of cores (could use one per chain)
+    cores = parallel::detectCores(), # number of cores (could use one per chain)
     refresh = 500             # no progress shown
 )
 
 posterior <- extract(fit1)
-str(posterior)
 
 plot(fit1, plotfun = "trace", pars = c("theta"), nrow = 3)
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_theta_trace_sc1-wi.pdf"), width=10, height = 7.78)
 plot(fit1, plotfun = "trace", pars = c("lambda1", "lambda2"), nrow = 2)
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_lambda_sc1-wi.pdf"), width=10, height = 7.78)
 
-
-theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
-gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
-lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
-alpha.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
-newalpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
 
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary

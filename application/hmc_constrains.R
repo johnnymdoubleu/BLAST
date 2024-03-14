@@ -200,7 +200,6 @@ newx <- seq(0, 1, length.out=n)
 xholder.linear <- xholder.nonlinear <- bs.linear <- bs.nonlinear <- matrix(,nrow=n, ncol=0)
 xholder <- matrix(nrow=n, ncol=p)
 end.holder <- basis.holder <- matrix(, nrow = 2, ncol =0)
-mid.holder <- matrix(, nrow = 9, ncol = 0)
 index.holder <- matrix(, nrow = 0, ncol = 2)
 for(i in 1:p){
   index.holder <- rbind(index.holder, 
@@ -219,16 +218,16 @@ for(i in 1:p){
   knots <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
   tps <- basis.tps(fwi.scaled[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
   basis.holder <- cbind(basis.holder, 
-          solve(matrix(c(splines[index.holder[i,1], no.theta+1],
-                  splines[index.holder[i,1], no.theta+psi],
-                  splines[index.holder[i,2], no.theta+1],
-                  splines[index.holder[i,2], no.theta+psi]), 
+          solve(matrix(c(tps[index.holder[i,1], no.theta+1],
+                  tps[index.holder[i,1], no.theta+psi],
+                  tps[index.holder[i,2], no.theta+1],
+                  tps[index.holder[i,2], no.theta+psi]), 
                   nrow = 2, ncol = 2)))
   end.holder <- cbind(end.holder, 
-                matrix(c(splines[index.holder[i,1], no.theta+1],
-                  splines[index.holder[i,1], no.theta+psi],
-                  splines[index.holder[i,2], no.theta+1],
-                  splines[index.holder[i,2], no.theta+psi]), 
+                matrix(c(tps[index.holder[i,1], no.theta+1],
+                  tps[index.holder[i,1], no.theta+psi],
+                  tps[index.holder[i,2], no.theta+1],
+                  tps[index.holder[i,2], no.theta+psi]), 
                   nrow = 2, ncol = 2))
   # mid.holder <- cbind(mid.holder,)                  
   bs.linear <- cbind(bs.linear, tps[,1:no.theta])
@@ -325,7 +324,7 @@ generated quantities {
 , "model_BRSTIR_constraint.stan")
 
 data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, 
-                    atau = ((psi-1)/2), newp = (p+1), 
+                    atau = ((psi+1)/2), newp = (p+1), 
                     indexFL = index.holder, 
                     bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
                     xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear, basisFL = basis.holder)
