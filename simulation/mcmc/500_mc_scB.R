@@ -1,13 +1,7 @@
 library(npreg)
-library(Pareto)
 suppressMessages(library(tidyverse))
-library(gridExtra)
-library(colorspace)
-library(corrplot)
-library(ReIns)
-library(evir)
 library(rstan)
-library(cmdstanr)
+library(Pareto)
 
 # Scenario B
 total.iter <- 500

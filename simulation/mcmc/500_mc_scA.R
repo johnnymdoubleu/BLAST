@@ -1,20 +1,12 @@
 library(npreg)
-library(Pareto)
 suppressMessages(library(tidyverse))
-library(JOPS)
-library(readxl)
-library(gridExtra)
-library(colorspace)
-library(corrplot)
-library(ReIns)
-library(evir)
 library(rstan)
-library(cmdstanr)
+library(Pareto)
 
 # Scenario A
-total.iter <- 2
+total.iter <- 500
 
-n <- 5000
+n <- 15000
 psi <- 10
 threshold <- 0.95
 p <- 5

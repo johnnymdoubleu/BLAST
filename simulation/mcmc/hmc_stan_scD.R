@@ -394,9 +394,10 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
         plot.margin = margin(0,0,0,-20),
         strip.text = element_blank(),
         axis.title.x = element_text(size = 35),
-        axis.text = element_text(size=18))
+        axis.text.y = element_blank(),
+        axis.text.x = element_text(size=18))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_smooth_sc4-wi.pdf"), width=11.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_smooth_sc4-wi.pdf"), width=11, height = 15)
 
 data.linear <- data.frame("x"=newx,
                           "true" = as.vector(f.linear.new),
@@ -490,9 +491,10 @@ ggplot(data.scenario, aes(x=newx)) + #ylab(expression(alpha(c*bold("1")))) +
   theme_minimal(base_size = 30) + ylim(0, 2.4) +
   theme(legend.position = "none",
         strip.text = element_blank(),
-        axis.text = element_text(size = 18))
+        axis.text.y = element_blank(),
+        axis.text.x = element_text(size = 18))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_test_sc4-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_test_sc4-wi.pdf"), width=9.5, height = 7.78)
 
 mcmc.alpha <- posterior$alpha
 len <- dim(mcmc.alpha)[1]
