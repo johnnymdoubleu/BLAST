@@ -196,9 +196,8 @@ for(iter in 1:total.iter){
         data = data.stan,    # named list of data
         init = init.alpha,      # initial value
         chains = 3,             # number of Markov chains
-        warmup = 1000,          # number of warmup iterations per chain
         iter = 2000,            # total number of iterations per chain
-        cores = 4,              # number of cores (could use one per chain)
+        cores = parallel::detectCores(), # number of cores (could use one per chain)
         refresh = 500             # no progress shown
     )
     newgsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
