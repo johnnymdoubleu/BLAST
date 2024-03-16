@@ -4,7 +4,7 @@ library(rstan)
 library(Pareto)
 
 # Scenario A
-total.iter <- 500
+total.iter <- 2
 
 n <- 15000
 psi <- 10
@@ -49,7 +49,7 @@ data {
 
 parameters {
     vector[(p+1)] theta; // linear predictor
-    array[p] vector[psi] gamma; // splines coefficient
+    vector[psi] gamma[p]; // splines coefficient
     real <lower=0> lambda1; // lasso penalty
     real <lower=0> lambda2; // group lasso penalty
     real <lower=0> sigma; //
@@ -200,6 +200,7 @@ for(iter in 1:total.iter){
     newgsmooth.container[,iter] <- as.vector(matrix(newgsmooth.samples[,5], nrow = n, byrow=TRUE))
 }
 
+#Post Processing
 alpha.container$x <- seq(0,1, length.out = n)
 alpha.container$true <- alp.new
 alpha.container <- cbind(alpha.container, t(apply(alpha.container[,1:total.iter], 1, quantile, c(0.05, .5, .95))))
@@ -208,14 +209,6 @@ alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
 alpha.container$q1 <- apply(alpha.lower.container[,1:total.iter], 1, quantile, c(.5))
 alpha.container$q3 <- apply(alpha.upper.container[,1:total.iter], 1, quantile, c(.5))
 alpha.container <- as.data.frame(alpha.container)
-
-equal_breaks <- function(n = 3, s = 0.1,...){
-  function(x){
-    d <- s * diff(range(x)) / (1+2*s)
-    seq = seq(min(x)+d, max(x)-d, length=n)
-    round(seq, -floor(log10(abs(seq[2]-seq[1]))))
-  }
-}
 
 newgsmooth.container$x <- seq(0,1, length.out = n)
 newgsmooth.container$true <- as.vector(g.new)

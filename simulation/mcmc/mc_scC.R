@@ -267,9 +267,10 @@ print(plt +
         theme_minimal(base_size = 30) + ylim(0, 2.4) +
         theme(legend.position = "none",
                 strip.text = element_blank(),
-                axis.text = element_text(size = 18)))
+                axis.text.y = element_blank(),
+                axis.text.x = element_text(size = 18)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_sc3-wi.pdf"), width=10, height = 7.78)
+ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_sc3-wi.pdf"), width=9.5, height = 7.78)
 
 
 # resg <- gather(theta.container,
@@ -361,7 +362,7 @@ newgsmooth.container$true <- as.vector(f.new)
 newgsmooth.container <- cbind(newgsmooth.container, t(apply(newgsmooth.container[,1:total.iter], 1, quantile, c(0.05, .5, .95))))
 colnames(newgsmooth.container)[(dim(newgsmooth.container)[2]-2):(dim(newgsmooth.container)[2])] <- c("q1","q2","q3")
 newgsmooth.container$mean <- rowMeans(newgsmooth.container[,1:total.iter])
-newgsmooth.container$covariate <- gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]", "g[6]"))
+newgsmooth.container$covariate <- gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]"))
 newgsmooth.container <- as.data.frame(newgsmooth.container)
 
 plt <- ggplot(data = newgsmooth.container, aes(x = x, group = covariate)) + ylab("") + xlab(expression(c))
@@ -392,10 +393,11 @@ print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha 
         theme_minimal(base_size = 30) +
         theme(legend.position = "none",
                 plot.margin = margin(0,0,0,-20),
-                strip.text = element_blank(),
-                axis.text = element_text(size = 18)))
+                strip.text = element_blank(),      
+                axis.text.y = element_blank(),
+                axis.text.x = element_text(size = 18)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_sc3-wi.pdf"), width=11.5, height = 15) 
+ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_sc3-wi.pdf"), width=11, height = 15) 
 
 # newgl.container$x <- seq(0,1, length.out = n)
 # newgl.container$true <- as.vector(f.linear.new)

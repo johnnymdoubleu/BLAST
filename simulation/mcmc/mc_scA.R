@@ -1,35 +1,19 @@
 library(npreg)
-library(tmvnsim)
-library(reshape2)
 library(Pareto)
 suppressMessages(library(tidyverse))
-library(JOPS)
-library(readxl)
-library(gridExtra)
-library(colorspace)
-library(corrplot)
-library(ReIns)
-library(evir)
 library(rstan)
-library(cmdstanr)
-
+library(MESS)
 # Scenario A
 
-total.iter <- 250
+total.iter <- 2
 
-n <- 15000
+n <- 10000
 psi <- 10
 threshold <- 0.95
 p <- 5
 newp <- p+1
 no.theta <- 1
 
-# Function to generate Gaussian copula
-# C <- matrix(c(1, 0.3, 0.5, 0.3, 0.3,
-#             0.3, 1, 0.95, 0.4, 0.4,
-#             0.5, 0.95, 1, 0.5, 0.1,
-#             0.3, 0.4, 0.5 , 1, 0.5,
-#             0.3, 0.4, 0.5, 0.5, 1), nrow = p)
 C <- diag(p)
 ## Generate sample
 gamma.origin <- matrix(, nrow = psi, ncol = p)
@@ -121,12 +105,15 @@ model {
 newgsmooth.container <- as.data.frame(matrix(, nrow = (p*(n*(1-threshold))), ncol = total.iter))
 # newgl.container <- as.data.frame(matrix(, nrow = (p*(n*(1-threshold))), ncol = total.iter))
 # newgnl.container <- as.data.frame(matrix(, nrow = (p*(n*(1-threshold))), ncol = total.iter))
+true.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total.iter))
+median.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total.iter))
 alpha.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total.iter))
 alpha.lower.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total.iter))
 alpha.upper.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total.iter))
+mise <- c()
 
 for(iter in 1:total.iter){
-    n <- 15000
+    n <- 10000
     x.origin <- pnorm(matrix(rnorm(n*p), ncol = p) %*% chol(C))
     xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
     for(i in 1:p){
@@ -222,15 +209,24 @@ for(iter in 1:total.iter){
     # newgnl.samples <- summary(fit1, par=c("newgnl"), probs = c(0.05, 0.5, 0.95))$summary
     newgsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
     newalpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
+    median.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary    
 
     alpha.lower.container[,iter] <- (newalpha.samples[,4])
     alpha.container[,iter] <- (newalpha.samples[,5])
     alpha.upper.container[,iter] <- (newalpha.samples[,6])
+    true.container[,iter] <- alp.origin
+    median.container[,iter] <- median.samples[,5]
     # theta.container[,iter] <- theta.samples[,5]
     # gamma.container[,iter] <- gamma.samples[,5]
     # newgl.container[,iter] <- as.vector(matrix(newgl.samples[,5], nrow = n, byrow=TRUE))
     # newgnl.container[,iter] <- as.vector(matrix(newgnl.samples[,5], nrow = n, byrow=TRUE))
     newgsmooth.container[,iter] <- as.vector(matrix(newgsmooth.samples[,5], nrow = n, byrow=TRUE))
+    mcmc.alpha <- extract(fit1)$alpha
+    mse <- c()
+    for(i in 1:n){
+        mse[i] <- 1/n * (newalpha.samples[i,5] - alp.new[i])^2
+    }
+    mise[iter] <- auc(newx, mse, type = "spline")
 }
 
 alpha.container$x <- seq(0,1, length.out = n)
@@ -478,6 +474,19 @@ print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha 
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_nonlinear_sc1-wi.pdf"), width=10, height = 7.78)
 
-save(alpha.container, newgsmooth.container, file = (paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_sc1.Rdata")))
+# save(alpha.container, newgsmooth.container, file = (paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_sc1.Rdata")))
 # total.iter <- 100
 # load(paste0("./simulation/results/MC-Scenario_A/2024-02-04_",total.iter,"_MC_sc1.Rdata"))
+
+mean(mise)
+
+# I.1d_v <- function(x) {
+#    matrix(apply(x, 2, function(z)
+#        sin(4 * z) *
+#        z * ((z * ( z * (z * z - 4) + 1) - 1))),
+#        ncol = ncol(x))
+# }
+
+# I.1d_v(x.origin[,c(1,2)])
+# cubintegrate(f = I.1d_v, lower = -Inf, upper = Inf, method = "cuhre", nVec = 128L)
+

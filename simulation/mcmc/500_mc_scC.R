@@ -49,7 +49,7 @@ data {
 
 parameters {
     vector[(p+1)] theta; // linear predictor
-    array[p] vector[psi] gamma; // splines coefficient
+    vector[psi] gamma[p]; // splines coefficient
     real <lower=0> lambda1; // lasso penalty
     real <lower=0> lambda2; // group lasso penalty
     real <lower=0> sigma; //

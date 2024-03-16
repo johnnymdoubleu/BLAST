@@ -29,7 +29,7 @@ set.seed(36)
 
 n <- 15000
 psi <-10
-threshold <- 0.95
+threshold <- 0.99
 p <- 5
 no.theta <- 1
 simul.no <- 50

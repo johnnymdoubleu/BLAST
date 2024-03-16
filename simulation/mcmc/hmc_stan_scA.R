@@ -18,7 +18,7 @@ library(rstan)
 library(ggmcmc)
 library(MCMCvis)
 library(cmdstanr)
-library(ggh4x)
+library(MESS)
 
 #Scenario 1
 set.seed(10)
@@ -27,7 +27,7 @@ set.seed(10)
 
 n <- 15000
 psi <- 10
-threshold <- 0.95
+threshold <- 0.99
 p <- 5
 no.theta <- 1
 simul.no <- 50
@@ -133,11 +133,11 @@ data {
 
 parameters {
     vector[newp] theta; // linear predictor
-    array[p] vector[psi] gamma; // splines coefficient
+    vector[psi] gamma[p]; // splines coefficient
     real <lower=0> lambda1; // lasso penalty
     real <lower=0> lambda2; // group lasso penalty
     real <lower=0> sigma; //
-    array[p] real <lower=0> tau;
+    vector[p] tau;
 }
 
 transformed parameters {
@@ -208,7 +208,7 @@ fit1 <- stan(
     init = init.alpha,      # initial value
     chains = 3,             # number of Markov chains
     # warmup = 1000,          # number of warmup iterations per chain
-    iter = 3000,            # total number of iterations per chain
+    iter = 2000,            # total number of iterations per chain
     cores = 4,              # number of cores (could use one per chain)
     refresh = 500             # no progress shown
 )
@@ -221,12 +221,6 @@ plot(fit1, plotfun = "trace", pars = c("theta"), nrow = 3)
 plot(fit1, plotfun = "trace", pars = c("lambda1", "lambda2"), nrow = 2)
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_lambda_sc1-wi.pdf"), width=10, height = 7.78)
 
-
-theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
-gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
-lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
-alpha.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
-newalpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
 
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
@@ -467,7 +461,7 @@ data.scenario <- data.frame("x" = c(1:n),
                             # "q3" = sort(alpha.smooth.q3))
 
 ggplot(data.scenario, aes(x=newx)) + 
-  ylab(expression(alpha(c,...,c)))) + xlab(expression(c)) + labs(col = "") +
+  ylab(expression(alpha(c,...,c))) + xlab(expression(c)) + labs(col = "") +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2) + 
   geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1.5) +
@@ -517,3 +511,28 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
   coord_fixed(xlim = c(-3, 3),  
               ylim = c(-3, 3))
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_qqplot_sc1-wi.pdf"), width=10, height = 7.78)
+
+
+mse <- c()
+for(i in 1:n){
+    mse[i] <- 1/n * (newalpha.samples[i,5] - alp.new[i])^2
+}
+library(pracma)
+
+auc(newx, mse, type = "spline")
+
+# basis.tps(x.origin[,i], knots, m=2, rk=FALSE, intercept = FALSE)
+
+# mise.func <- function(x) {
+    
+#     function(y){
+#         result <- c()
+#         for(i in 1:psi){
+#             result[i] <- gamma[]abs(y-k[i])^3
+#         }
+#         return(theta.origin[j]*x + sum())
+#     }
+#     exp(theta.origin[1])
+# }
+
+# cubintegrate(f = mise.func, lower = 0, upper = 1, method = "cuhre", nVec = 128L)
