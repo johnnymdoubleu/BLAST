@@ -2,12 +2,12 @@ library(npreg)
 library(Pareto)
 suppressMessages(library(tidyverse))
 library(rstan)
-library(pracma)
+library(MESS)
 # Scenario A
 
 total.iter <- 2
 
-n <- 10000
+n <- n.origin <- 10000
 psi <- 10
 threshold <- 0.99
 p <- 5
@@ -119,7 +119,7 @@ mise.container <- c()
 qqplot.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total.iter))
 
 for(iter in 1:total.iter){
-    n <- 10000
+    n <- n.origin
     x.origin <- pnorm(matrix(rnorm(n*p), ncol = p) %*% chol(C))
     xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
     for(i in 1:p){
@@ -198,7 +198,7 @@ for(iter in 1:total.iter){
                             lambda1 = 0.1, lambda2 = 0.01))
 
     fit1 <- stan(
-        file = "model_simulation_sc1.stan",  # Stan program
+        file = "model_simulation_scA.stan",  # Stan program
         data = data.stan,    # named list of data
         init = init.alpha,      # initial value
         chains = 3,             # number of Markov chains
@@ -502,19 +502,18 @@ qqplot.container$mean <- rowMeans(qqplot.container[,1:total.iter])
 plt <- ggplot(data = qqplot.container, aes(x = grid)) + ylab("") + xlab(expression(x))
 
 for(i in 1:total.iter){
-  plt <- plt + geom_line(aes(y = .data[[names(newgl.container)[i]]]), alpha = 0.2, linewidth = 0.7)
+  plt <- plt + geom_line(aes(y = .data[[names(qqplot.container)[i]]]), alpha = 0.2, linewidth = 0.7)
 }
 print(plt + 
-        geom_line(aes(y=true, col = "True"), linewidth = 2) + 
-        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5, linetype = 2) + 
-        scale_color_manual(values = c("steelblue", "red"))+
+        geom_line(aes(x = grid, y = mean), colour = "steelblue", linewidth = 1.5, linetype = 2) + 
+        geom_abline(intercept = 0, slope = 1, linewidth = 1.2) + 
+        labs(x = "Theoretical quantiles", y = "Sample quantiles") + 
         guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) +
         theme_minimal(base_size = 30) +
-        theme(legend.position = "none",
-                plot.margin = margin(0,0,0,-20),
-                strip.text = element_blank(),
-                axis.text = element_text(size = 20)))
+        theme(text = element_text(size = 20)) +         
+        coord_fixed(xlim = c(-2, 2),  
+                    ylim = c(-2, 2)))
 
 ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat, 
                          u.band = u.band)) + 
