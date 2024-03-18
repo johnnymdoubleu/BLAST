@@ -221,9 +221,8 @@ for(iter in 1:total.iter){
     for (t in 1:T){
         traj[t, ] <- quantile(r[, t], ppoints(lgrid), type = 2)
     }
-    trajhat <- apply(traj, 2, quantile, prob = 0.5)
+    qqplot.container[iter] <- apply(traj, 2, quantile, prob = 0.5)
 
-    
     newgsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
     newalpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
 
