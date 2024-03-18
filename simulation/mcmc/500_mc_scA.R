@@ -2,7 +2,7 @@ library(npreg)
 suppressMessages(library(tidyverse))
 library(rstan)
 library(Pareto)
-library(pracma)
+library(MESS)
 
 # Scenario A
 total.iter <- 2
@@ -110,6 +110,7 @@ alpha.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total
 alpha.lower.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total.iter))
 alpha.upper.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total.iter))
 mise.container <- c()
+qqplot.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total.iter))
 
 for(iter in 1:total.iter){
     n <- 10000
@@ -202,9 +203,26 @@ for(iter in 1:total.iter){
     mcmc.se <- extract(fit1)$se
     temp.se <- c()
     for(i in 1:dim(mcmc.se)[1]){
-        temp.se[i] <- auc(newx, mcmc.se[i,], type="spline")
+        temp.se[i] <- auc(newx, as.vector(mcmc.se[i,]), type="spline")
     }
     mise.container[iter] <- mean(temp.se)
+
+    mcmc.alpha <- extract(fit1)$alpha
+    r <- matrix(, nrow = n, ncol = 30)
+    T <- 30
+    for(i in 1:n){
+        for(t in 1:T){
+            r[i, t] <- qnorm(pPareto(y.origin[i], u, alpha = mcmc.alpha[round(runif(1,1, dim(mcmc.alpha)[1])),i]))
+        }
+    }
+    lgrid <- n
+    grid <- qnorm(ppoints(lgrid))
+    traj <- matrix(NA, nrow = T, ncol = lgrid)
+    for (t in 1:T){
+        traj[t, ] <- quantile(r[, t], ppoints(lgrid), type = 2)
+    }
+    trajhat <- apply(traj, 2, quantile, prob = 0.5)
+
     
     newgsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
     newalpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
@@ -214,8 +232,6 @@ for(iter in 1:total.iter){
     alpha.upper.container[,iter] <- (newalpha.samples[,6])
     newgsmooth.container[,iter] <- as.vector(matrix(newgsmooth.samples[,5], nrow = n, byrow=TRUE))
 }
-mean(mise.container)
-
 #Post Processing
 alpha.container$x <- seq(0,1, length.out = n)
 alpha.container$true <- alp.new
@@ -234,5 +250,5 @@ newgsmooth.container$mean <- rowMeans(newgsmooth.container[,1:total.iter])
 newgsmooth.container$covariate <- gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]"))
 newgsmooth.container <- as.data.frame(newgsmooth.container)
          
-save(alpha.container, newgsmooth.container, file = (paste0("./",Sys.Date(),"_",total.iter,"_MC_scA.Rdata")))
+save(alpha.container, newgsmooth.container, mise.container, qqplot.container, file = (paste0("./",Sys.Date(),"_",total.iter,"_MC_scA.Rdata")))
 

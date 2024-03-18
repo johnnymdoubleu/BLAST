@@ -2,14 +2,14 @@ library(npreg)
 library(Pareto)
 suppressMessages(library(tidyverse))
 library(rstan)
-library(MESS)
+library(pracma)
 # Scenario A
 
 total.iter <- 2
 
 n <- 10000
 psi <- 10
-threshold <- 0.95
+threshold <- 0.99
 p <- 5
 newp <- p+1
 no.theta <- 1
@@ -476,9 +476,9 @@ print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha 
 
 # save(alpha.container, newgsmooth.container, file = (paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_sc1.Rdata")))
 # total.iter <- 100
-# load(paste0("./simulation/results/MC-Scenario_A/2024-02-04_",total.iter,"_MC_sc1.Rdata"))
+load(paste0("./simulation/results/MC-Scenario_A/2024-02-04_",total.iter,"_MC_sc1.Rdata"))
+load(paste0("./MC-Scenario_A/2024-02-04_",total.iter,"_MC_scA.Rdata"))
 
-mean(mise)
 
 # I.1d_v <- function(x) {
 #    matrix(apply(x, 2, function(z)
