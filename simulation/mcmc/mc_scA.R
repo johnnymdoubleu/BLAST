@@ -506,31 +506,17 @@ for(i in 1:total.iter){
   plt <- plt + geom_line(aes(y = .data[[names(qqplot.container)[i]]]), alpha = 0.2, linewidth = 0.7)
 }
 print(plt + 
-        geom_line(aes(x = grid, y = mean), colour = "steelblue", linewidth = 1.5, linetype = 2) + 
-        geom_abline(intercept = 0, slope = 1, linewidth = 1.2) + 
+        geom_line(aes(x = grid, y = mean), colour = "steelblue", linewidth = 2, linetype = 2) + 
+        geom_abline(intercept = 0, slope = 1, linewidth = 1.2, colour = "black") + 
         labs(x = "Theoretical quantiles", y = "Sample quantiles") + 
-        guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) +
+        # guides(color = guide_legend(order = 2), fill = guide_legend(order = 1)) +
         theme_minimal(base_size = 30) +
         theme(text = element_text(size = 20)) +         
         coord_fixed(xlim = c(-2, 2),  
                     ylim = c(-2, 2)))
 
-ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat, 
-                         u.band = u.band)) + 
-  geom_ribbon(aes(x = grid, ymin = l.band, ymax = u.band), 
-              fill = "steelblue",
-              alpha = 0.4, linetype = "dashed") + 
-  geom_line(aes(x = grid, y = trajhat), colour = "steelblue", linetype = "dashed", linewidth = 1.2) + 
-  geom_abline(intercept = 0, slope = 1, linewidth = 1.2) + 
-  labs(x = "Theoretical quantiles", y = "Sample quantiles") + 
-  theme_minimal(base_size = 20) +
-  theme(text = element_text(size = 20)) + 
-  coord_fixed(xlim = c(-3, 3),  
-              ylim = c(-3, 3))
 
-
-# save(alpha.container, newgsmooth.container, file = (paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_sc1.Rdata")))
+save(alpha.container, newgsmooth.container, mise.container, qqplot.container, file = (paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_scA.Rdata")))
 # total.iter <- 100
 # load(paste0("./simulation/results/MC-Scenario_A/2024-02-04_",total.iter,"_MC_sc1.Rdata"))
 load(paste0("./2024-03-18_",total.iter,"_MC_scA.Rdata"))
