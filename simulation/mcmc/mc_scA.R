@@ -5,7 +5,7 @@ library(rstan)
 library(MESS)
 # Scenario A
 
-total.iter <- 2
+total.iter <- 250
 
 n <- n.origin <- 10000
 psi <- 10
@@ -215,6 +215,7 @@ for(iter in 1:total.iter){
     # newgnl.samples <- summary(fit1, par=c("newgnl"), probs = c(0.05, 0.5, 0.95))$summary
     newgsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
     newalpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
+    se.samples <- summary(fit1, par=c("se"), probs = c(0.05,0.5, 0.95))$summary    
     # median.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary    
 
     alpha.lower.container[,iter] <- (newalpha.samples[,4])
@@ -227,12 +228,12 @@ for(iter in 1:total.iter){
     # newgl.container[,iter] <- as.vector(matrix(newgl.samples[,5], nrow = n, byrow=TRUE))
     # newgnl.container[,iter] <- as.vector(matrix(newgnl.samples[,5], nrow = n, byrow=TRUE))
     newgsmooth.container[,iter] <- as.vector(matrix(newgsmooth.samples[,5], nrow = n, byrow=TRUE))
-    mcmc.se <- extract(fit1)$se
-    temp.se <- c()
-    for(i in 1:dim(mcmc.se)[1]){
-        temp.se[i] <- auc(newx, as.vector(mcmc.se[i,]), type="spline")
-    }
-    mise.container[iter] <- mean(temp.se)
+    # mcmc.se <- extract(fit1)$se
+    # temp.se <- c()
+    # for(i in 1:dim(mcmc.se)[1]){
+    #     temp.se[i] <- auc(newx, as.vector(mcmc.se[i,]), type="spline")
+    # }
+    mise.container[iter] <- auc(newx, se.samples[,5], type="spline")
 
     mcmc.alpha <- extract(fit1)$alpha
     r <- matrix(, nrow = n, ncol = 30)

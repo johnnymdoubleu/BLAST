@@ -200,12 +200,13 @@ for(iter in 1:total.iter){
         cores = parallel::detectCores(), # number of cores (could use one per chain)
         refresh = 500             # no progress shown
     )
-    mcmc.se <- extract(fit1)$se
-    temp.se <- c()
-    for(i in 1:dim(mcmc.se)[1]){
-        temp.se[i] <- auc(newx, as.vector(mcmc.se[i,]), type="spline")
-    }
-    mise.container[iter] <- mean(temp.se)
+    # mcmc.se <- extract(fit1)$se
+    # temp.se <- c()
+    # for(i in 1:dim(mcmc.se)[1]){
+    #     temp.se[i] <- auc(newx, as.vector(mcmc.se[i,]), type="spline")
+    # }
+    se.samples <- summary(fit1, par=c("se"), probs = c(0.05, 0.5, 0.95))$summary    
+    mise.container[iter] <- auc(newx, se.samples[,5], type="spline")
 
     mcmc.alpha <- extract(fit1)$alpha
     r <- matrix(, nrow = n, ncol = 30)
