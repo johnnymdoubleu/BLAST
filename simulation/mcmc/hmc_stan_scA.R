@@ -511,28 +511,3 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
   coord_fixed(xlim = c(-3, 3),  
               ylim = c(-3, 3))
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_qqplot_sc1-wi.pdf"), width=10, height = 7.78)
-
-
-mse <- c()
-for(i in 1:n){
-    mse[i] <- 1/n * (newalpha.samples[i,5] - alp.new[i])^2
-}
-library(pracma)
-
-auc(newx, mse, type = "spline")
-
-# basis.tps(x.origin[,i], knots, m=2, rk=FALSE, intercept = FALSE)
-
-# mise.func <- function(x) {
-    
-#     function(y){
-#         result <- c()
-#         for(i in 1:psi){
-#             result[i] <- gamma[]abs(y-k[i])^3
-#         }
-#         return(theta.origin[j]*x + sum())
-#     }
-#     exp(theta.origin[1])
-# }
-
-# cubintegrate(f = mise.func, lower = 0, upper = 1, method = "cuhre", nVec = 128L)

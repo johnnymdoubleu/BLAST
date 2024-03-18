@@ -11,6 +11,7 @@ data {
     matrix[n, (psi*p)] xholderNonlinear; // thin plate splines basis    
     vector[n] y; // extreme response
     real <lower=0> atau;
+    array[n] real <lower=0> trueAlpha; // True Alpha
 }
 
 parameters {
@@ -24,6 +25,8 @@ parameters {
 
 transformed parameters {
     array[n] real <lower=0> alpha; // tail index
+    array[n] real <lower=0> se; // squared error
+    real <lower=0> mse; // mean squared error
     matrix[n, p] gnl; // nonlinear component
     matrix[n, p] gl; // linear component
     matrix[n, p] gsmooth; // linear component
@@ -31,6 +34,7 @@ transformed parameters {
     matrix[n, p] newgnl; // nonlinear component
     matrix[n, p] newgl; // linear component
     matrix[n, p] newgsmooth; // linear component
+    
     for (j in 1:p){
         gnl[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
         newgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
@@ -42,7 +46,9 @@ transformed parameters {
     for (i in 1:n){
         alpha[i] = exp(theta[1] + sum(gnl[i,]) + sum(gl[i,]));
         newalpha[i] = exp(theta[1] + sum(newgnl[i,]) + sum(newgl[i,]));
+        se[i] = pow((newalpha[i]-trueAlpha[i]), 2);
     };
+    mse = mean(se);
 }
 
 model {

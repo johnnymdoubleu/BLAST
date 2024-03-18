@@ -2,13 +2,14 @@ library(npreg)
 suppressMessages(library(tidyverse))
 library(rstan)
 library(Pareto)
+library(pracma)
 
 # Scenario A
 total.iter <- 2
 
-n <- 15000
+n <- 10000
 psi <- 10
-threshold <- 0.95
+threshold <- 0.99
 p <- 5
 newp <- p+1
 no.theta <- 1
@@ -45,6 +46,7 @@ data {
     matrix[n, (psi*p)] xholderNonlinear; // thin plate splines basis    
     vector[n] y; // extreme response
     real <lower=0> atau;
+    array[n] real <lower=0> trueAlpha; // True Alpha
 }
 
 parameters {
@@ -58,6 +60,8 @@ parameters {
 
 transformed parameters {
     array[n] real <lower=0> alpha; // tail index
+    array[n] real <lower=0> se; // squared error
+    real <lower=0> mse; // mean squared error
     matrix[n, p] gnl; // nonlinear component
     matrix[n, p] gl; // linear component
     matrix[n, p] gsmooth; // linear component
@@ -65,6 +69,7 @@ transformed parameters {
     matrix[n, p] newgnl; // nonlinear component
     matrix[n, p] newgl; // linear component
     matrix[n, p] newgsmooth; // linear component
+    
     for (j in 1:p){
         gnl[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
         newgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
@@ -76,7 +81,9 @@ transformed parameters {
     for (i in 1:n){
         alpha[i] = exp(theta[1] + sum(gnl[i,]) + sum(gl[i,]));
         newalpha[i] = exp(theta[1] + sum(newgnl[i,]) + sum(newgl[i,]));
+        se[i] = pow((newalpha[i]-trueAlpha[i]), 2);
     };
+    mse = mean(se);
 }
 
 model {
@@ -102,9 +109,10 @@ newgsmooth.container <- as.data.frame(matrix(, nrow = (p*(n*(1-threshold))), nco
 alpha.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total.iter))
 alpha.lower.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total.iter))
 alpha.upper.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total.iter))
+mise.container <- c()
 
 for(iter in 1:total.iter){
-    n <- 15000
+    n <- 10000
     x.origin <- pnorm(matrix(rnorm(n*p), ncol = p) %*% chol(C))
     xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
     for(i in 1:p){
@@ -164,7 +172,7 @@ for(iter in 1:total.iter){
     }
 
     data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, 
-                        atau = ((psi+1)/2),
+                        atau = ((psi+1)/2), trueAlpha = alp.new,
                         bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
                         xholderLinear = xholder.linear, 
                         xholderNonlinear = xholder.nonlinear)
@@ -191,6 +199,13 @@ for(iter in 1:total.iter){
         cores = parallel::detectCores(), # number of cores (could use one per chain)
         refresh = 500             # no progress shown
     )
+    mcmc.se <- extract(fit1)$se
+    temp.se <- c()
+    for(i in 1:dim(mcmc.se)[1]){
+        temp.se[i] <- auc(newx, mcmc.se[i,], type="spline")
+    }
+    mise.container[iter] <- mean(temp.se)
+    
     newgsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
     newalpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
 
@@ -199,6 +214,7 @@ for(iter in 1:total.iter){
     alpha.upper.container[,iter] <- (newalpha.samples[,6])
     newgsmooth.container[,iter] <- as.vector(matrix(newgsmooth.samples[,5], nrow = n, byrow=TRUE))
 }
+mean(mise.container)
 
 #Post Processing
 alpha.container$x <- seq(0,1, length.out = n)
