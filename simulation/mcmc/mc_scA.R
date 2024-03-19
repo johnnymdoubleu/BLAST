@@ -413,6 +413,7 @@ print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha 
                 plot.margin = margin(0,0,0,-20),
                 strip.text.y = element_text(size = 25, colour = "black", angle = 0, face = "bold.italic"),
                 strip.placement = "outside",
+                axis.title.x = element_text(size = 35),                
                 axis.text = element_text(size = 18)))
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_sc1-wi.pdf"), width=12.5, height = 15)                
