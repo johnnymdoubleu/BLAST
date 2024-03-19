@@ -517,7 +517,7 @@ print(plt +
         theme(text = element_text(size = 20)) +         
         coord_fixed(xlim = c(-2, 2),  
                     ylim = c(-2, 2)))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_qqplot_sc1-wi.pdf"), width=12.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_qqplot_sc1-wi.pdf"), width=10, height = 7.78)
 
 save(alpha.container, newgsmooth.container, mise.container, qqplot.container, file = (paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_sc1.Rdata")))
 # total.iter <- 100
