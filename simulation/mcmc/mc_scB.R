@@ -15,7 +15,7 @@ library(cmdstanr)
 
 # Scenario B
 
-total.iter <- 50
+total.iter <- 250
 
 n <- 15000
 psi <- 10
@@ -233,7 +233,8 @@ for(iter in 1:total.iter){
     # newgnl.container[,iter] <- as.vector(matrix(newgnl.samples[,5], nrow = n, byrow=TRUE))
     newgsmooth.container[,iter] <- as.vector(matrix(newgsmooth.samples[,5], nrow = n, byrow=TRUE))
 }
-
+# colnames(alpha.container)[1:500] <- as.character(1:500)
+# total.iter <- 500
 alpha.container$x <- seq(0,1, length.out = n)
 alpha.container$true <- alp.new
 alpha.container <- cbind(alpha.container, t(apply(alpha.container[,1:total.iter], 1, quantile, c(0.05, .5, .95))))
@@ -243,7 +244,7 @@ alpha.container$q1 <- apply(alpha.lower.container[,1:total.iter], 1, quantile, c
 alpha.container$q3 <- apply(alpha.upper.container[,1:total.iter], 1, quantile, c(.5))
 alpha.container <- as.data.frame(alpha.container)
 
-plt <- ggplot(data = alpha.container, aes(x = x)) + ylab(expression(alpha(c*bold("1")))) + xlab(expression(c)) + labs(col = "")
+plt <- ggplot(data = alpha.container, aes(x = x)) + ylab("") + xlab(expression(c)) + labs(col = "")
 if(total.iter <= 50){
   for(i in 1:total.iter){
     plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.2, linewidth = 0.7)
@@ -255,19 +256,20 @@ if(total.iter <= 50){
   }
 }
 
-print(plt + geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) + ylim(0.5, 2.5) +
+print(plt +
         geom_line(aes(y=true, col = "True"), linewidth = 2) + 
         geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5, linetype = 2) +
         scale_fill_manual(values=c("steelblue"), name = "") +
         scale_color_manual(values = c("steelblue", "red"))+
         guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) +
-        theme_minimal(base_size = 30) +
+        theme_minimal(base_size = 30) + ylim(0, 2.4) +
         theme(legend.position = "none",
-                strip.text = element_blank(),
-                axis.text = element_text(size = 35)))
+              strip.text = element_blank(),
+              axis.text.y = element_blank(),
+              axis.text.x = element_text(size = 18)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_sc2-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_sc2-wi.pdf"), width=9.5, height = 7.78)
 
 
 # resg <- gather(theta.container,
@@ -353,13 +355,13 @@ equal_breaks <- function(n = 3, s = 0.1,...){
     round(seq, -floor(log10(abs(seq[2]-seq[1]))))
   }
 }
-
+# colnames(newgsmooth.container)[1:500] <- as.character(1:500)
 newgsmooth.container$x <- seq(0,1, length.out = n)
 newgsmooth.container$true <- as.vector(f.new)
 newgsmooth.container <- cbind(newgsmooth.container, t(apply(newgsmooth.container[,1:total.iter], 1, quantile, c(0.05, .5, .95))))
 colnames(newgsmooth.container)[(dim(newgsmooth.container)[2]-2):(dim(newgsmooth.container)[2])] <- c("q1","q2","q3")
 newgsmooth.container$mean <- rowMeans(newgsmooth.container[,1:total.iter])
-newgsmooth.container$covariate <- gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]", "g[6]"))
+newgsmooth.container$covariate <- gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]"))
 newgsmooth.container <- as.data.frame(newgsmooth.container)
 
 plt <- ggplot(data = newgsmooth.container, aes(x = x, group = covariate)) + ylab("") + xlab(expression(c))
@@ -369,19 +371,17 @@ if(total.iter <= 50){
     # plt <- plt + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
   }
 } else{
-  for(i in 1:50){
+  for(i in 1:total.iter){
     plt <- plt + geom_line(aes(y = .data[[names(newgsmooth.container)[i]]]), alpha = 0.2, linewidth = 0.7)
     # plt <- plt + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
   }
 }
 print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
         geom_line(aes(y=true, col = "True"), linewidth = 2) + 
-        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5, linetype = 2) + 
-        facet_wrap(covariate ~ ., scales = "free_x", nrow = 5,
-                    labeller = label_parsed, strip.position = "left") +
+        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.8, linetype = 2) + 
         ylim(-0.23, 0.2) +
-        # facet_grid(covariate ~ ., scales = "free_x", switch = "y",
-        #             labeller = label_parsed) +        
+        facet_grid(covariate ~ ., scales = "free_x", switch = "y",
+                    labeller = label_parsed) +        
         # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
         #scale_fill_manual(values=c("steelblue"), name = "") +
         scale_color_manual(values = c("steelblue", "red"))+
@@ -389,10 +389,11 @@ print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha 
           fill = guide_legend(order = 1)) +
         theme_minimal(base_size = 30) +
         theme(legend.position = "none",
-                plot.margin = margin(0,0,0,-20),
-                strip.text.y = element_text(size = 25, colour = "black", angle = 0, face = "bold.italic"),
-                strip.placement = "outside",
-                axis.text = element_text(size = 20)))
+              plot.margin = margin(0,0,0,-20),
+              strip.text = element_blank(),
+              axis.title.x = element_text(size = 35),
+              axis.text.y = element_blank(),
+              axis.text = element_text(size = 18)))
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_sc2-wi.pdf"), width=12.5, height = 15)
 
@@ -482,4 +483,9 @@ print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha 
 save(alpha.container, newgsmooth.container, file = (paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_sc2.Rdata")))
 # total.iter <- 250
 # load(paste0("./simulation/results/MC-Scenario_B/",Sys.Date(),"_",total.iter,"_MC_sc2.Rdata"))
-# load(paste0("./simulation/results/MC-Scenario_B/2024-02-05","_",total.iter,"_MC_sc2.Rdata"))
+load(paste0("./simulation/results/2024-03-18","_",total.iter,"_MC_scB2.Rdata"))
+# alpha.container.comb <- alpha.container[,1:250]
+# newgsmooth.container.comb <- newgsmooth.container[,1:250]
+
+# alpha.container <- cbind(alpha.container.comb, alpha.container[,1:250])
+# newgsmooth.container <- cbind(newgsmooth.container.comb, newgsmooth.container[,1:250])

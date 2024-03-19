@@ -7,9 +7,9 @@ library(MESS)
 
 total.iter <- 250
 
-n <- n.origin <- 10000
+n <- n.origin <- 15000
 psi <- 10
-threshold <- 0.99
+threshold <- 0.95
 p <- 5
 newp <- p+1
 no.theta <- 1
@@ -252,6 +252,7 @@ for(iter in 1:total.iter){
     qqplot.container[iter] <- apply(traj, 2, quantile, prob = 0.5)
 }
 
+# total.iter<-500
 alpha.container$x <- seq(0,1, length.out = n)
 alpha.container$true <- alp.new
 alpha.container <- cbind(alpha.container, t(apply(alpha.container[,1:total.iter], 1, quantile, c(0.05, .5, .95))))
@@ -260,6 +261,7 @@ alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
 alpha.container$q1 <- apply(alpha.lower.container[,1:total.iter], 1, quantile, c(.5))
 alpha.container$q3 <- apply(alpha.upper.container[,1:total.iter], 1, quantile, c(.5))
 alpha.container <- as.data.frame(alpha.container)
+# colnames(alpha.container)[1:500] <- as.character(1:500)
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + ylab(expression(alpha(bold("c"),"...",bold("c")))) + xlab(expression(c)) + labs(col = "")
 if(total.iter <= 50){
@@ -372,6 +374,7 @@ equal_breaks <- function(n = 3, s = 0.1,...){
   }
 }
 
+# colnames(newgsmooth.container)[1:500] <- as.character(1:500)
 newgsmooth.container$x <- seq(0,1, length.out = n)
 newgsmooth.container$true <- as.vector(f.new)
 newgsmooth.container <- cbind(newgsmooth.container, t(apply(newgsmooth.container[,1:total.iter], 1, quantile, c(0.05, .5, .95))))
@@ -515,12 +518,16 @@ print(plt +
                     ylim = c(-2, 2)))
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_qqplot_sc1-wi.pdf"), width=12.5, height = 15)
 
-save(alpha.container, newgsmooth.container, mise.container, qqplot.container, file = (paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_scA.Rdata")))
+save(alpha.container, newgsmooth.container, mise.container, qqplot.container, file = (paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_sc1.Rdata")))
 # total.iter <- 100
-# load(paste0("./simulation/results/MC-Scenario_A/2024-02-04_",total.iter,"_MC_sc1.Rdata"))
-load(paste0("./2024-03-18_",total.iter,"_MC_scA.Rdata"))
+# load(paste0("./simulation/results/MC-scenarioA/2024-03-18_",total.iter,"_MC_sc1.Rdata"))
+# load(paste0("./2024-03-18_",total.iter,"_MC_scA.Rdata"))
 
+# alpha.container.comb <- alpha.container[,1:250]
+# newgsmooth.container.comb <- newgsmooth.container[,1:250]
 
+# alpha.container <- cbind(alpha.container.comb, alpha.container[,1:250])
+# newgsmooth.container <- cbind(newgsmooth.container.comb, newgsmooth.container[,1:250])
 # I.1d_v <- function(x) {
 #    matrix(apply(x, 2, function(z)
 #        sin(4 * z) *
