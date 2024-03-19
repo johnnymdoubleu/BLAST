@@ -522,7 +522,8 @@ print(plt +
 save(alpha.container, newgsmooth.container, mise.container, qqplot.container, file = (paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_sc1.Rdata")))
 # total.iter <- 100
 # load(paste0("./simulation/results/MC-scenarioA/2024-03-18_",total.iter,"_MC_sc1.Rdata"))
-# load(paste0("./2024-03-18_",total.iter,"_MC_scA.Rdata"))
+total.iter <- 250
+load(paste0("./simulation/results/2024-03-18_",total.iter,"_q99_MC_scA.Rdata"))
 
 # alpha.container.comb <- alpha.container[,1:250]
 # newgsmooth.container.comb <- newgsmooth.container[,1:250]
