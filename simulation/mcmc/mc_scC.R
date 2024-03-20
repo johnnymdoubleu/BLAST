@@ -1,24 +1,14 @@
 library(npreg)
-library(tmvnsim)
-library(reshape2)
-library(Pareto)
 suppressMessages(library(tidyverse))
-library(JOPS)
-library(readxl)
-library(gridExtra)
-library(colorspace)
-library(corrplot)
-library(ReIns)
-library(evir)
 library(rstan)
-
+library(MESS)
 
 
 # Scenario C
 
 total.iter <- 250
 
-n <- 15000
+n <- n.origin <- 5000
 psi <- 10
 threshold <- 0.95
 p <- 5
@@ -55,20 +45,20 @@ write("// Stan model for BRSTIR Student-t Uncorrelated Samples
 data {
     int <lower=1> n; // Sample size
     int <lower=1> p; // regression coefficient size
-    int <lower=1> newp; 
     int <lower=1> psi; // splines coefficient size
     real <lower=0> u; // large threshold value
-    matrix[n,p] bsLinear; // fwi dataset
+    matrix[n,p] bsLinear; //
     matrix[n, (psi*p)] bsNonlinear; // thin plate splines basis
-    matrix[n,p] xholderLinear; // fwi dataset
+    matrix[n,p] xholderLinear; // 
     matrix[n, (psi*p)] xholderNonlinear; // thin plate splines basis    
     vector[n] y; // extreme response
     real <lower=0> atau;
+    array[n] real <lower=0> trueAlpha; // True Alpha
 }
 
 parameters {
-    vector[newp] theta; // linear predictor
-    array[p] vector[psi] gamma; // splines coefficient
+    vector[(p+1)] theta; // linear predictor
+    vector[psi] gamma[p]; // splines coefficient
     real <lower=0> lambda1; // lasso penalty
     real <lower=0> lambda2; // group lasso penalty
     real <lower=0> sigma; //
@@ -77,6 +67,8 @@ parameters {
 
 transformed parameters {
     array[n] real <lower=0> alpha; // tail index
+    array[n] real <lower=0> se; // squared error
+    real <lower=0> mse; // mean squared error
     matrix[n, p] gnl; // nonlinear component
     matrix[n, p] gl; // linear component
     matrix[n, p] gsmooth; // linear component
@@ -84,6 +76,7 @@ transformed parameters {
     matrix[n, p] newgnl; // nonlinear component
     matrix[n, p] newgl; // linear component
     matrix[n, p] newgsmooth; // linear component
+    
     for (j in 1:p){
         gnl[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
         newgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
@@ -95,8 +88,11 @@ transformed parameters {
     for (i in 1:n){
         alpha[i] = exp(theta[1] + sum(gnl[i,]) + sum(gl[i,]));
         newalpha[i] = exp(theta[1] + sum(newgnl[i,]) + sum(newgl[i,]));
+        se[i] = pow((newalpha[i]-trueAlpha[i]), 2);
     };
+    mse = mean(se);
 }
+
 
 model {
     // likelihood
@@ -105,10 +101,10 @@ model {
         target += -1*log(1-student_t_cdf(u, alpha[i], 0, 1));
     }
     target += gamma_lpdf(lambda1 | 1, 10);
-    target += gamma_lpdf(lambda2 | 0.1, 100);
+    target += gamma_lpdf(lambda2 | 0.1, 10);
     target += normal_lpdf(theta[1] | 0, 100);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
-    target += (newp * log(lambda1) + (p * psi * log(lambda2)));
+    target += (p * log(lambda1) + (p * psi * log(lambda2)));
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, lambda2/sqrt(2));
@@ -116,7 +112,7 @@ model {
     }
 }
 "
-, "model_simulation_sc3.stan")
+, "model_simulation_scC.stan")
 
 # theta.container <- as.data.frame(matrix(, nrow = newp, ncol= total.iter))
 # gamma.container <- as.data.frame(matrix(, nrow = (p*psi), ncol = total.iter))
@@ -126,9 +122,11 @@ newgsmooth.container <- as.data.frame(matrix(, nrow = (p*(n*(1-threshold))), nco
 alpha.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total.iter))
 alpha.lower.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total.iter))
 alpha.upper.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total.iter))
+mise.container <- c()
+qqplot.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total.iter))
 
 for(iter in 1:total.iter){
-    n <- 15000
+    n <- n.origin
     x.origin <- pnorm(matrix(rnorm(n*p), ncol = p) %*% chol(C))
     xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
     for(i in 1:p){
@@ -188,7 +186,7 @@ for(iter in 1:total.iter){
     }
 
     data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, 
-                        atau = ((psi+1)/2), newp = (p+1),
+                        atau = ((psi+1)/2), trueAlpha = alp.new,
                         bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
                         xholderLinear = xholder.linear, 
                         xholderNonlinear = xholder.nonlinear)
@@ -207,7 +205,7 @@ for(iter in 1:total.iter){
                             lambda1 = 0.1, lambda2 = 0.01))
 
     fit1 <- stan(
-        file = "model_simulation_sc3.stan",  # Stan program
+        file = "model_simulation_scC.stan",  # Stan program
         data = data.stan,    # named list of data
         init = init.alpha,      # initial value
         chains = 3,             # number of Markov chains
@@ -224,7 +222,24 @@ for(iter in 1:total.iter){
     # newgnl.samples <- summary(fit1, par=c("newgnl"), probs = c(0.05, 0.5, 0.95))$summary
     newgsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
     newalpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
+    se.samples <- summary(fit1, par=c("se"), probs = c(0.05,0.5, 0.95))$summary   
+    mise.container[iter] <- auc(newx, se.samples[,5], type="spline")
 
+    mcmc.alpha <- extract(fit1)$alpha
+    r <- matrix(, nrow = n, ncol = 30)
+    T <- 30
+    for(i in 1:n){
+        for(t in 1:T){
+            r[i, t] <- qnorm(pPareto(y.origin[i], u, alpha = mcmc.alpha[round(runif(1,1, dim(mcmc.alpha)[1])),i]))
+        }
+    }
+    lgrid <- n
+    grid <- qnorm(ppoints(lgrid))
+    traj <- matrix(NA, nrow = T, ncol = lgrid)
+    for (t in 1:T){
+        traj[t, ] <- quantile(r[, t], ppoints(lgrid), type = 2)
+    }
+    qqplot.container[iter] <- apply(traj, 2, quantile, prob = 0.5)
     alpha.lower.container[,iter] <- (newalpha.samples[,4])
     alpha.container[,iter] <- (newalpha.samples[,5])
     alpha.upper.container[,iter] <- (newalpha.samples[,6])
@@ -270,7 +285,7 @@ print(plt +
                 axis.text.y = element_blank(),
                 axis.text.x = element_text(size = 18)))
 
-ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_sc3-wi.pdf"), width=9.5, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_sc3-wi.pdf"), width=9.5, height = 7.78)
 
 
 # resg <- gather(theta.container,
@@ -397,7 +412,7 @@ print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha 
                 axis.text.y = element_blank(),
                 axis.text.x = element_text(size = 18)))
 
-ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_sc3-wi.pdf"), width=11, height = 15) 
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_sc3-wi.pdf"), width=11, height = 15) 
 
 # newgl.container$x <- seq(0,1, length.out = n)
 # newgl.container$true <- as.vector(f.linear.new)
@@ -479,10 +494,25 @@ ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_sc3-
 #                 strip.text = element_blank(),
 #                 axis.text = element_text(size = 20)))
 
-# # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_nonlinear_sc3-wi.pdf"), width=10, height = 7.78) 
+# # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_nonlinear_sc3-wi.pdf"), width=10, height = 7.78)
 
-save(alpha.container, newgsmooth.container, file = (paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_sc3.Rdata")))
+qqplot.container$grid <- grid
+qqplot.container$mean <- rowMeans(qqplot.container[,1:total.iter])
+plt <- ggplot(data = qqplot.container, aes(x = grid))
+for(i in 1:total.iter){
+  plt <- plt + geom_line(aes(y = .data[[names(qqplot.container)[i]]]), alpha = 0.2, linewidth = 0.7)
+}
+print(plt + geom_line(aes(y = mean), colour = "steelblue", linewidth = 1.5, linetype = 2) + 
+        labs(x = "Theoretical quantiles", y = "") + 
+        theme_minimal(base_size = 30) +
+        theme(text = element_text(size = 20,
+              axis.text.y = element_blank(),) +         
+        coord_fixed(xlim = c(-2, 2),  
+                    ylim = c(-2, 2))))
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_qqplot_sc1-wi.pdf"), width=10, height = 7.78)
+
+save(alpha.container, newgsmooth.container, mise.container, qqplot.container, file = (paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_sc3.Rdata")))
 # total.iter <- 250
-load(paste0("./simulation/results/MC-Scenario_C/2024-02-13_",total.iter,"_MC_sc3.Rdata"))
+# load(paste0("./simulation/results/MC-Scenario_C/2024-02-13_",total.iter,"_MC_sc3.Rdata"))
 
 
