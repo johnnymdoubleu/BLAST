@@ -7,9 +7,9 @@ library(MESS)
 
 total.iter <- 250
 
-n <- n.origin <- 15000
+n <- n.origin <- 20000
 psi <- 10
-threshold <- 0.95
+threshold <- 0.99
 p <- 5
 newp <- p+1
 no.theta <- 1
@@ -522,8 +522,8 @@ print(plt +
 save(alpha.container, newgsmooth.container, mise.container, qqplot.container, file = (paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_sc1.Rdata")))
 # total.iter <- 100
 # load(paste0("./simulation/results/MC-scenarioA/2024-03-18_",total.iter,"_MC_sc1.Rdata"))
-total.iter <- 250
-load(paste0("./simulation/results/2024-03-18_",total.iter,"_q99_MC_scA.Rdata"))
+
+# load(paste0("./simulation/results/2024-03-18_",total.iter,"_q99_MC_scA.Rdata"))
 
 # alpha.container.comb <- alpha.container[,1:250]
 # newgsmooth.container.comb <- newgsmooth.container[,1:250]
