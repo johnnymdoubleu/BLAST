@@ -505,10 +505,10 @@ for(i in 1:total.iter){
 print(plt + geom_line(aes(y = mean), colour = "steelblue", linewidth = 1.5, linetype = 2) + 
         labs(x = "Theoretical quantiles", y = "") + 
         theme_minimal(base_size = 30) +
-        theme(text = element_text(size = 20,
-              axis.text.y = element_blank(),) +         
+        theme(text = element_text(size = 20),
+              axis.text.y = element_blank()) +       
         coord_fixed(xlim = c(-2, 2),  
-                    ylim = c(-2, 2))))
+                    ylim = c(-2, 2)))
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_qqplot_sc1-wi.pdf"), width=10, height = 7.78)
 
 save(alpha.container, newgsmooth.container, mise.container, qqplot.container, file = (paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_sc3.Rdata")))
