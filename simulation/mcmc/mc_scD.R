@@ -16,7 +16,7 @@ library(rmutil)
 
 total.iter <- 250
 
-n <- 15000
+n <- n.origin <- 15000
 psi <- 10
 threshold <- 0.95
 p <- 5
@@ -141,7 +141,7 @@ alpha.lower.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol =
 alpha.upper.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total.iter))
 
 for(iter in 1:total.iter){
-    n <- 15000
+    n <- n.origin
     x.origin <- pnorm(matrix(rnorm(n*p), ncol = p) %*% chol(C))
     xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
     for(i in 1:p){
@@ -247,7 +247,7 @@ for(iter in 1:total.iter){
     # newgnl.container[,iter] <- as.vector(matrix(newgnl.samples[,5], nrow = n, byrow=TRUE))
     newgsmooth.container[,iter] <- as.vector(matrix(newgsmooth.samples[,5], nrow = n, byrow=TRUE))
 }
-
+# colnames(alpha.container)[1:500] <- as.character(1:500)
 alpha.container$x <- seq(0,1, length.out = n)
 alpha.container$true <- (alp.new)
 alpha.container <- cbind(alpha.container, t(apply(alpha.container[,1:total.iter], 1, quantile, c(0.05, .5, .95))))
@@ -282,7 +282,7 @@ print(plt +
                 strip.text = element_blank(),
                 axis.text = element_text(size = 18)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_sc4-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_sc4-wi.pdf"), width=9.5, height = 7.78)
 
 
 # resg <- gather(theta.container,
@@ -368,13 +368,13 @@ equal_breaks <- function(n = 3, s = 0.1,...){
     round(seq, -floor(log10(abs(seq[2]-seq[1]))))
   }
 }
-
+# colnames(newgsmooth.container)[1:500] <- as.character(1:500)
 newgsmooth.container$x <- seq(0,1, length.out = n)
 newgsmooth.container$true <- as.vector(f.new)
 newgsmooth.container <- cbind(newgsmooth.container, t(apply(newgsmooth.container[,1:total.iter], 1, quantile, c(0.05, .5, .95))))
 colnames(newgsmooth.container)[(dim(newgsmooth.container)[2]-2):(dim(newgsmooth.container)[2])] <- c("q1","q2","q3")
 newgsmooth.container$mean <- rowMeans(newgsmooth.container[,1:total.iter])
-newgsmooth.container$covariate <- gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]", "g[6]"))
+newgsmooth.container$covariate <- gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]"))
 newgsmooth.container <- as.data.frame(newgsmooth.container)
 
 plt <- ggplot(data = newgsmooth.container, aes(x = x, group = covariate)) + ylab("") + xlab(expression(c))
@@ -401,10 +401,11 @@ print(plt +
         theme_minimal(base_size = 30) +
         theme(legend.position = "none",
                 plot.margin = margin(0,0,0,-20),
-                strip.text = element_blank(),
+                strip.text = element_blank(),      
+                axis.text.y = element_blank(),
                 axis.text = element_text(size = 18)))
 
-ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_sc4-wi.pdf"), width=11.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_sc4-wi.pdf"), width=11, height = 15)
 
 # newgl.container$x <- seq(0,1, length.out = n)
 # newgl.container$true <- as.vector(f.linear.new)
@@ -479,7 +480,13 @@ ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_sc4-
 #                 axis.text = element_text(size = 20)))
 
 # # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_nonlinear_sc4-wi.pdf"), width=12.5, height = 15)
+total.iter <- 500
+save(alpha.container, newgsmooth.container, file = (paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_sc4.Rdata")))
 
-# save(alpha.container, newgsmooth.container, file = (paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_sc4.Rdata")))
-# total.iter <- 250
 load(paste0("./simulation/results/MC-Scenario_D/2024-02-12_",total.iter,"_MC_sc4.Rdata"))
+
+# alpha.container.comb <- alpha.container[,1:250]
+# newgsmooth.container.comb <- newgsmooth.container[,1:250]
+
+# alpha.container <- cbind(alpha.container.comb, alpha.container[,1:250])
+# newgsmooth.container <- cbind(newgsmooth.container.comb, newgsmooth.container[,1:250])

@@ -362,7 +362,7 @@ print(plt +
 #           axis.text.x = element_text(hjust=0.5),
 #           axis.text = element_text(size = 28))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_gamma_sc3-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_gamma_sc3-wi.pdf"), width=9.5, height = 7.78)
 
 equal_breaks <- function(n = 3, s = 0.1,...){
   function(x){
@@ -395,7 +395,7 @@ if(total.iter <= 50){
 print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
         geom_line(aes(y=true, col = "True"), linewidth = 2) + 
         geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5, linetype = 2) + 
-        ylim(-0.23, 0.2) +
+        ylim(-0.5, 0.5) +
         # facet_wrap(covariate ~ ., scales = "free_x", nrow = 5,
         #             labeller = label_parsed, strip.position = "left") +
         facet_grid(covariate ~ ., scales = "free_x", switch = "y", 
@@ -513,6 +513,6 @@ print(plt + geom_line(aes(y = mean), colour = "steelblue", linewidth = 1.5, line
 
 save(alpha.container, newgsmooth.container, mise.container, qqplot.container, file = (paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_sc3.Rdata")))
 # total.iter <- 250
-# load(paste0("./simulation/results/MC-Scenario_C/2024-02-13_",total.iter,"_MC_sc3.Rdata"))
-
+load(paste0("./simulation/results/MC-Scenario_C/2024-02-13_",total.iter,"_MC_sc3.Rdata"))
+load()
 
