@@ -509,10 +509,11 @@ print(plt + geom_line(aes(y = mean), colour = "steelblue", linewidth = 1.5, line
               axis.text.y = element_blank()) +       
         coord_fixed(xlim = c(-2, 2),  
                     ylim = c(-2, 2)))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_qqplot_sc1-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_qqplot_sc3-wi.pdf"), width=10, height = 7.78)
 
 save(alpha.container, newgsmooth.container, mise.container, qqplot.container, file = (paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_sc3.Rdata")))
 # total.iter <- 250
 load(paste0("./simulation/results/MC-Scenario_C/2024-02-13_",total.iter,"_MC_sc3.Rdata"))
-load()
+
+load("./simulation/results/MC-Scenario_C/2024-03-21_q95_250_MC_scC.Rdata")
 

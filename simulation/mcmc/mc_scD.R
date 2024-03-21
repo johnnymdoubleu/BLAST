@@ -1,17 +1,9 @@
 library(npreg)
-library(reshape2)
 suppressMessages(library(tidyverse))
-library(JOPS)
-library(readxl)
-library(gridExtra)
-library(colorspace)
-library(corrplot)
-library(ReIns)
 library(evir)
 library(rstan)
-library(cmdstanr)
 library(rmutil)
-
+library(MESS)
 # Scenario D
 
 total.iter <- 250
@@ -480,7 +472,7 @@ print(plt +
 #                 axis.text = element_text(size = 20)))
 
 # # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_nonlinear_sc4-wi.pdf"), width=12.5, height = 15)
-total.iter <- 500
+# total.iter <- 500
 save(alpha.container, newgsmooth.container, file = (paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_sc4.Rdata")))
 
 load(paste0("./simulation/results/MC-Scenario_D/2024-02-12_",total.iter,"_MC_sc4.Rdata"))
