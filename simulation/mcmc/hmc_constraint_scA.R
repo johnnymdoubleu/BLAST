@@ -21,7 +21,7 @@ library(cmdstanr)
 library(ggh4x)
 
 #Scenario 1
-set.seed(10)
+# set.seed(10)
 # set.seed(6)
 
 
@@ -51,7 +51,7 @@ for(j in 1:p){
         if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
         else {
             if(ps == 1 | ps == psi){gamma.origin[ps, j] <- 0}
-            else{gamma.origin[ps, j] <- -0.3}
+            else{gamma.origin[ps, j] <- -0.1}
         }
     }
 }
@@ -196,9 +196,9 @@ model {
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += gamma_lpdf(lambda1 | 0.01, 0.01);
-    target += gamma_lpdf(lambda2 | 0.1, 0.1);
+    target += gamma_lpdf(lambda2 | 0.01, 0.01);
     target += normal_lpdf(theta[1] | 0, 100);
-    target += inv_gamma_lpdf(sigma | 1, 1);
+    target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     target += ((p * log(lambda1)) + (p * psi * log(sqrt(lambda2))));
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
@@ -446,7 +446,7 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values=c("steelblue", "red")) + 
   guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) + ylim(-0.55, 0.5) +
+          fill = guide_legend(order = 1)) + ylim(-0.05, 0.05) +
   # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) +
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 15),
