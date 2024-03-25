@@ -25,7 +25,7 @@ set.seed(10)
 # set.seed(6)
 
 
-n <- 5000
+n <- 15000
 psi <- 10
 threshold <- 0.95
 p <- 5
@@ -49,18 +49,14 @@ gamma.origin <- matrix(, nrow = psi, ncol = p)
 for(j in 1:p){
     for (ps in 1:psi){
         if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
-        else if(j==7){
-            if(ps <= (psi/2)){gamma.origin[ps, j] <- -0.1}
-            else{gamma.origin[ps, j] <- -0.1}
-        }
         else {
-            if(ps <= (psi/2)){gamma.origin[ps, j] <- -0.1}
-            else{gamma.origin[ps, j] <- -0.1}
+            if(ps == 1 | ps == psi){gamma.origin[ps, j] <- 0}
+            else{gamma.origin[ps, j] <- -0.2}
         }
     }
 }
 
-theta.origin <- c(0.5, 0, -0.2, -0.2, 0, 0)
+theta.origin <- c(0.1, 0, -0.2, -0.2, 0, 0)
 
 f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
@@ -199,7 +195,7 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 0.1, 0.1);
+    target += gamma_lpdf(lambda1 | 0.01, 0.01);
     target += gamma_lpdf(lambda2 | 0.01, 0.01);
     target += normal_lpdf(theta[1] | 0, 100);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
@@ -219,18 +215,18 @@ data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi,
                     bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
                     xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear)
 
-init.alpha <- list(list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c((psi-2), p)),
+init.alpha <- list(list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c(p, (psi-2))),
                         theta = rep(0, (p+1)),
                         tau = rep(0.1, p), sigma = 0.1, 
                         lambda1 = 0.01, lambda2 = 0.01),
-                  list(gammaTemp = array(rep(0.2, ((psi-2)*p)), dim=c((psi-2), p)),
+                  list(gammaTemp = array(rep(0.2, ((psi-2)*p)), dim=c(p, (psi-2))),
                         theta = rep(0.01, (p+1)),
                         tau = rep(0.01, p), sigma = 0.001,
                         lambda1 = 0.1, lambda2 = 0.001),
-                  list(gammaTemp = array(rep(0.1, ((psi-2)*p)), dim=c((psi-2), p)),
+                  list(gammaTemp = array(rep(0.1, ((psi-2)*p)), dim=c(p,(psi-2))),
                         theta = rep(0.05, (p+1)),
                         tau = rep(0.01, p), sigma = 0.01,
-                        lambda1 = 1, lambda2 = 0.01))
+                        lambda1 = 0.01, lambda2 = 0.05))
 # setwd("C:/Users/Johnny Lee/Documents/GitHub")
 fit1 <- stan(
     file = "model_simulation_sc1_constraint.stan",  # Stan program
@@ -367,9 +363,9 @@ data.smooth <- data.frame("x"=newx,
                           "q1" = as.vector(g.smooth.q1),
                           "q2" = as.vector(g.smooth.q2),
                           "q3" = as.vector(g.smooth.q3),
-                          "covariates" = gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]", "g[6]")),
+                          "covariates" = gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]")),
                           "fakelab" = rep(1, (p*n)),
-                          "replicate" = gl(p, n, (p*n), labels = c("x[1]", "x[2]", "x[3]", "x[4]", "x[5]", "x[6]")))
+                          "replicate" = gl(p, n, (p*n), labels = c("x[1]", "x[2]", "x[3]", "x[4]", "x[5]")))
 
 ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 

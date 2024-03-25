@@ -240,7 +240,6 @@ for(i in 1:p){
 write("data {
     int <lower=1> n; // Sample size
     int <lower=1> p; // regression coefficient size
-    int <lower=1> newp; 
     int <lower=1> psi; // splines coefficient size
     real <lower=0> u; // large threshold value
     matrix[n,p] bsLinear; // fwi dataset
@@ -253,7 +252,7 @@ write("data {
     array[p, 2] int indexFL;
 }
 parameters {
-    vector[newp] theta; // linear predictor
+    vector[(p+1)] theta; // linear predictor
     vector[(psi-2)] gammaTemp[p]; // splines coefficient
     real <lower=0> lambda1; // lasso penalty
     real <lower=0> lambda2; // group lasso penalty
