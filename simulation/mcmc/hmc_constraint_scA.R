@@ -196,14 +196,14 @@ model {
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += gamma_lpdf(lambda1 | 0.1, 0.1);
-    target += gamma_lpdf(lambda2 | 1, 1);
+    target += gamma_lpdf(lambda2 | 0.1, 0.1);
     target += normal_lpdf(theta[1] | 0, 100);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
-    target += ((p * log(lambda1)) + (p * psi * log(lambda2)));
+    target += ((p * log(lambda1)) + (p * psi * log(sqrt(lambda2))));
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
-        target += gamma_lpdf(tau[j] | atau, lambda2/sqrt(2));
-        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * sqrt(tau[j]) * sqrt(sigma));
+        target += gamma_lpdf(tau[j] | atau, (sqrt(lambda2)/2));
+        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau[j] * sigma);
     }
 }
 "
@@ -219,12 +219,12 @@ init.alpha <- list(list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c((psi-2),p))
                         theta = rep(0, (p+1)),
                         tau = rep(0.1, p), sigma = 0.1, 
                         lambda1 = 0.01, lambda2 = 0.01),
-                  list(gammaTemp = array(rep(0.2, ((psi-2)*p)), dim=c((psi-2),p)),
+                  list(gammaTemp = array(rep(-0.2, ((psi-2)*p)), dim=c((psi-2),p)),
                         theta = rep(0.01, (p+1)),
                         tau = rep(0.01, p), sigma = 0.001,
                         lambda1 = 0.1, lambda2 = 0.001),
                   list(gammaTemp = array(rep(0.1, ((psi-2)*p)), dim=c((psi-2),p)),
-                        theta = rep(0.05, (p+1)),
+                        theta = rep(-0.05, (p+1)),
                         tau = rep(0.5, p), sigma = 0.01,
                         lambda1 = 0.01, lambda2 = 0.05))
 # setwd("C:/Users/Johnny Lee/Documents/GitHub")
