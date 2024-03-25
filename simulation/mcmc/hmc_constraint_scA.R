@@ -21,7 +21,7 @@ library(cmdstanr)
 library(ggh4x)
 
 #Scenario 1
-# set.seed(10)
+set.seed(10)
 # set.seed(6)
 
 
@@ -195,8 +195,8 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 0.01, 0.01);
-    target += gamma_lpdf(lambda2 | 0.01, 0.01);
+    target += gamma_lpdf(lambda1 | 1, 1);
+    target += gamma_lpdf(lambda2 | 1, 1);
     target += normal_lpdf(theta[1] | 0, 100);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     target += ((p * log(lambda1)) + (p * psi * log(lambda2)));
@@ -215,17 +215,17 @@ data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi,
                     bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
                     xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear)
 
-init.alpha <- list(list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c(p, (psi-2))),
+init.alpha <- list(list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c((psi-2),p)),
                         theta = rep(0, (p+1)),
                         tau = rep(0.1, p), sigma = 0.1, 
                         lambda1 = 0.01, lambda2 = 0.01),
-                  list(gammaTemp = array(rep(0.2, ((psi-2)*p)), dim=c(p, (psi-2))),
+                  list(gammaTemp = array(rep(0.2, ((psi-2)*p)), dim=c((psi-2),p)),
                         theta = rep(0.01, (p+1)),
                         tau = rep(0.01, p), sigma = 0.001,
                         lambda1 = 0.1, lambda2 = 0.001),
-                  list(gammaTemp = array(rep(0.1, ((psi-2)*p)), dim=c(p,(psi-2))),
+                  list(gammaTemp = array(rep(0.1, ((psi-2)*p)), dim=c((psi-2),p)),
                         theta = rep(0.05, (p+1)),
-                        tau = rep(0.01, p), sigma = 0.01,
+                        tau = rep(0.5, p), sigma = 0.01,
                         lambda1 = 0.01, lambda2 = 0.05))
 # setwd("C:/Users/Johnny Lee/Documents/GitHub")
 fit1 <- stan(
@@ -282,12 +282,7 @@ ggplot(df.theta, aes(x = covariate, y=m, color = covariate)) + ylab("") + xlab('
                               expression(bold(theta[2])),
                               expression(bold(theta[3])),
                               expression(bold(theta[4])),
-                              expression(bold(theta[5])),
-                              expression(bold(theta[6])),
-                              expression(bold(theta[7])),
-                              expression(bold(theta[8])),
-                              expression(bold(theta[9])),
-                              expression(bold(theta[10])))) + 
+                              expression(bold(theta[5])))) + 
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 20),
           legend.text.align = 0,
@@ -318,12 +313,7 @@ ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) +
                               expression(bold(gamma[2])), 
                               expression(bold(gamma[3])), 
                               expression(bold(gamma[4])), 
-                              expression(bold(gamma[5])), 
-                              expression(bold(gamma[6])), 
-                              expression(bold(gamma[7])), 
-                              expression(bold(gamma[8])), 
-                              expression(bold(gamma[9])), 
-                              expression(bold(gamma[10]))),
+                              expression(bold(gamma[5]))),
                     expand=c(0,3)) +
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 20),
