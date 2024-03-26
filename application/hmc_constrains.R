@@ -47,7 +47,7 @@ Y <- df.long$measurement[!is.na(df.long$measurement)]
 summary(Y) #total burnt area
 length(Y)
 psi <- 10
-threshold <- 0.99
+threshold <- 0.95
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
 # x.scale <- x.scale[which(y>quantile(y, threshold)),]
@@ -274,7 +274,7 @@ transformed parameters {
 
     for(j in 1:p){
         gamma[j][2:(psi-1)] = gammaTemp[j][1:(psi-2)];
-        subgnl[,j] = bsNonlinear[indexFL[1,], (((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] * gammaTemp[j];
+        subgnl[,j] = bsNonlinear[indexFL[j,1:2], (((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] * gammaTemp[j];
         gammaFL[j] = basisFL[, (((j-1)*2)+1):(((j-1)*2)+2)] * -1 * subgnl[,j];
         gamma[j][1] = gammaFL[j][1];
         gamma[j][psi] = gammaFL[j][2];
@@ -302,14 +302,13 @@ model {
     }
     target += gamma_lpdf(lambda1 | 1, 10);
     target += gamma_lpdf(lambda2 | 0.1, 0.1);
-    target += normal_lpdf(theta[1] | 0, 1);
-    // target += normal_lpdf(theta[1] | log(1.2), 0.01) target += double_exponential_lpdf(theta[1] | 0, lambda1)
+    target += normal_lpdf(theta[1] | 0, 100);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
-    target += ((newp * log(lambda1)) + (p * psi * log(lambda2)));
+    target += ((p * log(sqrt(lambda1))) + (p * psi * log(sqrt(lambda2))));
     for (j in 1:p){
-        target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
-        target += gamma_lpdf(tau[j] | atau, lambda2/sqrt(2));
-        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * sqrt(tau[j]) * sqrt(sigma));
+        target += double_exponential_lpdf(theta[(j+1)] | 0, sqrt(lambda1));
+        target += gamma_lpdf(tau[j] | atau, (lambda2/2));
+        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau[j] * sigma);
     }
 }
 generated quantities {
@@ -323,8 +322,7 @@ generated quantities {
 , "model_BRSTIR_constraint.stan")
 
 data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, 
-                    atau = ((psi+1)/2), newp = (p+1), 
-                    indexFL = index.holder, 
+                    atau = ((psi+1)/2), indexFL = index.holder, 
                     bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
                     xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear, basisFL = basis.holder)
 
@@ -356,7 +354,7 @@ fit1 <- stan(
     # init_r = 1,
     chains = 3,             # number of Markov chains
     # warmup = 1000,          # number of warmup iterations per chain
-    iter = 500,            # total number of iterations per chain
+    iter = 2000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
     refresh = 500           # no progress shown
 )
@@ -488,12 +486,12 @@ ggplot(df.theta, aes(x = covariate, y=m, color = covariate)) + ylab("") + xlab('
 #         axis.text.x = element_text(angle = 0, hjust = 0.5))
 
 
-df.gamma <- data.frame("seq" = seq(1, ((psi-2)*p)), 
+df.gamma <- data.frame("seq" = seq(1, (psi*p)), 
                   "m" = as.vector(gamma.q2),
                   "l" = as.vector(gamma.q1),
                   "u" = as.vector(gamma.q3))
-df.gamma$covariate <- factor(rep(names(fwi.scaled), each = (psi-2), length.out = nrow(df.gamma)), levels = colnames(fwi.scaled))
-df.gamma$labels <- factor(1:((psi-2)*p))
+df.gamma$covariate <- factor(rep(names(fwi.scaled), each = psi, length.out = nrow(df.gamma)), levels = colnames(fwi.scaled))
+df.gamma$labels <- factor(1:(psi*p))
 ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) + 
   geom_errorbar(aes(ymin = l, ymax = u), alpha = 0.4, width = 4, linewidth = 1.2) +
   geom_point(size = 4) + ylab("") + xlab("" ) + #xlim(1,(psi*p)) +

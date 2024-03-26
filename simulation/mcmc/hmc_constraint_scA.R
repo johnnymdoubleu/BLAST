@@ -21,12 +21,12 @@ library(cmdstanr)
 library(ggh4x)
 
 #Scenario 1
-# set.seed(10)
+set.seed(10)
 # set.seed(6)
 
 
 n <- 15000
-psi <- 10
+psi <- 20
 threshold <- 0.95
 p <- 5
 no.theta <- 1
@@ -72,8 +72,8 @@ for(i in 1:n){
 }
 
 u <- quantile(y.origin, threshold)
-x.origin <- x.origin[which(y.origin>u),]
-# x.bs <- x.origin
+excess.index <- which(y.origin>u)
+x.origin <- x.origin[excess.index,]
 
 y.origin <- y.origin[y.origin > u]
 n <- length(y.origin)
@@ -88,6 +88,8 @@ for(i in 1:p){
                       matrix(c(which.min(x.origin[,i]),
                               which.max(x.origin[,i])), ncol=2))
 }
+range01 <- function(x){(x-min(x))/(max(x)-min(x))}
+x.origin <- as.data.frame(sapply(as.data.frame(x.origin), FUN = range01))
 
 for(i in 1:p){
     # xholder[,i] <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = n)  
@@ -114,6 +116,7 @@ for(i in 1:p){
     bs.linear <- cbind(bs.linear, tps[,1:no.theta])
     bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)]) 
 }
+
 
 f.nonlinear.new <- f.linear.new <- f.new <- f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
@@ -169,7 +172,7 @@ transformed parameters {
 
     for(j in 1:p){
         gamma[j][2:(psi-1)] = gammaTemp[j][1:(psi-2)];
-        subgnl[,j] = bsNonlinear[indexFL[1,], (((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] * gammaTemp[j];
+        subgnl[,j] = bsNonlinear[indexFL[j,], (((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] * gammaTemp[j];
         gammaFL[j] = basisFL[, (((j-1)*2)+1):(((j-1)*2)+2)] * -1 * subgnl[,j];
         gamma[j][1] = gammaFL[j][1];
         gamma[j][psi] = gammaFL[j][2];
@@ -198,12 +201,12 @@ model {
     target += gamma_lpdf(lambda1 | 0.1, 0.1);
     target += gamma_lpdf(lambda2 | 0.1, 0.1);
     target += normal_lpdf(theta[1] | 0, 100);
-    target += inv_gamma_lpdf(sigma | 0.01, 0.01);
-    target += ((p * log(lambda1)) + (p * psi * log(lambda2)));
+    target += inv_gamma_lpdf(sigma | 1, 1);
+    target += ((p * log(lambda1)/2) + (p * psi * log(lambda2)/2));
     for (j in 1:p){
-        target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
+        target += double_exponential_lpdf(theta[(j+1)] | 0, sqrt(lambda1));
         target += gamma_lpdf(tau[j] | atau, (lambda2/2));
-        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * sqrt(tau[j]) * sqrt(sigma));
+        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau[j] * sigma);
     }
 }
 "
@@ -223,7 +226,7 @@ init.alpha <- list(list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c((psi-2),p))
                         theta = rep(0.01, (p+1)),
                         tau = rep(0.01, p), sigma = 0.001,
                         lambda1 = 0.1, lambda2 = 0.001),
-                  list(gammaTemp = array(rep(0.05, ((psi-2)*p)), dim=c((psi-2),p)),
+                  list(gammaTemp = array(rep(0.75, ((psi-2)*p)), dim=c((psi-2),p)),
                         theta = rep(-0.05, (p+1)),
                         tau = rep(0.5, p), sigma = 0.01,
                         lambda1 = 0.01, lambda2 = 0.05))
@@ -256,6 +259,8 @@ newgl.samples <- summary(fit1, par=c("newgl"), probs = c(0.05, 0.5, 0.95))$summa
 newgnl.samples <- summary(fit1, par=c("newgnl"), probs = c(0.05, 0.5, 0.95))$summary
 newgsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
 newalpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
+subgnl.samples <- summary(fit1, par=c("subgnl"), probs = c(0.05,0.5, 0.95))$summary
+gammafl.samples <- summary(fit1, par=c("gammaFL"), probs = c(0.05,0.5, 0.95))$summary
 
 gamma.post.mean <- gamma.samples[,1]
 gamma.q1 <- gamma.samples[,4]
@@ -265,6 +270,8 @@ theta.post.mean <- theta.samples[,1]
 theta.q1 <- theta.samples[,4]
 theta.q2 <- theta.samples[,5]
 theta.q3 <- theta.samples[,6]
+
+array(gamma.q2, dim=c(psi,p))
 
 df.theta <- data.frame("seq" = seq(1, (p+1)),
                         "true" = theta.origin,
@@ -446,7 +453,7 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values=c("steelblue", "red")) + 
   guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) + ylim(-0.05, 0.05) +
+          fill = guide_legend(order = 1)) + ylim(-0.5, 0.5) +
   # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) +
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 15),

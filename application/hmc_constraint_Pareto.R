@@ -280,7 +280,7 @@ transformed parameters {
 
     for(j in 1:p){
         gammaTemp[j] = gamma[j];
-        subgnl[,j] = bsNonlinear[indexFL[1,], (((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] * gammaTemp[j];
+        subgnl[,j] = bsNonlinear[indexFL[j,], (((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] * gammaTemp[j];
         gammaFL[j] = basisFL[, (((j-1)*2)+1):(((j-1)*2)+2)] * -1 * subgnl[,j];
     };
 
