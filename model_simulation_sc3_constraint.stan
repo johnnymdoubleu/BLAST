@@ -1,4 +1,4 @@
-// Stan model for BRSTIR Pareto Uncorrelated Samples
+// Stan model for BRSTIR Student-t Uncorrelated Samples
 data {
     int <lower=1> n; // Sample size
     int <lower=1> p; // regression coefficient size
@@ -59,7 +59,8 @@ transformed parameters {
 model {
     // likelihood
     for (i in 1:n){
-        target += pareto_lpdf(y[i] | u, alpha[i]);
+        target += student_t_lpdf(y[i] | alpha[i], 0, 1);
+        target += -1*log(1-student_t_cdf(u, alpha[i], 0, 1));
     }
     target += gamma_lpdf(lambda1 | 0.1, 0.1);
     target += gamma_lpdf(lambda2 | 0.1, 0.1);

@@ -274,7 +274,7 @@ transformed parameters {
     array[n] real <lower=0> newalpha; // new tail index
     matrix[n, p] newgnl; // nonlinear component
     matrix[n, p] newgfnl;
-    matrix[n, p] newglnl;    
+    matrix[n, p] newglnl;
     matrix[n, p] newgl; // linear component
     matrix[n, p] newgsmooth; // linear component
 
@@ -313,7 +313,7 @@ model {
     target += normal_lpdf(theta[1] | 0, 1);
     // target += normal_lpdf(theta[1] | log(1.2), 0.01) target += double_exponential_lpdf(theta[1] | 0, lambda1)
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
-    target += ((newp * log(lambda1)) + (p * (psi-2) * log(lambda2)));
+    target += ((p * log(lambda1)) + (p * (psi-2) * log(lambda2)));
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
         target += gamma_lpdf(tau[j] | atau, lambda2/sqrt(2));

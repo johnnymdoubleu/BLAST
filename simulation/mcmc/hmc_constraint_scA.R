@@ -26,7 +26,7 @@ set.seed(10)
 
 
 n <- 15000
-psi <- 20
+psi <- 10
 threshold <- 0.95
 p <- 5
 no.theta <- 1
@@ -88,8 +88,8 @@ for(i in 1:p){
                       matrix(c(which.min(x.origin[,i]),
                               which.max(x.origin[,i])), ncol=2))
 }
-range01 <- function(x){(x-min(x))/(max(x)-min(x))}
-x.origin <- as.data.frame(sapply(as.data.frame(x.origin), FUN = range01))
+# range01 <- function(x){(x-min(x))/(max(x)-min(x))}
+# x.origin <- as.data.frame(sapply(as.data.frame(x.origin), FUN = range01))
 
 for(i in 1:p){
     # xholder[,i] <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = n)  
@@ -144,10 +144,10 @@ data {
     matrix[n, (psi*p)] bsNonlinear; // thin plate splines basis
     matrix[n,p] xholderLinear; // fwi dataset
     matrix[n, (psi*p)] xholderNonlinear; // thin plate splines basis    
-    vector[n] y; // extreme response
+    array[n] real <lower=1> y; // extreme response
     real <lower=0> atau;
     matrix[2, (2*p)] basisFL;
-    array[p, 2] int indexFL;
+    array[(p*2)] int indexFL;
 }
 parameters {
     vector[(p+1)] theta; // linear predictor
@@ -159,10 +159,10 @@ parameters {
 }
 transformed parameters {
     array[n] real <lower=0> alpha; // covariate-adjusted tail index
-    vector[psi] gamma[p]; // splines coefficient
-    vector[2] gammaFL[p];
-    matrix[n, p] gnl; // nonlinear component
+    vector[psi] gamma[p]; // splines coefficient 
+    vector[2] gammaFL[p]; 
     matrix[2, p] subgnl;
+    matrix[n, p] gnl; // nonlinear component
     matrix[n, p] gl; // linear component
     matrix[n, p] gsmooth; // linear component
     array[n] real <lower=0> newalpha; // new tail index
@@ -172,12 +172,11 @@ transformed parameters {
 
     for(j in 1:p){
         gamma[j][2:(psi-1)] = gammaTemp[j][1:(psi-2)];
-        subgnl[,j] = bsNonlinear[indexFL[j,], (((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] * gammaTemp[j];
-        gammaFL[j] = basisFL[, (((j-1)*2)+1):(((j-1)*2)+2)] * -1 * subgnl[,j];
+        subgnl[,j] = bsNonlinear[indexFL[(((j-1)*2)+1):(((j-1)*2)+2)], (((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] * gammaTemp[j];
+        gammaFL[j] = basisFL[, (((j-1)*2)+1):(((j-1)*2)+2)] * subgnl[,j] * -1;
         gamma[j][1] = gammaFL[j][1];
         gamma[j][psi] = gammaFL[j][2];
     };
-
     for (j in 1:p){
         gnl[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
         newgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
@@ -201,7 +200,7 @@ model {
     target += gamma_lpdf(lambda1 | 0.1, 0.1);
     target += gamma_lpdf(lambda2 | 0.1, 0.1);
     target += normal_lpdf(theta[1] | 0, 100);
-    target += inv_gamma_lpdf(sigma | 1, 1);
+    target += inv_gamma_lpdf(sigma | 0.1, 0.1);
     target += ((p * log(lambda1)/2) + (p * psi * log(lambda2)/2));
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, sqrt(lambda1));
@@ -214,7 +213,7 @@ model {
 
 data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, 
                     atau = ((psi+1)/2), basisFL = basis.holder,
-                    indexFL = index.holder, 
+                    indexFL = as.vector(t(index.holder)), 
                     bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
                     xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear)
 
@@ -226,7 +225,7 @@ init.alpha <- list(list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c((psi-2),p))
                         theta = rep(0.01, (p+1)),
                         tau = rep(0.01, p), sigma = 0.001,
                         lambda1 = 0.1, lambda2 = 0.001),
-                  list(gammaTemp = array(rep(0.75, ((psi-2)*p)), dim=c((psi-2),p)),
+                  list(gammaTemp = array(rep(-0.5, ((psi-2)*p)), dim=c((psi-2),p)),
                         theta = rep(-0.05, (p+1)),
                         tau = rep(0.5, p), sigma = 0.01,
                         lambda1 = 0.01, lambda2 = 0.05))
@@ -272,7 +271,11 @@ theta.q2 <- theta.samples[,5]
 theta.q3 <- theta.samples[,6]
 
 array(gamma.q2, dim=c(psi,p))
-
+sampled <- end.holder[,1:2] %*% gammafl.samples[1:2, 5]
+trued <- as.matrix(c(bs.nonlinear[index.holder[1,1], 2:(psi-1)] %*% gamma.samples[1:(psi-2), 5], bs.nonlinear[index.holder[1,2], 2:(psi-1)] %*% gamma.samples[1:(psi-2), 5]), nrow = 2)
+sampled - trued
+sampled
+trued
 df.theta <- data.frame("seq" = seq(1, (p+1)),
                         "true" = theta.origin,
                         "m" = theta.q2,
@@ -453,7 +456,7 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values=c("steelblue", "red")) + 
   guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) + ylim(-0.5, 0.5) +
+          fill = guide_legend(order = 1)) + ylim(-0.05, 0.05) +
   # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) +
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 15),
