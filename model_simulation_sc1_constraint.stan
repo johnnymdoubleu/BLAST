@@ -12,12 +12,12 @@ data {
     real <lower=0> atau;
     matrix[2, (2*p)] basisFL;
     array[(p*2)] int indexFL;
+    real <lower=0> lambda1; //lasso penalty
 }
 parameters {
     vector[(p+1)] theta; // linear predictor
     vector[(psi-2)] gammaTemp[p]; // constraint splines coefficient from 2 to psi-1
-    real <lower=0> lambda1; // lasso penalty
-    real <lower=0> lambda2; // group lasso penalty
+    real <lower=0> lambda2; // group lasso penalty 
     real sigma;
     vector[p] tau;
 }
@@ -61,8 +61,7 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 0.1, 0.1);
-    target += gamma_lpdf(lambda2 | 0.1, 0.1);
+    target += gamma_lpdf(lambda2 | 0.1, 0.1); //target += gamma_lpdf(lambda1 | 0.1, 0.1)
     target += normal_lpdf(theta[1] | 0, 100);
     target += inv_gamma_lpdf(sigma | 0.1, 0.1);
     target += ((p * log(lambda1)/2) + (p * psi * log(lambda2)/2));
