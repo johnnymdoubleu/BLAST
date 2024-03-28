@@ -61,8 +61,8 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 0.1, 0.1);
-    target += gamma_lpdf(lambda2 | 0.1, 0.1);
+    target += gamma_lpdf(lambda1 | 0.001, 0.001);
+    target += gamma_lpdf(lambda2 | 0.001, 0.001);
     target += normal_lpdf(theta[1] | 0, 100);
     target += inv_gamma_lpdf(sigma | 0.1, 0.1);
     target += ((p * log(lambda1)/2) + (p * psi * log(lambda2)/2));
