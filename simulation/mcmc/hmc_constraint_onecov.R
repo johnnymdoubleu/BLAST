@@ -25,7 +25,7 @@ set.seed(10)
 # set.seed(6)
 
 
-n <- 15000
+n <- 5000
 psi <- 10
 threshold <- 0.95
 p <- 5
@@ -37,7 +37,7 @@ C <- diag(p)
 xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
 x.origin <- pnorm(matrix(rnorm(n*p), ncol = p) %*% chol(C))
 
-x.origin <- apply(x.origin, 2, sort, decreasing=F)
+# x.origin <- apply(x.origin, 2, sort, decreasing=F)
 
 for(i in 1:p){
     knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)  
@@ -57,7 +57,7 @@ for(j in 1:p){
         }
     }
 }
-theta.origin <- c(0.5, 0, 0, 0, 0, 0)
+theta.origin <- c(0.5, 0, -0.2, -0.2, 0, 0)
 
 f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
@@ -238,7 +238,7 @@ fit1 <- stan(
     init = init.alpha,      # initial value
     chains = 3,             # number of Markov chains
     # warmup = 1000,          # number of warmup iterations per chain
-    iter = 2000,            # total number of iterations per chain
+    iter = 500,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
     refresh = 500             # no progress shown
 )

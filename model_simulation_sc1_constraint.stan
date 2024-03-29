@@ -41,6 +41,7 @@ transformed parameters {
         gamma[j][1] = gammaFL[j][1];
         gamma[j][psi] = gammaFL[j][2];
     };
+    print(gammaFL);
     for (j in 1:p){
         gnl[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
         newgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
