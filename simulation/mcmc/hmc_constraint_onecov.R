@@ -51,11 +51,11 @@ for(i in 1:p){
     bs.linear <- cbind(bs.linear, tps[,1:no.theta])
     bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])
     basis.holder <- cbind(basis.holder, 
-            solve(matrix(c(tps[index.holder[i,1], no.theta+1],
+            solve(t(matrix(c(tps[index.holder[i,1], no.theta+1],
                     tps[index.holder[i,1], no.theta+psi],
                     tps[index.holder[i,2], no.theta+1],
                     tps[index.holder[i,2], no.theta+psi]), 
-                    nrow = 2, ncol = 2)))
+                    nrow = 2, ncol = 2))))
     end.holder <- cbind(end.holder, 
                 matrix(c(tps[index.holder[i,1], no.theta+1],
                     tps[index.holder[i,1], no.theta+psi],
@@ -63,6 +63,7 @@ for(i in 1:p){
                     tps[index.holder[i,2], no.theta+psi]), 
                     nrow = 2, ncol = 2))        
 }
+
 
 ## Generate sample
 gamma.origin <- matrix(, nrow = psi, ncol = p)
