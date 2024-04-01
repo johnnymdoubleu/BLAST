@@ -36,7 +36,7 @@ transformed parameters {
 
     for(j in 1:p){
         gamma[j][2:(psi-1)] = gammaTemp[j][1:(psi-2)];
-        subgnl[,j] = xholderNonlinear[indexFL[(((j-1)*2)+1):(((j-1)*2)+2)], (((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] * gammaTemp[j];
+        subgnl[,j] = bsNonlinear[indexFL[(((j-1)*2)+1):(((j-1)*2)+2)], (((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] * gammaTemp[j];
         gammaFL[j] = basisFL[, (((j-1)*2)+1):(((j-1)*2)+2)] * subgnl[,j] * -1;
         gamma[j][1] = gammaFL[j][1];
         gamma[j][psi] = gammaFL[j][2];

@@ -38,12 +38,30 @@ xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow
 x.origin <- pnorm(matrix(rnorm(n*p), ncol = p) %*% chol(C))
 
 # x.origin <- apply(x.origin, 2, sort, decreasing=F)
-
+end.holder <- basis.holder <- matrix(, nrow = 2, ncol =0)
+index.holder <- matrix(, nrow = 0, ncol = 2)
+for(i in 1:p){
+  index.holder <- rbind(index.holder, 
+                      matrix(c(which.min(x.origin[,i]),
+                              which.max(x.origin[,i])), ncol=2))
+}
 for(i in 1:p){
     knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)  
     tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
     bs.linear <- cbind(bs.linear, tps[,1:no.theta])
-    bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])  
+    bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])
+    basis.holder <- cbind(basis.holder, 
+            solve(matrix(c(tps[index.holder[i,1], no.theta+1],
+                    tps[index.holder[i,1], no.theta+psi],
+                    tps[index.holder[i,2], no.theta+1],
+                    tps[index.holder[i,2], no.theta+psi]), 
+                    nrow = 2, ncol = 2)))
+    end.holder <- cbind(end.holder, 
+                matrix(c(tps[index.holder[i,1], no.theta+1],
+                    tps[index.holder[i,1], no.theta+psi],
+                    tps[index.holder[i,2], no.theta+1],
+                    tps[index.holder[i,2], no.theta+psi]), 
+                    nrow = 2, ncol = 2))        
 }
 
 ## Generate sample
@@ -52,12 +70,17 @@ for(j in 1:p){
     for (ps in 1:psi){
         if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
         else {
-            if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.1}
-            else{gamma.origin[ps, j] <- -0.1}
+            if(ps <= (psi/2)){gamma.origin[ps, j] <- -1.2}
+            else{gamma.origin[ps, j] <- -1.2}
         }
     }
 }
 theta.origin <- c(0.5, 0, -0.2, -0.2, 0, 0)
+f.sub.origin <- matrix(, nrow=2, ncol=p)
+for(j in 1:p){
+    f.sub.origin[,j] <- bs.nonlinear[index.holder[j,], (((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] %*% gamma.origin[(2:(psi-1)), j]
+    gamma.origin[c(1,psi),j] <- -1 * basis.holder[,(((j-1)*2)+1):(((j-1)*2)+2)] %*% as.matrix(f.sub.origin[,j], nrow=2)
+}
 
 f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
@@ -75,23 +98,19 @@ for(i in 1:n){
 u <- quantile(y.origin, threshold)
 excess.index <- which(y.origin>u)
 x.origin <- as.matrix(x.origin[excess.index,])
+bs.nonlinear <- bs.nonlinear[excess.index,]
+bs.linear <- bs.linear[excess.index,]
 
 y.origin <- y.origin[y.origin > u]
 n <- length(y.origin)
 
-xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
+# xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
 newx <- seq(0, 1, length.out=n)
 xholder <- bs.x <- matrix(, nrow = n, ncol = p)
-end.holder <- basis.holder <- matrix(, nrow = 2, ncol =0)
-index.holder <- matrix(, nrow = 0, ncol = 2)
-for(i in 1:p){
-  index.holder <- rbind(index.holder, 
-                      matrix(c(which.min(x.origin[,i]),
-                              which.max(x.origin[,i])), ncol=2))
-}
-# range01 <- function(x){(x-min(x))/(max(x)-min(x))}
-# x.origin <- as.data.frame(sapply(as.data.frame(x.origin), FUN = range01))
 
+# # range01 <- function(x){(x-min(x))/(max(x)-min(x))}
+# # x.origin <- as.data.frame(sapply(as.data.frame(x.origin), FUN = range01))
+xholder.nonlinear <- xholder.linear  <- matrix(,nrow=n, ncol=0)
 for(i in 1:p){
     # xholder[,i] <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = n)  
     # test.knot <- seq(min(xholder[,i]), max(xholder[,i]), length.out = psi)
@@ -100,31 +119,24 @@ for(i in 1:p){
     splines <- basis.tps(xholder[,i], test.knot, m=2, rk=FALSE, intercept = FALSE)
     xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
     xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
-    knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)  
-    tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
-    basis.holder <- cbind(basis.holder, 
-            solve(matrix(c(tps[index.holder[i,1], no.theta+1],
-                    tps[index.holder[i,1], no.theta+psi],
-                    tps[index.holder[i,2], no.theta+1],
-                    tps[index.holder[i,2], no.theta+psi]), 
-                    nrow = 2, ncol = 2)))
-    end.holder <- cbind(end.holder, 
-                matrix(c(tps[index.holder[i,1], no.theta+1],
-                    tps[index.holder[i,1], no.theta+psi],
-                    tps[index.holder[i,2], no.theta+1],
-                    tps[index.holder[i,2], no.theta+psi]), 
-                    nrow = 2, ncol = 2))
-    bs.linear <- cbind(bs.linear, tps[,1:no.theta])
-    bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)]) 
+    # knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)  
+    # tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
+    # bs.linear <- cbind(bs.linear, tps[,1:no.theta])
+    # bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)]) 
 }
-
+index.holder <- matrix(, nrow = 0, ncol = 2)
+for(i in 1:p){
+  index.holder <- rbind(index.holder, 
+                      matrix(c(which.min(x.origin[,i]),
+                              which.max(x.origin[,i])), ncol=2))
+}
 
 f.nonlinear.new <- f.linear.new <- f.new <- f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
-f.sub.origin <- matrix(, nrow=2, ncol=p)
-for(j in 1:p){
-    f.sub.origin[,j] <- bs.nonlinear[index.holder[j,], (((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] %*% gamma.origin[(2:(psi-1)), j]
-    gamma.origin[c(1,psi),j] <- -1 * basis.holder[,(((j-1)*2)+1):(((j-1)*2)+2)] %*% as.matrix(f.sub.origin[,j], nrow=2)
-}
+
+# for(j in 1:p){
+#     f.sub.origin[,j] <- bs.nonlinear[index.holder[j,], (((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] %*% gamma.origin[(2:(psi-1)), j]
+#     gamma.origin[c(1,psi),j] <- -1 * basis.holder[,(((j-1)*2)+1):(((j-1)*2)+2)] %*% as.matrix(f.sub.origin[,j], nrow=2)
+# }
 
 for(j in 1:p){
     f.linear.origin[,j] <- bs.linear[, j] * theta.origin[j+1]
