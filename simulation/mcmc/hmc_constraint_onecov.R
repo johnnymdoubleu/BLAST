@@ -52,7 +52,7 @@ for(j in 1:p){
     for (ps in 1:psi){
         if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
         else {
-            if(ps == 1 | ps == psi){gamma.origin[ps, j] <- 0}
+            if(ps <= (psi/2)){gamma.origin[ps, j] <- 0.1}
             else{gamma.origin[ps, j] <- -0.1}
         }
     }
@@ -120,9 +120,15 @@ for(i in 1:p){
 
 
 f.nonlinear.new <- f.linear.new <- f.new <- f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
+f.sub.origin <- matrix(, nrow=2, ncol=p)
+for(j in 1:p){
+    f.sub.origin[,j] <- bs.nonlinear[index.holder[j,], (((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] %*% gamma.origin[(2:(psi-1)), j]
+    gamma.origin[c(1,psi),j] <- -1 * basis.holder[,(((j-1)*2)+1):(((j-1)*2)+2)] %*% as.matrix(f.sub.origin[,j], nrow=2)
+}
+
 for(j in 1:p){
     f.linear.origin[,j] <- bs.linear[, j] * theta.origin[j+1]
-    f.nonlinear.origin[,j] <- bs.nonlinear[1:n,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
+    f.nonlinear.origin[,j] <- bs.nonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
     f.origin[, j] <- f.linear.origin[,j] + f.nonlinear.origin[,j]
     f.linear.new[,j] <- xholder.linear[, j] * theta.origin[j+1]
     f.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
@@ -202,11 +208,11 @@ model {
     target += gamma_lpdf(lambda2 | 0.1, 0.1);
     target += normal_lpdf(theta[1] | 0, 100);
     target += inv_gamma_lpdf(sigma | 0.1, 0.1);
-    target += ((p * log(lambda1)/2) + (p * (psi-2) * log(lambda2)/2));
+    target += ((p * log(lambda1)/2) + (p * psi * log(lambda2)/2));
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, sqrt(lambda1));
         target += gamma_lpdf(tau[j] | atau, (lambda2/2));
-        target += multi_normal_lpdf(gammaTemp[j] | rep_vector(0, (psi-2)), diag_matrix(rep_vector(1, (psi-2))) * tau[j] * sigma);
+        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau[j] * sigma);
     }
 }
 "
@@ -273,7 +279,7 @@ theta.q3 <- theta.samples[,6]
 
 array(gamma.q2, dim=c(psi,p))
 sampled <- end.holder[,1:2] %*% gammafl.samples[1:2, 5]
-trued <- as.matrix(c(bs.nonlinear[index.holder[1,1], 2:(psi-1)] %*% gamma.samples[1:(psi-2), 5], bs.nonlinear[index.holder[1,2], 2:(psi-1)] %*% gamma.samples[1:(psi-2), 5]), nrow = 2)
+trued <- as.matrix(c(bs.nonlinear[index.holder[1,1], 2:(psi-1)] %*% gamma.samples[2:(psi-1), 5], bs.nonlinear[index.holder[1,2], 2:(psi-1)] %*% gamma.samples[2:(psi-1), 5]), nrow = 2)
 sampled - trued
 sampled
 trued
