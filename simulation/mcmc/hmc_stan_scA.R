@@ -54,8 +54,8 @@ for(j in 1:p){
             else{gamma.origin[ps, j] <- -0.1}
         }
         else {
-            if(ps <= (psi/2)){gamma.origin[ps, j] <- 1.5}
-            else{gamma.origin[ps, j] <- -1.5}
+            if(ps <= (psi/2)){gamma.origin[ps, j] <- -0.1}
+            else{gamma.origin[ps, j] <- -0.1}
         }
     }
 }
