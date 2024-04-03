@@ -158,8 +158,8 @@ transformed parameters {
         newgsmooth[,j] = newgl[,j] + newgnl[,j];
     };
     for (i in 1:n){
-        alpha[i] = exp(theta[1] + sum(gnl[i,]) + sum(gl[i,]));
-        newalpha[i] = exp(theta[1] + sum(newgnl[i,]) + sum(newgl[i,]));
+        alpha[i] = exp(theta[1] + sum(gsmooth[i,]));
+        newalpha[i] = exp(theta[1] + sum(newgsmooth[i,]));
     };
 }
 
