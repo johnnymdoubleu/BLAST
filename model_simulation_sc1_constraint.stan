@@ -66,7 +66,7 @@ model {
     target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     target += (p * log(lambda1)/2); // (p * psi * log(lambda2)/2))
     for (j in 1:p){
-        target += gamma_lpdf(lambda2[j] | 1, 1);
+        target += gamma_lpdf(lambda2[j] | 0.01, 0.01);
         target += psi * log(lambda2[j]);
         target += double_exponential_lpdf(theta[(j+1)] | 0, sqrt(lambda1));
         target += gamma_lpdf(tau[j] | atau, (lambda2[j]/2));

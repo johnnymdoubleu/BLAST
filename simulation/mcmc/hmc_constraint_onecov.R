@@ -26,9 +26,9 @@ library(ggh4x)
 
 
 n <- 5000
-psi <- 3
+psi <- 5
 threshold <- 0.95
-p <- 2
+p <- 5
 no.theta <- 1
 simul.no <- 50
 
@@ -54,11 +54,11 @@ for(j in 1:p){
         if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
         else {
             if(ps == 1 || ps == psi){gamma.origin[ps, j] <- 0}
-            else{gamma.origin[ps, j] <- -0.2}
+            else{gamma.origin[ps, j] <- -0.02}
         }
     }
 }
-theta.origin <- c(-0.01, -0.2, 0)
+theta.origin <- c(-0.01, 0, -0.02, -0.02, 0, 0)
 
 f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
