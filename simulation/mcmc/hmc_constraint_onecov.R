@@ -21,12 +21,12 @@ library(cmdstanr)
 library(ggh4x)
 
 #Scenario 1
-set.seed(10)
+# set.seed(10)
 # set.seed(6)
 
 
 n <- 5000
-psi <- 3
+psi <- 5
 threshold <- 0.95
 p <- 1
 no.theta <- 1
@@ -54,11 +54,11 @@ for(j in 1:p){
         if(j %in% c(4,5,6,9,10)){gamma.origin[ps, j] <- 0}
         else {
             if(ps == 1 || ps == psi){gamma.origin[ps, j] <- 0}
-            else{gamma.origin[ps, j] <- -0.1}
+            else{gamma.origin[ps, j] <- -0.5}
         }
     }
 }
-theta.origin <- c(0.5, -0.2)
+theta.origin <- c(-0.1, -0.2)
 
 f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
@@ -210,7 +210,7 @@ model {
     target += gamma_lpdf(lambda1 | 0.1, 0.1);
     target += gamma_lpdf(lambda2 | 0.1, 0.1);
     target += normal_lpdf(theta[1] | 0, 100);
-    target += inv_gamma_lpdf(sigma | 0.1, 0.1);
+    target += inv_gamma_lpdf(sigma | 1, 1);
     target += ((p * log(lambda1)/2) + (p * psi * log(lambda2)/2));
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, sqrt(lambda1));
@@ -273,7 +273,7 @@ gammafl.samples <- summary(fit1, par=c("gammaFL"), probs = c(0.05,0.5, 0.95))$su
 
 gamma.post.mean <- gamma.samples[,1]
 gamma.q1 <- gamma.samples[,4]
-gamma.q2 <- gamma.samples[,5]
+gamma.q2 <- gamma.samples[,1]
 gamma.q3 <- gamma.samples[,6]
 theta.post.mean <- theta.samples[,1]
 theta.q1 <- theta.samples[,4]
@@ -451,22 +451,22 @@ data.nonlinear <- data.frame("x"=newx,
                           "q1" = as.vector(g.nonlinear.q1),
                           "q2" = as.vector(g.nonlinear.q2),
                           "q3" = as.vector(g.nonlinear.q3),
-                          "covariates" = gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]", "g[6]")),
+                          "covariates" = gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]")),
                           "fakelab" = rep(1, (p*n)),
-                          "replicate" = gl(p, n, (p*n), labels = c("x[1]", "x[2]", "x[3]", "x[4]", "x[5]", "x[6]")))
+                          "replicate" = gl(p, n, (p*n), labels = c("x[1]", "x[2]", "x[3]", "x[4]", "x[5]")))
 
 ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   geom_line(aes(y=true, colour = "True"), linewidth=2) + 
-  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
+  geom_line(aes(y=post.mean, colour = "Posterior Median"), linewidth=1) + 
   ylab("") + xlab(expression(c)) +
   facet_wrap(covariates ~ ., scales = "free_x", nrow = 5,
               labeller = label_parsed, strip.position = "left") + 
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values=c("steelblue", "red")) + 
   guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) + ylim(-0.05, 0.05) +
+          fill = guide_legend(order = 1)) + ylim(-0.002, 0.002) +
   # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) +
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 15),
