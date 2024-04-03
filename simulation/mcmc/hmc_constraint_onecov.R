@@ -26,9 +26,9 @@ library(ggh4x)
 
 
 n <- 5000
-psi <- 5
+psi <- 3
 threshold <- 0.95
-p <- 1
+p <- 2
 no.theta <- 1
 simul.no <- 50
 
@@ -51,14 +51,14 @@ for(i in 1:p){
 gamma.origin <- matrix(, nrow = psi, ncol = p)
 for(j in 1:p){
     for (ps in 1:psi){
-        if(j %in% c(4,5,6,9,10)){gamma.origin[ps, j] <- 0}
+        if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
         else {
             if(ps == 1 || ps == psi){gamma.origin[ps, j] <- 0}
-            else{gamma.origin[ps, j] <- -0.5}
+            else{gamma.origin[ps, j] <- -0.2}
         }
     }
 }
-theta.origin <- c(-0.1, -0.2)
+theta.origin <- c(-0.01, -0.2, 0)
 
 f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
@@ -163,9 +163,9 @@ parameters {
     vector[(p+1)] theta; // linear predictor
     vector[(psi-2)] gammaTemp[p]; // constraint splines coefficient from 2 to psi-1
     real <lower=0> lambda1; // lasso penalty
-    real <lower=0> lambda2; // group lasso penalty
+    array[p] real <lower=0> lambda2; // group lasso penalty
     real sigma;
-    vector[p] tau;
+    array[p] real <lower=0> tau;
 }
 transformed parameters {
     array[n] real <lower=0> alpha; // covariate-adjusted tail index
@@ -208,13 +208,14 @@ model {
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += gamma_lpdf(lambda1 | 0.1, 0.1);
-    target += gamma_lpdf(lambda2 | 0.1, 0.1);
     target += normal_lpdf(theta[1] | 0, 100);
-    target += inv_gamma_lpdf(sigma | 1, 1);
-    target += ((p * log(lambda1)/2) + (p * psi * log(lambda2)/2));
+    target += inv_gamma_lpdf(sigma | 0.01, 0.01);
+    target += (p * log(lambda1)/2); // (p * psi * log(lambda2)/2))
     for (j in 1:p){
+        target += gamma_lpdf(lambda2[j] | 0.01, 0.01);
+        target += psi * log(lambda2[j]);
         target += double_exponential_lpdf(theta[(j+1)] | 0, sqrt(lambda1));
-        target += gamma_lpdf(tau[j] | atau, (lambda2/2));
+        target += gamma_lpdf(tau[j] | atau, (lambda2[j]/2));
         target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau[j] * sigma);
     }
 }
@@ -230,15 +231,15 @@ data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi,
 init.alpha <- list(list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c((psi-2),p)),
                         theta = rep(0, (p+1)),
                         tau = rep(0.1, p), sigma = 0.1, 
-                        lambda1 = 0.01, lambda2 = 0.01),
+                        lambda1 = 0.01, lambda2 = rep(0.01, p)),
                   list(gammaTemp = array(rep(-0.2, ((psi-2)*p)), dim=c((psi-2),p)),
                         theta = rep(0.01, (p+1)),
                         tau = rep(0.01, p), sigma = 0.001,
-                        lambda1 = 0.1, lambda2 = 0.001),
+                        lambda1 = 0.1, lambda2 = rep(0.001, p)),
                   list(gammaTemp = array(rep(-0.5, ((psi-2)*p)), dim=c((psi-2),p)),
                         theta = rep(-0.05, (p+1)),
                         tau = rep(0.5, p), sigma = 0.01,
-                        lambda1 = 0.01, lambda2 = 0.05))
+                        lambda1 = 0.01, lambda2 = rep(0.05, p)))
 # setwd("C:/Users/Johnny Lee/Documents/GitHub")
 fit1 <- stan(
     file = "model_simulation_sc1_constraint.stan",  # Stan program
@@ -259,7 +260,7 @@ plot(fit1, plotfun = "trace", pars = c("theta"), nrow = 3)
 plot(fit1, plotfun = "trace", pars = c("lambda1", "lambda2"), nrow = 2)
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_lambda_sc1-wi.pdf"), width=10, height = 7.78)
 
-
+tau.samples <- summary(fit1, par=c("tau"), probs = c(0.05,0.5, 0.95))$summary
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
 lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
@@ -499,7 +500,7 @@ ggplot(data.scenario, aes(x=newx)) +
   ylab(expression(alpha(c*bold("1")))) + xlab(expression(c)) + labs(col = "") +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2) + 
-  geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1.5) +
+  geom_line(aes(y=post.mean, col = "Posterior Median"), linewidth=1.5) +
   scale_color_manual(values=c("steelblue", "red")) + 
   scale_fill_manual(values=c("steelblue"), name = "") +
   theme_minimal(base_size = 30) + ylim(0.5,2.5)+
