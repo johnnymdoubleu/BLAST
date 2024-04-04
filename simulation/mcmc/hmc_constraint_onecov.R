@@ -28,7 +28,7 @@ library(ggh4x)
 n <- 5000
 psi <- 3
 threshold <- 0.95
-p <- 5
+p <- 2
 no.theta <- 1
 simul.no <- 50
 
@@ -54,11 +54,11 @@ for(j in 1:p){
         if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
         else {
             if(ps == 1 || ps == psi){gamma.origin[ps, j] <- 0}
-            else{gamma.origin[ps, j] <- -0.02}
+            else{gamma.origin[ps, j] <- -0.2}
         }
     }
 }
-theta.origin <- c(-0.01, 0, -0.02, -0.02, 0, 0)
+theta.origin <- c(-0.01, -0.2, 0)
 
 f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
@@ -207,14 +207,14 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 0.1, 0.1);
-    target += gamma_lpdf(lambda2 | 0.01, 0.01);
+    target += gamma_lpdf(lambda1 | 0.1, 0.01);
+    target += gamma_lpdf(lambda2 | 0.1, 0.1);
     target += normal_lpdf(theta[1] | 0, 100);
-    target += inv_gamma_lpdf(sigma | 0.01, 0.01);
-    target += (p * log(lambda1)/2) + (p * psi * log(lambda2));
+    target += inv_gamma_lpdf(sigma | 1, 1);
+    target += ((p * log(lambda1)/2) + (p * psi * log(lambda2)/2));
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, sqrt(lambda1));
-        target += gamma_lpdf(tau[j] | atau, (lambda2/2));
+        target += gamma_lpdf(tau[j] | atau, sqrt(lambda2/2));
         target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau[j] * sigma);
     }
 }
