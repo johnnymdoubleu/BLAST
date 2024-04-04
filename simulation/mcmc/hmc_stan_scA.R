@@ -25,7 +25,7 @@ set.seed(10)
 # set.seed(6)
 
 
-n <- 15000
+n <- 5000
 psi <- 10
 threshold <- 0.95
 p <- 5
