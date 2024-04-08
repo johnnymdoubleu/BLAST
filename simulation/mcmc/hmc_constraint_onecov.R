@@ -72,7 +72,7 @@ for(j in 1:p){
         if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
         else {
             if(ps == 1 || ps == psi){gamma.origin[ps, j] <- 0}
-            else{gamma.origin[ps, j] <- 100}
+            else{gamma.origin[ps, j] <- 1}
         }
     }
 }
@@ -180,12 +180,10 @@ data {
     array[(p*2)] int indexFL;
 }
 parameters {
-    real sigma;
-    array[p] real <lower=0> tau;    
     vector[(p+1)] theta; // linear predictor
     vector[(psi-2)] gammaTemp[p]; // constraint splines coefficient from 2 to psi-1
     real <lower=0> lambda1; // lasso penalty
-    real <lower=0> lambda2; // group lasso penalty   
+    real <lower=0> lambda2; // group lasso penalty  
 }
 transformed parameters {
     array[n] real <lower=0> alpha; // covariate-adjusted tail index
@@ -229,22 +227,23 @@ model {
     }
     target += normal_lpdf(theta[1] | 0, 100);
     target += gamma_lpdf(lambda1 | 0.01, 0.01);
-    target += gamma_lpdf(lambda2 | 1, 0.00001);
-    target += inv_gamma_lpdf(sigma | 0.1, 0.11);    
+    target += gamma_lpdf(lambda2 | 1, 0.001);
     target += ((p * log(lambda1)/2) + (p * psi * log(lambda2)/2));
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, sqrt(lambda1));
-
-        target += gamma_lpdf(tau[j] | atau, sqrt(lambda2/2));
-        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau[j] * sigma);
+        for ( i in 1:psi){
+            target += double_exponential_lpdf(gamma[j][i] | 0, sqrt(lambda2));
+        }  
     }
 }
 "
 , "model_simulation_sc1_constraint.stan")
-
-        # for ( i in 1:psi){
-        #     target += double_exponential_lpdf(gamma[j][i] | 0, sqrt(lambda2));
-        # }    
+    # real sigma;
+    # array[p] real <lower=0> tau;
+    # target += inv_gamma_lpdf(sigma | 0.1, 0.11); 
+    #     target += gamma_lpdf(tau[j] | atau, sqrt(lambda2/2));
+    #     target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau[j] * sigma);
+  
 
 
 data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, 
@@ -255,7 +254,7 @@ data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi,
 
 init.alpha <- list(list(gammaTemp = array(rep(-0.2, ((psi-2)*p)), dim=c((psi-2),p)),
                         theta = rep(0, (p+1)),
-                        tau = rep(0.1, p), sigma = 0.1,
+                        # tau = rep(0.1, p), sigma = 0.1,
                         lambda1 = 0.01, lambda2 = 0.1
                         )
                 #   list(gammaTemp = array(rep(-0.2, ((psi-2)*p)), dim=c((psi-2),p)),
@@ -576,3 +575,5 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
   coord_fixed(xlim = c(-3, 3),  
               ylim = c(-3, 3))
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_qqplot_sc1-wi.pdf"), width=10, height = 7.78)
+
+lambda.data <- data.frame("x" = seq(0, 100, length.out = n))
