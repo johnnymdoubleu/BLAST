@@ -54,13 +54,13 @@ for(j in 1:p){
             else{gamma.origin[ps, j] <- -0.1}
         }
         else {
-            if(ps <= (psi/2)){gamma.origin[ps, j] <- -1.2}
-            else{gamma.origin[ps, j] <- -1.2}
+            if(ps <= (psi/2)){gamma.origin[ps, j] <- -0.5}
+            else{gamma.origin[ps, j] <- -0.5}
         }
     }
 }
 
-theta.origin <- c(0.1, 0, 0, 0, 0, 0)
+theta.origin <- c(0.1, 0, -0.2, -0.2, 0, 0)
 
 f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
