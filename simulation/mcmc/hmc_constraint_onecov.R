@@ -54,7 +54,7 @@ for(j in 1:p){
         if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
         else {
             if(ps == 1 || ps == psi){gamma.origin[ps, j] <- 0}
-            else{gamma.origin[ps, j] <- -0.2}
+            else{gamma.origin[ps, j] <- -0.3}
         }
     }
 }
@@ -207,10 +207,8 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 0.1, 0.01);
-    target += gamma_lpdf(lambda2 | 0.1, 0.1);
+    target += gamma_lpdf(lambda2 | 0.01, 0.01);
     target += normal_lpdf(theta[1] | 0, 100);
-    target += inv_gamma_lpdf(sigma | 1, 1);
     target += ((p * log(lambda1)/2) + (p * psi * log(lambda2)/2));
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, sqrt(lambda1));
@@ -223,22 +221,25 @@ model {
 
 data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, 
                     atau = ((psi+1)/2), basisFL = basis.holder,
-                    indexFL = as.vector(t(index.holder)), 
+                    indexFL = as.vector(t(index.holder)), lambda1 = 1, sigma = 0.1,
                     bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
                     xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear)
 
 init.alpha <- list(list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c((psi-2),p)),
                         theta = rep(0, (p+1)),
-                        tau = rep(0.1, p), sigma = 0.1, 
-                        lambda1 = 0.01, lambda2 = 0.01),
+                        tau = rep(0.1, p), 
+                        # sigma = 0.1, lambda1 = 0.01, 
+                        lambda2 = 0.01),
                   list(gammaTemp = array(rep(-0.2, ((psi-2)*p)), dim=c((psi-2),p)),
                         theta = rep(0.01, (p+1)),
-                        tau = rep(0.01, p), sigma = 0.001,
-                        lambda1 = 0.1, lambda2 = 0.001),
+                        tau = rep(0.01, p), 
+                        # sigma = 0.001, lambda1 = 0.1, 
+                        lambda2 = 0.001),
                   list(gammaTemp = array(rep(-0.5, ((psi-2)*p)), dim=c((psi-2),p)),
                         theta = rep(-0.05, (p+1)),
-                        tau = rep(0.5, p), sigma = 0.01,
-                        lambda1 = 0.01, lambda2 = 0.05))
+                        tau = rep(0.5, p), 
+                        # sigma = 0.01, lambda1 = 0.01, 
+                        lambda2 = 0.05))
 # setwd("C:/Users/Johnny Lee/Documents/GitHub")
 fit1 <- stan(
     file = "model_simulation_sc1_constraint.stan",  # Stan program
@@ -256,13 +257,13 @@ posterior <- extract(fit1)
 
 plot(fit1, plotfun = "trace", pars = c("theta"), nrow = 3)
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_theta_trace_sc1-wi.pdf"), width=10, height = 7.78)
-plot(fit1, plotfun = "trace", pars = c("lambda1", "lambda2"), nrow = 2)
+# plot(fit1, plotfun = "trace", pars = c("lambda1", "lambda2"), nrow = 2)
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_lambda_sc1-wi.pdf"), width=10, height = 7.78)
 
 tau.samples <- summary(fit1, par=c("tau"), probs = c(0.05,0.5, 0.95))$summary
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
-lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
+lambda.samples <- summary(fit1, par=c("lambda2"), probs = c(0.05,0.5, 0.95))$summary
 alpha.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
 newgl.samples <- summary(fit1, par=c("newgl"), probs = c(0.05, 0.5, 0.95))$summary
 newgnl.samples <- summary(fit1, par=c("newgnl"), probs = c(0.05, 0.5, 0.95))$summary
