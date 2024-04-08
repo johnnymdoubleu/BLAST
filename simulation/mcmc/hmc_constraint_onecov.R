@@ -25,10 +25,10 @@ library(ggh4x)
 # set.seed(6)
 
 
-n <- 1500
+n <- 30000
 psi <- 3
-threshold <- 0
-p <- 1
+threshold <- 0.95
+p <- 2
 no.theta <- 1
 simul.no <- 50
 
@@ -99,19 +99,25 @@ for(i in 1:n){
 }
 
 u <- quantile(y.origin, threshold)
-# excess.index <- which(y.origin>u)
-# x.origin <- as.matrix(x.origin[excess.index,])
+excess.index <- which(y.origin>u)
+x.origin <- as.matrix(x.origin[excess.index,])
 # bs.nonlinear <- bs.nonlinear[excess.index,]
 # bs.linear <- bs.linear[excess.index,]
 
-# y.origin <- y.origin[y.origin > u]
+y.origin <- y.origin[y.origin > u]
 n <- length(y.origin)
 
 xholder.nonlinear <- xholder.linear <-  matrix(,nrow=n, ncol=0)
-# bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
+bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
 newx <- seq(0, 1, length.out=n)
 xholder <- bs.x <- matrix(, nrow = n, ncol = p)
-
+end.holder <- basis.holder <- matrix(, nrow = 2, ncol =0)
+index.holder <- matrix(, nrow = 0, ncol = 2)
+for(i in 1:p){
+  index.holder <- rbind(index.holder, 
+                      matrix(c(which.min(x.origin[,i]),
+                              which.max(x.origin[,i])), ncol=2))
+}
 # # range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 # # x.origin <- as.data.frame(sapply(as.data.frame(x.origin), FUN = range01))
 for(i in 1:p){
@@ -124,20 +130,20 @@ for(i in 1:p){
     xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
     knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)  
     tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
-    # basis.holder <- cbind(basis.holder, 
-    #         solve(t(matrix(c(tps[index.holder[i,1], no.theta+1],
-    #                 tps[index.holder[i,1], no.theta+psi],
-    #                 tps[index.holder[i,2], no.theta+1],
-    #                 tps[index.holder[i,2], no.theta+psi]), 
-    #                 nrow = 2, ncol = 2))))
+    basis.holder <- cbind(basis.holder, 
+            solve(t(matrix(c(tps[index.holder[i,1], no.theta+1],
+                    tps[index.holder[i,1], no.theta+psi],
+                    tps[index.holder[i,2], no.theta+1],
+                    tps[index.holder[i,2], no.theta+psi]), 
+                    nrow = 2, ncol = 2))))
     # end.holder <- cbind(end.holder, 
     #             matrix(c(tps[index.holder[i,1], no.theta+1],
     #                 tps[index.holder[i,1], no.theta+psi],
     #                 tps[index.holder[i,2], no.theta+1],
     #                 tps[index.holder[i,2], no.theta+psi]), 
-    #                 nrow = 2, ncol = 2)) 
-    # bs.linear <- cbind(bs.linear, tps[,1:no.theta])
-    # bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)]) 
+    #                nrow = 2, ncol = 2)) 
+    bs.linear <- cbind(bs.linear, tps[,1:no.theta])
+    bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)]) 
 }
 
 
@@ -172,15 +178,14 @@ data {
     real <lower=0> atau;
     matrix[2, (2*p)] basisFL;
     array[(p*2)] int indexFL;
-
 }
 parameters {
+    real sigma;
+    array[p] real <lower=0> tau;    
     vector[(p+1)] theta; // linear predictor
     vector[(psi-2)] gammaTemp[p]; // constraint splines coefficient from 2 to psi-1
-    real sigma;
-    array[p] real <lower=0> tau;
     real <lower=0> lambda1; // lasso penalty
-    real <lower=0> lambda2; // group lasso penalty    
+    real <lower=0> lambda2; // group lasso penalty   
 }
 transformed parameters {
     array[n] real <lower=0> alpha; // covariate-adjusted tail index
@@ -224,29 +229,34 @@ model {
     }
     target += normal_lpdf(theta[1] | 0, 100);
     target += gamma_lpdf(lambda1 | 0.01, 0.01);
-    target += gamma_lpdf(lambda2 | 0.01, 0.01);
-    target += inv_gamma_lpdf(sigma | 1, 1);
+    target += gamma_lpdf(lambda2 | 1, 0.00001);
+    target += inv_gamma_lpdf(sigma | 0.1, 0.11);    
     target += ((p * log(lambda1)/2) + (p * psi * log(lambda2)/2));
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, sqrt(lambda1));
+
         target += gamma_lpdf(tau[j] | atau, sqrt(lambda2/2));
         target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau[j] * sigma);
-    }    
+    }
 }
 "
 , "model_simulation_sc1_constraint.stan")
 
+        # for ( i in 1:psi){
+        #     target += double_exponential_lpdf(gamma[j][i] | 0, sqrt(lambda2));
+        # }    
+
 
 data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, 
                     atau = ((psi+1)/2), basisFL = basis.holder,
-                    indexFL = as.vector(t(index.holder)), 
+                    indexFL = as.vector(t(index.holder)),
                     bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
                     xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear)
 
 init.alpha <- list(list(gammaTemp = array(rep(-0.2, ((psi-2)*p)), dim=c((psi-2),p)),
                         theta = rep(0, (p+1)),
                         tau = rep(0.1, p), sigma = 0.1,
-                        lambda1 = 0.01, lambda2 = 1
+                        lambda1 = 0.01, lambda2 = 0.1
                         )
                 #   list(gammaTemp = array(rep(-0.2, ((psi-2)*p)), dim=c((psi-2),p)),
                 #         theta = rep(0.01, (p+1)),
@@ -279,10 +289,10 @@ plot(fit1, plotfun = "trace", pars = c("theta"), nrow = 3)
 # plot(fit1, plotfun = "trace", pars = c("lambda1", "lambda2"), nrow = 2)
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_lambda_sc1-wi.pdf"), width=10, height = 7.78)
 
-tau.samples <- summary(fit1, par=c("tau"), probs = c(0.05,0.5, 0.95))$summary
+# tau.samples <- summary(fit1, par=c("tau"), probs = c(0.05,0.5, 0.95))$summary
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
-# lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
+lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
 alpha.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
 newgl.samples <- summary(fit1, par=c("newgl"), probs = c(0.05, 0.5, 0.95))$summary
 newgnl.samples <- summary(fit1, par=c("newgnl"), probs = c(0.05, 0.5, 0.95))$summary
@@ -300,12 +310,12 @@ theta.q1 <- theta.samples[,4]
 theta.q2 <- theta.samples[,5]
 theta.q3 <- theta.samples[,6]
 
-array(gamma.q2, dim=c(psi,p))
-sampled <- end.holder[,1:2] %*% gammafl.samples[1:2, 5]
-trued <- as.matrix(c(bs.nonlinear[index.holder[1,1], 2:(psi-1)] %*% gamma.samples[2:(psi-1), 5], bs.nonlinear[index.holder[1,2], 2:(psi-1)] %*% gamma.samples[2:(psi-1), 5]), nrow = 2)
-sampled - trued
-sampled
-trued
+# array(gamma.q2, dim=c(psi,p))
+# sampled <- end.holder[,1:2] %*% gammafl.samples[1:2, 5]
+# trued <- as.matrix(c(bs.nonlinear[index.holder[1,1], 2:(psi-1)] %*% gamma.samples[2:(psi-1), 5], bs.nonlinear[index.holder[1,2], 2:(psi-1)] %*% gamma.samples[2:(psi-1), 5]), nrow = 2)
+# sampled - trued
+# sampled
+# trued
 df.theta <- data.frame("seq" = seq(1, (p+1)),
                         "true" = theta.origin,
                         "m" = theta.q2,
@@ -486,7 +496,7 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values=c("steelblue", "red")) + 
   guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) + ylim(-1, 0.5) +
+          fill = guide_legend(order = 1)) + ylim(-1, 1) +
   # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) +
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 15),
