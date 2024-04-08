@@ -25,8 +25,8 @@ library(ggh4x)
 # set.seed(6)
 
 
-n <- 30000
-psi <- 3
+n <- 15000
+psi <- 10
 threshold <- 0.95
 p <- 2
 no.theta <- 1
@@ -226,7 +226,7 @@ model {
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += normal_lpdf(theta[1] | 0, 100);
-    target += gamma_lpdf(lambda1 | 0.01, 0.01);
+    target += gamma_lpdf(lambda1 | 1, 0.1);
     target += gamma_lpdf(lambda2 | 1, 0.001);
     target += ((p * log(lambda1)/2) + (p * psi * log(lambda2)/2));
     for (j in 1:p){
