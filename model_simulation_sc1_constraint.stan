@@ -60,13 +60,13 @@ model {
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += normal_lpdf(theta[1] | 0, 100);
-    target += gamma_lpdf(lambda1 | 1, 0.0001);
+    target += gamma_lpdf(lambda1 | 0.01, 0.01);
     target += gamma_lpdf(lambda2 | 1, 0.0001);
     target += ((p * log(lambda1)/2) + (p * psi * log(lambda2)/2));
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, sqrt(lambda1));
         for ( i in 1:psi){
-                    target += double_exponential_lpdf(gamma[j][i] | 0, sqrt(lambda2));
+            target += double_exponential_lpdf(gamma[j][i] | 0, sqrt(lambda2));
         }       
     }
 }

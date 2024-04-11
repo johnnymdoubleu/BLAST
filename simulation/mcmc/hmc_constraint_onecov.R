@@ -72,7 +72,7 @@ for(j in 1:p){
         if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
         else {
             if(ps == 1 || ps == psi){gamma.origin[ps, j] <- 0}
-            else{gamma.origin[ps, j] <- 10}
+            else{gamma.origin[ps, j] <- 100}
         }
     }
 }
@@ -226,7 +226,7 @@ model {
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += normal_lpdf(theta[1] | 0, 100);
-    target += gamma_lpdf(lambda1 | 1, 0.0001);
+    target += gamma_lpdf(lambda1 | 0.01, 0.01);
     target += gamma_lpdf(lambda2 | 1, 0.0001);
     target += ((p * log(lambda1)/2) + (p * psi * log(lambda2)/2));
     for (j in 1:p){
@@ -576,4 +576,16 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
               ylim = c(-3, 3))
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_qqplot_sc1-wi.pdf"), width=10, height = 7.78)
 
-lambda.data <- data.frame("x" = seq(0, 100, length.out = n))
+lambda.container <- data.frame("x" = seq(0, 180000, length.out = 1000),
+                        "GamDist" = dgamma(seq(0, 180000, length.out = 1000), 1, 0.0001),
+                        "lambda.post" = posterior$lambda2)
+# for(i in length(posterior$lambda2)){
+#   lambda.container <- cbind(lambda.container, posterior$lambda2[i])
+# }
+                        
+ggplot(data = lambda.container, aes(x = x)) + ylab("density") + xlab("lambdas") + labs(col = "") +
+    geom_line(aes(x=x, y=GamDist), color = "red", linewidth = 1) +
+    geom_density(aes(x=lambda.post), color = "steelblue", linewidth = 0.7) +
+        theme_minimal(base_size = 30) +
+        theme(legend.position = "none",
+                axis.text = element_text(size = 35))

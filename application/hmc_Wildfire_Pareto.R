@@ -759,7 +759,7 @@ plt <- ggplot(data = y.container, aes(x = x)) + ylab("density") + xlab("log(Burn
 
 for(i in names(y.container)){
   # plt <- plt + geom_line(aes(y = .data[[i]]), alpha = 0.2, linewidth = 0.7)
-  plt <- plt + geom_density(aes(x=.data[[i]]), color = "slategray1", alpha = 0.1, linewidht = 0.7)
+  plt <- plt + geom_density(aes(x=.data[[i]]), color = "slategray1", alpha = 0.1, linewidth = 0.7)
 }
 
 print(plt + geom_density(aes(x=logy), color = "steelblue", linewidth = 2) +
