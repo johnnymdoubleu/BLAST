@@ -232,7 +232,7 @@ model {
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, sqrt(lambda1));
         for ( i in 1:psi){
-                    target += double_exponential_lpdf(gamma[j][i] | 0, sqrt(lambda2));
+            target += double_exponential_lpdf(gamma[j][i] | 0, sqrt(lambda2));
         }       
     }
 }
