@@ -21,7 +21,7 @@ library(cmdstanr)
 library(MESS)
 
 #Scenario 1
-set.seed(10)
+# set.seed(10)
 # set.seed(6)
 
 
@@ -50,8 +50,8 @@ for(j in 1:p){
     for (ps in 1:psi){
         if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
         else if(j==7){
-            if(ps <= (psi/2)){gamma.origin[ps, j] <- -0.1}
-            else{gamma.origin[ps, j] <- -0.1}
+            if(ps <= (psi/2)){gamma.origin[ps, j] <- -0.5}
+            else{gamma.origin[ps, j] <- -0.5}
         }
         else {
             if(ps <= (psi/2)){gamma.origin[ps, j] <- -0.5}
