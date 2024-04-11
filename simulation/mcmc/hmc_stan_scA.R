@@ -21,7 +21,7 @@ library(cmdstanr)
 library(MESS)
 
 #Scenario 1
-# set.seed(10)
+set.seed(10)
 # set.seed(6)
 
 
@@ -54,8 +54,8 @@ for(j in 1:p){
             else{gamma.origin[ps, j] <- -0.5}
         }
         else {
-            if(ps <= (psi/2)){gamma.origin[ps, j] <- -0.5}
-            else{gamma.origin[ps, j] <- -0.5}
+            if(ps <= (psi/2)){gamma.origin[ps, j] <- -0.1}
+            else{gamma.origin[ps, j] <- -0.1}
         }
     }
 }
@@ -513,8 +513,8 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_qqplot_sc1-wi.pdf"), width=10, height = 7.78)
 
 lambda.container <- data.frame("x" = seq(0, max(posterior$lambda2), length.out = 1000),
-                        "GamDist" = dgamma(seq(0, max(posterior$lambda2), length.out = 1000), 1, 0.0001),
-                        "lambda.post" = posterior$lambda2)
+                        "GamDist" = dgamma(seq(0, max(posterior$lambda2), length.out = 1000), 0.01, 0.01),
+                        "lambda.post" = posterior$lambda1)
 
                         
 ggplot(data = lambda.container, aes(x = x)) + ylab("density") + xlab("lambdas") + labs(col = "") +
