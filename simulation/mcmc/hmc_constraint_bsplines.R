@@ -38,29 +38,23 @@ xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow
 x.origin <- pnorm(matrix(rnorm(n*p), ncol = p) %*% chol(C))
 
 # x.origin <- apply(x.origin, 2, sort, decreasing=F)
-end.holder <- basis.holder <- matrix(, nrow = 2, ncol =0)
-index.holder <- matrix(, nrow = 0, ncol = 2)
-for(i in 1:p){
-  index.holder <- rbind(index.holder, 
-                      matrix(c(which.min(x.origin[,i]),
-                              which.max(x.origin[,i])), ncol=2))
-}
+# end.holder <- basis.holder <- matrix(, nrow = 2, ncol =0)
+# index.holder <- matrix(, nrow = 0, ncol = 2)
+# for(i in 1:p){
+#   index.holder <- rbind(index.holder, 
+#                       matrix(c(which.min(x.origin[,i]),
+#                               which.max(x.origin[,i])), ncol=2))
+# }
 for(i in 1:p){
     knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)  
     bsp <- bSpline(x.origin[,i], Boundary.knots = c(min(x.origin[,i]), max(x.origin[,i])), degree = 3)
     bs.nonlinear <- cbind(bs.nonlinear, bsp)
-    basis.holder <- cbind(basis.holder, 
-            solve(t(matrix(c(bsp[index.holder[i,1], 1],
-                    bsp[index.holder[i,1], psi],
-                    bsp[index.holder[i,2], 1],
-                    bsp[index.holder[i,2], psi]), 
-                    nrow = 2, ncol = 2))))
-    end.holder <- cbind(end.holder, 
-                matrix(c(tps[index.holder[i,1], no.theta+1],
-                    tps[index.holder[i,1], no.theta+psi],
-                    tps[index.holder[i,2], no.theta+1],
-                    tps[index.holder[i,2], no.theta+psi]), 
-                    nrow = 2, ncol = 2))    
+    # basis.holder <- cbind(basis.holder, 
+    #         solve(t(matrix(c(bsp[index.holder[i,1], 1],
+    #                 bsp[index.holder[i,1], psi],
+    #                 bsp[index.holder[i,2], 1],
+    #                 bsp[index.holder[i,2], psi]), 
+    #                 nrow = 2, ncol = 2))))
 }
 
 
@@ -71,29 +65,22 @@ for(j in 1:p){
         if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
         else {
             if(ps == 1 || ps == psi){gamma.origin[ps, j] <- 0}
-            else{gamma.origin[ps, j] <- -100}
+            else{gamma.origin[ps, j] <- -10}
         }
     }
 }
-theta.origin <- c(-0.01, 0, -0.2)
-
-f.sub.origin <- matrix(, nrow = 2, ncol = p)
-for(j in 1:p){
-    f.sub.origin[,j] <- as.matrix(bs.nonlinear[index.holder[j,], (((j-1)*psi)+2):(((j-1)*psi)+(psi-1))], nrow = 2) %*% gamma.origin[(2:(psi-1)), j]
-    gamma.origin[c(1,psi),j] <- -1 * basis.holder[,(((j-1)*2)+1):(((j-1)*2)+2)] %*% as.matrix(f.sub.origin[,j], nrow=2)
-}
+theta.origin <- -0.01
 
 f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
-    f.linear.origin[,j] <- bs.linear[, j] * theta.origin[j+1]
+    # f.linear.origin[,j] <- bs.linear[, j] * theta.origin[j+1]
     f.nonlinear.origin[,j] <- bs.nonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
-    f.origin[, j] <- f.linear.origin[,j] + f.nonlinear.origin[,j]
+    # f.origin[, j] <- f.linear.origin[,j] + f.nonlinear.origin[,j]
 }
 
 alp.origin <- y.origin <- NULL
 for(i in 1:n){
-    
-    alp.origin[i] <- exp(theta.origin[1] + sum(f.origin[i,]))
+    alp.origin[i] <- exp(theta.origin + sum(f.nonlinear.origin[i,]))
     y.origin[i] <- rPareto(1, 1, alpha = alp.origin[i]) 
 }
 
@@ -122,45 +109,45 @@ for(i in 1:p){
 for(i in 1:p){
     # xholder[,i] <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = n)  
     # test.knot <- seq(min(xholder[,i]), max(xholder[,i]), length.out = psi)
-    xholder[,i] <- seq(0, 1, length.out = n)  
-    test.knot <- seq(0, 1, length.out = psi)
-    splines <- basis.tps(xholder[,i], test.knot, m=2, rk=FALSE, intercept = FALSE)
-    xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
-    xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
-    knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)  
-    tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
-    basis.holder <- cbind(basis.holder, 
-            solve(t(matrix(c(tps[index.holder[i,1], no.theta+1],
-                    tps[index.holder[i,1], no.theta+psi],
-                    tps[index.holder[i,2], no.theta+1],
-                    tps[index.holder[i,2], no.theta+psi]), 
-                    nrow = 2, ncol = 2))))
+    xholder[,i] <- seq(0, 1, length.out = n)
+    splines <- bSpline(xholder[,i], Boundary.knots = c(min(xholder[,i]), max(xholder[,i])), degree = 3)    
+    xholder.nonlinear <- cbind(xholder.nonlinear, splines)
+    bsp <- bSpline(x.origin[,i], Boundary.knots = c(min(x.origin[,i]), max(x.origin[,i])), degree = 3)
+    # basis.holder <- cbind(basis.holder, 
+    #         solve(t(matrix(c(bsp[index.holder[i,1], 1],
+    #                 bsp[index.holder[i,1], psi],
+    #                 bsp[index.holder[i,2], 1],
+    #                 bsp[index.holder[i,2], psi]), 
+    #                 nrow = 2, ncol = 2))))
     # end.holder <- cbind(end.holder, 
     #             matrix(c(tps[index.holder[i,1], no.theta+1],
     #                 tps[index.holder[i,1], no.theta+psi],
     #                 tps[index.holder[i,2], no.theta+1],
     #                 tps[index.holder[i,2], no.theta+psi]), 
-    #                nrow = 2, ncol = 2)) 
-    bs.linear <- cbind(bs.linear, tps[,1:no.theta])
-    bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)]) 
+    #                nrow = 2, ncol = 2))
+    bs.nonlinear <- cbind(bs.nonlinear, bsp) 
 }
 
 
 f.nonlinear.new <- f.linear.new <- f.new <- f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
-
+f.sub.origin <- matrix(, nrow = 2, ncol = p)
+# for(j in 1:p){
+#     f.sub.origin[,j] <- as.matrix(bs.nonlinear[index.holder[j,], (((j-1)*psi)+2):(((j-1)*psi)+(psi-1))], nrow = 2) %*% gamma.origin[(2:(psi-1)), j]
+#     gamma.origin[c(1,psi),j] <- -1 * basis.holder[,(((j-1)*2)+1):(((j-1)*2)+2)] %*% as.matrix(f.sub.origin[,j], nrow=2)
+# }
 for(j in 1:p){
-    f.linear.origin[,j] <- bs.linear[, j] * theta.origin[j+1]
+    # f.linear.origin[,j] <- bs.linear[, j] * theta.origin[j+1]
     f.nonlinear.origin[,j] <- bs.nonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
-    f.origin[, j] <- f.linear.origin[,j] + f.nonlinear.origin[,j]
-    f.linear.new[,j] <- xholder.linear[, j] * theta.origin[j+1]
+    # f.origin[, j] <- f.linear.origin[,j] + f.nonlinear.origin[,j]
+    # f.linear.new[,j] <- xholder.linear[, j] * theta.origin[j+1]
     f.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
-    f.new[,j] <- f.linear.new[,j] + f.nonlinear.new[,j]
+    # f.new[,j] <- f.linear.new[,j] + f.nonlinear.new[,j]
 }
 
 true.alpha <- alp.new <- alp.origin <- NULL
 for(i in 1:n){
-    alp.origin[i] <- exp(theta.origin[1] + sum(f.origin[i,]))
-    alp.new[i] <- exp(theta.origin[1] + sum(f.new[i,]))
+    alp.origin[i] <- exp(theta.origin + sum(f.nonlinear.origin[i,]))
+    alp.new[i] <- exp(theta.origin + sum(f.nonlinear.new[i,]))
 }
 
 write("// Stan model for BRSTIR Pareto Uncorrelated Samples
@@ -169,9 +156,7 @@ data {
     int <lower=1> p; // regression coefficient size
     int <lower=1> psi; // splines coefficient size
     real <lower=0> u; // large threshold value
-    matrix[n,p] bsLinear; // fwi dataset
     matrix[n, (psi*p)] bsNonlinear; // thin plate splines basis
-    matrix[n,p] xholderLinear; // fwi dataset
     matrix[n, (psi*p)] xholderNonlinear; // thin plate splines basis    
     array[n] real <lower=1> y; // extreme response
     real <lower=0> atau;
@@ -179,45 +164,26 @@ data {
     array[(p*2)] int indexFL;
 }
 parameters {
-    vector[(p+1)] theta; // linear predictor
-    vector[(psi-2)] gammaTemp[p]; // constraint splines coefficient from 2 to psi-1
-    real <lower=0> lambda1; // lasso penalty
-    real <lower=0> lambda2; // group lasso penalty
+    real theta; // linear predictor
+    vector[psi] gamma[p]; // splines coefficient 
+    real <lower=0> lambda; // group lasso penalty
     real sigma;
     array[p] real <lower=0> tau;          
 }
 transformed parameters {
     array[n] real <lower=0> alpha; // covariate-adjusted tail index
-    vector[psi] gamma[p]; // splines coefficient 
-    vector[2] gammaFL[p]; 
-    matrix[2, p] subgnl;
     matrix[n, p] gnl; // nonlinear component
-    matrix[n, p] gl; // linear component
-    matrix[n, p] gsmooth; // linear component
     array[n] real <lower=0> newalpha; // new tail index
     matrix[n, p] newgnl; // nonlinear component
-    matrix[n, p] newgl; // linear component
-    matrix[n, p] newgsmooth; // linear component
 
-    for(j in 1:p){
-        gamma[j][2:(psi-1)] = gammaTemp[j][1:(psi-2)];
-        subgnl[,j] = bsNonlinear[indexFL[(((j-1)*2)+1):(((j-1)*2)+2)], (((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] * gammaTemp[j];
-        gammaFL[j] = basisFL[, (((j-1)*2)+1):(((j-1)*2)+2)] * subgnl[,j] * -1;
-        gamma[j][1] = gammaFL[j][1];
-        gamma[j][psi] = gammaFL[j][2];
-    };
     for (j in 1:p){
         gnl[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
         newgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
-        gl[,j] = bsLinear[,j] * theta[j+1];
-        newgl[,j] = xholderLinear[,j] * theta[j+1];
-        gsmooth[,j] = gl[,j] + gnl[,j];
-        newgsmooth[,j] = newgl[,j] + newgnl[,j];
     };
 
     for (i in 1:n){
-        alpha[i] = exp(theta[1] + sum(gsmooth[i,])); 
-        newalpha[i] = exp(theta[1] + sum(newgsmooth[i,]));
+        alpha[i] = exp(theta + sum(gnl[i,])); 
+        newalpha[i] = exp(theta + sum(newgnl[i,]));
     };
 }
 
@@ -226,34 +192,35 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += normal_lpdf(theta[1] | 0, 100);
-    target += gamma_lpdf(lambda1 | 1, 0.000001);
-    target += gamma_lpdf(lambda2 | 1, 0.000001);
-    target += ((p * log(lambda1)/2) + (p * psi * log(lambda2)/2));
+    target += normal_lpdf(theta | 0, 100);
+    target += gamma_lpdf(lambda | 0.01, 0.01);
+    target += (p * psi * log(lambda)/2);
     for (j in 1:p){
-        target += double_exponential_lpdf(theta[(j+1)] | 0, sqrt(lambda1));
         target += inv_gamma_lpdf(sigma | 0.01, 0.01); 
-        target += gamma_lpdf(tau[j] | atau, sqrt(lambda2/2));
+        target += gamma_lpdf(tau[j] | atau, sqrt(lambda/2));
         target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau[j] * sigma);
     }
 }
 "
 , "model_simulation_sc1_constraint.stan")
-        # for ( i in 1:psi){
-        #     target += double_exponential_lpdf(gamma[j][i] | 0, sqrt(lambda2));
-        # }      
 
+    # vector[2] gammaFL[p]; 
+    # matrix[2, p] subgnl;
+    # for(j in 1:p){
+    #     gamma[j][2:(psi-1)] = gammaTemp[j][1:(psi-2)];
+    #     subgnl[,j] = bsNonlinear[indexFL[(((j-1)*2)+1):(((j-1)*2)+2)], (((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] * gammaTemp[j];
+    #     gammaFL[j] = basisFL[, (((j-1)*2)+1):(((j-1)*2)+2)] * subgnl[,j] * -1;
+    #     gamma[j][1] = gammaFL[j][1];
+    #     gamma[j][psi] = gammaFL[j][2];
+    # };
 
 data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, 
-                    atau = ((psi+1)/2), basisFL = basis.holder,
-                    indexFL = as.vector(t(index.holder)),
-                    bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
-                    xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear)
+                    atau = ((psi+1)/2), 
+                    # basisFL = basis.holder, indexFL = as.vector(t(index.holder)),
+                    bsNonlinear = bs.nonlinear, xholderNonlinear = xholder.nonlinear)
 
-init.alpha <- list(list(gammaTemp = array(rep(10, ((psi-2)*p)), dim=c((psi-2),p)),
-                        theta = rep(0, (p+1)),
-                        tau = rep(0.1, p), sigma = 0.1,
-                        lambda1 = 0.01, lambda2 = 0.1)
+init.alpha <- list(list(gamma = array(rep(10, (psi*p)), dim=c(psi,p)),
+                        theta = 0, tau = rep(0.1, p), sigma = 0.1, lambda = 0.1)
                 #   list(gammaTemp = array(rep(-0.2, ((psi-2)*p)), dim=c((psi-2),p)),
                 #         theta = rep(0.01, (p+1)),
                 #         tau = rep(0.01, p), sigma = 0.001,
@@ -312,34 +279,6 @@ theta.q3 <- theta.samples[,6]
 # sampled - trued
 # sampled
 # trued
-df.theta <- data.frame("seq" = seq(1, (p+1)),
-                        "true" = theta.origin,
-                        "m" = theta.q2,
-                        "l" = theta.q1,
-                        "u" = theta.q3)
-df.theta$covariate <- factor(0:p)
-df.theta$labels <- factor(0:p)
-ggplot(df.theta, aes(x = covariate, y=m, color = covariate)) + ylab("") + xlab('') +
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  geom_point(size = 5) + geom_point(aes(y = true), color="red", size = 4) +
-  geom_errorbar(aes(ymin = l, ymax = u), width = 0.3, linewidth =1.2) + 
-  scale_x_discrete(labels = c(expression(bold(theta[0])),
-                              expression(bold(theta[1])),
-                              expression(bold(theta[2])),
-                              expression(bold(theta[3])),
-                              expression(bold(theta[4])),
-                              expression(bold(theta[5])))) + 
-  theme_minimal(base_size = 30) +
-  theme(plot.title = element_text(hjust = 0.5, size = 20),
-          legend.text.align = 0,
-          legend.title = element_blank(),
-          legend.text = element_text(size=25),
-          legend.margin=margin(0,0,0,-10),
-          legend.box.margin=margin(-10,0,-10,0),
-          plot.margin = margin(0,0,0,-20),
-          axis.text.x = element_text(hjust=0.35),
-          axis.text = element_text(size = 28))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_theta_sc1-wi.pdf"), width=10, height = 7.78)
 
 df.gamma <- data.frame("seq" = seq(1, (psi*p)), 
                   "true" = as.vector(gamma.origin),
@@ -372,18 +311,11 @@ ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) +
           axis.text = element_text(size = 28))
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_gamma_sc1-wi.pdf"), width=10, height = 7.78)
 
-g.linear.mean <- as.vector(matrix(newgl.samples[,1], nrow = n, byrow=TRUE))
-g.linear.q1 <- as.vector(matrix(newgl.samples[,4], nrow = n, byrow=TRUE))
-g.linear.q2 <- as.vector(matrix(newgl.samples[,5], nrow = n, byrow=TRUE))
-g.linear.q3 <- as.vector(matrix(newgl.samples[,6], nrow = n, byrow=TRUE))
 g.nonlinear.mean <- as.vector(matrix(newgnl.samples[,1], nrow = n, byrow=TRUE))
 g.nonlinear.q1 <- as.vector(matrix(newgnl.samples[,4], nrow = n, byrow=TRUE))
 g.nonlinear.q2 <- as.vector(matrix(newgnl.samples[,5], nrow = n, byrow=TRUE))
 g.nonlinear.q3 <- as.vector(matrix(newgnl.samples[,6], nrow = n, byrow=TRUE))
-g.smooth.mean <- as.vector(matrix(newgsmooth.samples[,1], nrow = n, byrow=TRUE))
-g.smooth.q1 <- as.vector(matrix(newgsmooth.samples[,4], nrow = n, byrow=TRUE))
-g.smooth.q2 <- as.vector(matrix(newgsmooth.samples[,5], nrow = n, byrow=TRUE))
-g.smooth.q3 <- as.vector(matrix(newgsmooth.samples[,6], nrow = n, byrow=TRUE))
+
 
 equal_breaks <- function(n = 3, s = 0.1,...){
   function(x){
@@ -392,83 +324,6 @@ equal_breaks <- function(n = 3, s = 0.1,...){
     round(seq, -floor(log10(abs(seq[2]-seq[1]))))
   }
 }
-
-data.smooth <- data.frame("x"=newx,
-                          "true" = as.vector(f.new),
-                          "post.mean" = as.vector(g.smooth.mean),
-                          "q1" = as.vector(g.smooth.q1),
-                          "q2" = as.vector(g.smooth.q2),
-                          "q3" = as.vector(g.smooth.q3),
-                          "covariates" = gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]")),
-                          "fakelab" = rep(1, (p*n)),
-                          "replicate" = gl(p, n, (p*n), labels = c("x[1]", "x[2]", "x[3]", "x[4]", "x[5]")))
-
-ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) + 
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
-  geom_line(aes(y=true, colour = "True"), linewidth=2) + 
-  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
-  ylab("") + xlab(expression(c)) +
-  facet_wrap(covariates ~ ., scales = "free_x", nrow = 5,
-              labeller = label_parsed, strip.position = "left") + 
-  scale_fill_manual(values=c("steelblue"), name = "") +
-  scale_color_manual(values=c("steelblue", "red")) + 
-  guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) + #ylim(-0.55, 0.5) +
-#   scale_y_continuous(breaks=c(-0.6,-0.3,-0,0.3)) + 
-  # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
-  theme_minimal(base_size = 30) +
-  theme(plot.title = element_text(hjust = 0.5, size = 15),
-        legend.position="none",
-        legend.title = element_blank(),
-        legend.text = element_text(size=20),
-        legend.margin=margin(t = 1, unit='cm'),
-        legend.box.margin=margin(-10,0,-10,0),
-        plot.margin = margin(0,0,0,-20),
-        strip.text.y = element_text(size = 25, colour = "black", angle = 0, face = "bold.italic"),
-        strip.placement = "outside",
-        axis.title.x = element_text(size = 35),
-        axis.text = element_text(size=18))
-
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_smooth_sc1-wi.pdf"), width=12.5, height = 15)
-
-data.linear <- data.frame("x"=newx,
-                          "true" = as.vector(f.linear.new),
-                          "post.mean" = as.vector(g.linear.mean),
-                          "q1" = as.vector(g.linear.q1),
-                          "q2" = as.vector(g.linear.q2),
-                          "q3" = as.vector(g.linear.q3),
-                          "covariates" = gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]")),
-                          "fakelab" = rep(1, (p*n)),
-                          "replicate" = gl(p, n, (p*n), labels = c("x[1]", "x[2]", "x[3]", "x[4]", "x[5]")))
-
-ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) + 
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
-  geom_line(aes(y=true, colour = "True"), linewidth=2) + 
-  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
-  ylab("") + xlab(expression(c)) +
-  facet_wrap(covariates ~ ., scales = "free_x", nrow = 5,
-              labeller = label_parsed, strip.position = "left") + 
-  scale_fill_manual(values=c("steelblue"), name = "") +
-  scale_color_manual(values=c("steelblue", "red")) + 
-  guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) + ylim(-0.55, 0.5) +
-  # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
-  theme_minimal(base_size = 30) +
-  theme(plot.title = element_text(hjust = 0.5, size = 15),
-        legend.position="none",
-        legend.title = element_blank(),
-        legend.text = element_text(size=20),
-        legend.margin=margin(t = 1, unit='cm'),
-        legend.box.margin=margin(-10,0,-10,0),
-        plot.margin = margin(0,0,0,-20),
-        strip.text.y = element_text(size = 25, colour = "black", angle = 0, face = "bold.italic"),
-        strip.placement = "outside",
-        axis.title.x = element_text(size = 35),
-        axis.text = element_text(size=18))
-
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_linear_sc1-wi.pdf"), width=12.5, height = 15)
 
 
 data.nonlinear <- data.frame("x"=newx,
@@ -573,9 +428,9 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
               ylim = c(-3, 3))
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_qqplot_sc1-wi.pdf"), width=10, height = 7.78)
 
-lambda.container <- data.frame("x" = seq(0, max(posterior$lambda1), length.out = 1000),
-                        "GamDist" = dgamma(seq(0, max(posterior$lambda1), length.out = 1000), 1, 0.0000001),
-                        "lambda.post" = posterior$lambda1)
+lambda.container <- data.frame("x" = seq(0, max(posterior$lambda), length.out = 1000),
+                        "GamDist" = dgamma(seq(0, max(posterior$lambda), length.out = 1000), 0.01, 0.01),
+                        "lambda.post" = posterior$lambda)
 
                         
 ggplot(data = lambda.container, aes(x = x)) + ylab("density") + xlab("lambdas") + labs(col = "") +
