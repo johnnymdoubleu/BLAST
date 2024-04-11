@@ -72,7 +72,7 @@ for(j in 1:p){
         if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
         else {
             if(ps == 1 || ps == psi){gamma.origin[ps, j] <- 0}
-            else{gamma.origin[ps, j] <- 100}
+            else{gamma.origin[ps, j] <- -10}
         }
     }
 }
@@ -184,8 +184,7 @@ parameters {
     vector[(psi-2)] gammaTemp[p]; // constraint splines coefficient from 2 to psi-1
     real <lower=0> lambda1; // lasso penalty
     real <lower=0> lambda2; // group lasso penalty
-    real sigma;
-    array[p] real <lower=0> tau;         
+      
 }
 transformed parameters {
     array[n] real <lower=0> alpha; // covariate-adjusted tail index
@@ -229,22 +228,23 @@ model {
     }
     target += normal_lpdf(theta[1] | 0, 100);
     target += gamma_lpdf(lambda1 | 0.01, 0.01);
-    target += gamma_lpdf(lambda2 | 0.1, 0.1);
+    target += gamma_lpdf(lambda2 | 1, 0.0001);
     target += ((p * log(lambda1)/2) + (p * psi * log(lambda2)/2));
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, sqrt(lambda1));
-        target += inv_gamma_lpdf(sigma | 1, 0.01); 
-        target += gamma_lpdf(tau[j] | atau, sqrt(lambda2/2));
-        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau[j] * sigma);         
+        for ( i in 1:psi){
+            target += double_exponential_lpdf(gamma[j][i] | 0, sqrt(lambda2));
+        }
     }
 }
 "
 , "model_simulation_sc1_constraint.stan")
     
-# for ( i in 1:psi){
-#     target += double_exponential_lpdf(gamma[j][i] | 0, sqrt(lambda2));
-# }         
-
+    # real sigma;
+    # array[p] real <lower=0> tau;      
+        # target += inv_gamma_lpdf(sigma | 1, 0.01); 
+        # target += gamma_lpdf(tau[j] | atau, sqrt(lambda2/2));
+        # target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau[j] * sigma);
 
 data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, 
                     atau = ((psi+1)/2), basisFL = basis.holder,
@@ -254,7 +254,7 @@ data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi,
 
 init.alpha <- list(list(gammaTemp = array(rep(10, ((psi-2)*p)), dim=c((psi-2),p)),
                         theta = rep(0, (p+1)),
-                        tau = rep(0.1, p), sigma = 0.1,
+                        # tau = rep(0.1, p), sigma = 0.1,
                         lambda1 = 0.01, lambda2 = 0.1)
                 #   list(gammaTemp = array(rep(-0.2, ((psi-2)*p)), dim=c((psi-2),p)),
                 #         theta = rep(0.01, (p+1)),
@@ -575,14 +575,14 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
               ylim = c(-3, 3))
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_qqplot_sc1-wi.pdf"), width=10, height = 7.78)
 
-lambda.container <- data.frame("x" = seq(0, max(posterior$lambda2), length.out = 1000),
-                        "GamDist" = dgamma(seq(0, max(posterior$lambda2), length.out = 1000), 0.1, 0.1),
-                        "lambda.post" = posterior$lambda2)
+lambda.container <- data.frame("x" = seq(0, max(posterior$lambda1), length.out = 1000),
+                        "GamDist" = dgamma(seq(0, max(posterior$lambda1), length.out = 1000), 0.01, 0.01),
+                        "lambda.post" = posterior$lambda1)
 
                         
 ggplot(data = lambda.container, aes(x = x)) + ylab("density") + xlab("lambdas") + labs(col = "") +
-    geom_line(aes(x=x, y=GamDist), color = "red", linewidth = 1) +
-    geom_density(aes(x=lambda.post), color = "steelblue", linewidth = 0.7) +
+    geom_line(aes(x=x, y=GamDist), color = "red", linewidth = 0.7) +
+    geom_density(aes(x=lambda.post), color = "steelblue", linewidth = 1) +
         theme_minimal(base_size = 30) +
         theme(legend.position = "none",
                 axis.text = element_text(size = 35))

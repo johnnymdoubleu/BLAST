@@ -25,7 +25,7 @@ set.seed(10)
 # set.seed(6)
 
 
-n <- 5000
+n <- 15000
 psi <- 10
 threshold <- 0.95
 p <- 5
@@ -416,9 +416,9 @@ data.nonlinear <- data.frame("x"=newx,
                           "q1" = as.vector(g.nonlinear.q1),
                           "q2" = as.vector(g.nonlinear.q2),
                           "q3" = as.vector(g.nonlinear.q3),
-                          "covariates" = gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]", "g[6]")),
+                          "covariates" = gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]")),
                           "fakelab" = rep(1, (p*n)),
-                          "replicate" = gl(p, n, (p*n), labels = c("x[1]", "x[2]", "x[3]", "x[4]", "x[5]", "x[6]")))
+                          "replicate" = gl(p, n, (p*n), labels = c("x[1]", "x[2]", "x[3]", "x[4]", "x[5]")))
 
 ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
@@ -514,7 +514,7 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
 
 lambda.container <- data.frame("x" = seq(0, max(posterior$lambda2), length.out = 1000),
                         "GamDist" = dgamma(seq(0, max(posterior$lambda2), length.out = 1000), 0.01, 0.01),
-                        "lambda.post" = posterior$lambda1)
+                        "lambda.post" = posterior$lambda2)
 
                         
 ggplot(data = lambda.container, aes(x = x)) + ylab("density") + xlab("lambdas") + labs(col = "") +

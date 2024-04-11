@@ -54,11 +54,11 @@ for(j in 1:p){
         if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
         else {
             if(ps == 1 || ps == psi){gamma.origin[ps, j] <- 0}
-            else{gamma.origin[ps, j] <- -0.5}
+            else{gamma.origin[ps, j] <- -10}
         }
     }
 }
-theta.origin <- c(-0.01, 0, 0)
+theta.origin <- c(-0.01, 0, -0.2)
 
 f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
