@@ -17,7 +17,9 @@ parameters {
     vector[(p+1)] theta; // linear predictor
     vector[(psi-2)] gammaTemp[p]; // constraint splines coefficient from 2 to psi-1
     real <lower=0> lambda1; // lasso penalty
-    real <lower=0> lambda2; // group lasso penalty     
+    real <lower=0> lambda2; // group lasso penalty
+    real sigma;
+    array[p] real <lower=0> tau;         
 }
 transformed parameters {
     array[n] real <lower=0> alpha; // covariate-adjusted tail index
@@ -65,9 +67,9 @@ model {
     target += ((p * log(lambda1)/2) + (p * psi * log(lambda2)/2));
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, sqrt(lambda1));
-        for ( i in 1:psi){
-            target += double_exponential_lpdf(gamma[j][i] | 0, sqrt(lambda2));
-        }       
+        target += inv_gamma_lpdf(sigma | 1, 0.01); 
+        target += gamma_lpdf(tau[j] | atau, sqrt(lambda2/2));
+        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau[j] * sigma);         
     }
 }
 

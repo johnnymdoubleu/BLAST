@@ -168,8 +168,8 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 1, 0.001);
-    target += gamma_lpdf(lambda2 | 1, 0.001);
+    target += gamma_lpdf(lambda1 | 0.01, 0.01);
+    target += gamma_lpdf(lambda2 | 0.01, 0.01);
     target += normal_lpdf(theta[1] | 0, 100);
     target += inv_gamma_lpdf(sigma | 0.01, 0.01); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
     target += (newp * log(lambda1) + (p * psi * log(lambda2)));
@@ -511,3 +511,15 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
   coord_fixed(xlim = c(-3, 3),  
               ylim = c(-3, 3))
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_qqplot_sc1-wi.pdf"), width=10, height = 7.78)
+
+lambda.container <- data.frame("x" = seq(0, max(posterior$lambda2), length.out = 1000),
+                        "GamDist" = dgamma(seq(0, max(posterior$lambda2), length.out = 1000), 1, 0.0001),
+                        "lambda.post" = posterior$lambda2)
+
+                        
+ggplot(data = lambda.container, aes(x = x)) + ylab("density") + xlab("lambdas") + labs(col = "") +
+    geom_line(aes(x=x, y=GamDist), color = "red", linewidth = 1) +
+    geom_density(aes(x=lambda.post), color = "steelblue", linewidth = 0.7) +
+        theme_minimal(base_size = 30) +
+        theme(legend.position = "none",
+                axis.text = element_text(size = 35))
