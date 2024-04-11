@@ -21,11 +21,11 @@ library(cmdstanr)
 library(ggh4x)
 
 #Scenario 1
-# set.seed(10)
+set.seed(10)
 # set.seed(6)
 
 
-n <- 5000
+n <- 15000
 psi <- 3
 threshold <- 0.95
 p <- 2
@@ -54,11 +54,11 @@ for(j in 1:p){
         if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
         else {
             if(ps == 1 || ps == psi){gamma.origin[ps, j] <- 0}
-            else{gamma.origin[ps, j] <- -10}
+            else{gamma.origin[ps, j] <- 0}
         }
     }
 }
-theta.origin <- c(-0.01, 0, -0.2)
+theta.origin <- c(-0.01, 0, -1.2)
 
 f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
@@ -210,7 +210,7 @@ model {
     }
     target += gamma_lpdf(lambda2 | 0.01, 0.01);
     target += normal_lpdf(theta | 0, 100);
-    target += inv_gamma_lpdf(sigma | 1, 1);
+    target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     target += (p * (psi+1) * log(lambda2)/2);
     for (j in 1:p){
         target += gamma_lpdf(tau[j] | atau, sqrt(lambda2/2));
@@ -229,22 +229,23 @@ data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi,
 init.alpha <- list(list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c((psi-2),p)),
                         theta = 0, beta = rep(0, p),
                         tau = rep(0.1, p), sigma = 0.1, 
-                        lambda2 = 0.1),
-                  list(gammaTemp = array(rep(-0.2, ((psi-2)*p)), dim=c((psi-2),p)),
-                        theta = 0.01, beta = rep(0.1, p),
-                        tau = rep(0.01, p), sigma = 0.01,
-                        lambda2 = 1),
-                  list(gammaTemp = array(rep(-0.5, ((psi-2)*p)), dim=c((psi-2),p)),
-                        theta = -0.05, beta = rep(-0.5, p),
-                        tau = rep(0.5, p), sigma = 1,
-                        lambda2 = 5))
+                        lambda2 = 0.1)
+                #   list(gammaTemp = array(rep(-0.2, ((psi-2)*p)), dim=c((psi-2),p)),
+                #         theta = 0.01, beta = rep(0.1, p),
+                #         tau = rep(0.01, p), sigma = 0.01,
+                #         lambda2 = 1),
+                #   list(gammaTemp = array(rep(-0.5, ((psi-2)*p)), dim=c((psi-2),p)),
+                #         theta = -0.05, beta = rep(-0.5, p),
+                #         tau = rep(0.5, p), sigma = 1,
+                #         lambda2 = 5)
+                        )
 # setwd("C:/Users/Johnny Lee/Documents/GitHub")
 fit1 <- stan(
     file = "model_simulation_constraint.stan",  # Stan program
     # file = "model_BRSTIR.stan",  # Stan program
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
-    chains = 3,             # number of Markov chains
+    chains = 1,             # number of Markov chains
     # warmup = 1000,          # number of warmup iterations per chain
     iter = 2000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)

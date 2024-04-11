@@ -64,7 +64,7 @@ model {
     }
     target += gamma_lpdf(lambda2 | 0.01, 0.01);
     target += normal_lpdf(theta | 0, 100);
-    target += inv_gamma_lpdf(sigma | 1, 1);
+    target += inv_gamma_lpdf(sigma | 0.01, 0.01);
     target += (p * (psi+1) * log(lambda2)/2);
     for (j in 1:p){
         target += gamma_lpdf(tau[j] | atau, sqrt(lambda2/2));
