@@ -228,11 +228,10 @@ model {
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += normal_lpdf(theta[1] | 0, 100);
-    target += gamma_lpdf(lambda1 | 1, 1e-6);
+    target += gamma_lpdf(lambda1 | 0.01, 0.01);
     target += gamma_lpdf(lambda2 | 1, 1e-6);
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, sqrt(lambda1));
-        
     }
     for (j in 1:p){
         target += gamma_lpdf(tau1[j] | atau, sqrt(lambda2));
@@ -263,15 +262,15 @@ data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi,
 init.alpha <- list(list(gammaTemp = array(rep(10, ((psi-2)*p)), dim=c((psi-2),p)),
                         theta = rep(0, (p+1)), pie = 0.05,
                         tau1 = rep(0.1, p), tau2 = rep(0.1, p),
-                        lambda1 = 0.01, lambda2 = 100),
+                        lambda1 = 0.1, lambda2 = 1),
                     list(gammaTemp = array(rep(-1, ((psi-2)*p)), dim=c((psi-2),p)),
-                            theta = rep(0, (p+1)), pie = 0.05,
+                            theta = rep(0, (p+1)), pie = 0.75,
                             tau1 = rep(0.001, p), tau2 = rep(0.5, p),
                             lambda1 = 1, lambda2 = 10),
-                    list(gammaTemp = array(rep(3, ((psi-2)*p)), dim=c((psi-2),p)),
-                            theta = rep(0.1, (p+1)), pie = 0.05,
+                    list(gammaTemp = array(rep(-3, ((psi-2)*p)), dim=c((psi-2),p)),
+                            theta = rep(0.1, (p+1)), pie = 0.5,
                             tau1 = rep(0.5, p), tau2 = rep(0.01, p),
-                            lambda1 = 5, lambda2 = 5500)        
+                            lambda1 = 5, lambda2 = 55)        
                         )
 # setwd("C:/Users/Johnny Lee/Documents/GitHub")
 fit1 <- stan(
@@ -281,7 +280,7 @@ fit1 <- stan(
     init = init.alpha,      # initial value
     chains = 3,             # number of Markov chains
     # warmup = 1000,          # number of warmup iterations per chain
-    iter = 5000,            # total number of iterations per chain
+    iter = 2000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
     refresh = 500,             # no progress shown
     control=list(adapt_delta=0.99, max_treedepth=15)
