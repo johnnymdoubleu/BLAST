@@ -72,7 +72,7 @@ for(j in 1:p){
         if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
         else {
             if(ps == 1 || ps == psi){gamma.origin[ps, j] <- 0}
-            else{gamma.origin[ps, j] <- -10}
+            else{gamma.origin[ps, j] <- -1}
         }
     }
 }
@@ -186,7 +186,6 @@ parameters {
     real <lower=0> lambda2; // group lasso penalty
     real sigma;
     array[p] real <lower=0> tau;
-    real <lower=0, upper=1> pie;
 }
 transformed parameters {
     array[n] real <lower=0> alpha; // covariate-adjusted tail index
@@ -234,8 +233,7 @@ model {
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, sqrt(lambda1));
     }
-    target += (-p * psi * log(lambda2)/2);    
-    target += beta_lpdf(pie | 1, 1);
+    target += (-p * psi * log(lambda2)/2);
     for (j in 1:p){
         target += inv_gamma_lpdf(sigma | 1, 1); 
         target += gamma_lpdf(tau[j] | atau, (sqrt(lambda2)/2));
@@ -246,7 +244,9 @@ model {
 , "model_simulation_sc1_constraint.stan")
         # for ( i in 1:psi){
         #     target += double_exponential_lpdf(gamma[j][i] | 0, sqrt(lambda2));
-        # }      
+        # }
+    # real <lower=0, upper=1> pie;        
+# target += beta_lpdf(pie | 1, 1);        
     # target += ((p * log(lambda1)/2) + (p * psi * log(lambda2)/2));
 # target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau[j] * sigma);
 # target += log_mix(pie, multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau[j] * sigma), multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * 0.0001));
@@ -258,7 +258,7 @@ data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi,
                     xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear)
 
 init.alpha <- list(list(gammaTemp = array(rep(10, ((psi-2)*p)), dim=c((psi-2),p)),
-                        theta = rep(0, (p+1)), pie = 0.5,
+                        theta = rep(0, (p+1)), #pie = 0.5,
                         tau = rep(0.1, p), sigma = 0.1,
                         lambda1 = 0.01, lambda2 = 0.1)
                 #   list(gammaTemp = array(rep(-0.2, ((psi-2)*p)), dim=c((psi-2),p)),
