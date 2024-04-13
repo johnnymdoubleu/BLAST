@@ -26,7 +26,7 @@ library(ggh4x)
 
 
 n <- 10000
-psi <- 5
+psi <- 10
 threshold <- 0.95
 p <- 2
 no.theta <- 1
@@ -229,17 +229,17 @@ model {
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += normal_lpdf(theta[1] | 0, 100);
-    target += gamma_lpdf(lambda1 | 1, 1);
-    target += gamma_lpdf(lambda2 | 1, 1);
+    target += gamma_lpdf(lambda1 | 0.01, 0.01);
+    target += gamma_lpdf(lambda2 | 0.01, 0.01);
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, sqrt(lambda1));
     }
-    target += (-p * psi * log(lambda2)/2));    
+    target += (-p * psi * log(lambda2)/2);    
     target += beta_lpdf(pie | 1, 1);
     for (j in 1:p){
         target += inv_gamma_lpdf(sigma | 1, 1); 
         target += gamma_lpdf(tau[j] | atau, (sqrt(lambda2)/2));
-        target += log_mix(pie, multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau[j] * sigma), multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * 0.001));
+        target += log_mix(pie, multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau[j] * sigma), multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * 0.0001));
     }
 }
 "
@@ -248,6 +248,8 @@ model {
         #     target += double_exponential_lpdf(gamma[j][i] | 0, sqrt(lambda2));
         # }      
     # target += ((p * log(lambda1)/2) + (p * psi * log(lambda2)/2));
+# target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau[j] * sigma);
+
 
 data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, 
                     atau = ((psi+1)/2), basisFL = basis.holder,
@@ -579,7 +581,7 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_qqplot_sc1-wi.pdf"), width=10, height = 7.78)
 
 lambda.container <- data.frame("x" = seq(0, max(posterior$lambda2), length.out = 1000),
-                        "GamDist" = dgamma(seq(0, max(posterior$lambda2), length.out = 1000),0.01, 0.01),
+                        "GamDist" = dgamma(seq(0, max(posterior$lambda2), length.out = 1000), 1, 0.00001),
                         "lambda.post" = posterior$lambda2)
 
                         

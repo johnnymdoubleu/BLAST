@@ -229,7 +229,7 @@ data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi,
                     xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear)
 
 init.alpha <- list(list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c((psi-2),p)),
-                        theta = 0, beta = rep(0, p), pie = 0,
+                        theta = 0, beta = rep(0, p), pie = 0.5,
                         tau = rep(0.1, p), sigma = 0.1, 
                         lambda = 0.1)
                 #   list(gammaTemp = array(rep(-0.2, ((psi-2)*p)), dim=c((psi-2),p)),
