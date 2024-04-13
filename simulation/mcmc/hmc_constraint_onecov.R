@@ -26,7 +26,7 @@ library(ggh4x)
 
 
 n <- 5000
-psi <- 10
+psi <- 3
 threshold <- 0.95
 p <- 5
 no.theta <- 1
