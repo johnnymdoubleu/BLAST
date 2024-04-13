@@ -28,7 +28,7 @@ library(ggh4x)
 n <- 5000
 psi <- 3
 threshold <- 0.95
-p <- 5
+p <- 2
 no.theta <- 1
 simul.no <- 50
 
@@ -183,7 +183,8 @@ parameters {
     vector[(psi-2)] gammaTemp[p]; // constraint splines coefficient from 2 to psi-1
     real <lower=0> lambda1; // lasso penalty
     real <lower=0> lambda2; // group lasso penalty
-    array[p] real <lower=0> tau;
+    array[p] real <lower=0> tau1;
+    array[p] real <lower=0> tau2;
     real <lower=0, upper=1> pie;
 }
 transformed parameters {
@@ -227,15 +228,16 @@ model {
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += normal_lpdf(theta[1] | 0, 100);
-    target += gamma_lpdf(lambda1 | 0.01, 0.01);
-    target += gamma_lpdf(lambda2 | 1, 1e-6);
+    target += gamma_lpdf(lambda1 | 1, 1e-3);
+    target += gamma_lpdf(lambda2 | 1, 1e-3);
     target += beta_lpdf(pie | 1, 1);
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, sqrt(lambda1));
     }
     for (j in 1:p){
-        target += gamma_lpdf(tau[j] | atau, (sqrt(lambda2)/2));
-        target += log_mix(pie, multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau[j]), multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * 0.0001));
+        target += gamma_lpdf(tau1[j] | atau, (sqrt(lambda2)/2));
+        target += normal_lpdf(tau2[j] | 0, 0.1);
+        target += log_mix(pie, multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau2[j]), multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau1[j]));
         target += -(psi * log(lambda2)/2);
     }
 }
@@ -258,7 +260,7 @@ data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi,
 
 init.alpha <- list(list(gammaTemp = array(rep(10, ((psi-2)*p)), dim=c((psi-2),p)),
                         theta = rep(0, (p+1)), pie = 0.5,
-                        tau = rep(0.1, p), sigma = 0.1,
+                        tau1 = rep(0.1, p), tau2 = rep(0.1, p),
                         lambda1 = 0.01, lambda2 = 0.1)
                 #   list(gammaTemp = array(rep(-0.2, ((psi-2)*p)), dim=c((psi-2),p)),
                 #         theta = rep(0.01, (p+1)),
@@ -291,7 +293,8 @@ plot(fit1, plotfun = "trace", pars = c("theta"), nrow = 3)
 # plot(fit1, plotfun = "trace", pars = c("lambda1", "lambda2"), nrow = 2)
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_lambda_sc1-wi.pdf"), width=10, height = 7.78)
 
-tau.samples <- summary(fit1, par=c("tau","pie"), probs = c(0.05,0.5, 0.95))$summary
+tau.samples <- summary(fit1, par=c("tau1", "tau2"), probs = c(0.05,0.5, 0.95))$summary
+pie.samples <- summary(fit1, par=c("pie"), probs = c(0.05,0.5, 0.95))$summary
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
 lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
@@ -579,8 +582,8 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
               ylim = c(-3, 3))
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_qqplot_sc1-wi.pdf"), width=10, height = 7.78)
 
-lambda.container <- data.frame("x" = seq(0, max(posterior$lambda2), length.out = 1000),
-                        "GamDist" = dgamma(seq(0, max(posterior$lambda2), length.out = 1000), 1, 0.00001),
+lambda.container <- data.frame("x" = seq(0, max(posterior$lambda2), length.out = 1500),
+                        "GamDist" = dgamma(seq(0, max(posterior$lambda2), length.out = 1500), 1, 1e-6),
                         "lambda.post" = posterior$lambda2)
 
                         
