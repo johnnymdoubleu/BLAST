@@ -234,7 +234,7 @@ model {
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, sqrt(lambda1));
     }
-    target += (p * psi * log(lambda2)/2))    
+    target += (-p * psi * log(lambda2)/2));    
     target += beta_lpdf(pie | 1, 1);
     for (j in 1:p){
         target += inv_gamma_lpdf(sigma | 1, 1); 
