@@ -40,7 +40,7 @@ transformed parameters {
         subgnl[,j] = bsNonlinear[indexFL[(((j-1)*2)+1):(((j-1)*2)+2)], (((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] * gammaTemp[j];
         gammaFL[j] = basisFL[, (((j-1)*2)+1):(((j-1)*2)+2)] * subgnl[,j] * -1;
         gamma[j][1] = gammaFL[j][1];
-        gamma[j][psi] = gammaFL[j][2];
+        gamma[j][psi] = gammaFL[j][2];  
     };
     for (j in 1:p){
         gnl[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
@@ -67,10 +67,11 @@ model {
     target += gamma_lpdf(lambda2 | 1, 1e-6);
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, sqrt(lambda1));
+        
     }
     for (j in 1:p){
-        target += normal_lpdf(tau1[j] | 0, sqrt(lambda2));
-        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau1[j]);        
+        target += gamma_lpdf(tau1[j] | atau, sqrt(lambda2));
+        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau1[j]);
         target += -(psi * log(lambda2)/2);
     }
 }

@@ -26,9 +26,9 @@ library(ggh4x)
 
 
 n <- 10000
-psi <- 7
+psi <- 5
 threshold <- 0.95
-p <- 3
+p <- 2
 no.theta <- 1
 simul.no <- 50
 
@@ -72,11 +72,11 @@ for(j in 1:p){
         if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
         else {
             if(ps == 1 || ps == psi){gamma.origin[ps, j] <- 0}
-            else{gamma.origin[ps, j] <- -1.5}
+            else{gamma.origin[ps, j] <- -5}
         }
     }
 }
-theta.origin <- c(-0.1, 0, -0.5, -0.5)
+theta.origin <- c(-0.1, 0, -0.5)
 
 f.sub.origin <- matrix(, nrow = 2, ncol = p)
 for(j in 1:p){
@@ -205,7 +205,7 @@ transformed parameters {
         subgnl[,j] = bsNonlinear[indexFL[(((j-1)*2)+1):(((j-1)*2)+2)], (((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] * gammaTemp[j];
         gammaFL[j] = basisFL[, (((j-1)*2)+1):(((j-1)*2)+2)] * subgnl[,j] * -1;
         gamma[j][1] = gammaFL[j][1];
-        gamma[j][psi] = gammaFL[j][2];
+        gamma[j][psi] = gammaFL[j][2];  
     };
     for (j in 1:p){
         gnl[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
@@ -232,10 +232,11 @@ model {
     target += gamma_lpdf(lambda2 | 1, 1e-6);
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, sqrt(lambda1));
+        
     }
     for (j in 1:p){
-        target += normal_lpdf(tau1[j] | 0, sqrt(lambda2));
-        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau1[j]);        
+        target += gamma_lpdf(tau1[j] | atau, sqrt(lambda2));
+        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau1[j]);
         target += -(psi * log(lambda2)/2);
     }
 }
@@ -244,10 +245,11 @@ model {
         # for ( i in 1:psi){
                     # target += inv_gamma_lpdf(sigma | 0.1, 0.1); 
         #     target += double_exponential_lpdf(gamma[j][i] | 0, sqrt(lambda2));
-        # }      
-    #    target += beta_lpdf(pie | 3, 1);
+        # }
+# target += -(log(lambda1)/2);        
+    # target += beta_lpdf(pie | 3, 1);
     # target += ((p * log(lambda1)/2) + (p * psi * log(lambda2)/2));
-# target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau[j] * sigma);
+# target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau1[j] * sigma);
 # target += normal_lpdf(tau2[j] | 0, 0.01);
         # target += gamma_lpdf(tau1[j] | atau, (sqrt(lambda2)/2));
 # target += log_mix(pie, multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau2[j]), multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau1[j]));
@@ -279,9 +281,10 @@ fit1 <- stan(
     init = init.alpha,      # initial value
     chains = 3,             # number of Markov chains
     # warmup = 1000,          # number of warmup iterations per chain
-    iter = 2000,            # total number of iterations per chain
+    iter = 5000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
-    refresh = 500             # no progress shown
+    refresh = 500,             # no progress shown
+    control=list(adapt_delta=0.99, max_treedepth=15)
 )
 
 posterior <- extract(fit1)
