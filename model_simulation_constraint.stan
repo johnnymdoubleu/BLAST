@@ -17,9 +17,10 @@ parameters {
     real theta; // intercept term
     vector[p] beta; // linear coefficient
     vector[(psi-2)] gammaTemp[p]; // constraint splines coefficient from 2 to psi-1
-    real <lower=0> lambda2; // group lasso penalty
+    real <lower=0> lambda; // group lasso penalty
     real sigma;
     array[p] real <lower=0> tau;
+    real <lower=0, upper=1> pie;
 }
 transformed parameters {
     array[n] real <lower=0> alpha; // covariate-adjusted tail index
@@ -62,13 +63,14 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda2 | 0.01, 0.01);
+    target += gamma_lpdf(lambda | 1, 0.000001);
     target += normal_lpdf(theta | 0, 100);
-    target += inv_gamma_lpdf(sigma | 0.01, 0.01);
-    target += (p * (psi+1) * log(lambda2)/2);
+    target += inv_gamma_lpdf(sigma | 1 ,1);
+    target += (-p * (psi+1) * log(lambda)/2);    
+    target += beta_lpdf(pie | 1, 1);
     for (j in 1:p){
-        target += gamma_lpdf(tau[j] | atau, sqrt(lambda2/2));
-        target += multi_normal_lpdf(gamma[j] | rep_vector(0, (psi+1)), diag_matrix(rep_vector(1, (psi+1))) * tau[j] * sigma);
+        target += gamma_lpdf(tau[j] | atau, sqrt(lambda/2));
+        target += log_mix(pie, multi_normal_lpdf(gamma[j] | rep_vector(0, (psi+1)), diag_matrix(rep_vector(1, (psi+1))) * tau[j] * sigma), multi_normal_lpdf(gamma[j] | rep_vector(0, (psi+1)), diag_matrix(rep_vector(1, (psi+1))) * 0.001));
     }
 }
 

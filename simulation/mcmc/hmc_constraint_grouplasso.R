@@ -21,12 +21,12 @@ library(cmdstanr)
 library(ggh4x)
 
 #Scenario 1
-set.seed(10)
+# set.seed(10)
 # set.seed(6)
 
 
-n <- 15000
-psi <- 3
+n <- 10000
+psi <- 5
 threshold <- 0.95
 p <- 2
 no.theta <- 1
@@ -54,11 +54,11 @@ for(j in 1:p){
         if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
         else {
             if(ps == 1 || ps == psi){gamma.origin[ps, j] <- 0}
-            else{gamma.origin[ps, j] <- 0}
+            else{gamma.origin[ps, j] <- 0.52}
         }
     }
 }
-theta.origin <- c(-0.01, 0, -1.2)
+theta.origin <- c(-0.01, 0, -0.2)
 
 f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
@@ -163,9 +163,10 @@ parameters {
     real theta; // intercept term
     vector[p] beta; // linear coefficient
     vector[(psi-2)] gammaTemp[p]; // constraint splines coefficient from 2 to psi-1
-    real <lower=0> lambda2; // group lasso penalty
+    real <lower=0> lambda; // group lasso penalty
     real sigma;
     array[p] real <lower=0> tau;
+    real <lower=0, upper=1> pie;
 }
 transformed parameters {
     array[n] real <lower=0> alpha; // covariate-adjusted tail index
@@ -208,13 +209,14 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda2 | 0.01, 0.01);
+    target += gamma_lpdf(lambda | 1, 0.000001);
     target += normal_lpdf(theta | 0, 100);
-    target += inv_gamma_lpdf(sigma | 0.01, 0.01);
-    target += (p * (psi+1) * log(lambda2)/2);
+    target += inv_gamma_lpdf(sigma | 1 ,1);
+    target += (-p * (psi+1) * log(lambda)/2);    
+    target += beta_lpdf(pie | 1, 1);
     for (j in 1:p){
-        target += gamma_lpdf(tau[j] | atau, sqrt(lambda2/2));
-        target += multi_normal_lpdf(gamma[j] | rep_vector(0, (psi+1)), diag_matrix(rep_vector(1, (psi+1))) * tau[j] * sigma);
+        target += gamma_lpdf(tau[j] | atau, sqrt(lambda/2));
+        target += log_mix(pie, multi_normal_lpdf(gamma[j] | rep_vector(0, (psi+1)), diag_matrix(rep_vector(1, (psi+1))) * tau[j] * sigma), multi_normal_lpdf(gamma[j] | rep_vector(0, (psi+1)), diag_matrix(rep_vector(1, (psi+1))) * 0.001));
     }
 }
 "
@@ -227,9 +229,9 @@ data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi,
                     xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear)
 
 init.alpha <- list(list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c((psi-2),p)),
-                        theta = 0, beta = rep(0, p),
+                        theta = 0, beta = rep(0, p), pie = 0,
                         tau = rep(0.1, p), sigma = 0.1, 
-                        lambda2 = 0.1)
+                        lambda = 0.1)
                 #   list(gammaTemp = array(rep(-0.2, ((psi-2)*p)), dim=c((psi-2),p)),
                 #         theta = 0.01, beta = rep(0.1, p),
                 #         tau = rep(0.01, p), sigma = 0.01,
@@ -247,7 +249,7 @@ fit1 <- stan(
     init = init.alpha,      # initial value
     chains = 1,             # number of Markov chains
     # warmup = 1000,          # number of warmup iterations per chain
-    iter = 2000,            # total number of iterations per chain
+    iter = 3000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
     refresh = 500             # no progress shown
 )
@@ -256,13 +258,13 @@ posterior <- extract(fit1)
 
 plot(fit1, plotfun = "trace", pars = c("theta"), nrow = 3)
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_theta_trace_sc1-wi.pdf"), width=10, height = 7.78)
-plot(fit1, plotfun = "trace", pars = c("lambda2"), nrow = 2)
+plot(fit1, plotfun = "trace", pars = c("lambda"), nrow = 2)
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_lambda_sc1-wi.pdf"), width=10, height = 7.78)
 
 tau.samples <- summary(fit1, par=c("tau"), probs = c(0.05,0.5, 0.95))$summary
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
-lambda.samples <- summary(fit1, par=c("lambda2"), probs = c(0.05,0.5, 0.95))$summary
+lambda.samples <- summary(fit1, par=c("lambda"), probs = c(0.05,0.5, 0.95))$summary
 alpha.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
 newgl.samples <- summary(fit1, par=c("newgl"), probs = c(0.05, 0.5, 0.95))$summary
 newgnl.samples <- summary(fit1, par=c("newgnl"), probs = c(0.05, 0.5, 0.95))$summary
@@ -281,11 +283,11 @@ theta.q2 <- theta.samples[,5]
 theta.q3 <- theta.samples[,6]
 
 # array(gamma.q2, dim=c(psi,p))
-sampled <- end.holder[,1:2] %*% gammafl.samples[1:2, 5]
-trued <- as.matrix(c(bs.nonlinear[index.holder[1,1], 2:(psi-1)] %*% gamma.samples[3:psi, 5], bs.nonlinear[index.holder[1,2], 2:(psi-1)] %*% gamma.samples[3:psi, 5]), nrow = 2)
-sampled - trued
-sampled
-trued
+# sampled <- end.holder[,1:2] %*% gammafl.samples[1:2, 5]
+# trued <- as.matrix(c(bs.nonlinear[index.holder[1,1], 2:(psi-1)] %*% gamma.samples[3:psi, 5], bs.nonlinear[index.holder[1,2], 2:(psi-1)] %*% gamma.samples[3:psi, 5]), nrow = 2)
+# sampled - trued
+# sampled
+# trued
 # df.theta <- data.frame("seq" = seq(1, (p+1)),
 #                         "true" = theta.origin,
 #                         "m" = theta.q2,

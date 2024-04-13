@@ -21,12 +21,12 @@ library(cmdstanr)
 library(ggh4x)
 
 #Scenario 1
-set.seed(10)
+# set.seed(10)
 # set.seed(6)
 
 
-n <- 15000
-psi <- 3
+n <- 10000
+psi <- 5
 threshold <- 0.95
 p <- 2
 no.theta <- 1
@@ -72,11 +72,11 @@ for(j in 1:p){
         if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
         else {
             if(ps == 1 || ps == psi){gamma.origin[ps, j] <- 0}
-            else{gamma.origin[ps, j] <- -100}
+            else{gamma.origin[ps, j] <- -10}
         }
     }
 }
-theta.origin <- c(-0.01, 0, -0.2)
+theta.origin <- c(-0.01, 0, -0.5)
 
 f.sub.origin <- matrix(, nrow = 2, ncol = p)
 for(j in 1:p){
@@ -185,7 +185,8 @@ parameters {
     real <lower=0> lambda1; // lasso penalty
     real <lower=0> lambda2; // group lasso penalty
     real sigma;
-    array[p] real <lower=0> tau;          
+    array[p] real <lower=0> tau;
+    real <lower=0, upper=1> pie;
 }
 transformed parameters {
     array[n] real <lower=0> alpha; // covariate-adjusted tail index
@@ -228,14 +229,17 @@ model {
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += normal_lpdf(theta[1] | 0, 100);
-    target += gamma_lpdf(lambda1 | 1, 0.000001);
-    target += gamma_lpdf(lambda2 | 1, 0.000001);
-    target += ((p * log(lambda1)/2) + (p * psi * log(lambda2)/2));
+    target += gamma_lpdf(lambda1 | 1, 1);
+    target += gamma_lpdf(lambda2 | 1, 1);
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, sqrt(lambda1));
-        target += inv_gamma_lpdf(sigma | 0.01, 0.01); 
-        target += gamma_lpdf(tau[j] | atau, sqrt(lambda2/2));
-        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau[j] * sigma);
+    }
+    target += (p * psi * log(lambda2)/2))    
+    target += beta_lpdf(pie | 1, 1);
+    for (j in 1:p){
+        target += inv_gamma_lpdf(sigma | 1, 1); 
+        target += gamma_lpdf(tau[j] | atau, (sqrt(lambda2)/2));
+        target += log_mix(pie, multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau[j] * sigma), multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * 0.001));
     }
 }
 "
@@ -243,7 +247,7 @@ model {
         # for ( i in 1:psi){
         #     target += double_exponential_lpdf(gamma[j][i] | 0, sqrt(lambda2));
         # }      
-
+    # target += ((p * log(lambda1)/2) + (p * psi * log(lambda2)/2));
 
 data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, 
                     atau = ((psi+1)/2), basisFL = basis.holder,
@@ -252,7 +256,7 @@ data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi,
                     xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear)
 
 init.alpha <- list(list(gammaTemp = array(rep(10, ((psi-2)*p)), dim=c((psi-2),p)),
-                        theta = rep(0, (p+1)),
+                        theta = rep(0, (p+1)), pie = 0.5,
                         tau = rep(0.1, p), sigma = 0.1,
                         lambda1 = 0.01, lambda2 = 0.1)
                 #   list(gammaTemp = array(rep(-0.2, ((psi-2)*p)), dim=c((psi-2),p)),
@@ -574,9 +578,9 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
               ylim = c(-3, 3))
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_qqplot_sc1-wi.pdf"), width=10, height = 7.78)
 
-lambda.container <- data.frame("x" = seq(0, max(posterior$lambda1), length.out = 1000),
-                        "GamDist" = dgamma(seq(0, max(posterior$lambda1), length.out = 1000), 1, 0.0000001),
-                        "lambda.post" = posterior$lambda1)
+lambda.container <- data.frame("x" = seq(0, max(posterior$lambda2), length.out = 1000),
+                        "GamDist" = dgamma(seq(0, max(posterior$lambda2), length.out = 1000),0.01, 0.01),
+                        "lambda.post" = posterior$lambda2)
 
                         
 ggplot(data = lambda.container, aes(x = x)) + ylab("density") + xlab("lambdas") + labs(col = "") +

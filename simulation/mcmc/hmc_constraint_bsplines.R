@@ -21,12 +21,12 @@ library(cmdstanr)
 library(ggh4x)
 
 #Scenario 1
-set.seed(10)
+# set.seed(10)
 # set.seed(6)
 
 
-n <- 15000
-psi <- 3
+n <- 10000
+psi <- 2
 threshold <- 0.95
 p <- 2
 no.theta <- 1
@@ -46,8 +46,8 @@ x.origin <- pnorm(matrix(rnorm(n*p), ncol = p) %*% chol(C))
 #                               which.max(x.origin[,i])), ncol=2))
 # }
 for(i in 1:p){
-    knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)  
-    bsp <- bSpline(x.origin[,i], Boundary.knots = c(min(x.origin[,i]), max(x.origin[,i])), degree = 3)
+    knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = (psi+2))[2:(psi+1)]  
+    bsp <- bSpline(x.origin[,i], knots= knots, degree = 3)
     bs.nonlinear <- cbind(bs.nonlinear, bsp)
     # basis.holder <- cbind(basis.holder, 
     #         solve(t(matrix(c(bsp[index.holder[i,1], 1],
@@ -59,13 +59,12 @@ for(i in 1:p){
 
 
 ## Generate sample
-gamma.origin <- matrix(, nrow = psi, ncol = p)
+gamma.origin <- matrix(, nrow = (psi+3), ncol = p)
 for(j in 1:p){
-    for (ps in 1:psi){
+    for (ps in 1:(psi+3)){
         if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
         else {
-            if(ps == 1 || ps == psi){gamma.origin[ps, j] <- 0}
-            else{gamma.origin[ps, j] <- -10}
+            gamma.origin[ps, j] <- -2.5
         }
     }
 }
@@ -74,7 +73,7 @@ theta.origin <- -0.01
 f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
     # f.linear.origin[,j] <- bs.linear[, j] * theta.origin[j+1]
-    f.nonlinear.origin[,j] <- bs.nonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
+    f.nonlinear.origin[,j] <- bs.nonlinear[,(((j-1)*(psi+3))+1):(((j-1)*(psi+3))+(psi+3))] %*% gamma.origin[,j]
     # f.origin[, j] <- f.linear.origin[,j] + f.nonlinear.origin[,j]
 }
 
@@ -110,9 +109,11 @@ for(i in 1:p){
     # xholder[,i] <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = n)  
     # test.knot <- seq(min(xholder[,i]), max(xholder[,i]), length.out = psi)
     xholder[,i] <- seq(0, 1, length.out = n)
-    splines <- bSpline(xholder[,i], Boundary.knots = c(min(xholder[,i]), max(xholder[,i])), degree = 3)    
+    test.knot <- seq(min(xholder[,i]), max(xholder[,i]), length.out = (psi+2))[2:(psi+1)]
+    splines <- bSpline(xholder[,i], knots = test.knot, degree = 3)    
     xholder.nonlinear <- cbind(xholder.nonlinear, splines)
-    bsp <- bSpline(x.origin[,i], Boundary.knots = c(min(x.origin[,i]), max(x.origin[,i])), degree = 3)
+    knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = (psi+2))[2:(psi+1)]    
+    bsp <- bSpline(x.origin[,i], knots = knots, degree = 3)
     # basis.holder <- cbind(basis.holder, 
     #         solve(t(matrix(c(bsp[index.holder[i,1], 1],
     #                 bsp[index.holder[i,1], psi],
@@ -137,10 +138,10 @@ f.sub.origin <- matrix(, nrow = 2, ncol = p)
 # }
 for(j in 1:p){
     # f.linear.origin[,j] <- bs.linear[, j] * theta.origin[j+1]
-    f.nonlinear.origin[,j] <- bs.nonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
+    f.nonlinear.origin[,j] <- bs.nonlinear[,(((j-1)*(psi+3))+1):(((j-1)*(psi+3))+(psi+3))] %*% gamma.origin[,j]
     # f.origin[, j] <- f.linear.origin[,j] + f.nonlinear.origin[,j]
     # f.linear.new[,j] <- xholder.linear[, j] * theta.origin[j+1]
-    f.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
+    f.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*(psi+3))+1):(((j-1)*(psi+3))+(psi+3))] %*% gamma.origin[,j]
     # f.new[,j] <- f.linear.new[,j] + f.nonlinear.new[,j]
 }
 
@@ -156,19 +157,17 @@ data {
     int <lower=1> p; // regression coefficient size
     int <lower=1> psi; // splines coefficient size
     real <lower=0> u; // large threshold value
-    matrix[n, (psi*p)] bsNonlinear; // thin plate splines basis
-    matrix[n, (psi*p)] xholderNonlinear; // thin plate splines basis    
+    matrix[n, ((psi+3)*p)] bsNonlinear; // thin plate splines basis
+    matrix[n, ((psi+3)*p)] xholderNonlinear; // thin plate splines basis    
     array[n] real <lower=1> y; // extreme response
     real <lower=0> atau;
-    matrix[2, (2*p)] basisFL;
-    array[(p*2)] int indexFL;
 }
 parameters {
     real theta; // linear predictor
-    vector[psi] gamma[p]; // splines coefficient 
+    vector[(psi+3)] gamma[p]; // splines coefficient 
     real <lower=0> lambda; // group lasso penalty
     real sigma;
-    array[p] real <lower=0> tau;          
+    array[p] real <lower=0> tau;
 }
 transformed parameters {
     array[n] real <lower=0> alpha; // covariate-adjusted tail index
@@ -177,8 +176,8 @@ transformed parameters {
     matrix[n, p] newgnl; // nonlinear component
 
     for (j in 1:p){
-        gnl[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
-        newgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
+        gnl[,j] = bsNonlinear[,(((j-1)*(psi+3))+1):(((j-1)*(psi+3))+(psi+3))] * gamma[j];
+        newgnl[,j] = xholderNonlinear[,(((j-1)*(psi+3))+1):(((j-1)*(psi+3))+(psi+3))] * gamma[j];
     };
 
     for (i in 1:n){
@@ -193,17 +192,18 @@ model {
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += normal_lpdf(theta | 0, 100);
-    target += gamma_lpdf(lambda | 0.01, 0.01);
-    target += (p * psi * log(lambda)/2);
+    target += gamma_lpdf(lambda | 1, 0.0001);
+    target += (p * (psi+3) * log(lambda)/2);
     for (j in 1:p){
         target += inv_gamma_lpdf(sigma | 0.01, 0.01); 
         target += gamma_lpdf(tau[j] | atau, sqrt(lambda/2));
-        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau[j] * sigma);
+        target += multi_normal_lpdf(gamma[j] | rep_vector(0, (psi+3)), diag_matrix(rep_vector(1, (psi+3))) * tau[j] * sigma);
     }
 }
 "
 , "model_simulation_sc1_constraint.stan")
-
+    # matrix[2, (2*p)] basisFL;
+    # array[(p*2)] int indexFL;
     # vector[2] gammaFL[p]; 
     # matrix[2, p] subgnl;
     # for(j in 1:p){
@@ -215,11 +215,11 @@ model {
     # };
 
 data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, 
-                    atau = ((psi+1)/2), 
+                    atau = (((psi+3)+1)/2), 
                     # basisFL = basis.holder, indexFL = as.vector(t(index.holder)),
                     bsNonlinear = bs.nonlinear, xholderNonlinear = xholder.nonlinear)
 
-init.alpha <- list(list(gamma = array(rep(10, (psi*p)), dim=c(psi,p)),
+init.alpha <- list(list(gamma = array(rep(0, ((psi+3)*p)), dim=c((psi+3),p)),
                         theta = 0, tau = rep(0.1, p), sigma = 0.1, lambda = 0.1)
                 #   list(gammaTemp = array(rep(-0.2, ((psi-2)*p)), dim=c((psi-2),p)),
                 #         theta = rep(0.01, (p+1)),
@@ -255,14 +255,10 @@ plot(fit1, plotfun = "trace", pars = c("theta"), nrow = 3)
 # tau.samples <- summary(fit1, par=c("tau"), probs = c(0.05,0.5, 0.95))$summary
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
-lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
+lambda.samples <- summary(fit1, par=c("lambda"), probs = c(0.05,0.5, 0.95))$summary
 alpha.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
-newgl.samples <- summary(fit1, par=c("newgl"), probs = c(0.05, 0.5, 0.95))$summary
 newgnl.samples <- summary(fit1, par=c("newgnl"), probs = c(0.05, 0.5, 0.95))$summary
-newgsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
 newalpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
-subgnl.samples <- summary(fit1, par=c("subgnl"), probs = c(0.05,0.5, 0.95))$summary
-gammafl.samples <- summary(fit1, par=c("gammaFL"), probs = c(0.05,0.5, 0.95))$summary
 
 gamma.post.mean <- gamma.samples[,1]
 gamma.q1 <- gamma.samples[,4]
@@ -280,13 +276,13 @@ theta.q3 <- theta.samples[,6]
 # sampled
 # trued
 
-df.gamma <- data.frame("seq" = seq(1, (psi*p)), 
+df.gamma <- data.frame("seq" = seq(1, ((psi+3)*p)), 
                   "true" = as.vector(gamma.origin),
                   "m" = as.vector(gamma.q2),
                   "l" = as.vector(gamma.q1),
                   "u" = as.vector(gamma.q3))
-df.gamma$covariate <- factor(rep(seq(1, 1 + nrow(df.gamma) %/% psi), each = psi, length.out = nrow(df.gamma)))
-df.gamma$labels <- factor(1:(psi*p))
+df.gamma$covariate <- factor(rep(seq(1, 1 + nrow(df.gamma) %/% (psi+3)), each = (psi+3), length.out = nrow(df.gamma)))
+df.gamma$labels <- factor(1:((psi+3)*p))
 ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) + 
   geom_errorbar(aes(ymin = l, ymax = u),alpha = 0.4, width = 4, linewidth = 1.2) +
   geom_point(aes(y=true), size =4, color ="red")+
@@ -347,7 +343,7 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values=c("steelblue", "red")) + 
   guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) + ylim(-1, 1) +
+          fill = guide_legend(order = 1)) + 
   # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) +
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 15),
@@ -383,7 +379,7 @@ ggplot(data.scenario, aes(x=newx)) +
   geom_line(aes(y=post.mean, col = "Posterior Median"), linewidth=1.5) +
   scale_color_manual(values=c("steelblue", "red")) + 
   scale_fill_manual(values=c("steelblue"), name = "") +
-  theme_minimal(base_size = 30) + ylim(0.5,2.5)+
+  theme_minimal(base_size = 30) +
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 18))
