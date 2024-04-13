@@ -25,10 +25,10 @@ library(ggh4x)
 # set.seed(6)
 
 
-n <- 5000
-psi <- 3
+n <- 10000
+psi <- 7
 threshold <- 0.95
-p <- 2
+p <- 3
 no.theta <- 1
 simul.no <- 50
 
@@ -72,11 +72,11 @@ for(j in 1:p){
         if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
         else {
             if(ps == 1 || ps == psi){gamma.origin[ps, j] <- 0}
-            else{gamma.origin[ps, j] <- -10}
+            else{gamma.origin[ps, j] <- -1.5}
         }
     }
 }
-theta.origin <- c(-0.01, 0, -0.5, -0.5, 0, 0)
+theta.origin <- c(-0.1, 0, -0.5, -0.5)
 
 f.sub.origin <- matrix(, nrow = 2, ncol = p)
 for(j in 1:p){
@@ -228,16 +228,14 @@ model {
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += normal_lpdf(theta[1] | 0, 100);
-    target += gamma_lpdf(lambda1 | 1, 1e-3);
-    target += gamma_lpdf(lambda2 | 1, 1e-3);
-    target += beta_lpdf(pie | 1, 1);
+    target += gamma_lpdf(lambda1 | 1, 1e-6);
+    target += gamma_lpdf(lambda2 | 1, 1e-6);
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, sqrt(lambda1));
     }
     for (j in 1:p){
-        target += gamma_lpdf(tau1[j] | atau, (sqrt(lambda2)/2));
-        target += normal_lpdf(tau2[j] | 0, 0.1);
-        target += log_mix(pie, multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau2[j]), multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau1[j]));
+        target += normal_lpdf(tau1[j] | 0, sqrt(lambda2));
+        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau1[j]);        
         target += -(psi * log(lambda2)/2);
     }
 }
@@ -247,10 +245,12 @@ model {
                     # target += inv_gamma_lpdf(sigma | 0.1, 0.1); 
         #     target += double_exponential_lpdf(gamma[j][i] | 0, sqrt(lambda2));
         # }      
-   
+    #    target += beta_lpdf(pie | 3, 1);
     # target += ((p * log(lambda1)/2) + (p * psi * log(lambda2)/2));
 # target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau[j] * sigma);
-# target += log_mix(pie, multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau[j] * sigma), multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * 0.0001));
+# target += normal_lpdf(tau2[j] | 0, 0.01);
+        # target += gamma_lpdf(tau1[j] | atau, (sqrt(lambda2)/2));
+# target += log_mix(pie, multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau2[j]), multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau1[j]));
 
 data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, 
                     atau = ((psi+1)/2), basisFL = basis.holder,
@@ -259,19 +259,17 @@ data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi,
                     xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear)
 
 init.alpha <- list(list(gammaTemp = array(rep(10, ((psi-2)*p)), dim=c((psi-2),p)),
-                        theta = rep(0, (p+1)), pie = 0.5,
+                        theta = rep(0, (p+1)), pie = 0.05,
                         tau1 = rep(0.1, p), tau2 = rep(0.1, p),
-                        lambda1 = 0.01, lambda2 = 0.1)
-                #   list(gammaTemp = array(rep(-0.2, ((psi-2)*p)), dim=c((psi-2),p)),
-                #         theta = rep(0.01, (p+1)),
-                #         tau = rep(0.01, p), sigma = 0.001,
-                #         # lambda1 = 0.1, 
-                #         lambda2 = 0.001),
-                #   list(gammaTemp = array(rep(-0.5, ((psi-2)*p)), dim=c((psi-2),p)),
-                #         theta = rep(-0.05, (p+1)),
-                #         tau = rep(0.5, p), sigma = 0.01,
-                #         #lambda1 = 0.01, 
-                #         lambda2 = 0.05)
+                        lambda1 = 0.01, lambda2 = 100),
+                    list(gammaTemp = array(rep(-1, ((psi-2)*p)), dim=c((psi-2),p)),
+                            theta = rep(0, (p+1)), pie = 0.05,
+                            tau1 = rep(0.001, p), tau2 = rep(0.5, p),
+                            lambda1 = 1, lambda2 = 10),
+                    list(gammaTemp = array(rep(3, ((psi-2)*p)), dim=c((psi-2),p)),
+                            theta = rep(0.1, (p+1)), pie = 0.05,
+                            tau1 = rep(0.5, p), tau2 = rep(0.01, p),
+                            lambda1 = 5, lambda2 = 5500)        
                         )
 # setwd("C:/Users/Johnny Lee/Documents/GitHub")
 fit1 <- stan(
@@ -279,9 +277,9 @@ fit1 <- stan(
     # file = "model_BRSTIR.stan",  # Stan program
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
-    chains = 1,             # number of Markov chains
+    chains = 3,             # number of Markov chains
     # warmup = 1000,          # number of warmup iterations per chain
-    iter = 3000,            # total number of iterations per chain
+    iter = 2000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
     refresh = 500             # no progress shown
 )
@@ -537,7 +535,7 @@ ggplot(data.scenario, aes(x=newx)) +
   geom_line(aes(y=post.mean, col = "Posterior Median"), linewidth=1.5) +
   scale_color_manual(values=c("steelblue", "red")) + 
   scale_fill_manual(values=c("steelblue"), name = "") +
-  theme_minimal(base_size = 30) + ylim(0.5,2.5)+
+  theme_minimal(base_size = 30) + #ylim(0.5,2.5)+
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 18))
