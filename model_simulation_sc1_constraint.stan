@@ -63,8 +63,8 @@ model {
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += normal_lpdf(theta[1] | 0, 100);
-    target += gamma_lpdf(lambda1 | 0.01, 0.01);
-    target += gamma_lpdf(lambda2 | 0.01, 0.01);
+    target += gamma_lpdf(lambda1 | 1, 0.00001);
+    target += gamma_lpdf(lambda2 | 1, 0.00001);
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, sqrt(lambda1));
     }
@@ -73,7 +73,7 @@ model {
     for (j in 1:p){
         target += inv_gamma_lpdf(sigma | 1, 1); 
         target += gamma_lpdf(tau[j] | atau, (sqrt(lambda2)/2));
-        target += log_mix(pie, multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau[j] * sigma), multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * 0.001));
+        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau[j] * sigma);
     }
 }
 
