@@ -63,14 +63,14 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda | 1, 0.000001);
+    target += gamma_lpdf(lambda | 1, 1e-6);
     target += normal_lpdf(theta | 0, 100);
-    target += inv_gamma_lpdf(sigma | 1 ,1);
-    target += (-p * (psi+1) * log(lambda)/2);    
+    target += inv_gamma_lpdf(sigma | 1, 1e-6);
+    target += (-p * (psi+1) * log(lambda)/2);
     target += beta_lpdf(pie | 1, 1);
     for (j in 1:p){
-        target += gamma_lpdf(tau[j] | atau, sqrt(lambda/2));
-        target += log_mix(pie, multi_normal_lpdf(gamma[j] | rep_vector(0, (psi+1)), diag_matrix(rep_vector(1, (psi+1))) * tau[j] * sigma), multi_normal_lpdf(gamma[j] | rep_vector(0, (psi+1)), diag_matrix(rep_vector(1, (psi+1))) * 0.001));
+        target += gamma_lpdf(tau[j] | atau, (sqrt(lambda)/2));
+        target += log_mix(pie, multi_normal_lpdf(gamma[j] | rep_vector(0, (psi+1)), diag_matrix(rep_vector(1, (psi+1))) * tau[j] * sigma), multi_normal_lpdf(gamma[j] | rep_vector(0, (psi+1)), diag_matrix(rep_vector(1, (psi+1))) * 0.1));
     }
 }
 
