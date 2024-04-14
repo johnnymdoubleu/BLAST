@@ -24,9 +24,8 @@ library(ggh4x)
 # set.seed(10)
 # set.seed(6)
 
-
 n <- 15000
-psi <- 10
+psi <- 9
 threshold <- 0.95
 p <- 2
 no.theta <- 1
@@ -226,9 +225,9 @@ model {
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += normal_lpdf(theta[1] | 0, 100);
-    target += gamma_lpdf(lambda1 | 1, 1e-6);
-    target += gamma_lpdf(lambda2 | 1, 1e-6);
-    for (1 in 1:p){
+    target += gamma_lpdf(lambda1 | 1, 1e-3);
+    target += gamma_lpdf(lambda2 | 1, 1e-8);
+    for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, sqrt(lambda1));
         target += gamma_lpdf(tau1[j] | atau, sqrt(lambda2)/2);
         target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * (1/tau1[j]));
@@ -287,8 +286,8 @@ plot(fit1, plotfun = "trace", pars = c("theta"), nrow = 3)
 # plot(fit1, plotfun = "trace", pars = c("lambda1", "lambda2"), nrow = 2)
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_lambda_sc1-wi.pdf"), width=10, height = 7.78)
 
-tau.samples <- summary(fit1, par=c("tau1", "tau2"), probs = c(0.05,0.5, 0.95))$summary
-pie.samples <- summary(fit1, par=c("pie"), probs = c(0.05,0.5, 0.95))$summary
+tau.samples <- summary(fit1, par=c("tau1"), probs = c(0.05,0.5, 0.95))$summary
+# pie.samples <- summary(fit1, par=c("pie"), probs = c(0.05,0.5, 0.95))$summary
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
 lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
