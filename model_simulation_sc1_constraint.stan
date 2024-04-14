@@ -19,8 +19,6 @@ parameters {
     real <lower=0> lambda1; // lasso penalty
     real <lower=0> lambda2; // group lasso penalty
     array[p] real <lower=0> tau1;
-    array[p] real <lower=0> tau2;
-    real <lower=0, upper=1> pie;
 }
 transformed parameters {
     array[n] real <lower=0> alpha; // covariate-adjusted tail index
@@ -65,10 +63,10 @@ model {
     target += normal_lpdf(theta[1] | 0, 100);
     target += gamma_lpdf(lambda1 | 1, 1e-6);
     target += gamma_lpdf(lambda2 | 1, 1e-6);
-    for (j in 1:p){
+    for (1 in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, sqrt(lambda1));
         target += gamma_lpdf(tau1[j] | atau, sqrt(lambda2)/2);
-        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau1[j]);
+        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * (1/tau1[j]));
     }
 }
 

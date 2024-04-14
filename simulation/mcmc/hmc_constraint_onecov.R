@@ -25,10 +25,10 @@ library(ggh4x)
 # set.seed(6)
 
 
-n <- 10000
-psi <- 3
+n <- 15000
+psi <- 10
 threshold <- 0.95
-p <- 3
+p <- 2
 no.theta <- 1
 simul.no <- 50
 
@@ -46,7 +46,7 @@ for(i in 1:p){
                               which.max(x.origin[,i])), ncol=2))
 }
 for(i in 1:p){
-    knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)  
+    knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)
     tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
     bs.linear <- cbind(bs.linear, tps[,1:no.theta])
     bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])
@@ -72,11 +72,11 @@ for(j in 1:p){
         if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
         else {
             if(ps == 1 || ps == psi){gamma.origin[ps, j] <- 0}
-            else{gamma.origin[ps, j] <- -10}
+            else{gamma.origin[ps, j] <- -2.5}
         }
     }
 }
-theta.origin <- c(-0.1, 0, -0.5, -0.5)
+theta.origin <- c(-0.01, 0, -0.2)
 
 f.sub.origin <- matrix(, nrow = 2, ncol = p)
 for(j in 1:p){
@@ -184,8 +184,6 @@ parameters {
     real <lower=0> lambda1; // lasso penalty
     real <lower=0> lambda2; // group lasso penalty
     array[p] real <lower=0> tau1;
-    array[p] real <lower=0> tau2;
-    real <lower=0, upper=1> pie;
 }
 transformed parameters {
     array[n] real <lower=0> alpha; // covariate-adjusted tail index
@@ -230,10 +228,10 @@ model {
     target += normal_lpdf(theta[1] | 0, 100);
     target += gamma_lpdf(lambda1 | 1, 1e-6);
     target += gamma_lpdf(lambda2 | 1, 1e-6);
-    for (j in 1:p){
+    for (1 in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, sqrt(lambda1));
         target += gamma_lpdf(tau1[j] | atau, sqrt(lambda2)/2);
-        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau1[j]);
+        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * (1/tau1[j]));
     }
 }
 "
@@ -243,13 +241,11 @@ model {
         #     target += double_exponential_lpdf(gamma[j][i] | 0, sqrt(lambda2));
         #  target += double_exponential_lpdf(theta[(j+1)] | 0, sqrt(lambda1));
         # }
-# target += -(log(lambda1)/2);        
     # target += beta_lpdf(pie | 3, 1);
     # target += ((p * log(lambda1)/2) + (p * psi * log(lambda2)/2));
-# target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau1[j] * sigma);
+# target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * (1/tau1[j]));
 # target += normal_lpdf(tau2[j] | 0, 0.01);
-        # target += gamma_lpdf(tau1[j] | atau, (sqrt(lambda2)/2));
-# target += log_mix(pie, multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau2[j]), multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau1[j]));
+# target += log_mix(pie, multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * (1/tau1[j])), multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * (1/tau2[j])));
 
 data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, 
                     atau = ((psi+1)/2), basisFL = basis.holder,
@@ -257,17 +253,17 @@ data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi,
                     bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
                     xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear)
 
-init.alpha <- list(list(gammaTemp = array(rep(10, ((psi-2)*p)), dim=c((psi-2),p)),
-                        theta = rep(0, (p+1)), pie = 0.05,
-                        tau1 = rep(0.1, p), tau2 = rep(0.1, p),
+init.alpha <- list(list(gammaTemp = array(rep(2, ((psi-2)*p)), dim=c((psi-2),p)),
+                        theta = rep(0, (p+1)), tau1 = rep(0.1, p), 
+                        # pie = 0.05,tau2 = rep(0.1, p),
                         lambda1 = 0.1, lambda2 = 1),
                     list(gammaTemp = array(rep(-1, ((psi-2)*p)), dim=c((psi-2),p)),
-                            theta = rep(0, (p+1)), pie = 0.75,
-                            tau1 = rep(0.001, p), tau2 = rep(0.5, p),
-                            lambda1 = 1, lambda2 = 10),
+                            theta = rep(0, (p+1)), tau1 = rep(0.001, p), 
+                            #tau2 = rep(0.5, p),pie = 0.75,
+                            lambda1 = 100, lambda2 = 100),
                     list(gammaTemp = array(rep(-3, ((psi-2)*p)), dim=c((psi-2),p)),
-                            theta = rep(0.1, (p+1)), pie = 0.5,
-                            tau1 = rep(0.5, p), tau2 = rep(0.01, p),
+                            theta = rep(0.1, (p+1)), tau1 = rep(0.5, p),
+                            # pie = 0.5,  tau2 = rep(0.01, p),
                             lambda1 = 5, lambda2 = 55)
                         )
 # setwd("C:/Users/Johnny Lee/Documents/GitHub")
@@ -278,7 +274,7 @@ fit1 <- stan(
     init = init.alpha,      # initial value
     chains = 3,             # number of Markov chains
     # warmup = 1000,          # number of warmup iterations per chain
-    iter = 3000,            # total number of iterations per chain
+    iter = 2000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
     refresh = 500             # no progress shown
     # control=list(adapt_delta=0.99, max_treedepth=15)

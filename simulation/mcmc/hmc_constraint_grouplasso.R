@@ -54,7 +54,7 @@ for(j in 1:p){
         if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
         else {
             if(ps == 1 || ps == psi){gamma.origin[ps, j] <- 0}
-            else{gamma.origin[ps, j] <- 0.52}
+            else{gamma.origin[ps, j] <- 0.5}
         }
     }
 }
@@ -208,7 +208,7 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda | 0.01, 0.01);
+    target += gamma_lpdf(lambda | 1, 1e-6);
     target += normal_lpdf(theta | 0, 100);
     target += beta_lpdf(pie | 1, 1);
     for (j in 1:p){
