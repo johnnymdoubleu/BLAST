@@ -21,12 +21,12 @@ library(cmdstanr)
 library(ggh4x)
 
 #Scenario 1
-# set.seed(10)
+set.seed(10)
 # set.seed(6)
 
 
 n <- 10000
-psi <- 5
+psi <- 3
 threshold <- 0.95
 p <- 2
 no.theta <- 1
@@ -72,7 +72,7 @@ for(j in 1:p){
         if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
         else {
             if(ps == 1 || ps == psi){gamma.origin[ps, j] <- 0}
-            else{gamma.origin[ps, j] <- -5}
+            else{gamma.origin[ps, j] <- -10}
         }
     }
 }
@@ -230,13 +230,12 @@ model {
     target += normal_lpdf(theta[1] | 0, 100);
     target += gamma_lpdf(lambda1 | 1, 1e-6);
     target += gamma_lpdf(lambda2 | 1, 1e-6);
+    target += beta_lpdf(pie | 3, 1);    
     for (j in 1:p){
-        target += double_exponential_lpdf(theta[(j+1)] | 0, sqrt(lambda1));
-    }
-    for (j in 1:p){
-        target += gamma_lpdf(tau1[j] | atau, 2/sqrt(lambda2));
-        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau1[j]);
-        target += -(psi * log(lambda2)/2);
+        target += gamma_lpdf(tau1[j] | atau, sqrt(lambda2)/2);
+        target += normal_lpdf(tau2[j] | 0, 0.01);
+        target += log_mix(pie, normal_lpdf(theta[(j+1)] | 0, (1/tau2[j])), double_exponential_lpdf(theta[(j+1)] | 0, sqrt(lambda1))); 
+        target += log_mix(pie, multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * (1/tau2[j])), multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * (1/tau1[j])));        
     }
 }
 "
@@ -244,6 +243,7 @@ model {
         # for ( i in 1:psi){
                     # target += inv_gamma_lpdf(sigma | 0.1, 0.1); 
         #     target += double_exponential_lpdf(gamma[j][i] | 0, sqrt(lambda2));
+        #  target += double_exponential_lpdf(theta[(j+1)] | 0, sqrt(lambda1));
         # }
 # target += -(log(lambda1)/2);        
     # target += beta_lpdf(pie | 3, 1);
@@ -282,8 +282,8 @@ fit1 <- stan(
     # warmup = 1000,          # number of warmup iterations per chain
     iter = 2000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
-    refresh = 500,             # no progress shown
-    control=list(adapt_delta=0.99, max_treedepth=15)
+    refresh = 500             # no progress shown
+    # control=list(adapt_delta=0.99, max_treedepth=15)
 )
 
 posterior <- extract(fit1)
@@ -501,7 +501,7 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values=c("steelblue", "red")) + 
   guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) + ylim(-1, 1) +
+          fill = guide_legend(order = 1)) + #ylim(-1, 1) +
   # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) +
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 15),
@@ -582,8 +582,8 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
               ylim = c(-3, 3))
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_qqplot_sc1-wi.pdf"), width=10, height = 7.78)
 
-lambda.container <- data.frame("x" = seq(0, max(posterior$lambda2), length.out = 1500),
-                        "GamDist" = dgamma(seq(0, max(posterior$lambda2), length.out = 1500), 1, 1e-6),
+lambda.container <- data.frame("x" = seq(0, max(posterior$lambda2), length.out = 1000),
+                        "GamDist" = dgamma(seq(0, max(posterior$lambda2), length.out = 1000), 1, 1e-6),
                         "lambda.post" = posterior$lambda2)
 
                         

@@ -210,11 +210,10 @@ model {
     }
     target += gamma_lpdf(lambda | 0.01, 0.01);
     target += normal_lpdf(theta | 0, 100);
-    target += (-p * (psi+1) * log(lambda)/2);
     target += beta_lpdf(pie | 1, 1);
     for (j in 1:p){
         target += gamma_lpdf(tau[j] | atau, (sqrt(lambda)/2));
-        target += log_mix(pie, multi_normal_lpdf(gamma[j] | rep_vector(0, (psi+1)), diag_matrix(rep_vector(1, (psi+1))) * tau[j]), multi_normal_lpdf(gamma[j] | rep_vector(0, (psi+1)), diag_matrix(rep_vector(1, (psi+1))) * 0.1));
+        target += log_mix(pie, multi_normal_lpdf(gamma[j] | rep_vector(0, (psi+1)), diag_matrix(rep_vector(1, (psi+1))) * (1/tau[j])), multi_normal_lpdf(gamma[j] | rep_vector(0, (psi+1)), diag_matrix(rep_vector(1, (psi+1))) * 0.01));
     }
 }
 "
@@ -247,7 +246,7 @@ fit1 <- stan(
     init = init.alpha,      # initial value
     chains = 1,             # number of Markov chains
     # warmup = 1000,          # number of warmup iterations per chain
-    iter = 3000,            # total number of iterations per chain
+    iter = 2000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
     refresh = 500             # no progress shown
 )

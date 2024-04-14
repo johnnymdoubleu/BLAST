@@ -63,15 +63,14 @@ model {
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += normal_lpdf(theta[1] | 0, 100);
-    target += gamma_lpdf(lambda1 | 1, 1e-6);
-    target += gamma_lpdf(lambda2 | 1, 1e-6);
+    target += gamma_lpdf(lambda1 | 0.01, 0.01);
+    target += gamma_lpdf(lambda2 | 0.01, 0.01);
+    target += beta_lpdf(pie | 3, 1);    
     for (j in 1:p){
-        target += double_exponential_lpdf(theta[(j+1)] | 0, sqrt(lambda1));
-    }
-    for (j in 1:p){
-        target += gamma_lpdf(tau1[j] | atau, 2/sqrt(lambda2));
-        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * tau1[j]);
-        target += -(psi * log(lambda2)/2);
+        target += gamma_lpdf(tau1[j] | atau, sqrt(lambda2)/2);
+        target += normal_lpdf(tau2[j] | 0, 0.01);
+        target += log_mix(pie, normal_lpdf(theta[(j+1)] | 0, (1/tau2[j])), double_exponential_lpdf(theta[(j+1)] | 0, sqrt(lambda1))); 
+        target += log_mix(pie, multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * (1/tau2[j])), multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * (1/tau1[j])));        
     }
 }
 
