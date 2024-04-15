@@ -4,8 +4,8 @@ library(evir)
 library(rstan)
 library(rmutil)
 
-#Scenario 3
-set.seed(9)
+#Scenario 4
+set.seed(10)
 # set.seed(36)
 
 n <- 15000

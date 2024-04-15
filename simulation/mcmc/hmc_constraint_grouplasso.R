@@ -25,123 +25,141 @@ set.seed(10)
 # set.seed(6)
 
 
-n <- 10000
-psi <- 5
+n <- 15000
+psi <- 10
 threshold <- 0.95
-p <- 2
+p <- 5
 no.theta <- 1
 simul.no <- 50
 
-# Function to generate Gaussian copula
 C <- diag(p)
 xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
 x.origin <- pnorm(matrix(rnorm(n*p), ncol = p) %*% chol(C))
 
 # x.origin <- apply(x.origin, 2, sort, decreasing=F)
-
+end.holder <- basis.holder <- matrix(, nrow = 2, ncol =0)
+index.holder <- matrix(, nrow = 0, ncol = 2)
 for(i in 1:p){
-    knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)
-    tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
-    bs.linear <- cbind(bs.linear, tps[,1:no.theta])
-    bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])     
+  index.holder <- rbind(index.holder, 
+                        matrix(c(which.min(x.origin[,i]),
+                                 which.max(x.origin[,i])), ncol=2))
+}
+for(i in 1:p){
+  knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)
+  tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
+  bs.linear <- cbind(bs.linear, tps[,1:no.theta])
+  bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])
+  basis.holder <- cbind(basis.holder, 
+                        solve(t(matrix(c(tps[index.holder[i,1], no.theta+1],
+                                         tps[index.holder[i,1], no.theta+psi],
+                                         tps[index.holder[i,2], no.theta+1],
+                                         tps[index.holder[i,2], no.theta+psi]), 
+                                       nrow = 2, ncol = 2))))
+  end.holder <- cbind(end.holder, 
+                      matrix(c(tps[index.holder[i,1], no.theta+1],
+                               tps[index.holder[i,1], no.theta+psi],
+                               tps[index.holder[i,2], no.theta+1],
+                               tps[index.holder[i,2], no.theta+psi]), 
+                             nrow = 2, ncol = 2))
 }
 
 
 ## Generate sample
 gamma.origin <- matrix(, nrow = psi, ncol = p)
 for(j in 1:p){
-    for (ps in 1:psi){
-        if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
-        else {
-            if(ps == 1 || ps == psi){gamma.origin[ps, j] <- 0}
-            else{gamma.origin[ps, j] <- 0.5}
-        }
+  for (ps in 1:psi){
+    if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
+    else {
+      if(ps == 1 || ps == psi){gamma.origin[ps, j] <- 0}
+      else{gamma.origin[ps, j] <- -25}
     }
+  }
 }
-theta.origin <- c(-0.01, 0, -0.2)
+theta.origin <- c(-0.5, 0, -0.5, -0.5, 0, 0)
+
+f.sub.origin <- matrix(, nrow = 2, ncol = p)
+for(j in 1:p){
+  f.sub.origin[,j] <- as.matrix(bs.nonlinear[index.holder[j,], (((j-1)*psi)+2):(((j-1)*psi)+(psi-1))], nrow = 2) %*% gamma.origin[(2:(psi-1)), j]
+  gamma.origin[c(1,psi),j] <- -1 * basis.holder[,(((j-1)*2)+1):(((j-1)*2)+2)] %*% as.matrix(f.sub.origin[,j], nrow=2)
+}
 
 f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
-    f.linear.origin[,j] <- bs.linear[, j] * theta.origin[j+1]
-    f.nonlinear.origin[,j] <- bs.nonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
-    f.origin[, j] <- f.linear.origin[,j] + f.nonlinear.origin[,j]
+  f.linear.origin[,j] <- bs.linear[, j] * theta.origin[j+1]
+  f.nonlinear.origin[,j] <- bs.nonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
+  f.origin[, j] <- f.linear.origin[,j] + f.nonlinear.origin[,j]
 }
 
 alp.origin <- y.origin <- NULL
 for(i in 1:n){
-    
-    alp.origin[i] <- exp(theta.origin[1] + sum(f.origin[i,]))
-    y.origin[i] <- rPareto(1, 1, alpha = alp.origin[i]) 
+  alp.origin[i] <- exp(theta.origin[1] + sum(f.origin[i,]))
+  y.origin[i] <- rPareto(1, 1, alpha = alp.origin[i]) 
 }
 
 u <- quantile(y.origin, threshold)
 excess.index <- which(y.origin>u)
 x.origin <- as.matrix(x.origin[excess.index,])
-bs.nonlinear <- bs.nonlinear[excess.index,]
-bs.linear <- bs.linear[excess.index,]
+# bs.nonlinear <- bs.nonlinear[excess.index,]
+# bs.linear <- bs.linear[excess.index,]
 
 y.origin <- y.origin[y.origin > u]
 n <- length(y.origin)
 
-xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
+xholder.nonlinear <- xholder.linear <-  matrix(,nrow=n, ncol=0)
+bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
 newx <- seq(0, 1, length.out=n)
 xholder <- bs.x <- matrix(, nrow = n, ncol = p)
 end.holder <- basis.holder <- matrix(, nrow = 2, ncol =0)
 index.holder <- matrix(, nrow = 0, ncol = 2)
 for(i in 1:p){
   index.holder <- rbind(index.holder, 
-                      matrix(c(which.min(x.origin[,i]),
-                              which.max(x.origin[,i])), ncol=2))
+                        matrix(c(which.min(x.origin[,i]),
+                                 which.max(x.origin[,i])), ncol=2))
 }
 # # range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 # # x.origin <- as.data.frame(sapply(as.data.frame(x.origin), FUN = range01))
 for(i in 1:p){
-    # xholder[,i] <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = n)  
-    # test.knot <- seq(min(xholder[,i]), max(xholder[,i]), length.out = psi)
-    xholder[,i] <- seq(0, 1, length.out = n)  
-    test.knot <- seq(0, 1, length.out = psi)
-    splines <- basis.tps(xholder[,i], test.knot, m=2, rk=FALSE, intercept = FALSE)
-    xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
-    xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
-    knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)  
-    tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
-    basis.holder <- cbind(basis.holder, 
-            solve(t(matrix(c(tps[index.holder[i,1], no.theta+1],
-                    tps[index.holder[i,1], no.theta+psi],
-                    tps[index.holder[i,2], no.theta+1],
-                    tps[index.holder[i,2], no.theta+psi]), 
-                    nrow = 2, ncol = 2))))
-    end.holder <- cbind(end.holder, 
-                matrix(c(tps[index.holder[i,1], no.theta+1],
-                    tps[index.holder[i,1], no.theta+psi],
-                    tps[index.holder[i,2], no.theta+1],
-                    tps[index.holder[i,2], no.theta+psi]), 
-                    nrow = 2, ncol = 2))       
-    bs.linear <- cbind(bs.linear, tps[,1:no.theta])
-    bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)]) 
+  # xholder[,i] <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = n)  
+  # test.knot <- seq(min(xholder[,i]), max(xholder[,i]), length.out = psi)
+  xholder[,i] <- seq(0, 1, length.out = n)  
+  test.knot <- seq(0, 1, length.out = psi)
+  splines <- basis.tps(xholder[,i], test.knot, m=2, rk=FALSE, intercept = FALSE)
+  xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
+  xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
+  knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)  
+  tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
+  basis.holder <- cbind(basis.holder, 
+                        solve(t(matrix(c(tps[index.holder[i,1], no.theta+1],
+                                         tps[index.holder[i,1], no.theta+psi],
+                                         tps[index.holder[i,2], no.theta+1],
+                                         tps[index.holder[i,2], no.theta+psi]), 
+                                       nrow = 2, ncol = 2))))
+  # end.holder <- cbind(end.holder, 
+  #             matrix(c(tps[index.holder[i,1], no.theta+1],
+  #                 tps[index.holder[i,1], no.theta+psi],
+  #                 tps[index.holder[i,2], no.theta+1],
+  #                 tps[index.holder[i,2], no.theta+psi]), 
+  #                nrow = 2, ncol = 2)) 
+  bs.linear <- cbind(bs.linear, tps[,1:no.theta])
+  bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)]) 
 }
 
 
 f.nonlinear.new <- f.linear.new <- f.new <- f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 
-# for(j in 1:p){
-#     f.sub.origin[,j] <- bs.nonlinear[index.holder[j,], (((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] %*% gamma.origin[(2:(psi-1)), j]
-#     gamma.origin[c(1,psi),j] <- -1 * basis.holder[,(((j-1)*2)+1):(((j-1)*2)+2)] %*% as.matrix(f.sub.origin[,j], nrow=2)
-# }
-
 for(j in 1:p){
-    f.linear.origin[,j] <- bs.linear[, j] * theta.origin[j+1]
-    f.nonlinear.origin[,j] <- bs.nonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
-    f.origin[, j] <- f.linear.origin[,j] + f.nonlinear.origin[,j]
-    f.linear.new[,j] <- xholder.linear[, j] * theta.origin[j+1]
-    f.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
-    f.new[,j] <- f.linear.new[,j] + f.nonlinear.new[,j]
+  f.linear.origin[,j] <- bs.linear[, j] * theta.origin[j+1]
+  f.nonlinear.origin[,j] <- bs.nonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
+  f.origin[, j] <- f.linear.origin[,j] + f.nonlinear.origin[,j]
+  f.linear.new[,j] <- xholder.linear[, j] * theta.origin[j+1]
+  f.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
+  f.new[,j] <- f.linear.new[,j] + f.nonlinear.new[,j]
 }
 
 true.alpha <- alp.new <- alp.origin <- NULL
 for(i in 1:n){
-    alp.origin[i] <- exp(theta.origin[1] + sum(f.origin[i,]))
-    alp.new[i] <- exp(theta.origin[1] + sum(f.new[i,]))
+  alp.origin[i] <- exp(theta.origin[1] + sum(f.origin[i,]))
+  alp.new[i] <- exp(theta.origin[1] + sum(f.new[i,]))
 }
 
 write("// Stan model for BRSTIR Pareto Uncorrelated Samples
@@ -208,12 +226,12 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda | 1, 1e-6);
+    target += gamma_lpdf(lambda | 1, 1e-3);
     target += normal_lpdf(theta | 0, 100);
     target += (2*p*log(lambda));
     for (j in 1:p){
-        target += gamma_lpdf(tau[j] | atau, lambda2^2*0.5);
-        target += multi_normal_lpdf(gamma[j] | rep_vector(0, (psi+1)), diag_matrix(rep_vector(1, (psi+1))) * (1/tau[j]))
+        target += gamma_lpdf(tau[j] | atau, lambda^2*0.5);
+        target += multi_normal_lpdf(gamma[j] | rep_vector(0, (psi+1)), diag_matrix(rep_vector(1, (psi+1))) * (1/tau[j]));
     }
 }
 "
@@ -225,26 +243,22 @@ data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi,
                     bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
                     xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear)
 
-init.alpha <- list(list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c((psi-2),p)),
+init.alpha <- list(list(gammaTemp = array(rep(2, ((psi-2)*p)), dim=c((psi-2),p)),
                         theta = 0, beta = rep(0, p),
-                        tau = rep(0.1, p), sigma = 0.1, 
-                        lambda = 0.1)
-                #   list(gammaTemp = array(rep(-0.2, ((psi-2)*p)), dim=c((psi-2),p)),
-                #         theta = 0.01, beta = rep(0.1, p),
-                #         tau = rep(0.01, p), sigma = 0.01,
-                #         lambda2 = 1),
-                #   list(gammaTemp = array(rep(-0.5, ((psi-2)*p)), dim=c((psi-2),p)),
-                #         theta = -0.05, beta = rep(-0.5, p),
-                #         tau = rep(0.5, p), sigma = 1,
-                #         lambda2 = 5)
-                        )
+                        tau = rep(0.1, p), lambda = 1),
+                   list(gammaTemp = array(rep(-1, ((psi-2)*p)), dim=c((psi-2),p)),
+                        theta = -1, beta = rep(-0.1, p), 
+                        tau = rep(0.001, p), lambda = 100),
+                   list(gammaTemp = array(rep(-3, ((psi-2)*p)), dim=c((psi-2),p)),
+                        theta = 0.1, beta = rep(-5, p),
+                        tau = rep(0.5, p), lambda = 55))
 # setwd("C:/Users/Johnny Lee/Documents/GitHub")
 fit1 <- stan(
     file = "model_simulation_constraint.stan",  # Stan program
     # file = "model_BRSTIR.stan",  # Stan program
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
-    chains = 1,             # number of Markov chains
+    chains = 3,             # number of Markov chains
     # warmup = 1000,          # number of warmup iterations per chain
     iter = 2000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
@@ -314,35 +328,35 @@ theta.q3 <- theta.samples[,6]
 #           axis.text = element_text(size = 28))
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_theta_sc1-wi.pdf"), width=10, height = 7.78)
 
-# df.gamma <- data.frame("seq" = seq(1, (psi*p)), 
-#                   "true" = as.vector(gamma.origin),
-#                   "m" = as.vector(gamma.q2),
-#                   "l" = as.vector(gamma.q1),
-#                   "u" = as.vector(gamma.q3))
-# df.gamma$covariate <- factor(rep(seq(1, 1 + nrow(df.gamma) %/% psi), each = psi, length.out = nrow(df.gamma)))
-# df.gamma$labels <- factor(1:(psi*p))
-# ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) + 
-#   geom_errorbar(aes(ymin = l, ymax = u),alpha = 0.4, width = 4, linewidth = 1.2) +
+df.gamma <- data.frame("seq" = seq(1, ((psi+1)*p)), 
+                #   "true" = as.vector(gamma.origin),
+                  "m" = as.vector(gamma.q2),
+                  "l" = as.vector(gamma.q1),
+                  "u" = as.vector(gamma.q3))
+df.gamma$covariate <- factor(rep(seq(1, 1 + nrow(df.gamma) %/% (psi+1)), each = (psi+1), length.out = nrow(df.gamma)))
+df.gamma$labels <- factor(1:((psi+1)*p))
+ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) + 
+  geom_errorbar(aes(ymin = l, ymax = u),alpha = 0.4, width = 4, linewidth = 1.2) +
 #   geom_point(aes(y=true), size =4, color ="red")+
-#   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-#   geom_point(size = 4) + ylab("") + xlab("" ) + #ylim(-15,15) +
-#   # geom_ribbon(aes(ymin = l, ymax = u)) +
-#   scale_x_discrete(breaks=c(seq(0, (psi*p), psi)+7), 
-#                     label = c(expression(bold(gamma[1])), 
-#                               expression(bold(gamma[2])), 
-#                               expression(bold(gamma[3])), 
-#                               expression(bold(gamma[4])), 
-#                               expression(bold(gamma[5]))),
-#                     expand=c(0,3)) +
-#   theme_minimal(base_size = 30) +
-#   theme(plot.title = element_text(hjust = 0.5, size = 20),
-#           legend.title = element_blank(),
-#           legend.text = element_text(size=25),
-#           legend.margin=margin(0,0,0,-10),
-#           legend.box.margin=margin(-10,0,-10,0),
-#           plot.margin = margin(0,0,0,-20),
-#           axis.text.x = element_text(hjust=0.5),
-#           axis.text = element_text(size = 28))
+  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+  geom_point(size = 4) + ylab("") + xlab("" ) + #ylim(-15,15) +
+  # geom_ribbon(aes(ymin = l, ymax = u)) +
+  scale_x_discrete(breaks=c(seq(0, (psi*p), psi)+7), 
+                    label = c(expression(bold(gamma[1])), 
+                              expression(bold(gamma[2])), 
+                              expression(bold(gamma[3])), 
+                              expression(bold(gamma[4])), 
+                              expression(bold(gamma[5]))),
+                    expand=c(0,3)) +
+  theme_minimal(base_size = 30) +
+  theme(plot.title = element_text(hjust = 0.5, size = 20),
+          legend.title = element_blank(),
+          legend.text = element_text(size=25),
+          legend.margin=margin(0,0,0,-10),
+          legend.box.margin=margin(-10,0,-10,0),
+          plot.margin = margin(0,0,0,-20),
+          axis.text.x = element_text(hjust=0.5),
+          axis.text = element_text(size = 28))
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_gamma_sc1-wi.pdf"), width=10, height = 7.78)
 
 g.linear.mean <- as.vector(matrix(newgl.samples[,1], nrow = n, byrow=TRUE))
@@ -465,7 +479,7 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values=c("steelblue", "red")) + 
   guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) + ylim(-0.002, 0.002) +
+          fill = guide_legend(order = 1)) + #ylim(-0.002, 0.002) +
   # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) +
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 15),
@@ -501,7 +515,7 @@ ggplot(data.scenario, aes(x=newx)) +
   geom_line(aes(y=post.mean, col = "Posterior Median"), linewidth=1.5) +
   scale_color_manual(values=c("steelblue", "red")) + 
   scale_fill_manual(values=c("steelblue"), name = "") +
-  theme_minimal(base_size = 30) + ylim(0.5,2.5)+
+  theme_minimal(base_size = 30) + #ylim(0.5,2.5)+
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 18))

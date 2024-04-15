@@ -62,12 +62,12 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda | 1, 1e-6);
+    target += gamma_lpdf(lambda | 1, 1e-3);
     target += normal_lpdf(theta | 0, 100);
-    target += beta_lpdf(pie | 1, 1);
+    target += (2*p*log(lambda));
     for (j in 1:p){
-        target += gamma_lpdf(tau[j] | atau, (sqrt(lambda)/2));
-        target += log_mix(pie, multi_normal_lpdf(gamma[j] | rep_vector(0, (psi+1)), diag_matrix(rep_vector(1, (psi+1))) * (1/tau[j])), multi_normal_lpdf(gamma[j] | rep_vector(0, (psi+1)), diag_matrix(rep_vector(1, (psi+1))) * 0.01));
+        target += gamma_lpdf(tau[j] | atau, lambda^2*0.5);
+        target += multi_normal_lpdf(gamma[j] | rep_vector(0, (psi+1)), diag_matrix(rep_vector(1, (psi+1))) * (1/tau[j]));
     }
 }
 
