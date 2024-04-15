@@ -302,8 +302,8 @@ model {
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += normal_lpdf(theta[1] | 0, 100);
-    target += gamma_lpdf(lambda1 | 1, 1e-2);
-    target += gamma_lpdf(lambda2 | 1, 1e-2);
+    target += gamma_lpdf(lambda1 | 1, 1e-4);
+    target += gamma_lpdf(lambda2 | 1, 1e-4);
     target += (2*p*log(lambda2));
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
