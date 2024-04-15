@@ -565,7 +565,7 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
   guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) + 
   # scale_y_continuous(breaks=c(-3,-2,-1,1,2)) +        
-          ylim(-3.5, 2.8) +
+          ylim(-3.5, 3.5) +
   # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
   theme_minimal(base_size = 30) +
   theme(legend.position = "none",
