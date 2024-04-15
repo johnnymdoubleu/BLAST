@@ -142,7 +142,7 @@ fwi.scaled <- as.data.frame(sapply(fwi.scaled, FUN = range01))
 
 # pdf(file = "./BRSTIR/application/figures/correlation.pdf")
 # corrplot.mixed(cor(fwi.scaled),
-#                 upper = "circle",
+#                 upper = "ellipse",
 #                 lower = "number",
 #                 addgrid.col = "black")
 # dev.off()

@@ -24,7 +24,7 @@ library(ggh4x)
 set.seed(10)
 # set.seed(6)
 
-n <- 5000
+n <- 15000
 psi <- 10
 threshold <- 0.95
 p <- 5
@@ -209,7 +209,6 @@ transformed parameters {
         gamma[j][1] = gammaFL[j][1];
         gamma[j][psi] = gammaFL[j][2];  
     };
-    //gamma=gammaTemp;
     
     for (j in 1:p){
         gnl[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
