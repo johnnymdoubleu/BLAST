@@ -71,7 +71,7 @@ for(j in 1:p){
     if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
     else {
       if(ps == 1 || ps == psi){gamma.origin[ps, j] <- 0}
-      else{gamma.origin[ps, j] <- -2}
+      else{gamma.origin[ps, j] <- -10}
     }
   }
 }
