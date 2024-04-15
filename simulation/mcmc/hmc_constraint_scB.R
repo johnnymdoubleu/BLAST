@@ -242,7 +242,7 @@ model {
     }
 }
 "
-, "model_simulation_sc1_constraint.stan")
+, "model_simulation_sc2_constraint.stan")
 # for ( i in 1:psi){
 # target += inv_gamma_lpdf(sigma | 0.1, 0.1); 
 #     target += double_exponential_lpdf(gamma[j][i] | 0, sqrt(lambda2));
@@ -288,7 +288,7 @@ init.alpha <- list(list(gammaTemp = array(rep(2, ((psi-2)*p)), dim=c((psi-2),p))
                    
 # setwd("C:/Users/Johnny Lee/Documents/GitHub")
 fit1 <- stan(
-  file = "model_simulation_sc1_constraint.stan",  # Stan program
+  file = "model_simulation_sc2_constraint.stan",  # Stan program
   # file = "model_BRSTIR.stan",  # Stan program
   data = data.stan,    # named list of data
   init = init.alpha,      # initial value
@@ -303,9 +303,9 @@ fit1 <- stan(
 posterior <- extract(fit1)
 
 plot(fit1, plotfun = "trace", pars = c("theta"), nrow = 3)
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_theta_trace_sc1-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_theta_trace_sc2-wi.pdf"), width=10, height = 7.78)
 # plot(fit1, plotfun = "trace", pars = c("lambda1", "lambda2"), nrow = 2)
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_lambda_sc1-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_lambda_sc2-wi.pdf"), width=10, height = 7.78)
 
 tau.samples <- summary(fit1, par=c("tau"), probs = c(0.05,0.5, 0.95))$summary
 # pie.samples <- summary(fit1, par=c("pie"), probs = c(0.05,0.5, 0.95))$summary
@@ -362,7 +362,7 @@ ggplot(df.theta, aes(x = covariate, y=m, color = covariate)) + ylab("") + xlab('
         plot.margin = margin(0,0,0,-20),
         axis.text.x = element_text(hjust=0.35),
         axis.text = element_text(size = 28))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_theta_sc1-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_theta_sc2-wi.pdf"), width=10, height = 7.78)
 
 df.gamma <- data.frame("seq" = seq(1, (psi*p)), 
                        "true" = as.vector(gamma.origin),
@@ -393,7 +393,7 @@ ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) +
         plot.margin = margin(0,0,0,-20),
         axis.text.x = element_text(hjust=0.5),
         axis.text = element_text(size = 28))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_gamma_sc1-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_gamma_sc2-wi.pdf"), width=10, height = 7.78)
 
 g.linear.mean <- as.vector(matrix(newgl.samples[,1], nrow = n, byrow=TRUE))
 g.linear.q1 <- as.vector(matrix(newgl.samples[,4], nrow = n, byrow=TRUE))
@@ -453,7 +453,7 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
         axis.title.x = element_text(size = 35),
         axis.text = element_text(size=18))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_smooth_sc1-wi.pdf"), width=12.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_smooth_sc2-wi.pdf"), width=12.5, height = 15)
 
 data.linear <- data.frame("x"=newx,
                           "true" = as.vector(f.linear.new),
@@ -491,7 +491,7 @@ ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) +
         axis.title.x = element_text(size = 35),
         axis.text = element_text(size=18))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_linear_sc1-wi.pdf"), width=12.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_linear_sc2-wi.pdf"), width=12.5, height = 15)
 
 
 data.nonlinear <- data.frame("x"=newx,
@@ -530,7 +530,7 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
         axis.title.x = element_text(size = 35),
         axis.text = element_text(size=18))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_nonlinear_sc1-wi.pdf"), width=12.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_nonlinear_sc2-wi.pdf"), width=12.5, height = 15)
 
 data.scenario <- data.frame("x" = c(1:n),
                             "constant" = newx,
@@ -556,7 +556,7 @@ ggplot(data.scenario, aes(x=newx)) +
         strip.text = element_blank(),
         axis.text = element_text(size = 18))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_test_sc1-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_test_sc2-wi.pdf"), width=10, height = 7.78)
 
 
 mcmc.alpha <- posterior$alpha
@@ -594,7 +594,7 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
   theme(text = element_text(size = 20)) + 
   coord_fixed(xlim = c(-3, 3),  
               ylim = c(-3, 3))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_qqplot_sc1-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_qqplot_sc2-wi.pdf"), width=10, height = 7.78)
 
 # lambda.container <- data.frame("x" = seq(0, max(posterior$lambda2), length.out = 1000),
 #                                "GamDist" = dgamma(seq(0, max(posterior$lambda2), length.out = 1000), 1, 1e-3),
