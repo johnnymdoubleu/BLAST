@@ -308,16 +308,14 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 1, 10);
-    target += gamma_lpdf(lambda2 | 0.1, 0.1);
-    target += normal_lpdf(theta[1] | 0, 1);
-    // target += normal_lpdf(theta[1] | log(1.2), 0.01) target += double_exponential_lpdf(theta[1] | 0, lambda1)
-    target += inv_gamma_lpdf(sigma | 0.01, 0.01);
-    target += ((p * log(lambda1)) + (p * (psi-2) * log(lambda2)));
+    target += normal_lpdf(theta[1] | 0, 100);
+    target += gamma_lpdf(lambda1 | 1, 1e-3);
+    target += gamma_lpdf(lambda2 | 1, 1e-3);
+    target += (2*p*log(lambda2));
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
-        target += gamma_lpdf(tau[j] | atau, lambda2/sqrt(2));
-        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi-2), diag_matrix(rep_vector(1, psi-2)) * sqrt(tau[j]) * sqrt(sigma));
+        target += gamma_lpdf(tau[j] | atau, lambda2^2*0.5);
+        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * (1/tau[j]));
     }
 }
 generated quantities {
@@ -345,16 +343,16 @@ file <- file.path(cmdstan_path(), "model.stan")
 
 init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c((psi-2), p)),
                         theta = rep(0, (p+1)),
-                        tau = rep(0.1, p), sigma = 0.1, 
-                        lambda1 = 0.01, lambda2 = 0.01),
+                        tau = rep(0.1, p),
+                        lambda1 = 10, lambda2 = 100),
                   list(gamma = array(rep(0.02, (psi*p)), dim=c((psi-2), p)),
                         theta = rep(0.01, (p+1)),
-                        tau = rep(0.01, p), sigma = 0.001,
-                        lambda1 = 0.1, lambda2 = 0.001),
+                        tau = rep(0.01, p),
+                        lambda1 = 0.1, lambda2 = 2),
                   list(gamma = array(rep(0.01, (psi*p)), dim=c((psi-2), p)),
                         theta = rep(0.05, (p+1)),
-                        tau = rep(0.01, p), sigma = 0.01,
-                        lambda1 = 1, lambda2 = 0.01))
+                        tau = rep(0.01, p),
+                        lambda1 = 1, lambda2 = 1))
 
 # stanc("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/application/model1.stan")
 fit1 <- stan(
