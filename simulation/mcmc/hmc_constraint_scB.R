@@ -25,14 +25,18 @@ set.seed(10)
 # set.seed(6)
 
 n <- 15000
-psi <- 3
+psi <- 10
 threshold <- 0.95
-p <- 2
+p <- 5
 no.theta <- 1
 simul.no <- 50
 
 # Function to generate Gaussian copula
-C <- diag(p)
+C <- matrix(c(1, 0.3, 0.5, 0.3, 0.3,
+            0.3, 1, 0.95, 0.4, 0.4,
+            0.5, 0.95, 1, 0.5, 0.1,
+            0.3, 0.4, 0.5 , 1, 0.5,
+            0.3, 0.4, 0.5, 0.5, 1), nrow = p)
 xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
 x.origin <- pnorm(matrix(rnorm(n*p), ncol = p) %*% chol(C))
 
@@ -75,7 +79,7 @@ for(j in 1:p){
     }
   }
 }
-theta.origin <- c(-0.5, 0, -0.2)
+theta.origin <- c(-0.5, 0, -0.2, -0.2, 0, 0)
 
 f.sub.origin <- matrix(, nrow = 2, ncol = p)
 for(j in 1:p){
@@ -592,14 +596,14 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
               ylim = c(-3, 3))
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_qqplot_sc1-wi.pdf"), width=10, height = 7.78)
 
-lambda.container <- data.frame("x" = seq(0, max(posterior$lambda2), length.out = 1000),
-                               "GamDist" = dgamma(seq(0, max(posterior$lambda2), length.out = 1000), 1, 1e-3),
-                               "lambda.post" = posterior$lambda2)
+# lambda.container <- data.frame("x" = seq(0, max(posterior$lambda2), length.out = 1000),
+#                                "GamDist" = dgamma(seq(0, max(posterior$lambda2), length.out = 1000), 1, 1e-3),
+#                                "lambda.post" = posterior$lambda2)
 
 
-ggplot(data = lambda.container, aes(x = x)) + ylab("density") + xlab("lambdas") + labs(col = "") +
-  geom_line(aes(x=x, y=GamDist), color = "red", linewidth = 0.7) +
-  geom_density(aes(x=lambda.post), color = "steelblue", linewidth = 1) +
-  theme_minimal(base_size = 30) +
-  theme(legend.position = "none",
-        axis.text = element_text(size = 35))
+# ggplot(data = lambda.container, aes(x = x)) + ylab("density") + xlab("lambdas") + labs(col = "") +
+#   geom_line(aes(x=x, y=GamDist), color = "red", linewidth = 0.7) +
+#   geom_density(aes(x=lambda.post), color = "steelblue", linewidth = 1) +
+#   theme_minimal(base_size = 30) +
+#   theme(legend.position = "none",
+#         axis.text = element_text(size = 35))
