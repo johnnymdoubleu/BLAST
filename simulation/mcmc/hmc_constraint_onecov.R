@@ -25,7 +25,7 @@ library(ggh4x)
 # set.seed(6)
 
 n <- 15000
-psi <- 9
+psi <- 5
 threshold <- 0.95
 p <- 2
 no.theta <- 1
@@ -225,7 +225,7 @@ model {
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += normal_lpdf(theta[1] | 0, 100);
-    target += gamma_lpdf(lambda1 | 1, 1e-3);
+    target += gamma_lpdf(lambda1 | 1, 1e-6);
     target += gamma_lpdf(lambda2 | 1, 1e-6);
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, sqrt(lambda1));
@@ -255,7 +255,7 @@ data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi,
 init.alpha <- list(list(gammaTemp = array(rep(2, ((psi-2)*p)), dim=c((psi-2),p)),
                         theta = rep(0, (p+1)), tau1 = rep(0.1, p), 
                         # pie = 0.05,tau2 = rep(0.1, p),
-                        lambda1 = 0.1, lambda2 = 1),
+                        lambda1 = 1, lambda2 = 1),
                     list(gammaTemp = array(rep(-1, ((psi-2)*p)), dim=c((psi-2),p)),
                             theta = rep(0, (p+1)), tau1 = rep(0.001, p), 
                             #tau2 = rep(0.5, p),pie = 0.75,
@@ -263,7 +263,7 @@ init.alpha <- list(list(gammaTemp = array(rep(2, ((psi-2)*p)), dim=c((psi-2),p))
                     list(gammaTemp = array(rep(-3, ((psi-2)*p)), dim=c((psi-2),p)),
                             theta = rep(0.1, (p+1)), tau1 = rep(0.5, p),
                             # pie = 0.5,  tau2 = rep(0.01, p),
-                            lambda1 = 5, lambda2 = 55)
+                            lambda1 = 400, lambda2 = 55)
                         )
 # setwd("C:/Users/Johnny Lee/Documents/GitHub")
 fit1 <- stan(
