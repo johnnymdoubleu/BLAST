@@ -46,7 +46,7 @@ df.long[which(is.na(df.long$...1))+1,]
 Y <- df.long$measurement[!is.na(df.long$measurement)]
 summary(Y) #total burnt area
 length(Y)
-psi <- 10
+psi <- 3
 threshold <- 0.95
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
@@ -241,7 +241,6 @@ for(i in 1:p){
 write("data {
     int <lower=1> n; // Sample size
     int <lower=1> p; // regression coefficient size
-    int <lower=1> newp; 
     int <lower=1> psi; // splines coefficient size
     real <lower=0> u; // large threshold value
     matrix[n,p] bsLinear; // fwi dataset
@@ -251,50 +250,44 @@ write("data {
     vector[n] y; // extreme response
     real <lower=0> atau;
     matrix[2, (2*p)] basisFL;
-    array[p, 2] int indexFL;
+    array[(p*2)] int indexFL;
 }
 parameters {
-    vector[newp] theta; // linear predictor
-    vector[(psi-2)] gamma[p]; // splines coefficient
+    vector[(p+1)] theta; // linear predictor
+    vector[(psi-2)] gammaTemp[p]; // constraint splines coefficient from 2 to psi-1
+    //vector[(psi)] gammaTemp[p];
     real <lower=0> lambda1; // lasso penalty
     real <lower=0> lambda2; // group lasso penalty
-    real sigma; //
-    vector[p] tau; //real <lower=0,upper=100> rho //softplus parameter
+    array[p] real <lower=0> tau;
 }
 transformed parameters {
-    array[n] real <lower=0> alpha; // tail index
-    vector[(psi-2)] gammaTemp[p]; // constraint gamma from 2 to psi-1
+    array[n] real <lower=0> alpha; // covariate-adjusted tail index
+    vector[psi] gamma[p]; // splines coefficient 
     vector[2] gammaFL[p];
-    matrix[n, p] gnl; // nonlinear component
     matrix[2, p] subgnl;
-    matrix[n, p] gfnl;
-    matrix[n, p] glnl;
+    matrix[n, p] gnl; // nonlinear component
     matrix[n, p] gl; // linear component
     matrix[n, p] gsmooth; // linear component
     array[n] real <lower=0> newalpha; // new tail index
     matrix[n, p] newgnl; // nonlinear component
-    matrix[n, p] newgfnl;
-    matrix[n, p] newglnl;
     matrix[n, p] newgl; // linear component
     matrix[n, p] newgsmooth; // linear component
 
     for(j in 1:p){
-        gammaTemp[j] = gamma[j];
-        subgnl[,j] = bsNonlinear[indexFL[j,], (((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] * gammaTemp[j];
-        gammaFL[j] = basisFL[, (((j-1)*2)+1):(((j-1)*2)+2)] * -1 * subgnl[,j];
+        gamma[j][2:(psi-1)] = gammaTemp[j][1:(psi-2)];
+        subgnl[,j] = bsNonlinear[indexFL[(((j-1)*2)+1):(((j-1)*2)+2)], (((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] * gammaTemp[j];
+        gammaFL[j] = basisFL[, (((j-1)*2)+1):(((j-1)*2)+2)] * subgnl[,j] * (-1);
+        gamma[j][1] = gammaFL[j][1];
+        gamma[j][psi] = gammaFL[j][2];  
     };
 
     for (j in 1:p){
-        gnl[,j] = bsNonlinear[,(((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] * gammaTemp[j]; 
-        newgnl[,j] = xholderNonlinear[,(((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] * gammaTemp[j];
-        gl[,j] = bsLinear[,j] * theta[j+1]; 
+        gnl[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
+        newgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
+        gl[,j] = bsLinear[,j] * theta[j+1];
         newgl[,j] = xholderLinear[,j] * theta[j+1];
-        gfnl[,j] = bsNonlinear[,(((j-1)*psi)+1)] * gammaFL[j][1];
-        glnl[,j] = bsNonlinear[,(((j-1)*psi)+psi)] * gammaFL[j][2];
-        newgfnl[,j] = xholderNonlinear[,(((j-1)*psi)+1)] * gammaFL[j][1];
-        newglnl[,j] = xholderNonlinear[,(((j-1)*psi)+psi)] * gammaFL[j][2];        
-        gsmooth[,j] = gl[,j] + gnl[,j] + gfnl[,j] + glnl[,j]; 
-        newgsmooth[,j] = newgl[,j] + newgnl[,j] + newgfnl[,j] + newglnl[,j];
+        gsmooth[,j] = gl[,j] + gnl[,j];
+        newgsmooth[,j] = newgl[,j] + newgnl[,j];
     };
 
     for (i in 1:n){
@@ -329,8 +322,7 @@ generated quantities {
 , "model_BRSTIR_constraint.stan")
 
 data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, 
-                    atau = ((psi-1)/2), newp = (p+1), 
-                    indexFL = index.holder, 
+                    atau = ((psi+1)/2), indexFL = as.vector(t(index.holder)),
                     bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
                     xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear, basisFL = basis.holder)
 
