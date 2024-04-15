@@ -534,7 +534,8 @@ r <- matrix(, nrow = n, ncol = 30)
 T <- 30
 for(i in 1:n){
   for(t in 1:T){
-    r[i, t] <- qnorm(pt(y.origin[i], df=mcmc.alpha[round(runif(1,1,len)),i], lower.tail = FALSE))
+    r[i, t] <- qnorm(pPareto(y.origin[i], u, alpha = mcmc.alpha[round(runif(1,1,len)),i]))
+    # qnorm(pt(y.origin[i], df=mcmc.alpha[round(runif(1,1,len)),i]))
   }
 }
 lgrid <- n
