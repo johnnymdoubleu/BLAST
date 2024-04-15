@@ -24,7 +24,7 @@ library(ggh4x)
 set.seed(10)
 # set.seed(6)
 
-n <- 15000
+n <- 5000
 psi <- 10
 threshold <- 0.95
 p <- 5
@@ -75,7 +75,7 @@ for(j in 1:p){
     if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
     else {
       if(ps == 1 || ps == psi){gamma.origin[ps, j] <- 0}
-      else{gamma.origin[ps, j] <- -200}
+      else{gamma.origin[ps, j] <- -10}
     }
   }
 }

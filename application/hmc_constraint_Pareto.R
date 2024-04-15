@@ -46,8 +46,8 @@ df.long[which(is.na(df.long$...1))+1,]
 Y <- df.long$measurement[!is.na(df.long$measurement)]
 summary(Y) #total burnt area
 length(Y)
-psi <- 3
-threshold <- 0.95
+psi <- 10
+threshold <- 0.99
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
 # x.scale <- x.scale[which(y>quantile(y, threshold)),]
@@ -219,16 +219,16 @@ for(i in 1:p){
   knots <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
   tps <- basis.tps(fwi.scaled[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
   basis.holder <- cbind(basis.holder, 
-          solve(matrix(c(splines[index.holder[i,1], no.theta+1],
-                  splines[index.holder[i,1], no.theta+psi],
-                  splines[index.holder[i,2], no.theta+1],
-                  splines[index.holder[i,2], no.theta+psi]), 
+          solve(matrix(c(tps[index.holder[i,1], no.theta+1],
+                  tps[index.holder[i,1], no.theta+psi],
+                  tps[index.holder[i,2], no.theta+1],
+                  tps[index.holder[i,2], no.theta+psi]), 
                   nrow = 2, ncol = 2)))
   end.holder <- cbind(end.holder, 
-                matrix(c(splines[index.holder[i,1], no.theta+1],
-                  splines[index.holder[i,1], no.theta+psi],
-                  splines[index.holder[i,2], no.theta+1],
-                  splines[index.holder[i,2], no.theta+psi]), 
+                matrix(c(tps[index.holder[i,1], no.theta+1],
+                  tps[index.holder[i,1], no.theta+psi],
+                  tps[index.holder[i,2], no.theta+1],
+                  tps[index.holder[i,2], no.theta+psi]), 
                   nrow = 2, ncol = 2))
   # mid.holder <- cbind(mid.holder,)                  
   bs.linear <- cbind(bs.linear, tps[,1:no.theta])
@@ -302,8 +302,8 @@ model {
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += normal_lpdf(theta[1] | 0, 100);
-    target += gamma_lpdf(lambda1 | 1, 1e-3);
-    target += gamma_lpdf(lambda2 | 1, 1e-3);
+    target += gamma_lpdf(lambda1 | 1, 1e-2);
+    target += gamma_lpdf(lambda2 | 1, 1e-2);
     target += (2*p*log(lambda2));
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
@@ -412,9 +412,9 @@ posterior <- extract(fit1)
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
 lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
-# gl.samples <- summary(fit1, par=c("newgl"), probs = c(0.05, 0.5, 0.95))$summary
+gl.samples <- summary(fit1, par=c("newgl"), probs = c(0.05, 0.5, 0.95))$summary
 gnl.samples <- summary(fit1, par=c("newgnl"), probs = c(0.05, 0.5, 0.95))$summary
-gnlfl.samples <- summary(fit1, par=c("newgfnl", "newglnl"), probs = c(0.05, 0.5, 0.95))$summary
+# gnlfl.samples <- summary(fit1, par=c("newgfnl", "newglnl"), probs = c(0.05, 0.5, 0.95))$summary
 
 gsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
 # smooth.samples <- summary(fit1,par=c("gsmooth"), probs = c(0.05, 0.5, 0.95))$summary
@@ -422,7 +422,7 @@ alp.x.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summar
 alpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
 # summary(fit1, par=c("sigma"), probs = c(0.05,0.5, 0.95))$summary
 # summary(fit1, par=c("tau"), probs = c(0.05,0.5, 0.95))$summary
-gammafl.samples <- summary(fit1, par=c("gammaFL"), probs = c(0.05,0.5, 0.95))$summary
+# gammafl.samples <- summary(fit1, par=c("gammaFL"), probs = c(0.05,0.5, 0.95))$summary
 
 sampled <- end.holder[,1:2] %*% gammafl.samples[1:2, 1]
 trued <- as.matrix(c(bs.nonlinear[index.holder[1,1], 2:9] %*% gamma.samples[1:8, 1], bs.nonlinear[index.holder[1,2], 2:9] %*% gamma.samples[1:8, 1]), nrow = 2)
@@ -486,12 +486,12 @@ ggplot(df.theta, aes(x = covariate, y=m, color = covariate)) + ylab("") + xlab('
 #         axis.text.x = element_text(angle = 0, hjust = 0.5))
 
 
-df.gamma <- data.frame("seq" = seq(1, ((psi-2)*p)), 
+df.gamma <- data.frame("seq" = seq(1, ((psi)*p)), 
                   "m" = as.vector(gamma.q2),
                   "l" = as.vector(gamma.q1),
                   "u" = as.vector(gamma.q3))
-df.gamma$covariate <- factor(rep(names(fwi.scaled), each = (psi-2), length.out = nrow(df.gamma)), levels = colnames(fwi.scaled))
-df.gamma$labels <- factor(1:((psi-2)*p))
+df.gamma$covariate <- factor(rep(names(fwi.scaled), each = (psi), length.out = nrow(df.gamma)), levels = colnames(fwi.scaled))
+df.gamma$labels <- factor(1:((psi)*p))
 ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) + 
   geom_errorbar(aes(ymin = l, ymax = u), alpha = 0.4, width = 4, linewidth = 1.2) +
   geom_point(size = 4) + ylab("") + xlab("" ) + #xlim(1,(psi*p)) +
