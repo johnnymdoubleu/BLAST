@@ -21,7 +21,7 @@ library(cmdstanr)
 library(ggh4x)
 
 #Scenario 1
-set.seed(10)
+# set.seed(10)
 # set.seed(6)
 
 
@@ -226,7 +226,7 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda | 1, 1e-3);
+    target += gamma_lpdf(lambda | 1, 1e-4);
     target += normal_lpdf(theta | 0, 100);
     target += (2*p*log(lambda));
     for (j in 1:p){
@@ -243,15 +243,15 @@ data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi,
                     bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
                     xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear)
 
-init.alpha <- list(list(gammaTemp = array(rep(2, ((psi-2)*p)), dim=c((psi-2),p)),
-                        theta = 0, beta = rep(0, p),
+init.alpha <- list(list(gammaTemp = array(rep(-10, ((psi-2)*p)), dim=c((psi-2),p)),
+                        theta = -0.5, beta = rep(0, p),
                         tau = rep(0.1, p), lambda = 1),
-                   list(gammaTemp = array(rep(-1, ((psi-2)*p)), dim=c((psi-2),p)),
-                        theta = -1, beta = rep(-0.1, p), 
+                   list(gammaTemp = array(rep(5, ((psi-2)*p)), dim=c((psi-2),p)),
+                        theta = -0.2, beta = rep(-0.1, p), 
                         tau = rep(0.001, p), lambda = 100),
-                   list(gammaTemp = array(rep(-3, ((psi-2)*p)), dim=c((psi-2),p)),
-                        theta = 0.1, beta = rep(-5, p),
-                        tau = rep(0.5, p), lambda = 55))
+                   list(gammaTemp = array(rep(-20, ((psi-2)*p)), dim=c((psi-2),p)),
+                        theta = 0.1, beta = rep(0.5, p),
+                        tau = rep(0.01, p), lambda = 55))
 # setwd("C:/Users/Johnny Lee/Documents/GitHub")
 fit1 <- stan(
     file = "model_simulation_constraint.stan",  # Stan program
@@ -341,7 +341,7 @@ ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) +
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_point(size = 4) + ylab("") + xlab("" ) + #ylim(-15,15) +
   # geom_ribbon(aes(ymin = l, ymax = u)) +
-  scale_x_discrete(breaks=c(seq(0, (psi*p), psi)+7), 
+  scale_x_discrete(breaks=c(seq(0, ((psi+1)*p), (psi+1))+7), 
                     label = c(expression(bold(gamma[1])), 
                               expression(bold(gamma[2])), 
                               expression(bold(gamma[3])), 

@@ -62,7 +62,7 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda | 1, 1e-3);
+    target += gamma_lpdf(lambda | 1, 1e-4);
     target += normal_lpdf(theta | 0, 100);
     target += (2*p*log(lambda));
     for (j in 1:p){
