@@ -229,8 +229,8 @@ model {
     target += gamma_lpdf(lambda2 | 1, 1e-6);
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, sqrt(lambda1));
-        target += gamma_lpdf(tau1[j] | atau, sqrt(lambda2)/2);
-        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * (1/tau1[j]));
+        target += gamma_lpdf(tau1[j] | atau, lambda2/2);
+        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * (tau1[j]));
     }
 }
 "
@@ -252,15 +252,15 @@ data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi,
                     bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
                     xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear)
 
-init.alpha <- list(list(gammaTemp = array(rep(2, ((psi-2)*p)), dim=c((psi-2),p)),
+init.alpha <- list(list(gammaTemp = array(rep(2, ((psi-2)*p)), dim=c(p, (psi-2))),
                         theta = rep(0, (p+1)), tau1 = rep(0.1, p), 
                         # pie = 0.05,tau2 = rep(0.1, p),
                         lambda1 = 1, lambda2 = 1),
-                    list(gammaTemp = array(rep(-1, ((psi-2)*p)), dim=c((psi-2),p)),
+                    list(gammaTemp = array(rep(-1, ((psi-2)*p)), dim=c(p, (psi-2))),
                             theta = rep(0, (p+1)), tau1 = rep(0.001, p), 
                             #tau2 = rep(0.5, p),pie = 0.75,
                             lambda1 = 100, lambda2 = 100),
-                    list(gammaTemp = array(rep(-3, ((psi-2)*p)), dim=c((psi-2),p)),
+                    list(gammaTemp = array(rep(-3, ((psi-2)*p)), dim=c(p,(psi-2))),
                             theta = rep(0.1, (p+1)), tau1 = rep(0.5, p),
                             # pie = 0.5,  tau2 = rep(0.01, p),
                             lambda1 = 400, lambda2 = 55)

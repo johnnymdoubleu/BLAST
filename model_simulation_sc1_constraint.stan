@@ -61,7 +61,7 @@ model {
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += normal_lpdf(theta[1] | 0, 100);
-    target += gamma_lpdf(lambda1 | 1, 1e-3);
+    target += gamma_lpdf(lambda1 | 1, 1e-6);
     target += gamma_lpdf(lambda2 | 1, 1e-6);
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, sqrt(lambda1));
