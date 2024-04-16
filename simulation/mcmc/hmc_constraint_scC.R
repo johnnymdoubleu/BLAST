@@ -403,7 +403,7 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values=c("steelblue", "red")) + 
   guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) + ylim(-0.7, 0.7) +
+          fill = guide_legend(order = 1)) + ylim(-1.3, 1.3) +
   # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 15),
@@ -417,6 +417,7 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
         axis.title.x = element_text(size = 35),
         axis.text.y = element_blank(),
         axis.text.x = element_text(size=18))
+
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_smooth_sc3-wi.pdf"), width=11, height = 15)
 
 data.linear <- data.frame("x"=newx,

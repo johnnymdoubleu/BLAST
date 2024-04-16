@@ -3,6 +3,7 @@ suppressMessages(library(tidyverse))
 library(evir)
 library(rstan)
 library(rmutil)
+library(Pareto)
 
 #Scenario 4
 set.seed(10)
@@ -59,7 +60,7 @@ for(j in 1:p){
     }
   }
 }
-theta.origin <- c(-0.5, 0, -0.5, -0.5, 0, 0)
+theta.origin <- c(-0.5, 0, 0, 0, -0.5, -0.5)
 
 f.sub.origin <- matrix(, nrow = 2, ncol = p)
 for(j in 1:p){
@@ -272,9 +273,9 @@ posterior <- extract(fit1)
 str(posterior)
 
 # plot(fit1, plotfun = "trace", pars = c("theta"), nrow = 3)
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_theta_trace_sc3-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_theta_trace_sc4-wi.pdf"), width=10, height = 7.78)
 # plot(fit1, plotfun = "trace", pars = c("lambda1", "lambda2"), nrow = 2)
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_lambda_sc3-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_lambda_sc4-wi.pdf"), width=10, height = 7.78)
 
 
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
@@ -329,7 +330,7 @@ ggplot(df.theta, aes(x = covariate, y=m, color = covariate)) + ylab("") + xlab('
           plot.margin = margin(0,0,0,-20),
           axis.text.x = element_text(hjust=0.35),
           axis.text = element_text(size = 28))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_theta_sc3-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_theta_sc4-wi.pdf"), width=10, height = 7.78)
 
 df.gamma <- data.frame("seq" = seq(1, (psi*p)), 
                   "true" = as.vector(gamma.origin),
@@ -360,7 +361,7 @@ ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) +
           plot.margin = margin(0,0,0,-20),
           axis.text.x = element_text(hjust=0.5),
           axis.text = element_text(size = 28))
-# # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_gamma_sc3-wi.pdf"), width=10, height = 7.78)
+# # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_gamma_sc4-wi.pdf"), width=10, height = 7.78)
 
 g.linear.mean <- as.vector(matrix(newgl.samples[,1], nrow = n, byrow=TRUE))
 g.linear.q1 <- as.vector(matrix(newgl.samples[,4], nrow = n, byrow=TRUE))
@@ -406,7 +407,7 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values=c("steelblue", "red")) + 
   guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) + ylim(-0.7, 0.7) +
+          fill = guide_legend(order = 1)) + ylim(-1.3, 1.3) +
   # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 15),
@@ -416,12 +417,12 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
         legend.margin=margin(t = 1, unit='cm'),
         legend.box.margin=margin(-10,0,-10,0),
         plot.margin = margin(0,0,0,-20),
-        strip.text.y = element_text(size = 25, colour = "black", angle = 0, face = "bold.italic"),
-        strip.placement = "outside",
+        strip.text = element_blank(),
         axis.title.x = element_text(size = 35),
-        axis.text = element_text(size=18))
+        axis.text.y = element_blank(),
+        axis.text.x = element_text(size=18))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_smooth_sc3-wi.pdf"), width=11, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_smooth_sc4-wi.pdf"), width=11, height = 15)
 
 data.linear <- data.frame("x"=newx,
                           "true" = as.vector(f.linear.new),
@@ -459,7 +460,7 @@ ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) +
         axis.title.x = element_text(size = 35),
         axis.text = element_text(size=18))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_linear_sc3-wi.pdf"), width=12.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_linear_sc4-wi.pdf"), width=12.5, height = 15)
 
 data.nonlinear <- data.frame("x"=newx,
                           "true" = as.vector(f.nonlinear.new),
@@ -497,7 +498,7 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
         axis.title.x = element_text(size = 35),
         axis.text = element_text(size=18))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_nonlinear_sc3-wi.pdf"), width=12.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_nonlinear_sc4-wi.pdf"), width=12.5, height = 15)
 
 data.scenario <- data.frame("x" = c(1:n),
                             "constant" = newx,
@@ -511,19 +512,20 @@ data.scenario <- data.frame("x" = c(1:n),
 # "q1" = sort(alpha.smooth.q1),
 # "q3" = sort(alpha.smooth.q3))
 
-ggplot(data.scenario, aes(x=newx)) + 
-  ylab(expression(alpha(c*bold("1")))) + xlab(expression(c)) + labs(col = "") +
+ggplot(data.scenario, aes(x=newx)) + #ylab(expression(alpha(c*bold("1")))) + 
+  ylab("") + xlab(expression(c)) + labs(col = "") +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2) + 
-  geom_line(aes(y=post.mean, col = "Posterior Median"), linewidth=1.5) +
+  geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1.5) +
   scale_color_manual(values=c("steelblue", "red")) + 
   scale_fill_manual(values=c("steelblue"), name = "") +
-  theme_minimal(base_size = 30) + #ylim(0.5,2.5)+
+  theme_minimal(base_size = 30) + ylim(0, 2.4) +
   theme(legend.position = "none",
         strip.text = element_blank(),
-        axis.text = element_text(size = 18))
+        axis.text.y = element_blank(),
+        axis.text.x = element_text(size = 18))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_test_sc3-wi.pdf"), width=9.5, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_test_sc4-wi.pdf"), width=9.5, height = 7.78)
 
 mcmc.alpha <- posterior$alpha
 len <- dim(mcmc.alpha)[1]
@@ -532,7 +534,7 @@ T <- 30
 for(i in 1:n){
   for(t in 1:T){
     r[i, t] <- qnorm(pPareto(y.origin[i], u, alpha = mcmc.alpha[round(runif(1,1,len)),i]))
-    # qnorm(pt(y.origin[i], df=mcmc.alpha[round(runif(1,1,len)),i]))
+    # qnorm(pburr(y.origin[i], m=1, f=1, s=mcmc.alpha[round(runif(1,1,len)),i]))
   }
 }
 lgrid <- n
@@ -560,6 +562,6 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
   theme(text = element_text(size = 20)) + 
   coord_fixed(xlim = c(-3, 3),  
               ylim = c(-3, 3))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_qqplot_sc3-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_qqplot_sc4-wi.pdf"), width=10, height = 7.78)
 cat("Scenario D Done")
 
