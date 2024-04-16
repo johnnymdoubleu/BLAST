@@ -91,12 +91,12 @@ fwi.index$month <- factor(format(as.Date(substr(cov.long$...1[missing.values],1,
 fwi.index$date <- as.numeric(fwi.index$date)
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 fwi.scaled <- fwi.scaled[which(Y>u),]
-# fwi.scaled <- as.data.frame(scale(fwi.scaled))
+fwi.scaled <- as.data.frame(scale(fwi.scaled))
 
 # plot((fwi.scaled[,2]), (log(y)))
 # plot((fwi.scaled[,5]), (log(y)))
-range01 <- function(x){(x-min(x))/(max(x)-min(x))}
-fwi.scaled <- as.data.frame(sapply(fwi.scaled, FUN = range01))
+# range01 <- function(x){(x-min(x))/(max(x)-min(x))}
+# fwi.scaled <- as.data.frame(sapply(fwi.scaled, FUN = range01))
 # fwi.scaled <- as.data.frame(lapply(fwi.scaled, rescale, to=c(-1,1)))
 
 # ---------------------------------------------------------------------------
@@ -255,7 +255,6 @@ write("data {
 parameters {
     vector[(p+1)] theta; // linear predictor
     vector[(psi-2)] gammaTemp[p]; // constraint splines coefficient from 2 to psi-1
-    //vector[(psi)] gammaTemp[p];
     real <lower=0> lambda1; // lasso penalty
     real <lower=0> lambda2; // group lasso penalty
     array[p] real <lower=0> tau;
@@ -333,18 +332,15 @@ set_cmdstan_path(path = NULL)
 # here using the example model that comes with CmdStan
 file <- file.path(cmdstan_path(), "model.stan")
 
-init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c((psi-2), p)),
-                        theta = rep(0, (p+1)),
-                        tau = rep(0.1, p),
-                        lambda1 = 10, lambda2 = 100),
-                  list(gamma = array(rep(0.02, (psi*p)), dim=c((psi-2), p)),
-                        theta = rep(0.01, (p+1)),
-                        tau = rep(0.01, p),
-                        lambda1 = 0.1, lambda2 = 2),
-                  list(gamma = array(rep(0.01, (psi*p)), dim=c((psi-2), p)),
-                        theta = rep(0.05, (p+1)),
-                        tau = rep(0.01, p),
-                        lambda1 = 1, lambda2 = 1))
+init.alpha <- list(list(gammaTemp = array(rep(2, ((psi-2)*p)), dim=c((psi-2),p)),
+                        theta = rep(0, (p+1)), tau = rep(0.1, p),
+                        lambda1 = 0.1, lambda2 = 1),
+                   list(gammaTemp = array(rep(-1, ((psi-2)*p)), dim=c((psi-2),p)),
+                        theta = rep(0, (p+1)), tau = rep(0.001, p),
+                        lambda1 = 100, lambda2 = 100),
+                   list(gammaTemp = array(rep(-3, ((psi-2)*p)), dim=c((psi-2),p)),
+                        theta = rep(0.1, (p+1)), tau = rep(0.5, p),
+                        lambda1 = 5, lambda2 = 55))
 
 # stanc("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/application/model1.stan")
 fit1 <- stan(
@@ -423,10 +419,6 @@ alpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$sum
 # summary(fit1, par=c("sigma"), probs = c(0.05,0.5, 0.95))$summary
 # summary(fit1, par=c("tau"), probs = c(0.05,0.5, 0.95))$summary
 # gammafl.samples <- summary(fit1, par=c("gammaFL"), probs = c(0.05,0.5, 0.95))$summary
-
-sampled <- end.holder[,1:2] %*% gammafl.samples[1:2, 1]
-trued <- as.matrix(c(bs.nonlinear[index.holder[1,1], 2:9] %*% gamma.samples[1:8, 1], bs.nonlinear[index.holder[1,2], 2:9] %*% gamma.samples[1:8, 1]), nrow = 2)
-sampled + trued
 
 gamma.post.mean <- gamma.samples[,1]
 gamma.q1 <- gamma.samples[,4]
@@ -633,17 +625,17 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
           axis.text = element_text(size = 20))
 # #ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_nonlinear.pdf"), width=12.5, height = 15)
 
+# data.scenario <- data.frame("x" = seq(0, 1, length.out = n),
+#                             "post.mean" = (alpha.samples[,1]),
+#                             "post.median" = (alpha.samples[,5]),
+#                             # "post.median" = sort(exp(rowSums(g.q2) + rep(theta.samples[1,5], n)), decreasing = TRUE),
+#                             "q1" = (alpha.samples[,4]),
+#                             "q3" = (alpha.samples[,6]))
 data.scenario <- data.frame("x" = seq(0, 1, length.out = n),
-                            "post.mean" = (alpha.samples[,1]),
-                            "post.median" = (alpha.samples[,5]),
-                            # "post.median" = sort(exp(rowSums(g.q2) + rep(theta.samples[1,5], n)), decreasing = TRUE),
-                            "q1" = (alpha.samples[,4]),
-                            "q3" = (alpha.samples[,6]))
-# data.scenario <- data.frame("x" = seq(-1, 1, length.out = n),
-#                             "post.mean" = sort(alp.x.samples[,1], decreasing = TRUE),
-#                             "post.median" = sort(alp.x.samples[,5], decreasing = TRUE),
-#                             "q1" = sort(alp.x.samples[,4], decreasing = TRUE),
-#                             "q3" = sort(alp.x.samples[,6], decreasing = TRUE))
+                            "post.mean" = (alp.x.samples[,1]),
+                            "post.median" = (alp.x.samples[,5]),
+                            "q1" = (alp.x.samples[,4]),
+                            "q3" = (alp.x.samples[,6]))
 
 ggplot(data.scenario, aes(x=x)) + 
   ylab(expression(alpha(bold(x)))) + xlab(expression(c)) + labs(col = "") +
@@ -666,6 +658,24 @@ ggplot(data.scenario, aes(x=x)) +
         axis.title.x = element_text(size = 35))
 
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_alpha.pdf"), width=10, height = 7.78)
+
+ggplot(data.scenario) + 
+  ylab(expression(alpha(bold(x)))) + xlab(expression(c)) + labs(col = "") +
+  geom_histogram(aes(post.median),fill = "purple", binwidth = 0.1, , alpha = 0.5) + 
+  geom_histogram(aes(post.mean), fill = "orange", binwidth = 0.1, alpha = 0.4) +
+  geom_histogram(aes(q1), fill = "green", binwidth = 0.1, alpha = 0.1) + 
+  geom_histogram(aes(q3), fill = "yellow", binwidth = 0.1, alpha = 0.1) + 
+  # scale_y_log10() + 
+  # guides(color = guide_legend(order = 2), 
+  #         fill = guide_legend(order = 1)) +
+  scale_fill_brewer(palette="Pastel1") +
+  theme_minimal(base_size = 30) +
+  theme(legend.position="bottom", 
+        legend.key.size = unit(1, 'cm'),
+        legend.text = element_text(size=20),
+        # plot.margin = margin(0,0,0,-1),
+        strip.text = element_blank(),
+        axis.title.x = element_text(size = 35))
 
 len <- dim(posterior$alpha)[1]
 r <- matrix(, nrow = n, ncol = 100)
@@ -759,7 +769,7 @@ grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
 #   labs(fill="")
 
 #Predictive Distribution check
-y.container <- as.data.frame(matrix(, nrow = n, ncol = 0))
+y.container <- as.data.frame(matrix(, nrow = n, ncol = 0))  
 # for(i in random.alpha.idx){
 random.alpha.idx <- floor(runif(100, 1, ncol(t(posterior$alpha))))
 for(i in random.alpha.idx){
@@ -844,3 +854,4 @@ constraint.waic <- waic(fit.log.lik, cores = 2)
 save(constraint.elpd.loo, constraint.waic, file = (paste0("./BRSTIR/application/BRSTIR_constraint_",Sys.Date(),"_",floor(threshold*100),"quantile_IC.Rdata")))
 
 loo(fit.log.lik)
+
