@@ -72,7 +72,7 @@ for(j in 1:p){
     }
   }
 }
-theta.origin <- c(-0.5, 0, -0.5, -0.5, 0, 0)
+theta.origin <- c(-0.5, -0.5, 0, -0.5, 0, 0)
 
 f.sub.origin <- matrix(, nrow = 2, ncol = p)
 for(j in 1:p){
@@ -413,11 +413,10 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
         legend.margin=margin(t = 1, unit='cm'),
         legend.box.margin=margin(-10,0,-10,0),
         plot.margin = margin(0,0,0,-20),
-        strip.text.y = element_text(size = 25, colour = "black", angle = 0, face = "bold.italic"),
-        strip.placement = "outside",
+        strip.text = element_blank(),
         axis.title.x = element_text(size = 35),
-        axis.text = element_text(size=18))
-
+        axis.text.y = element_blank(),
+        axis.text.x = element_text(size=18))
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_smooth_sc3-wi.pdf"), width=11, height = 15)
 
 data.linear <- data.frame("x"=newx,
@@ -508,17 +507,18 @@ data.scenario <- data.frame("x" = c(1:n),
 # "q1" = sort(alpha.smooth.q1),
 # "q3" = sort(alpha.smooth.q3))
 
-ggplot(data.scenario, aes(x=newx)) + 
-  ylab(expression(alpha(c*bold("1")))) + xlab(expression(c)) + labs(col = "") +
+ggplot(data.scenario, aes(x=newx)) + #ylab(expression(alpha(c*bold("1")))) + 
+  ylab("") + xlab(expression(c)) + labs(col = "") +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2) + 
-  geom_line(aes(y=post.mean, col = "Posterior Median"), linewidth=1.5) +
+  geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1.5) +
   scale_color_manual(values=c("steelblue", "red")) + 
   scale_fill_manual(values=c("steelblue"), name = "") +
-  theme_minimal(base_size = 30) + #ylim(0.5,2.5)+
+  theme_minimal(base_size = 30) + ylim(0, 2.4) +
   theme(legend.position = "none",
         strip.text = element_blank(),
-        axis.text = element_text(size = 18))
+        axis.text.y = element_blank(),
+        axis.text.x = element_text(size = 18))
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_test_sc3-wi.pdf"), width=9.5, height = 7.78)
 

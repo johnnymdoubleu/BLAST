@@ -21,8 +21,8 @@ library(MCMCvis)
 library(ggh4x)
 
 #Scenario 1
-set.seed(10)
-# set.seed(6)
+# set.seed(10)
+set.seed(6)
 
 n <- 15000
 psi <- 10
@@ -423,18 +423,19 @@ data.smooth <- data.frame("x"=newx,
                           "replicate" = gl(p, n, (p*n), labels = c("x[1]", "x[2]", "x[3]", "x[4]", "x[5]")))
 
 ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) + 
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+#   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   geom_line(aes(y=true, colour = "True"), linewidth=2) + 
-  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
-  ylab("") + xlab(expression(c)) +
-  facet_wrap(covariates ~ ., scales = "free_x", nrow = 5,
-             labeller = label_parsed, strip.position = "left") + 
+  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1.8) + 
+  ylab("") + xlab(expression(c)) + 
+  facet_grid(covariates ~ ., scales = "free_x", switch = "y", 
+              labeller = label_parsed) +    
+#   facet_wrap(covariates ~ ., scales = "free_x", nrow = 5, labeller = label_parsed, strip.position = "left") + 
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values=c("steelblue", "red")) + 
   guides(color = guide_legend(order = 2), 
-         fill = guide_legend(order = 1)) + #ylim(-0.55, 0.5) +
-  #   scale_y_continuous(breaks=c(-0.6,-0.3,-0,0.3)) + 
+          fill = guide_legend(order = 1)) + ylim(-1.3, 1.3) +
+#   scale_y_continuous(breaks=c(-0.6,-0.3,-0,0.3)) + 
   # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 15),
@@ -541,13 +542,13 @@ data.scenario <- data.frame("x" = c(1:n),
 # "q3" = sort(alpha.smooth.q3))
 
 ggplot(data.scenario, aes(x=newx)) + 
-  ylab(expression(alpha(c*bold("1")))) + xlab(expression(c)) + labs(col = "") +
+  ylab(expression(alpha(c,...,c))) + xlab(expression(c)) + labs(col = "") +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2) + 
-  geom_line(aes(y=post.mean, col = "Posterior Median"), linewidth=1.5) +
+  geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1.5) +
   scale_color_manual(values=c("steelblue", "red")) + 
   scale_fill_manual(values=c("steelblue"), name = "") +
-  theme_minimal(base_size = 30) + #ylim(0.5,2.5)+
+  theme_minimal(base_size = 30) + ylim(0,2.4)+
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 18))
