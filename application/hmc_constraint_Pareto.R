@@ -90,13 +90,20 @@ fwi.index$month <- factor(format(as.Date(substr(cov.long$...1[missing.values],1,
                             levels = c("Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"))
 fwi.index$date <- as.numeric(fwi.index$date)
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
-fwi.scaled <- fwi.scaled[which(Y>u),]
+fwi.origin <- fwi.scaled <-fwi.scaled[which(Y>u),]
 fwi.scaled <- as.data.frame(scale(fwi.scaled))
+fwi.scaled.cov <- cov(fwi.scaled)
+fwi.scaled.eigen <- eigen(fwi.scaled.cov)
+phi <- fwi.scaled.eigen$vectors[, 1:7]
+phi <- -phi
+PC1 <- sort(as.matrix(fwi.scaled) %*% phi[,1])
+PVE <- fwi.scaled.eigen$values / sum(fwi.scaled.eigen$values)
 
 # plot((fwi.scaled[,2]), (log(y)))
 # plot((fwi.scaled[,5]), (log(y)))
-# range01 <- function(x){(x-min(x))/(max(x)-min(x))}
-# fwi.scaled <- as.data.frame(sapply(fwi.scaled, FUN = range01))
+range01 <- function(x){(x-min(x))/(max(x)-min(x))}
+fwi.scaled <- as.data.frame(sapply(fwi.origin, FUN = range01))
+
 # fwi.scaled <- as.data.frame(lapply(fwi.scaled, rescale, to=c(-1,1)))
 
 # ---------------------------------------------------------------------------
@@ -200,7 +207,6 @@ newx <- seq(0, 1, length.out=n)
 xholder.linear <- xholder.nonlinear <- bs.linear <- bs.nonlinear <- matrix(,nrow=n, ncol=0)
 xholder <- matrix(nrow=n, ncol=p)
 end.holder <- basis.holder <- matrix(, nrow = 2, ncol =0)
-mid.holder <- matrix(, nrow = 9, ncol = 0)
 index.holder <- matrix(, nrow = 0, ncol = 2)
 for(i in 1:p){
   index.holder <- rbind(index.holder, 
@@ -211,9 +217,11 @@ for(i in 1:p){
   # xholder[,i] <- seq(0, 1, length.out = n)
   # test.knot <- seq(0, 1, length.out = psi)
   # splines <- basis.tps(seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n), test.knot, m=2, rk=FALSE, intercept = TRUE)
-  xholder[,i] <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n)
-  test.knot <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
-  splines <- basis.tps(xholder[,i], test.knot, m=2, rk=FALSE, intercept = FALSE)
+  # xholder[,i] <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n)
+  # test.knot <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
+  xholder[,i] <- PC1
+  test.knot <- seq(min(PC1), max(PC1), length.out = psi)  
+  splines <- basis.tps(PC1, test.knot, m=2, rk=FALSE, intercept = FALSE)
   xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
   xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
   knots <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
@@ -332,13 +340,13 @@ set_cmdstan_path(path = NULL)
 # here using the example model that comes with CmdStan
 file <- file.path(cmdstan_path(), "model.stan")
 
-init.alpha <- list(list(gammaTemp = array(rep(2, ((psi-2)*p)), dim=c((psi-2),p)),
+init.alpha <- list(list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c((psi-2),p)),
                         theta = rep(0, (p+1)), tau = rep(0.1, p),
                         lambda1 = 0.1, lambda2 = 1),
-                   list(gammaTemp = array(rep(-1, ((psi-2)*p)), dim=c((psi-2),p)),
+                   list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c((psi-2),p)),
                         theta = rep(0, (p+1)), tau = rep(0.001, p),
                         lambda1 = 100, lambda2 = 100),
-                   list(gammaTemp = array(rep(-3, ((psi-2)*p)), dim=c((psi-2),p)),
+                   list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c((psi-2),p)),
                         theta = rep(0.1, (p+1)), tau = rep(0.5, p),
                         lambda1 = 5, lambda2 = 55))
 
@@ -625,17 +633,18 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
           axis.text = element_text(size = 20))
 # #ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_nonlinear.pdf"), width=12.5, height = 15)
 
+data.scenario <- data.frame("x" = PC1,
+                            # "x" = seq(0, 1, length.out = n),
+                            "post.mean" = (alpha.samples[,1]),
+                            "post.median" = (alpha.samples[,5]),
+                            # "post.median" = sort(exp(rowSums(g.q2) + rep(theta.samples[1,5], n)), decreasing = TRUE),
+                            "q1" = (alpha.samples[,4]),
+                            "q3" = (alpha.samples[,6]))
 # data.scenario <- data.frame("x" = seq(0, 1, length.out = n),
-#                             "post.mean" = (alpha.samples[,1]),
-#                             "post.median" = (alpha.samples[,5]),
-#                             # "post.median" = sort(exp(rowSums(g.q2) + rep(theta.samples[1,5], n)), decreasing = TRUE),
-#                             "q1" = (alpha.samples[,4]),
-#                             "q3" = (alpha.samples[,6]))
-data.scenario <- data.frame("x" = seq(0, 1, length.out = n),
-                            "post.mean" = (alp.x.samples[,1]),
-                            "post.median" = (alp.x.samples[,5]),
-                            "q1" = (alp.x.samples[,4]),
-                            "q3" = (alp.x.samples[,6]))
+#                             "post.mean" = (alp.x.samples[,1]),
+#                             "post.median" = (alp.x.samples[,5]),
+#                             "q1" = (alp.x.samples[,4]),
+#                             "q3" = (alp.x.samples[,6]))
 
 ggplot(data.scenario, aes(x=x)) + 
   ylab(expression(alpha(bold(x)))) + xlab(expression(c)) + labs(col = "") +
@@ -854,4 +863,5 @@ constraint.waic <- waic(fit.log.lik, cores = 2)
 save(constraint.elpd.loo, constraint.waic, file = (paste0("./BRSTIR/application/BRSTIR_constraint_",Sys.Date(),"_",floor(threshold*100),"quantile_IC.Rdata")))
 
 loo(fit.log.lik)
+
 
