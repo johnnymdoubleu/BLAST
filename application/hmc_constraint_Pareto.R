@@ -217,11 +217,11 @@ for(i in 1:p){
   # xholder[,i] <- seq(0, 1, length.out = n)
   # test.knot <- seq(0, 1, length.out = psi)
   # splines <- basis.tps(seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n), test.knot, m=2, rk=FALSE, intercept = TRUE)
-  # xholder[,i] <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n)
-  # test.knot <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
-  xholder[,i] <- PC1
-  test.knot <- seq(min(PC1), max(PC1), length.out = psi)  
-  splines <- basis.tps(PC1, test.knot, m=2, rk=FALSE, intercept = FALSE)
+  xholder[,i] <- seq(min(fwi.scaled), max(fwi.scaled), length.out = n)
+  test.knot <- seq(min(fwi.scaled), max(fwi.scaled), length.out = psi)
+  # xholder[,i] <- PC1
+  # test.knot <- seq(min(PC1), max(PC1), length.out = psi)  
+  splines <- basis.tps(xholder[,i], test.knot, m=2, rk=FALSE, intercept = FALSE)
   xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
   xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
   knots <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
@@ -242,8 +242,6 @@ for(i in 1:p){
   bs.linear <- cbind(bs.linear, tps[,1:no.theta])
   bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])
 }
-
-
 
 
 write("data {
@@ -309,8 +307,8 @@ model {
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += normal_lpdf(theta[1] | 0, 100);
-    target += gamma_lpdf(lambda1 | 1, 1e-4);
-    target += gamma_lpdf(lambda2 | 1, 1e-4);
+    target += gamma_lpdf(lambda1 | 1, 1e-3);
+    target += gamma_lpdf(lambda2 | 1, 1e-3);
     target += (2*p*log(lambda2));
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
@@ -633,8 +631,7 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
           axis.text = element_text(size = 20))
 # #ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_nonlinear.pdf"), width=12.5, height = 15)
 
-data.scenario <- data.frame("x" = PC1,
-                            # "x" = seq(0, 1, length.out = n),
+data.scenario <- data.frame("x" = seq(0, 1, length.out = n),
                             "post.mean" = (alpha.samples[,1]),
                             "post.median" = (alpha.samples[,5]),
                             # "post.median" = sort(exp(rowSums(g.q2) + rep(theta.samples[1,5], n)), decreasing = TRUE),
@@ -668,12 +665,12 @@ ggplot(data.scenario, aes(x=x)) +
 
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_alpha.pdf"), width=10, height = 7.78)
 
-ggplot(data.scenario) + 
-  ylab(expression(alpha(bold(x)))) + xlab(expression(c)) + labs(col = "") +
-  geom_histogram(aes(post.median),fill = "purple", binwidth = 0.1, , alpha = 0.5) + 
-  geom_histogram(aes(post.mean), fill = "orange", binwidth = 0.1, alpha = 0.4) +
-  geom_histogram(aes(q1), fill = "green", binwidth = 0.1, alpha = 0.1) + 
-  geom_histogram(aes(q3), fill = "yellow", binwidth = 0.1, alpha = 0.1) + 
+ggplot(data.scenario,aes(x=x)) + 
+  xlab(expression(alpha(bold(x)))) + #ylab(expression(c)) + labs(col = "") +
+  geom_histogram(aes(post.median), fill = "purple", binwidth = 0.3, , alpha = 0.5) + 
+  geom_histogram(aes(post.mean), fill = "red", binwidth = 0.3, alpha = 0.4) +
+  geom_histogram(aes(q1), fill = "green", binwidth = 0.3, alpha = 0.1) + 
+  geom_histogram(aes(q3), fill = "black", binwidth = 0.3, alpha = 0.1) + 
   # scale_y_log10() + 
   # guides(color = guide_legend(order = 2), 
   #         fill = guide_legend(order = 1)) +
