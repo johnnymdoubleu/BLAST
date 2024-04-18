@@ -712,8 +712,8 @@ T <- 100
 for(i in 1:n){
   for(t in 1:T){
     # r[i, t] <- qnorm(pPareto(y[i], u, alpha = alp.x.samples[i,5]))
-    # r[i, t] <- qnorm(pPareto(y[i], u, alpha = posterior$alpha[round(runif(1,1,len)),i]))
-    r[i, t] <- qnorm(pPareto(y[i], u, alpha = posterior$newalpha[round(runif(1,1,len)),i]))
+    r[i, t] <- qnorm(pPareto(y[i], u, alpha = posterior$alpha[round(runif(1,1,len)),i]))
+    # r[i, t] <- qnorm(pPareto(y[i], u, alpha = posterior$newalpha[round(runif(1,1,len)),i]))
   }
 }
 lgrid <- n
