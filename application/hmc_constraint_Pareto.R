@@ -307,8 +307,8 @@ model {
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += normal_lpdf(theta[1] | 0, 100);
-    target += gamma_lpdf(lambda1 | 1, 1e-3);
-    target += gamma_lpdf(lambda2 | 1, 1e-3);
+    target += gamma_lpdf(lambda1 | 1, 1e-6);
+    target += gamma_lpdf(lambda2 | 1, 1e-6);
     target += (2*p*log(lambda2));
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
@@ -857,7 +857,7 @@ plot(fwi.loo, label_points = TRUE)
 
 constraint.elpd.loo <- loo(fit.log.lik, is_method = "sis", cores = 2)
 constraint.waic <- waic(fit.log.lik, cores = 2)
-save(constraint.elpd.loo, constraint.waic, file = (paste0("./BRSTIR/application/BRSTIR_constraint_",Sys.Date(),"_",floor(threshold*100),"quantile_IC.Rdata")))
+# save(constraint.elpd.loo, constraint.waic, file = (paste0("./BRSTIR/application/BRSTIR_constraint_",Sys.Date(),"_",floor(threshold*100),"quantile_IC.Rdata")))
 
 loo(fit.log.lik)
 
