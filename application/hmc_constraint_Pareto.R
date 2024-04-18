@@ -26,7 +26,7 @@ options(mc.cores = parallel::detectCores())
 #ISI : Initial Spread Index
 #FFMC : Fine FUel Moisture Code
 #DMC : Duff Moisture Code
-#DC : Drough Code
+#DC : Drought Code
 
 
 setwd("C:/Users/Johnny Lee/Documents/GitHub")
@@ -91,18 +91,23 @@ fwi.index$month <- factor(format(as.Date(substr(cov.long$...1[missing.values],1,
 fwi.index$date <- as.numeric(fwi.index$date)
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 fwi.origin <- fwi.scaled <-fwi.scaled[which(Y>u),]
-fwi.scaled <- as.data.frame(scale(fwi.scaled))
+
+# fwi.scaled <- as.data.frame(scale(fwi.scaled))
+range01 <- function(x){(x-min(x))/(max(x)-min(x))}
+fwi.scaled <- as.data.frame(sapply(fwi.origin, FUN = range01))
 fwi.scaled.cov <- cov(fwi.scaled)
 fwi.scaled.eigen <- eigen(fwi.scaled.cov)
 phi <- fwi.scaled.eigen$vectors[, 1:7]
-phi <- -phi
-PC1 <- sort(as.matrix(fwi.scaled) %*% phi[,1])
+# phi <- -phi
+centre.fwi <- colMeans(fwi.scaled)
+PC1 <- (as.matrix(fwi.scaled)-(matrix(rep(1, n),nrow=n) %*% matrix(centre.fwi, ncol=p))) %*% phi[,1]
 PVE <- fwi.scaled.eigen$values / sum(fwi.scaled.eigen$values)
-
+dim((as.matrix(fwi.scaled)-(matrix(rep(1, n),nrow=n) %*% matrix(centre.fwi, ncol=p))))
+matrix(rep(1, n),nrow=n) %*% matrix(centre.fwi, ncol=p)
 # plot((fwi.scaled[,2]), (log(y)))
 # plot((fwi.scaled[,5]), (log(y)))
-range01 <- function(x){(x-min(x))/(max(x)-min(x))}
-fwi.scaled <- as.data.frame(sapply(fwi.origin, FUN = range01))
+# range01 <- function(x){(x-min(x))/(max(x)-min(x))}
+# fwi.scaled <- as.data.frame(sapply(fwi.origin, FUN = range01))
 
 # fwi.scaled <- as.data.frame(lapply(fwi.scaled, rescale, to=c(-1,1)))
 
@@ -217,8 +222,8 @@ for(i in 1:p){
   # xholder[,i] <- seq(0, 1, length.out = n)
   # test.knot <- seq(0, 1, length.out = psi)
   # splines <- basis.tps(seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n), test.knot, m=2, rk=FALSE, intercept = TRUE)
-  xholder[,i] <- seq(min(fwi.scaled), max(fwi.scaled), length.out = n)
-  test.knot <- seq(min(fwi.scaled), max(fwi.scaled), length.out = psi)
+  xholder[,i] <- seq(min(PC1), max(PC1), length.out = n)
+  test.knot <- seq(min(PC1), max(PC1), length.out = psi)
   # xholder[,i] <- PC1
   # test.knot <- seq(min(PC1), max(PC1), length.out = psi)  
   splines <- basis.tps(xholder[,i], test.knot, m=2, rk=FALSE, intercept = FALSE)
@@ -307,7 +312,7 @@ model {
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += normal_lpdf(theta[1] | 0, 100);
-    target += gamma_lpdf(lambda1 | 1, 1e-6);
+    target += gamma_lpdf(lambda1 | 1, 1e-3);
     target += gamma_lpdf(lambda2 | 1, 1e-6);
     target += (2*p*log(lambda2));
     for (j in 1:p){
@@ -664,13 +669,19 @@ ggplot(data.scenario, aes(x=x)) +
         axis.title.x = element_text(size = 35))
 
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_alpha.pdf"), width=10, height = 7.78)
+data.scenario <- data.frame("x" = seq(0, 1, length.out = n),
+                            "post.mean" = (alp.x.samples[,3]),
+                            "post.median" = (alpha.samples[,5]),
+                            # "post.median" = sort(exp(rowSums(g.q2) + rep(theta.samples[1,5], n)), decreasing = TRUE),
+                            "q1" = (alpha.samples[,4]),
+                            "q3" = (alpha.samples[,6]))
 
 ggplot(data.scenario,aes(x=x)) + 
   xlab(expression(alpha(bold(x)))) + #ylab(expression(c)) + labs(col = "") +
   geom_histogram(aes(post.median), fill = "purple", binwidth = 0.3, , alpha = 0.5) + 
-  geom_histogram(aes(post.mean), fill = "red", binwidth = 0.3, alpha = 0.4) +
-  geom_histogram(aes(q1), fill = "green", binwidth = 0.3, alpha = 0.1) + 
-  geom_histogram(aes(q3), fill = "black", binwidth = 0.3, alpha = 0.1) + 
+  # geom_histogram(aes(post.mean), fill = "red", binwidth = 0.3, alpha = 0.4) +
+  # geom_histogram(aes(q1), fill = "green", binwidth = 0.3, alpha = 0.1) + 
+  # geom_histogram(aes(q3), fill = "black", binwidth = 0.3, alpha = 0.1) + 
   # scale_y_log10() + 
   # guides(color = guide_legend(order = 2), 
   #         fill = guide_legend(order = 1)) +
