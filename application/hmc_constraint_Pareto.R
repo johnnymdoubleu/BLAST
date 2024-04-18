@@ -98,12 +98,14 @@ fwi.scaled <- as.data.frame(sapply(fwi.origin, FUN = range01))
 fwi.scaled.cov <- cov(fwi.scaled)
 fwi.scaled.eigen <- eigen(fwi.scaled.cov)
 phi <- fwi.scaled.eigen$vectors[, 1:7]
-# phi <- -phi
+phi <- -phi
 centre.fwi <- colMeans(fwi.scaled)
+n <- dim(fwi.scaled)[[1]]
+p <- dim(fwi.scaled)[[2]]
 PC1 <- (as.matrix(fwi.scaled)-(matrix(rep(1, n),nrow=n) %*% matrix(centre.fwi, ncol=p))) %*% phi[,1]
 PVE <- fwi.scaled.eigen$values / sum(fwi.scaled.eigen$values)
-dim((as.matrix(fwi.scaled)-(matrix(rep(1, n),nrow=n) %*% matrix(centre.fwi, ncol=p))))
-matrix(rep(1, n),nrow=n) %*% matrix(centre.fwi, ncol=p)
+# dim((as.matrix(fwi.scaled)-(matrix(rep(1, n),nrow=n) %*% matrix(centre.fwi, ncol=p))))
+# matrix(rep(1, n),nrow=n) %*% matrix(centre.fwi, ncol=p)
 # plot((fwi.scaled[,2]), (log(y)))
 # plot((fwi.scaled[,5]), (log(y)))
 # range01 <- function(x){(x-min(x))/(max(x)-min(x))}
@@ -205,8 +207,7 @@ df.extreme <- as.data.frame(cbind(month = fwi.index$month[which(Y>u)], df.extrem
 # ggsave("./BRSTIR/application/figures/datavis.pdf", width=15)
 
 
-n <- dim(fwi.scaled)[[1]]
-p <- dim(fwi.scaled)[[2]]
+
 no.theta <- 1
 newx <- seq(0, 1, length.out=n)
 xholder.linear <- xholder.nonlinear <- bs.linear <- bs.nonlinear <- matrix(,nrow=n, ncol=0)
@@ -218,12 +219,15 @@ for(i in 1:p){
                       matrix(c(which.min(fwi.scaled[,i]),
                               which.max(fwi.scaled[,i])), ncol=2))
 }
+for(i in 1:n){
+  xholder[i,] <- centre.fwi + seq(min(PC1), max(PC1), length.out = n)[i] %*% phi[,1]
+}
+
 for(i in 1:p){
   # xholder[,i] <- seq(0, 1, length.out = n)
   # test.knot <- seq(0, 1, length.out = psi)
   # splines <- basis.tps(seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n), test.knot, m=2, rk=FALSE, intercept = TRUE)
-  xholder[,i] <- seq(min(PC1), max(PC1), length.out = n)
-  test.knot <- seq(min(PC1), max(PC1), length.out = psi)
+  test.knot <- seq(min(xholder[,i]), max(xholder[,i]), length.out = psi)
   # xholder[,i] <- PC1
   # test.knot <- seq(min(PC1), max(PC1), length.out = psi)  
   splines <- basis.tps(xholder[,i], test.knot, m=2, rk=FALSE, intercept = FALSE)
@@ -268,12 +272,14 @@ parameters {
     vector[(psi-2)] gammaTemp[p]; // constraint splines coefficient from 2 to psi-1
     real <lower=0> lambda1; // lasso penalty
     real <lower=0> lambda2; // group lasso penalty
-    array[p] real <lower=0> tau;
+    array[p] real <lower=0> tau1;
+    array[p] real <lower=0> tau2;
 }
 transformed parameters {
     array[n] real <lower=0> alpha; // covariate-adjusted tail index
     vector[psi] gamma[p]; // splines coefficient 
     vector[2] gammaFL[p];
+    real <lower=0> lambda2o;
     matrix[2, p] subgnl;
     matrix[n, p] gnl; // nonlinear component
     matrix[n, p] gl; // linear component
@@ -283,9 +289,10 @@ transformed parameters {
     matrix[n, p] newgl; // linear component
     matrix[n, p] newgsmooth; // linear component
 
+    lambda2o=lambda2*100;
     for(j in 1:p){
-        gamma[j][2:(psi-1)] = gammaTemp[j][1:(psi-2)];
-        subgnl[,j] = bsNonlinear[indexFL[(((j-1)*2)+1):(((j-1)*2)+2)], (((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] * gammaTemp[j];
+        gamma[j][2:(psi-1)] = gammaTemp[j][1:(psi-2)]*100;
+        subgnl[,j] = bsNonlinear[indexFL[(((j-1)*2)+1):(((j-1)*2)+2)], (((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] * gammaTemp[j]*100;
         gammaFL[j] = basisFL[, (((j-1)*2)+1):(((j-1)*2)+2)] * subgnl[,j] * (-1);
         gamma[j][1] = gammaFL[j][1];
         gamma[j][psi] = gammaFL[j][2];  
@@ -313,12 +320,13 @@ model {
     }
     target += normal_lpdf(theta[1] | 0, 100);
     target += gamma_lpdf(lambda1 | 1, 1e-3);
-    target += gamma_lpdf(lambda2 | 1, 1e-6);
-    target += (2*p*log(lambda2));
+    target += gamma_lpdf(lambda2o | 1, 1e-3);
+    target += (2*p*log(lambda2o));
     for (j in 1:p){
-        target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
-        target += gamma_lpdf(tau[j] | atau, lambda2^2*0.5);
-        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * (1/tau[j]));
+        target += gamma_lpdf(tau1[j] | 1, lambda1^2*0.5);
+        target += normal_lpdf(theta[(j+1)] | 0, sqrt(1/tau1[j]));
+        target += gamma_lpdf(tau2[j] | atau, lambda2o^2*0.5);
+        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * (1/tau2[j]));
     }
 }
 generated quantities {
@@ -344,13 +352,16 @@ set_cmdstan_path(path = NULL)
 file <- file.path(cmdstan_path(), "model.stan")
 
 init.alpha <- list(list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c((psi-2),p)),
-                        theta = rep(0, (p+1)), tau = rep(0.1, p),
+                        theta = rep(0, (p+1)), 
+                        tau1 = rep(0.1, p),tau2 = rep(0.1, p),
                         lambda1 = 0.1, lambda2 = 1),
                    list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c((psi-2),p)),
-                        theta = rep(0, (p+1)), tau = rep(0.001, p),
+                        theta = rep(0, (p+1)), 
+                        tau1 = rep(0.001, p),tau2 = rep(0.001, p),
                         lambda1 = 100, lambda2 = 100),
                    list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c((psi-2),p)),
-                        theta = rep(0.1, (p+1)), tau = rep(0.5, p),
+                        theta = rep(0.1, (p+1)), 
+                        tau1 = rep(0.5, p),tau2 = rep(0.5, p),
                         lambda1 = 5, lambda2 = 55))
 
 # stanc("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/application/model1.stan")
@@ -636,7 +647,7 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
           axis.text = element_text(size = 20))
 # #ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_nonlinear.pdf"), width=12.5, height = 15)
 
-data.scenario <- data.frame("x" = seq(0, 1, length.out = n),
+data.scenario <- data.frame("x" = seq(min(PC1), max(PC1), length.out = n),
                             "post.mean" = (alpha.samples[,1]),
                             "post.median" = (alpha.samples[,5]),
                             # "post.median" = sort(exp(rowSums(g.q2) + rep(theta.samples[1,5], n)), decreasing = TRUE),
@@ -669,30 +680,30 @@ ggplot(data.scenario, aes(x=x)) +
         axis.title.x = element_text(size = 35))
 
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_alpha.pdf"), width=10, height = 7.78)
-data.scenario <- data.frame("x" = seq(0, 1, length.out = n),
-                            "post.mean" = (alp.x.samples[,3]),
-                            "post.median" = (alpha.samples[,5]),
-                            # "post.median" = sort(exp(rowSums(g.q2) + rep(theta.samples[1,5], n)), decreasing = TRUE),
-                            "q1" = (alpha.samples[,4]),
-                            "q3" = (alpha.samples[,6]))
+# data.scenario <- data.frame("x" = seq(0, 1, length.out = n),
+#                             "post.mean" = (alp.x.samples[,3]),
+#                             "post.median" = (alpha.samples[,5]),
+#                             # "post.median" = sort(exp(rowSums(g.q2) + rep(theta.samples[1,5], n)), decreasing = TRUE),
+#                             "q1" = (alpha.samples[,4]),
+#                             "q3" = (alpha.samples[,6]))
 
-ggplot(data.scenario,aes(x=x)) + 
-  xlab(expression(alpha(bold(x)))) + #ylab(expression(c)) + labs(col = "") +
-  geom_histogram(aes(post.median), fill = "purple", binwidth = 0.3, , alpha = 0.5) + 
-  # geom_histogram(aes(post.mean), fill = "red", binwidth = 0.3, alpha = 0.4) +
-  # geom_histogram(aes(q1), fill = "green", binwidth = 0.3, alpha = 0.1) + 
-  # geom_histogram(aes(q3), fill = "black", binwidth = 0.3, alpha = 0.1) + 
-  # scale_y_log10() + 
-  # guides(color = guide_legend(order = 2), 
-  #         fill = guide_legend(order = 1)) +
-  scale_fill_brewer(palette="Pastel1") +
-  theme_minimal(base_size = 30) +
-  theme(legend.position="bottom", 
-        legend.key.size = unit(1, 'cm'),
-        legend.text = element_text(size=20),
-        # plot.margin = margin(0,0,0,-1),
-        strip.text = element_blank(),
-        axis.title.x = element_text(size = 35))
+# ggplot(data.scenario,aes(x=x)) + 
+#   xlab(expression(alpha(bold(x)))) + #ylab(expression(c)) + labs(col = "") +
+#   geom_histogram(aes(post.median), fill = "purple", binwidth = 0.3, , alpha = 0.5) + 
+#   # geom_histogram(aes(post.mean), fill = "red", binwidth = 0.3, alpha = 0.4) +
+#   # geom_histogram(aes(q1), fill = "green", binwidth = 0.3, alpha = 0.1) + 
+#   # geom_histogram(aes(q3), fill = "black", binwidth = 0.3, alpha = 0.1) + 
+#   # scale_y_log10() + 
+#   # guides(color = guide_legend(order = 2), 
+#   #         fill = guide_legend(order = 1)) +
+#   scale_fill_brewer(palette="Pastel1") +
+#   theme_minimal(base_size = 30) +
+#   theme(legend.position="bottom", 
+#         legend.key.size = unit(1, 'cm'),
+#         legend.text = element_text(size=20),
+#         # plot.margin = margin(0,0,0,-1),
+#         strip.text = element_blank(),
+#         axis.title.x = element_text(size = 35))
 
 len <- dim(posterior$alpha)[1]
 r <- matrix(, nrow = n, ncol = 100)
@@ -701,8 +712,8 @@ T <- 100
 for(i in 1:n){
   for(t in 1:T){
     # r[i, t] <- qnorm(pPareto(y[i], u, alpha = alp.x.samples[i,5]))
-    r[i, t] <- qnorm(pPareto(y[i], u, alpha = posterior$alpha[round(runif(1,1,len)),i]))
-    # r[i, t] <- qnorm(pPareto(y[i], u, alpha = posterior$newalpha[round(runif(1,1,len)),i]))
+    # r[i, t] <- qnorm(pPareto(y[i], u, alpha = posterior$alpha[round(runif(1,1,len)),i]))
+    r[i, t] <- qnorm(pPareto(y[i], u, alpha = posterior$newalpha[round(runif(1,1,len)),i]))
   }
 }
 lgrid <- n
@@ -729,7 +740,7 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
   theme_minimal(base_size = 20) +
   theme(axis.text = element_text(size = 30),
         axis.title = element_text(size = 30)) + 
-  coord_fixed(xlim = c(-3, 3),  
+  coord_fixed(xlim = c(-3, 3),
               ylim = c(-3, 3))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_qqplot.pdf"), width=10, height = 7.78)
              
@@ -748,7 +759,7 @@ cat("Finished Running")
 
 grid.plts <- list()
 for(i in 1:p){
-  grid.plt <- ggplot(data = data.frame(data.smooth[((((i-1)*n)+1):(i*n)),], origin = fwi.scaled[,i]), aes(x=x)) + 
+  grid.plt <- ggplot(data = data.frame(data.smooth[((((i-1)*n)+1):(i*n)),], origin = fwi.scaled[,i], c = seq(min(PC1), max(PC1), length.out = n)), aes(x=c)) + 
   # grid.plt <- ggplot(data = data.frame(data.smooth[((((i-1)*n)+1):(i*n)),], origin = fwi.index[which(Y>u),i]), aes(x=x)) +   
                   # geom_point(aes(x= origin, y=q2), alpha = 0.3) + 
                   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
