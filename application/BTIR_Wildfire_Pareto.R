@@ -181,10 +181,9 @@ parameters {
 }
 
 transformed parameters {
-    array[n] real <lower=0, upper = 6.5> alpha; // tail index
-    array[n] real <lower=0, upper=6.5> newalpha; // new tail index
+    array[n] real <lower=0> alpha; // tail index
+    array[n] real <lower=0> newalpha; // new tail index
     matrix[n, p] gl; // linear component
-    matrix[n, p] newgnl; // nonlinear component
     matrix[n, p] newgl; // linear component
     matrix[n, p] newgsmooth; // smooth function    
     for (j in 1:p){
@@ -204,7 +203,7 @@ model {
     }
     target += normal_lpdf(theta[1] | 0, 100);
     for (j in 1:p){
-        target += normal_lpdf(theta[(j+1)] | 0, 1);
+        target += normal_lpdf(theta[(j+1)] | 0, 100);
     }
 }
 generated quantities {
@@ -361,7 +360,7 @@ ggplot(data.scenario, aes(x=x)) +
   geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values = c("steelblue")) + 
-  scale_y_log10() + 
+  # scale_y_log10() + 
   guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) +
   theme_minimal(base_size = 30) +

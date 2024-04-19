@@ -25,20 +25,15 @@ C <- diag(p)
 ## Generate sample
 gamma.origin <- matrix(, nrow = psi, ncol = p)
 for(j in 1:p){
-    for (ps in 1:psi){
-        if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
-        else if(j==7){
-            if(ps <= (psi/2)){gamma.origin[ps, j] <- -0.1}
-            else{gamma.origin[ps, j] <- -0.1}
-        }
-        else {
-            if(ps <= (psi/2)){gamma.origin[ps, j] <- -0.1}
-            else{gamma.origin[ps, j] <- -0.1}
-        }
+  for (ps in 1:psi){
+    if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
+    else {
+      if(ps == 1 || ps == psi){gamma.origin[ps, j] <- 0}
+      else{gamma.origin[ps, j] <- -25}
     }
+  }
 }
-
-theta.origin <- c(0.5, 0, -0.2, -0.2, 0, 0)
+theta.origin <- c(-0.5, -0.5, 0, -0.5, 0, 0)
 
 write("// Stan model for BRSTIR Student-t Uncorrelated Samples
 

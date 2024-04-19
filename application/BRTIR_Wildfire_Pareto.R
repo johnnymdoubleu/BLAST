@@ -212,8 +212,8 @@ parameters {
 }
 
 transformed parameters {
-    array[n] real <lower=0, upper = 5> alpha; // tail index
-    array[n] real <lower=0, upper = 5> newalpha; // new tail index
+    array[n] real <lower=0> alpha; // tail index
+    array[n] real <lower=0> newalpha; // new tail index
     matrix[n, p] gl; // linear component
     matrix[n, p] newgnl; // nonlinear component
     matrix[n, p] newgl; // linear component
@@ -233,7 +233,7 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 1, 1e-3);
+    target += gamma_lpdf(lambda1 | 1, 1e-2);
     target += normal_lpdf(theta[1] | 0, 100);
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);

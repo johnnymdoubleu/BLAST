@@ -46,8 +46,8 @@ df.long[which(is.na(df.long$...1))+1,]
 Y <- df.long$measurement[!is.na(df.long$measurement)]
 summary(Y) #total burnt area
 length(Y)
-psi <- 20
-threshold <- 0.95
+psi <- 5
+threshold <- 0.99
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
 # x.scale <- x.scale[which(y>quantile(y, threshold)),]
@@ -84,7 +84,7 @@ for(i in 1:length(cov)){
     fwi.index[,i] <- cov.long$measurement[missing.values]
     fwi.scaled[,i] <- cov.long$measurement[missing.values]
 }
-# fwi.index$date <- 
+
 fwi.index$date <- substr(cov.long$...1[missing.values],9,10)
 fwi.index$month <- factor(format(as.Date(substr(cov.long$...1[missing.values],1,10), "%Y-%m-%d"),"%b"),
                             levels = c("Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"))
@@ -95,15 +95,17 @@ fwi.origin <- fwi.scaled <-fwi.scaled[which(Y>u),]
 # fwi.scaled <- as.data.frame(scale(fwi.scaled))
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 fwi.scaled <- as.data.frame(sapply(fwi.origin, FUN = range01))
-fwi.scaled.cov <- cov(fwi.scaled)
-fwi.scaled.eigen <- eigen(fwi.scaled.cov)
-phi <- fwi.scaled.eigen$vectors[, 1:7]
-phi <- -phi
-centre.fwi <- colMeans(fwi.scaled)
 n <- dim(fwi.scaled)[[1]]
 p <- dim(fwi.scaled)[[2]]
-PC1 <- (as.matrix(fwi.scaled)-(matrix(rep(1, n),nrow=n) %*% matrix(centre.fwi, ncol=p))) %*% phi[,1]
-PVE <- fwi.scaled.eigen$values / sum(fwi.scaled.eigen$values)
+
+# fwi.scaled.cov <- cov(fwi.scaled)
+# fwi.scaled.eigen <- eigen(fwi.scaled.cov)
+# phi <- fwi.scaled.eigen$vectors[, 1:7]
+# phi <- -phi
+# centre.fwi <- colMeans(fwi.scaled)
+
+# PC1 <- (as.matrix(fwi.scaled)-(matrix(rep(1, n),nrow=n) %*% matrix(centre.fwi, ncol=p))) %*% phi[,1]
+# PVE <- fwi.scaled.eigen$values / sum(fwi.scaled.eigen$values)
 # dim((as.matrix(fwi.scaled)-(matrix(rep(1, n),nrow=n) %*% matrix(centre.fwi, ncol=p))))
 # matrix(rep(1, n),nrow=n) %*% matrix(centre.fwi, ncol=p)
 # plot((fwi.scaled[,2]), (log(y)))
@@ -219,17 +221,14 @@ for(i in 1:p){
                       matrix(c(which.min(fwi.scaled[,i]),
                               which.max(fwi.scaled[,i])), ncol=2))
 }
-for(i in 1:n){
-  xholder[i,] <- centre.fwi + seq(min(PC1), max(PC1), length.out = n)[i] %*% phi[,1]
-}
+# for(i in 1:n){
+#   xholder[i,] <- centre.fwi + seq(min(PC1), max(PC1), length.out = n)[i] %*% phi[,1]
+# }
 
 for(i in 1:p){
-  # xholder[,i] <- seq(0, 1, length.out = n)
-  # test.knot <- seq(0, 1, length.out = psi)
-  # splines <- basis.tps(seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n), test.knot, m=2, rk=FALSE, intercept = TRUE)
-  test.knot <- seq(min(xholder[,i]), max(xholder[,i]), length.out = psi)
-  # xholder[,i] <- PC1
-  # test.knot <- seq(min(PC1), max(PC1), length.out = psi)  
+  # test.knot <- seq(min(xholder[,i]), max(xholder[,i]), length.out = psi)
+  xholder[,i] <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n)
+  test.knot <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)  
   splines <- basis.tps(xholder[,i], test.knot, m=2, rk=FALSE, intercept = FALSE)
   xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
   xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
@@ -319,8 +318,8 @@ model {
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += normal_lpdf(theta[1] | 0, 100);
-    target += gamma_lpdf(lambda1 | 1, 1e-3);
-    target += gamma_lpdf(lambda2o | 1, 1e-3);
+    target += gamma_lpdf(lambda1 | 1, 1e-2);
+    target += gamma_lpdf(lambda2o | 1, 1e-2);
     target += (2*p*log(lambda2o));
     for (j in 1:p){
         target += gamma_lpdf(tau1[j] | 1, lambda1^2*0.5);
@@ -354,15 +353,15 @@ file <- file.path(cmdstan_path(), "model.stan")
 init.alpha <- list(list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c((psi-2),p)),
                         theta = rep(0, (p+1)), 
                         tau1 = rep(0.1, p),tau2 = rep(0.1, p),
-                        lambda1 = 0.1, lambda2 = 1),
+                        lambda1 = 0.1, lambda2 = 0.01),
                    list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c((psi-2),p)),
                         theta = rep(0, (p+1)), 
                         tau1 = rep(0.001, p),tau2 = rep(0.001, p),
-                        lambda1 = 100, lambda2 = 100),
+                        lambda1 = 100, lambda2 = 1),
                    list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c((psi-2),p)),
                         theta = rep(0.1, (p+1)), 
                         tau1 = rep(0.5, p),tau2 = rep(0.5, p),
-                        lambda1 = 5, lambda2 = 55))
+                        lambda1 = 5, lambda2 = 5.5))
 
 # stanc("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/application/model1.stan")
 fit1 <- stan(
@@ -647,7 +646,8 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
           axis.text = element_text(size = 20))
 # #ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_nonlinear.pdf"), width=12.5, height = 15)
 
-data.scenario <- data.frame("x" = seq(min(PC1), max(PC1), length.out = n),
+data.scenario <- data.frame("x" = newx,
+                            # "x" = seq(min(PC1), max(PC1), length.out = n),
                             "post.mean" = (alpha.samples[,1]),
                             "post.median" = (alpha.samples[,5]),
                             # "post.median" = sort(exp(rowSums(g.q2) + rep(theta.samples[1,5], n)), decreasing = TRUE),
@@ -759,7 +759,9 @@ cat("Finished Running")
 
 grid.plts <- list()
 for(i in 1:p){
-  grid.plt <- ggplot(data = data.frame(data.smooth[((((i-1)*n)+1):(i*n)),], origin = fwi.scaled[,i], c = seq(min(PC1), max(PC1), length.out = n)), aes(x=x)) + 
+  grid.plt <- ggplot(data = data.frame(data.smooth[((((i-1)*n)+1):(i*n)),], origin = fwi.scaled[,i] 
+                  # c = seq(min(PC1), max(PC1), length.out = n)
+                  ), aes(x=x)) + 
   # grid.plt <- ggplot(data = data.frame(data.smooth[((((i-1)*n)+1):(i*n)),], origin = fwi.index[which(Y>u),i]), aes(x=x)) +   
                   # geom_point(aes(x= origin, y=q2), alpha = 0.3) + 
                   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
@@ -874,6 +876,7 @@ print(plt + geom_area(data = subset(d, x>12.44009), aes(x=x,y=y), fill = "slateg
 # gpd.fit(y, u)
 
 fit.log.lik <- extract_log_lik(fit1)
+loo(fit.log.lik, is_method = "sis", cores = 2)
 fwi.loo <- loo(fit.log.lik, cores = 2)
 plot(fwi.loo, label_points = TRUE)
 
@@ -881,6 +884,6 @@ constraint.elpd.loo <- loo(fit.log.lik, is_method = "sis", cores = 2)
 constraint.waic <- waic(fit.log.lik, cores = 2)
 # save(constraint.elpd.loo, constraint.waic, file = (paste0("./BRSTIR/application/BRSTIR_constraint_",Sys.Date(),"_",floor(threshold*100),"quantile_IC.Rdata")))
 
-loo(fit.log.lik)
+
 
 
