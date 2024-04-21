@@ -538,8 +538,8 @@ print(plt +
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_qqplot_scD_",n.origin,".pdf"), width=9.5, height = 7.78)
 
 # save(alpha.container, newgsmooth.container, mise.container, qqplot.container, file = (paste0("./simulation/results/MC-Scenario_D/",Sys.Date(),"_",total.iter,"_MC_scD_",n.origin,".Rdata")))
-total.iter <- 250
-load(paste0("./simulation/results/MC-Scenario_D/2024-04-17_",total.iter,"_MC_scD_",n.origin,".Rdata"))
+total.iter <- 500
+load(paste0("./simulation/results/MC-Scenario_D/2024-04-21_",total.iter,"_MC_scD_",n.origin,".Rdata"))
 
 # alpha.container.comb <- alpha.container[,1:100]
 # newgsmooth.container.comb <- newgsmooth.container[,1:100]
@@ -560,3 +560,5 @@ alpha.container <- alpha.container[,1:total.iter]
 newgsmooth.container <- newgsmooth.container[,1:total.iter]
 mise.container <- mise.container[1:total.iter]
 qqplot.container <- qqplot.container[,1:total.iter]
+
+mean(mise.container)
