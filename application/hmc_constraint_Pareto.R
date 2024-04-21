@@ -118,24 +118,24 @@ p <- dim(fwi.scaled)[[2]]
 # ---------------------------------------------------------------------------
 # Computing Hills Estimator plot
 # orderred <- rev(sort(Y)[14462:14609])
-# orderred <- rev(sort(Y)[13863:14609])
-# ordered <- rev(sort(Y))
+# # orderred <- rev(sort(Y)[13863:14609])
+# # ordered <- rev(sort(Y))
 # n.hill <- length(orderred)
 # k <- 1:n.hill
 # loggs <- logb(orderred/u)
 # avesumlog <- cumsum(loggs)/k
-# # xihat <- c(NA, (avesumlog)[2:n.hill])
+# xihat <- c(NA, (avesumlog)[2:n.hill])
 # xihat <- c(NA, (avesumlog-loggs)[2:n.hill])
 # alphahat <- 1/xihat
 # ses <- alphahat/sqrt(k)
 # xx <- trunc(seq(from = n.hill, to = 15))
 # y.alpha <- alphahat[xx]
-# # ylabel <- alphahat
+# ## ylabel <- alphahat
 # yrange <- range(y.alpha)
 # qq <- qnorm(1-(1-threshold)/2)
 # uu <- y.alpha + ses[xx] * qq
 # ll <- y.alpha - ses[xx] * qq
-# yrange <- range(u, l)
+# ## yrange <- range(uu, ll)
 # data.hill <- data.frame(k = c(15:n.hill),
 #                         u = uu,
 #                         l = ll,
@@ -371,7 +371,7 @@ fit1 <- stan(
     # init_r = 1,
     chains = 3,             # number of Markov chains
     # warmup = 1000,          # number of warmup iterations per chain
-    iter = 2000,            # total number of iterations per chain
+    iter = 5000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
     refresh = 500           # no progress shown
 )
@@ -771,7 +771,7 @@ for(i in 1:p){
                   ylab("") + xlab(names(fwi.scaled)[i]) +
                   scale_fill_manual(values=c("steelblue"), name = "") + 
                   scale_color_manual(values=c("steelblue")) +
-                  ylim(-3, 2) +
+                  ylim(-3, 3) +
                   # scale_y_continuous(breaks=equal_breaks(n=5, s=0.1)) + 
                   theme_minimal(base_size = 30) +
                   theme(legend.position = "none",
@@ -782,8 +782,8 @@ for(i in 1:p){
 }
 
 grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
-# grid.plts[[7]]
-# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=10, height = 7.78)
+grid.plts[[7]]
+ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=10, height = 7.78)
 
 # Testing accuracy of estimated alpha(x)
 # data.alpha <- data.frame(type=c(rep("Median", n), rep("Interval.Diff", n)),
