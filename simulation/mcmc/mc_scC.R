@@ -8,7 +8,7 @@ library(MESS)
 
 total.iter <- 250
 
-n <- n.origin <- 5000
+n <- n.origin <- 15000
 psi <- 10
 threshold <- 0.95
 p <- 5
@@ -123,25 +123,45 @@ qqplot.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = tota
 for(iter in 1:total.iter){
     n <- n.origin
     x.origin <- pnorm(matrix(rnorm(n*p), ncol = p) %*% chol(C))
+    
+    end.holder <- basis.holder <- matrix(, nrow = 2, ncol =0)
+    index.holder <- matrix(, nrow = 0, ncol = 2)
+    for(i in 1:p){
+      index.holder <- rbind(index.holder, 
+                            matrix(c(which.min(x.origin[,i]),
+                                      which.max(x.origin[,i])), ncol=2))
+    }
     xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
     for(i in 1:p){
-        knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)
-        tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
-        bs.linear <- cbind(bs.linear, tps[,1:no.theta])
-        bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])
+      knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)
+      tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
+      bs.linear <- cbind(bs.linear, tps[,1:no.theta])
+      bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])
+      basis.holder <- cbind(basis.holder, 
+                            solve(t(matrix(c(tps[index.holder[i,1], no.theta+1],
+                                              tps[index.holder[i,1], no.theta+psi],
+                                              tps[index.holder[i,2], no.theta+1],
+                                              tps[index.holder[i,2], no.theta+psi]), 
+                                            nrow = 2, ncol = 2))))
     }
-   
-    f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
+    g.sub.origin <- matrix(, nrow = 2, ncol = p)
     for(j in 1:p){
-        f.linear.origin[,j] <- bs.linear[, j] * theta.origin[j+1]
-        f.nonlinear.origin[,j] <- bs.nonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
-        f.origin[, j] <- f.linear.origin[,j] + f.nonlinear.origin[,j]
+      g.sub.origin[,j] <- as.matrix(bs.nonlinear[index.holder[j,], (((j-1)*psi)+2):(((j-1)*psi)+(psi-1))], nrow = 2) %*% gamma.origin[(2:(psi-1)), j]
+      gamma.origin[c(1,psi),j] <- -1 * basis.holder[,(((j-1)*2)+1):(((j-1)*2)+2)] %*% as.matrix(g.sub.origin[,j], nrow=2)
+    }
+    
+    g.nonlinear.origin <- g.linear.origin <- g.origin <- matrix(, nrow = n, ncol = p)
+    for(j in 1:p){
+        g.linear.origin[,j] <- bs.linear[, j] * theta.origin[j+1]
+        g.nonlinear.origin[,j] <- bs.nonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
+        g.origin[, j] <- g.linear.origin[,j] + g.nonlinear.origin[,j]
     }
 
     alp.origin <- y.origin <- NULL
+
     for(i in 1:n){
-        alp.origin[i] <- exp(theta.origin[1] + sum(f.origin[i,]))
-        y.origin[i] <- rt(1, df = alp.origin[i])
+      alp.origin[i] <- exp(theta.origin[1] + sum(g.origin[i,]))
+      y.origin[i] <- rt(1, df = alp.origin[i])
     }
 
     u <- quantile(y.origin, threshold)
@@ -152,72 +172,97 @@ for(iter in 1:total.iter){
     xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
     newx <- seq(0, 1, length.out=n)
     xholder <- bs.x <- matrix(, nrow = n, ncol = p)
+    end.holder <- basis.holder <- matrix(, nrow = 2, ncol =0)
+    index.holder <- matrix(, nrow = 0, ncol = 2)
     for(i in 1:p){
-        xholder[,i] <- seq(0, 1, length.out = n)  
-        test.knot <- seq(0, 1, length.out = psi)
-        splines <- basis.tps(xholder[,i], test.knot, m=2, rk=FALSE, intercept = FALSE)
-        xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
-        xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
-        knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)  
-        tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
-        bs.linear <- cbind(bs.linear, tps[,1:no.theta])
-        bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)]) 
+      index.holder <- rbind(index.holder, 
+                            matrix(c(which.min(x.origin[,i]),
+                                      which.max(x.origin[,i])), ncol=2))
+    }
+    for(i in 1:p){
+      xholder[,i] <- seq(0, 1, length.out = n)  
+      test.knot <- seq(0, 1, length.out = psi)
+      splines <- basis.tps(xholder[,i], test.knot, m=2, rk=FALSE, intercept = FALSE)
+      xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
+      xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
+      knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)  
+      tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
+      basis.holder <- cbind(basis.holder, 
+                            solve(t(matrix(c(tps[index.holder[i,1], no.theta+1],
+                                              tps[index.holder[i,1], no.theta+psi],
+                                              tps[index.holder[i,2], no.theta+1],
+                                              tps[index.holder[i,2], no.theta+psi]), 
+                                            nrow = 2, ncol = 2))))
+      bs.linear <- cbind(bs.linear, tps[,1:no.theta])
+      bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)]) 
     }
 
-    f.nonlinear.new <- f.linear.new <- f.new <- f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
+    g.nonlinear.new <- g.linear.new <- g.new <- g.nonlinear.origin <- g.linear.origin <- g.origin <- matrix(, nrow = n, ncol = p)
     for(j in 1:p){
-        # f.linear.origin[,j] <- bs.linear[, j] * theta.origin[j+1]
-        # f.nonlinear.origin[,j] <- bs.nonlinear[1:n,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
-        # f.origin[, j] <- f.linear.origin[,j] + f.nonlinear.origin[,j]
-        f.linear.new[,j] <- xholder.linear[, j] * theta.origin[j+1]
-        f.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
-        f.new[,j] <- f.linear.new[,j] + f.nonlinear.new[,j]
+        g.linear.origin[,j] <- bs.linear[, j] * theta.origin[j+1]
+        g.nonlinear.origin[,j] <- bs.nonlinear[1:n,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
+        g.origin[, j] <- g.linear.origin[,j] + g.nonlinear.origin[,j]
+        g.linear.new[,j] <- xholder.linear[, j] * theta.origin[j+1]
+        g.nonlinear.new[,j] <- xholder.nonlinear[, (((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
+        g.new[,j] <- g.linear.new[,j] + g.nonlinear.new[,j]
     }
 
     true.alpha <- alp.new <- alp.origin <- NULL
     for(i in 1:n){
-        # alp.origin[i] <- exp(theta.origin[1] + sum(f.origin[i,]))
-        alp.new[i] <- exp(theta.origin[1] + sum(f.new[i,]))
-    }
-
+      alp.origin[i] <- exp(theta.origin[1] + sum(g.origin[i,]))
+      alp.new[i] <- exp(theta.origin[1] + sum(g.new[i,]))
+    }     
     data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, 
-                        atau = ((psi+1)/2), trueAlpha = alp.new,
-                        bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
-                        xholderLinear = xholder.linear, 
-                        xholderNonlinear = xholder.nonlinear)
-
-    init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
-                            theta = rep(0, (p+1)), 
-                            tau = rep(0.1, p), sigma = 0.1, 
-                            lambda1 = 0.1, lambda2 = 0.1),
-                      list(gamma = array(rep(0.02, (psi*p)), dim=c(psi, p)),
-                            theta = rep(0.01, (p+1)), 
-                            tau = rep(0.01, p), sigma = 0.001,
-                            lambda1 = 0.01, lambda2 = 0.1),
-                      list(gamma = array(rep(0.01, (psi*p)), dim=c(psi, p)),
-                            theta = rep(0.05, (p+1)), 
-                            tau = rep(0.01, p), sigma = 0.01,
-                            lambda1 = 0.1, lambda2 = 0.01))
-
+                      atau = ((psi+1)/2), basisFL = basis.holder,
+                      indexFL = as.vector(t(index.holder)), trueAlpha = alp.new,
+                      bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
+                      xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear)
+    
+    init.alpha <- list(list(gammaTemp = array(rep(2, ((psi-2)*p)), dim=c(p,(psi-2))),
+                            theta = rep(0, (p+1)), tau1 = rep(0.1, p),tau2 = rep(0.1, p),
+                            lambda1 = 0.1, lambda2 = 1),
+                        list(gammaTemp = array(rep(-1, ((psi-2)*p)), dim=c(p,(psi-2))),
+                            theta = rep(0, (p+1)), tau1 = rep(0.001, p), tau2=rep(0.001, p),
+                            lambda1 = 100, lambda2 = 100),
+                        list(gammaTemp = array(rep(-3, ((psi-2)*p)), dim=c(p,(psi-2))),
+                            theta = rep(0.1, (p+1)), tau1 = rep(0.5, p),tau2 = rep(0.5, p),
+                            lambda1 = 5, lambda2 = 55))
+      
     fit1 <- stan(
-        file = "model_simulation_scC.stan",  # Stan program
+        file = "model_simulation_scA.stan",  # Stan program
         data = data.stan,    # named list of data
         init = init.alpha,      # initial value
         chains = 3,             # number of Markov chains
-        warmup = 1000,          # number of warmup iterations per chain
+        # warmup = 1000,          # number of warmup iterations per chain
         iter = 2000,            # total number of iterations per chain
-        cores = 4,              # number of cores (could use one per chain)
+        cores = parallel::detectCores(), # number of cores (could use one per chain)
         refresh = 500             # no progress shown
     )
 
     # theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
     # gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
-    lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
+    # lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
     # newgl.samples <- summary(fit1, par=c("newgl"), probs = c(0.05, 0.5, 0.95))$summary
     # newgnl.samples <- summary(fit1, par=c("newgnl"), probs = c(0.05, 0.5, 0.95))$summary
     newgsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
     newalpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
-    se.samples <- summary(fit1, par=c("se"), probs = c(0.05,0.5, 0.95))$summary   
+    se.samples <- summary(fit1, par=c("se"), probs = c(0.05,0.5, 0.95))$summary
+
+    alpha.lower.container[,iter] <- (newalpha.samples[,4])
+    alpha.container[,iter] <- (newalpha.samples[,5])
+    alpha.upper.container[,iter] <- (newalpha.samples[,6])
+    # true.container[,iter] <- alp.origin
+    # median.container[,iter] <- median.samples[,5]
+    # theta.container[,iter] <- theta.samples[,5]
+    # gamma.container[,iter] <- gamma.samples[,5]
+    # newgl.container[,iter] <- as.vector(matrix(newgl.samples[,5], nrow = n, byrow=TRUE))
+    # newgnl.container[,iter] <- as.vector(matrix(newgnl.samples[,5], nrow = n, byrow=TRUE))
+    newgsmooth.container[,iter] <- as.vector(matrix(newgsmooth.samples[,5], nrow = n, byrow=TRUE))
+    # mcmc.se <- extract(fit1)$se
+    # temp.se <- c()
+    # for(i in 1:dim(mcmc.se)[1]){
+    #     temp.se[i] <- auc(newx, as.vector(mcmc.se[i,]), type="spline")
+    # }
     mise.container[iter] <- auc(newx, se.samples[,5], type="spline")
 
     mcmc.alpha <- extract(fit1)$alpha
@@ -235,16 +280,10 @@ for(iter in 1:total.iter){
         traj[t, ] <- quantile(r[, t], ppoints(lgrid), type = 2)
     }
     qqplot.container[iter] <- apply(traj, 2, quantile, prob = 0.5)
-    alpha.lower.container[,iter] <- (newalpha.samples[,4])
-    alpha.container[,iter] <- (newalpha.samples[,5])
-    alpha.upper.container[,iter] <- (newalpha.samples[,6])
-    # theta.container[,iter] <- theta.samples[,5]
-    # gamma.container[,iter] <- gamma.samples[,5]
-    # newgl.container[,iter] <- as.vector(matrix(newgl.samples[,5], nrow = n, byrow=TRUE))
-    # newgnl.container[,iter] <- as.vector(matrix(newgnl.samples[,5], nrow = n, byrow=TRUE))
-    newgsmooth.container[,iter] <- as.vector(matrix(newgsmooth.samples[,5], nrow = n, byrow=TRUE))
 }
 
+# total.iter <- 500
+# colnames(alpha.container)[1:total.iter] <- as.character(1:total.iter)
 alpha.container$x <- seq(0,1, length.out = n)
 alpha.container$true <- (alp.new)
 alpha.container <- cbind(alpha.container, t(apply(alpha.container[,1:total.iter], 1, quantile, c(0.05, .5, .95))))
@@ -280,7 +319,7 @@ print(plt +
                 axis.text.y = element_blank(),
                 axis.text.x = element_text(size = 18)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_sc3-wi.pdf"), width=9.5, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_scC_",n.origin,".pdf"), width=9.5, height = 7.78)
 
 
 # resg <- gather(theta.container,
@@ -366,9 +405,9 @@ equal_breaks <- function(n = 3, s = 0.1,...){
     round(seq, -floor(log10(abs(seq[2]-seq[1]))))
   }
 }
-
+# colnames(newgsmooth.container)[1:total.iter] <- as.character(1:total.iter)
 newgsmooth.container$x <- seq(0,1, length.out = n)
-newgsmooth.container$true <- as.vector(f.new)
+newgsmooth.container$true <- as.vector(g.new)
 newgsmooth.container <- cbind(newgsmooth.container, t(apply(newgsmooth.container[,1:total.iter], 1, quantile, c(0.05, .5, .95))))
 colnames(newgsmooth.container)[(dim(newgsmooth.container)[2]-2):(dim(newgsmooth.container)[2])] <- c("q1","q2","q3")
 newgsmooth.container$mean <- rowMeans(newgsmooth.container[,1:total.iter])
@@ -390,7 +429,7 @@ if(total.iter <= 50){
 print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
         geom_line(aes(y=true, col = "True"), linewidth = 2) + 
         geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5, linetype = 2) + 
-        ylim(-0.5, 0.5) +
+        ylim(-1, 1) +
         # facet_wrap(covariate ~ ., scales = "free_x", nrow = 5,
         #             labeller = label_parsed, strip.position = "left") +
         facet_grid(covariate ~ ., scales = "free_x", switch = "y", 
@@ -407,7 +446,7 @@ print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha 
                 axis.text.y = element_blank(),
                 axis.text.x = element_text(size = 18)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_sc3-wi.pdf"), width=11, height = 15) 
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_scC_",n.origin,".pdf"), width=11, height = 15)
 
 # newgl.container$x <- seq(0,1, length.out = n)
 # newgl.container$true <- as.vector(f.linear.new)
@@ -490,7 +529,7 @@ print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha 
 #                 axis.text = element_text(size = 20)))
 
 # # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_nonlinear_sc3-wi.pdf"), width=10, height = 7.78)
-
+# colnames(qqplot.container)[1:total.iter] <- as.character(1:total.iter)
 qqplot.container$grid <- grid
 qqplot.container$mean <- rowMeans(qqplot.container[,1:total.iter])
 plt <- ggplot(data = qqplot.container, aes(x = grid))
@@ -504,11 +543,30 @@ print(plt + geom_line(aes(y = mean), colour = "steelblue", linewidth = 1.5, line
               axis.text.y = element_blank()) +       
         coord_fixed(xlim = c(-2, 2),  
                     ylim = c(-2, 2)))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_qqplot_sc3-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_qqplot_scC_",n.origin,".pdf"), width=9.5, height = 7.78)
 
-save(alpha.container, newgsmooth.container, mise.container, qqplot.container, file = (paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_sc3.Rdata")))
-# total.iter <- 250
-load(paste0("./simulation/results/MC-Scenario_C/2024-02-13_",total.iter,"_MC_sc3.Rdata"))
+save(alpha.container, newgsmooth.container, mise.container, qqplot.container, file = (paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_scC_",n.origin,".Rdata")))
+# total.iter <- 100
 
-load("./simulation/results/MC-Scenario_C/2024-03-21_q95_250_MC_scC.Rdata")
+load(paste0("./simulation/results/MC-Scenario_C/2024-04-18_",total.iter,"_MC_scC_",n.origin,".Rdata"))
 
+# alpha.container.comb <- alpha.container[,1:total.iter]
+# newgsmooth.container.comb <- newgsmooth.container[,1:total.iter]
+# mise.container.comb <- mise.container[1:total.iter]
+# qqplot.container.comb <- qqplot.container[,1:total.iter]
+
+# alpha.container.comb <- cbind(alpha.container.comb, alpha.container[,1:100])
+# newgsmooth.container.comb <- cbind(newgsmooth.container.comb, newgsmooth.container[,1:100])
+# mise.container.comb <- c(mise.container.comb, mise.container)
+# qqplot.container.comb <- cbind(qqplot.container.comb, qqplot.container[,1:100])
+
+alpha.container <- cbind(alpha.container.comb, alpha.container[,1:total.iter])
+newgsmooth.container <- cbind(newgsmooth.container.comb, newgsmooth.container[,1:total.iter])
+mise.container <- c(mise.container.comb, mise.container)
+qqplot.container <- cbind(qqplot.container.comb, qqplot.container[,1:total.iter])
+mean(mise.container)
+
+alpha.container <- alpha.container[,1:total.iter]
+newgsmooth.container <- newgsmooth.container[,1:total.iter]
+mise.container <- mise.container[1:total.iter]
+qqplot.container <- qqplot.container[,1:total.iter]

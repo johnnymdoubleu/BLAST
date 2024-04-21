@@ -21,7 +21,7 @@ library(rstan)
 set.seed(9)
 # set.seed(36)
 
-n <- 15000
+n <- 20000
 psi <- 10
 threshold <- 0.95
 p <- 5

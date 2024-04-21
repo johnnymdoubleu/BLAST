@@ -9,7 +9,7 @@ library(Pareto)
 set.seed(10)
 # set.seed(36)
 
-n <- 15000
+n <- 10000
 psi <- 10
 threshold <- 0.95
 p <- 5
