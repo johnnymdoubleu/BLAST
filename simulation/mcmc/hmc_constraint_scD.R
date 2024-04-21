@@ -6,7 +6,7 @@ library(rmutil)
 library(Pareto)
 
 #Scenario 4
-set.seed(10)
+set.seed(11)
 # set.seed(36)
 
 n <- 5000

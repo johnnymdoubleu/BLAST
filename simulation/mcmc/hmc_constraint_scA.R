@@ -22,9 +22,9 @@ library(ggh4x)
 
 #Scenario 1
 # set.seed(10)
-set.seed(6)
+set.seed(4)
 
-n <- 15000
+n <- 20000
 psi <- 10
 threshold <- 0.95
 p <- 5
@@ -553,7 +553,7 @@ ggplot(data.scenario, aes(x=newx)) +
         strip.text = element_blank(),
         axis.text = element_text(size = 18))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_test_sc1-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_test_sc1-wi.pdf"), width=9.5, height = 7.78)
 
 
 mcmc.alpha <- posterior$alpha

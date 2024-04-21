@@ -18,8 +18,8 @@ library(evir)
 library(rstan)
 
 #Scenario 3
-set.seed(9)
-# set.seed(36)
+# set.seed(9)
+set.seed(36)
 
 n <- 10000
 psi <- 10
