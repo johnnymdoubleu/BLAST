@@ -548,7 +548,7 @@ print(plt + geom_line(aes(y = mean), colour = "steelblue", linewidth = 1.5, line
 save(alpha.container, newgsmooth.container, mise.container, qqplot.container, file = (paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_scC_",n.origin,".Rdata")))
 # total.iter <- 100
 
-load(paste0("./simulation/results/MC-Scenario_C/2024-04-18_",total.iter,"_MC_scC_",n.origin,".Rdata"))
+load(paste0("./simulation/results/MC-Scenario_C/2024-04-16_",total.iter,"_MC_scC_",n.origin,".Rdata"))
 
 # alpha.container.comb <- alpha.container[,1:total.iter]
 # newgsmooth.container.comb <- newgsmooth.container[,1:total.iter]
@@ -560,11 +560,11 @@ load(paste0("./simulation/results/MC-Scenario_C/2024-04-18_",total.iter,"_MC_scC
 # mise.container.comb <- c(mise.container.comb, mise.container)
 # qqplot.container.comb <- cbind(qqplot.container.comb, qqplot.container[,1:100])
 
-alpha.container <- cbind(alpha.container.comb, alpha.container[,1:total.iter])
-newgsmooth.container <- cbind(newgsmooth.container.comb, newgsmooth.container[,1:total.iter])
-mise.container <- c(mise.container.comb, mise.container)
-qqplot.container <- cbind(qqplot.container.comb, qqplot.container[,1:total.iter])
-mean(mise.container)
+# alpha.container <- cbind(alpha.container.comb, alpha.container[,1:total.iter])
+# newgsmooth.container <- cbind(newgsmooth.container.comb, newgsmooth.container[,1:total.iter])
+# mise.container <- c(mise.container.comb, mise.container)
+# qqplot.container <- cbind(qqplot.container.comb, qqplot.container[,1:total.iter])
+# mean(mise.container)
 
 alpha.container <- alpha.container[,1:total.iter]
 newgsmooth.container <- newgsmooth.container[,1:total.iter]
