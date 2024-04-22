@@ -312,7 +312,7 @@ print(plt +
                 strip.text = element_blank(),
                 axis.text = element_text(size = 18)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_scA_",n.origin,".pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_scA_",n.origin,".pdf"), width=9.5, height = 7.78)
 
 
 # resg <- gather(theta.container,
@@ -547,9 +547,9 @@ print(plt +
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_qqplot_scA_",n.origin,".pdf"), width=10, height = 7.78)
 
 # save(alpha.container, newgsmooth.container, mise.container, qqplot.container, file = (paste0("./simulation/results/MC-scenario_A/",Sys.Date(),"_",total.iter,"_MC_scA",n.origin,".Rdata")))
-total.iter <- 100
+total.iter <- 250
 
-load(paste0("./simulation/results/MC-Scenario_A/2024-04-18_",total.iter,"_MC_scA_",n.origin,".Rdata"))
+load(paste0("./simulation/results/MC-Scenario_A/2024-04-19_",total.iter,"_MC_scA_",n.origin,".Rdata"))
 
 # alpha.container.comb <- alpha.container[,1:250]
 # newgsmooth.container.comb <- newgsmooth.container[,1:250]
