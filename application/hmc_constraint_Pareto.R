@@ -46,7 +46,7 @@ df.long[which(is.na(df.long$...1))+1,]
 Y <- df.long$measurement[!is.na(df.long$measurement)]
 summary(Y) #total burnt area
 length(Y)
-psi <- 5
+psi <- 10
 threshold <- 0.99
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
@@ -318,8 +318,8 @@ model {
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += normal_lpdf(theta[1] | 0, 100);
-    target += gamma_lpdf(lambda1 | 1, 1e-2);
-    target += gamma_lpdf(lambda2o | 1, 1e-2);
+    target += gamma_lpdf(lambda1 | 1, 1e-3);
+    target += gamma_lpdf(lambda2o | 1, 1e-3);
     target += (2*p*log(lambda2o));
     for (j in 1:p){
         target += gamma_lpdf(tau1[j] | 1, lambda1^2*0.5);
@@ -817,7 +817,7 @@ for(i in names(y.container)){
 }
 
 print(plt + geom_density(aes(x=logy), color = "steelblue", linewidth = 2) +
-        theme_minimal(base_size = 30) + ylim(0, 2) + xlim(6.8,25) +
+        theme_minimal(base_size = 30) + ylim(0, 2) + #xlim(7.5,25) +
         theme(legend.position = "none",
                 axis.text = element_text(size = 35)))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRSTIR_predictive_distribution.pdf"), width=10, height = 7.78)
@@ -838,9 +838,10 @@ colnames(ev.y) <- c("yrep")
 
 plt <- ggplot(data = ev.y, aes(x = yrep)) + ylab("density") + xlab("log(Burnt Area)") + labs(col = "") +
   geom_density(color = "steelblue", linewidth = 1.2) + 
-  geom_rug(alpha = 0.1) +
+  geom_rug(alpha = 0.1) + 
   # geom_point(aes(x=yrep,y=-Inf),color="steelblue", size = 3.5, alpha = 0.2) +
-  xlim(min(ev.y$yrep), 300) +
+  xlim(0, 150) +
+  # xlim(min(ev.y$yrep), 300) +
   theme_minimal(base_size = 30) +  
   theme(legend.position = "none",
   axis.text = element_text(size = 35))
