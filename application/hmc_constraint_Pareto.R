@@ -156,12 +156,13 @@ p <- dim(fwi.scaled)[[2]]
 # ggsave("./BRSTIR/application/figures/hillestimator.pdf", width=10, height = 7.78)
 
 
-# pdf(file = "./BRSTIR/application/figures/correlation.pdf")
-# corrplot.mixed(cor(fwi.scaled),
-#                 upper = "ellipse",
-#                 lower = "number",
-#                 addgrid.col = "black")
-# dev.off()
+pdf(file = "./BRSTIR/application/figures/correlation.pdf")
+corrplot.mixed(#cor(fwi.scaled),
+                cor(cbind(data.frame(BA = y),fwi.scaled)),
+                upper = "ellipse",
+                lower = "number",
+                addgrid.col = "black")
+dev.off()
 # ggsave("./BRSTIR/application/figures/correlation.pdf", plot = replayPlot(p1), width=10, height = 7.78)
 # -------------------------------------------------------------------
 
