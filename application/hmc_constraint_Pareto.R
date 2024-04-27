@@ -98,13 +98,13 @@ fwi.scaled <- as.data.frame(sapply(fwi.origin, FUN = range01))
 n <- dim(fwi.scaled)[[1]]
 p <- dim(fwi.scaled)[[2]]
 
-# fwi.scaled.cov <- cov(fwi.scaled)
-# fwi.scaled.eigen <- eigen(fwi.scaled.cov)
-# phi <- fwi.scaled.eigen$vectors[, 1:7]
-# phi <- -phi
-# centre.fwi <- colMeans(fwi.scaled)
+fwi.scaled.cov <- cov(fwi.scaled)
+fwi.scaled.eigen <- eigen(fwi.scaled.cov)
+phi <- fwi.scaled.eigen$vectors[, 1:7]
+phi <- -phi
+centre.fwi <- colMeans(fwi.scaled)
 
-# PC1 <- (as.matrix(fwi.scaled)-(matrix(rep(1, n),nrow=n) %*% matrix(centre.fwi, ncol=p))) %*% phi[,1]
+PC1 <- (as.matrix(fwi.scaled)-(matrix(rep(1, n),nrow=n) %*% matrix(centre.fwi, ncol=p))) %*% phi[,1]
 # PVE <- fwi.scaled.eigen$values / sum(fwi.scaled.eigen$values)
 # dim((as.matrix(fwi.scaled)-(matrix(rep(1, n),nrow=n) %*% matrix(centre.fwi, ncol=p))))
 # matrix(rep(1, n),nrow=n) %*% matrix(centre.fwi, ncol=p)
