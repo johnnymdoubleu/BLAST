@@ -47,7 +47,7 @@ Y <- df.long$measurement[!is.na(df.long$measurement)]
 summary(Y) #total burnt area
 length(Y)
 psi <- 10
-threshold <- 0.95
+threshold <- 0.99
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
 # x.scale <- x.scale[which(y>quantile(y, threshold)),]
@@ -810,7 +810,7 @@ for(i in random.alpha.idx){
 colnames(y.container) <- paste("col", 1:100, sep="")
 y.container$x <- seq(1,n)
 y.container$logy <- log(y)
-plt <- ggplot(data = y.container, aes(x = x)) + ylab("density") + xlab("log(Burnt Area)") + labs(col = "")
+plt <- ggplot(data = y.container, aes(x = logy)) + ylab("density") + xlab("log(Burnt Area)") + labs(col = "")
 
 for(i in names(y.container)){
   # plt <- plt + geom_line(aes(y = .data[[i]]), alpha = 0.2, linewidth = 0.7)
@@ -823,10 +823,12 @@ print(plt + geom_density(aes(x=logy), color = "steelblue", linewidth = 2) +
                 axis.text = element_text(size = 35)))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRSTIR_predictive_distribution.pdf"), width=10, height = 7.78)
 
+random.alpha.idx <- floor(runif(3000, 1, ncol(t(posterior$alpha))))
 ev.linear <- as.vector(c(1,bs.linear[which.max(y),]))
 ev.nonlinear <- (matrix(bs.nonlinear[which.max(y),], ncol = 10))
 ev.y <- as.data.frame(matrix(, nrow = 1, ncol = 0))
-for(i in 1:ncol(t(posterior$theta))){
+# for(i ?in 1:ncol(t(posterior$theta))){
+for(i in random.alpha.idx){
   ev.alpha.single <- exp(sum(t(posterior$theta)[,i]*ev.linear) + 
                               sum(t(posterior$gamma[i,,]) %*% ev.nonlinear))
   ev.y <- cbind(ev.y, log(rPareto(1, t = u, alpha = ev.alpha.single)))
@@ -853,7 +855,7 @@ print(plt + geom_area(data = subset(d, x>12.44009), aes(x=x,y=y), fill = "slateg
         geom_segment(x=12.44009, xend=12.44009, 
               y=0, yend=approx(x = d$x, y = d$y, xout = 12.4409)$y,
               colour="red", linewidth=1.2, linetype = "dotted"))
-# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRSTIR_generative.pdf"), width=10, height = 7.78)
+ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRSTIR_generative.pdf"), width=10, height = 7.78)
 # scaleFUN <- function(x) sprintf("%.1f", x)
 
 # p <- ggplot(data= ev.y, aes(x=yrep, y = logy)) +
