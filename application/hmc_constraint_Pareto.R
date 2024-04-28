@@ -47,7 +47,7 @@ Y <- df.long$measurement[!is.na(df.long$measurement)]
 summary(Y) #total burnt area
 length(Y)
 psi <- 10
-threshold <- 0.99
+threshold <- 0.95
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
 # x.scale <- x.scale[which(y>quantile(y, threshold)),]
@@ -156,13 +156,13 @@ PC1 <- (as.matrix(fwi.scaled)-(matrix(rep(1, n),nrow=n) %*% matrix(centre.fwi, n
 # ggsave("./BRSTIR/application/figures/hillestimator.pdf", width=10, height = 7.78)
 
 
-pdf(file = "./BRSTIR/application/figures/correlation.pdf")
-corrplot.mixed(#cor(fwi.scaled),
-                cor(cbind(data.frame(BA = y),fwi.scaled)),
-                upper = "ellipse",
-                lower = "number",
-                addgrid.col = "black")
-dev.off()
+# pdf(file = "./BRSTIR/application/figures/correlation.pdf")
+# corrplot.mixed(#cor(fwi.scaled),
+#                 cor(cbind(data.frame(BA = y),fwi.scaled)),
+#                 upper = "ellipse",
+#                 lower = "number",
+#                 addgrid.col = "black")
+# dev.off()
 # ggsave("./BRSTIR/application/figures/correlation.pdf", plot = replayPlot(p1), width=10, height = 7.78)
 # -------------------------------------------------------------------
 
@@ -222,14 +222,14 @@ for(i in 1:p){
                       matrix(c(which.min(fwi.scaled[,i]),
                               which.max(fwi.scaled[,i])), ncol=2))
 }
-# for(i in 1:n){
-#   xholder[i,] <- centre.fwi + seq(min(PC1), max(PC1), length.out = n)[i] %*% phi[,1]
-# }
+for(i in 1:n){
+  xholder[i,] <- centre.fwi + seq(min(PC1), max(PC1), length.out = n)[i] %*% phi[,1]
+}
 
 for(i in 1:p){
-  # test.knot <- seq(min(xholder[,i]), max(xholder[,i]), length.out = psi)
-  xholder[,i] <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n)
-  test.knot <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)  
+  # xholder[,i] <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n)
+  # test.knot <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
+  test.knot <- seq(min(xholder[,i]), max(xholder[,i]), length.out = psi)  
   splines <- basis.tps(xholder[,i], test.knot, m=2, rk=FALSE, intercept = FALSE)
   xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
   xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
@@ -372,7 +372,7 @@ fit1 <- stan(
     # init_r = 1,
     chains = 3,             # number of Markov chains
     # warmup = 1000,          # number of warmup iterations per chain
-    iter = 5000,            # total number of iterations per chain
+    iter = 2000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
     refresh = 500           # no progress shown
 )
@@ -647,8 +647,8 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
           axis.text = element_text(size = 20))
 # #ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_nonlinear.pdf"), width=12.5, height = 15)
 
-data.scenario <- data.frame("x" = newx,
-                            # "x" = seq(min(PC1), max(PC1), length.out = n),
+data.scenario <- data.frame(#"x" = newx,
+                            "x" = seq(min(PC1), max(PC1), length.out = n),
                             "post.mean" = (alpha.samples[,1]),
                             "post.median" = (alpha.samples[,5]),
                             # "post.median" = sort(exp(rowSums(g.q2) + rep(theta.samples[1,5], n)), decreasing = TRUE),
