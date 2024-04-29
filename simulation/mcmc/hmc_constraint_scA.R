@@ -23,7 +23,7 @@ library(ggh4x)
 set.seed(10)
 # set.seed(6)
 
-n <- 10000
+n <- 15000
 psi <- 10
 threshold <- 0.95
 p <- 5
@@ -554,6 +554,7 @@ ggplot(data.scenario, aes(x=newx)) +
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_test_sc1-wi.pdf"), width=10, height = 7.78)
 
+save(fit1, file = (paste0("./simulation/sweavedata.Rdata")))
 
 mcmc.alpha <- posterior$alpha
 len <- dim(mcmc.alpha)[1]
