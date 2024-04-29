@@ -215,7 +215,6 @@ transformed parameters {
     array[n] real <lower=0> alpha; // tail index
     array[n] real <lower=0> newalpha; // new tail index
     matrix[n, p] gl; // linear component
-    matrix[n, p] newgnl; // nonlinear component
     matrix[n, p] newgl; // linear component
     matrix[n, p] newgsmooth; // smooth function    
     for (j in 1:p){
@@ -408,7 +407,7 @@ ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) +
           axis.text = element_text(size = 20))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRTIR_mcmc_linear.pdf"), width=12.5, height = 15)
 
-data.scenario <- data.frame("x" = seq(-1, 1, length.out = n),
+data.scenario <- data.frame("x" = seq(0, 1, length.out = n),
                             "post.mean" = (alpha.samples[,1]),
                             "post.median" = (alpha.samples[,5]),
                             "q1" = (alpha.samples[,4]),

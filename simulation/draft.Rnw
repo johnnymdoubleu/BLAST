@@ -1,0 +1,104 @@
+\documentclass[10pt]{article}
+% !Rnw weave = knitr
+<<preliminaries, cache=FALSE, echo=FALSE, results='hide'>>=
+knitr::render_sweave()
+options(prompt = "R> ", continue = "+  ", width = 70, useFancyQuotes = FALSE)
+knitr::opts_chunk$set(cache=FALSE, eval=TRUE, echo = FALSE)
+knitr::knit_hooks$set(knitr::hooks_sweave())
+@
+
+%% -- LaTeX packages and custom commands ---------------------------------------
+\usepackage{mystyle}
+
+\begin{document}
+
+\maketitle \tableofcontents 
+\begin{abstract}
+Linearisation at latent Gaussian field. 
+\end{abstract}
+
+<<library>>=
+# library
+# core
+pkgs <- c("INLA", "inlabru", "fmesher", "sf", # core
+          "ggplot2", "here", "dplyr", "patchwork", # general
+          "terra", "stars", "tidyterra" # raster
+          )
+
+for(i in 1:length(pkgs)){
+  suppressMessages(library(pkgs[i], character.only = TRUE))
+  # Perform other operations here
+}
+
+# load data
+rerun <- FALSE
+if (rerun) {
+  tw <- 15.55528
+  load(file = here("misc", "RData","samplelgcp20240418.RData"))
+  nepal_rast <- r <- shift(rast(df, type = "xyz"),
+                           dx = (80.06015 + lat - 0.1),
+                           dy = (26.34742 + long - 0.1)
+  )
+  nepal_rast_mnagg <- terra::aggregate(nepal_rast,
+                                       fact = factor, fun = mean,
+                                       na.rm = TRUE
+  )
+  nepal_rast_mnaggdis <-
+    terra::disagg(nepal_rast_mnagg, factor, method = "bilinear")
+  
+  mesh_fm_vtx <- fm_vertices(mesh_fm, format = "sf")
+  
+  # mesh field
+  dx <- 80.06015 + lat - 0.1
+  dy <- (26.34742 + long - 0.1)
+  df <- data.frame(
+    x = st_coordinates(mesh_fm_vtx)[, 1] - dx,
+    y = st_coordinates(mesh_fm_vtx)[, 2] - dy
+  )
+  
+  mesh_fm_vtx_df <- fm_vertices(mesh_fm, format = "df")
+  
+  mesh_fm_vtx_df$cov <-
+    scale(with(df, ((2 * x)^2 + 2 * y) * exp(-.5 * x^2 - .5 * y^2)))
+  mesh_fm_vtx$cov <-
+    scale(with(df, ((2 * x)^2 + 2 * y) * exp(-.5 * x^2 - .5 * y^2)))
+  if (to_plot) {
+    ggplot() +
+      gg(mesh_fm) +
+      gg(mesh_fm_vtx, aes(col = cov), size = 1)
+  }
+  
+  mesh_fm_vtx$spde <- fm_evaluate(mesh = mesh_fm, loc = mesh_fm_vtx, field = samp)
+  
+  loglambda <- as.vector(with(mesh_fm_vtx, 1 - cov + spde))
+  mesh_fm_vtx$loglambda <- as.vector(with(mesh_fm_vtx, 1 - cov + spde))
+  
+}
+@
+
+
+<<introduction, child='intro.Rnw',cache=TRUE>>=
+@
+
+<<definition, child='defin.Rnw',cache=TRUE>>=
+@
+
+<<subset, child='subset.Rnw',cache=TRUE>>=
+@
+
+<<computation, child='comput.Rnw',cache=TRUE>>=
+@
+
+<<stimulation, child='stim.Rnw',cache=TRUE>>=
+@
+
+<<discussion, child='discuss.Rnw',cache=TRUE>>=
+@
+
+<<appendices, child='append.Rnw',cache=TRUE>>=
+@
+
+\bibliography{landslides}
+
+
+\end{document}

@@ -1,0 +1,11 @@
+\documentclass{article}
+
+\begin{document}
+
+ <<echo=FALSE,results='asis'>>=
+ library(stanhl)
+ stanhl_latex()
+ @
+
+
+\end{document}
