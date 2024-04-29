@@ -554,7 +554,7 @@ ggplot(data.scenario, aes(x=x)) +
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_test_sc1-wi.pdf"), width=10, height = 7.78)
 
-save(data.smooth, data.scenario, file = (paste0("./simulation/sweavedata.Rdata")))
+# save(data.smooth, data.scenario, file = (paste0("./simulation/sweavedata.Rdata")))
 
 mcmc.alpha <- posterior$alpha
 len <- dim(mcmc.alpha)[1]
