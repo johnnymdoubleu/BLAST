@@ -63,18 +63,7 @@ for(i in 1:p){
 }
 
 
-## Generate sample
-gamma.origin <- matrix(, nrow = psi, ncol = p)
-for(j in 1:p){
-  for (ps in 1:psi){
-    if(j %in% c(1,4,5,6,9,10)){gamma.origin[ps, j] <- 0}
-    else {
-      if(ps == 1 || ps == psi){gamma.origin[ps, j] <- 0}
-      else{gamma.origin[ps, j] <- -25}
-    }
-  }
-}
-theta.origin <- c(-0.5, 0, -0.5, -0.5, 0, 0)
+
 
 f.sub.origin <- matrix(, nrow = 2, ncol = p)
 for(j in 1:p){
