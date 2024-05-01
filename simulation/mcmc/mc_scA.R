@@ -7,7 +7,7 @@ library(MESS)
 
 total.iter <- 250
 
-n <- n.origin <- 5000
+n <- n.origin <- 15000
 psi <- 10
 threshold <- 0.95
 p <- 5
@@ -526,7 +526,7 @@ print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha 
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_nonlinear_sc1-wi.pdf"), width=10, height = 7.78)
 
-colnames(qqplot.container)[1:total.iter] <- as.character(1:total.iter)
+# colnames(qqplot.container)[1:total.iter] <- as.character(1:total.iter)
 qqplot.container$grid <- grid
 qqplot.container$mean <- rowMeans(qqplot.container[,1:total.iter])
 plt <- ggplot(data = qqplot.container, aes(x = grid))
@@ -549,7 +549,7 @@ print(plt +
 save(alpha.container, newgsmooth.container, mise.container, qqplot.container, file = (paste0("./simulation/results/MC-scenario_A/",Sys.Date(),"_",total.iter,"_MC_scA_",n.origin,".Rdata")))
 total.iter <- 125
 
-load(paste0("./simulation/results/MC-Scenario_A/2024-05-01_",total.iter,"_MC_scA_",n.origin,".Rdata"))
+load(paste0("./simulation/results/MC-Scenario_A/2024-04-19_",total.iter,"_MC_scA_",n.origin,".Rdata"))
 
 # alpha.container.comb <- alpha.container[,1:total.iter]
 # newgsmooth.container.comb <- newgsmooth.container[,1:total.iter]
