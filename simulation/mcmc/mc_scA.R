@@ -7,7 +7,7 @@ library(MESS)
 
 total.iter <- 250
 
-n <- n.origin <- 5000
+n <- n.origin <- 20000
 psi <- 10
 threshold <- 0.95
 p <- 5
@@ -551,15 +551,15 @@ total.iter <- 125
 
 load(paste0("./simulation/results/MC-Scenario_A/2024-04-30_",total.iter,"_MC_scA_",n.origin,".Rdata"))
 
-# alpha.container.comb <- alpha.container[,1:125]
-# newgsmooth.container.comb <- newgsmooth.container[,1:125]
-# mise.container.comb <- mise.container[1:125]
-# qqplot.container.comb <- qqplot.container[, 1:125]
+# alpha.container.comb <- alpha.container[,1:total.iter]
+# newgsmooth.container.comb <- newgsmooth.container[,1:total.iter]
+# mise.container.comb <- mise.container[1:total.iter]
+# qqplot.container.comb <- qqplot.container[, 1:total.iter]
 
-# alpha.container <- cbind(alpha.container.comb, alpha.container[,1:125])
-# newgsmooth.container <- cbind(newgsmooth.container.comb, newgsmooth.container[,1:125])
+# alpha.container <- cbind(alpha.container.comb, alpha.container[,1:total.iter])
+# newgsmooth.container <- cbind(newgsmooth.container.comb, newgsmooth.container[,1:total.iter])
 # mise.container <- c(mise.container.comb, mise.container)
-# qqplot.container <- cbind(qqplot.container.comb, qqplot.container[,1:125])
+# qqplot.container <- cbind(qqplot.container.comb, qqplot.container[,1:total.iter])
 
 # alpha.container <- alpha.container[,1:total.iter]
 # newgsmooth.container <- newgsmooth.container[,1:total.iter]
