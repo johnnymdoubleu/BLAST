@@ -8,7 +8,7 @@ library(MESS)
 
 total.iter <- 500
 
-n <- n.origin <- 5000
+n <- n.origin <- 15000
 psi <- 10
 threshold <- 0.95
 p <- 5
@@ -306,8 +306,8 @@ if(total.iter <= 50){
   }
 }
 
-print(plt +
-        # geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) + ylim(0.5, 2.5) + 
+print(plt + 
+        # geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) + ylim(0.5, 2.5) +
         geom_line(aes(y=true, col = "True"), linewidth = 2) + 
         geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5, linetype = 2) +
         scale_fill_manual(values=c("steelblue"), name = "") +
@@ -317,7 +317,8 @@ print(plt +
         theme_minimal(base_size = 30) + ylim(0, 2.4) +
         theme(legend.position = "none",
                 strip.text = element_blank(),
-                axis.text = element_text(size = 18)))
+                axis.text.y = element_blank(),
+                axis.text.x = element_text(size = 18)))
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_scD_",n.origin,".pdf"), width=9.5, height = 7.78)
 
@@ -538,8 +539,8 @@ print(plt +
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_qqplot_scD_",n.origin,".pdf"), width=9.5, height = 7.78)
 
 # save(alpha.container, newgsmooth.container, mise.container, qqplot.container, file = (paste0("./simulation/results/MC-Scenario_D/",Sys.Date(),"_",total.iter,"_MC_scD_",n.origin,".Rdata")))
-total.iter <- 125
-load(paste0("./simulation/results/MC-Scenario_D/2024-04-29_",total.iter,"_MC_scD_",n.origin,".Rdata"))
+total.iter <- 250
+load(paste0("./simulation/results/MC-Scenario_D/2024-04-21_",total.iter,"_MC_scD_",n.origin,".Rdata"))
 
 # alpha.container.comb <- alpha.container[,1:total.iter]
 # newgsmooth.container.comb <- newgsmooth.container[,1:total.iter]
@@ -556,9 +557,9 @@ load(paste0("./simulation/results/MC-Scenario_D/2024-04-29_",total.iter,"_MC_scD
 # mise.container <- c(mise.container.comb, mise.container)
 # qqplot.container <- cbind(qqplot.container.comb, qqplot.container[,1:total.iter])
 
-alpha.container <- alpha.container[,1:total.iter]
-newgsmooth.container <- newgsmooth.container[,1:total.iter]
-mise.container <- mise.container[1:total.iter]
-qqplot.container <- qqplot.container[,1:total.iter]
+# alpha.container <- alpha.container[,1:total.iter]
+# newgsmooth.container <- newgsmooth.container[,1:total.iter]
+# mise.container <- mise.container[1:total.iter]
+# qqplot.container <- qqplot.container[,1:total.iter]
 
 mean(mise.container)

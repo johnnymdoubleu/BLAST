@@ -547,9 +547,9 @@ print(plt + geom_line(aes(y = mean), colour = "steelblue", linewidth = 1.5, line
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_qqplot_scC_",n.origin,".pdf"), width=9.5, height = 7.78)
 
 # save(alpha.container, newgsmooth.container, mise.container, qqplot.container, file = (paste0("./simulation/results/MC-Scenario_C/",Sys.Date(),"_",total.iter,"_MC_scC_",n.origin,".Rdata")))
-total.iter <- 125
+total.iter <- 250
 
-load(paste0("./simulation/results/MC-Scenario_C/2024-04-29_",total.iter,"_MC_scC_",n.origin,".Rdata"))
+load(paste0("./simulation/results/MC-Scenario_C/2024-05-01_",total.iter,"_MC_scC_",n.origin,".Rdata"))
 
 # alpha.container.comb <- alpha.container[,1:total.iter]
 # newgsmooth.container.comb <- newgsmooth.container[,1:total.iter]
