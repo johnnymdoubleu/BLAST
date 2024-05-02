@@ -8,7 +8,7 @@ library(MESS)
 
 total.iter <- 250
 
-n <- n.origin <- 5000
+n <- n.origin <- 20000
 psi <- 10
 threshold <- 0.95
 p <- 5
@@ -547,19 +547,19 @@ print(plt + geom_line(aes(y = mean), colour = "steelblue", linewidth = 1.5, line
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_qqplot_scC_",n.origin,".pdf"), width=9.5, height = 7.78)
 
 # save(alpha.container, newgsmooth.container, mise.container, qqplot.container, file = (paste0("./simulation/results/MC-Scenario_C/",Sys.Date(),"_",total.iter,"_MC_scC_",n.origin,".Rdata")))
-total.iter <- 250
+total.iter <- 50
 
-load(paste0("./simulation/results/MC-Scenario_C/2024-05-01_",total.iter,"_MC_scC_",n.origin,".Rdata"))
+load(paste0("./simulation/results/MC-Scenario_C/2024-05-05_",total.iter,"_MC_scC_",n.origin,".Rdata"))
 
 # alpha.container.comb <- alpha.container[,1:total.iter]
 # newgsmooth.container.comb <- newgsmooth.container[,1:total.iter]
 # mise.container.comb <- mise.container[1:total.iter]
 # qqplot.container.comb <- qqplot.container[,1:total.iter]
 
-# alpha.container.comb <- cbind(alpha.container.comb, alpha.container[,1:100])
-# newgsmooth.container.comb <- cbind(newgsmooth.container.comb, newgsmooth.container[,1:100])
+# alpha.container.comb <- cbind(alpha.container.comb, alpha.container[,1:total.iter])
+# newgsmooth.container.comb <- cbind(newgsmooth.container.comb, newgsmooth.container[,1:total.iter])
 # mise.container.comb <- c(mise.container.comb, mise.container)
-# qqplot.container.comb <- cbind(qqplot.container.comb, qqplot.container[,1:100])
+# qqplot.container.comb <- cbind(qqplot.container.comb, qqplot.container[,1:total.iter])
 
 # alpha.container <- cbind(alpha.container.comb, alpha.container[,1:total.iter])
 # newgsmooth.container <- cbind(newgsmooth.container.comb, newgsmooth.container[,1:total.iter])
