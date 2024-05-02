@@ -737,11 +737,17 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
   coord_fixed(xlim = c(-3, 3),
               ylim = c(-3, 3))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_qqplot.pdf"), width=10, height = 7.78)
+rp <-c()
+for(i in 1:n){
+  # rp[i] <- rPareto(y[i], u, alpha = posterior$alpha[round(runif(1,1,len)),i])
+  rp[i] <- qnorm(pPareto(y[i], u, alpha = posterior$alpha[round(runif(1,1,len)),i]))
+}
+rp <- data.frame(rp, group = rep("residuals", n))
 
-ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat, 
-                         u.band = u.band)) + 
-  geom_qqboxplot(aes(y=trajhat), notch=TRUE, varwidth=TRUE, reference_dist="norm")+ xlim(-0.5,0.5) + ylim(-2.5,2.5)+
-  labs(x = "", y = "Residuals") + 
+ggplot(data = rp) + 
+  geom_qqboxplot(aes(factor(group, levels=c("residuals")), y=rp), notch=FALSE, varwidth=TRUE, reference_dist="norm")+ 
+  # geom_qqboxplot(aes(y=rp), notch=FALSE, varwidth=TRUE, reference_dist="norm")+   
+  labs(x = "", y = "Residuals") + ylim(-4,4) +
   theme_minimal(base_size = 20) +
   theme(axis.text = element_text(size = 30),
         axis.title = element_text(size = 30))
