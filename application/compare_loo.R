@@ -11,9 +11,9 @@ load(paste0("./BRSTIR/application/BRSTIR_constraint_",Sys.Date(),"_",20,"_",floo
 constraint.elpd.loo.20 <- constraint.elpd.loo
 
 
-
-loo_compare(brtir.elpd.loo, brstir.elpd.loo)
 compare <- loo_compare(constraint.elpd.loo.5, constraint.elpd.loo.10, constraint.elpd.loo.20, brtir.elpd.loo)
 print(compare, simplify = FALSE)
+
+loo_compare(brtir.elpd.loo, brstir.elpd.loo)
 loo_compare(brtir.waic, brstir.waic)
 loo_compare(constraint.waic, brstir.waic)

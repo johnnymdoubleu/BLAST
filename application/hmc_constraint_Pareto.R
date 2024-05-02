@@ -46,8 +46,8 @@ df.long[which(is.na(df.long$...1))+1,]
 Y <- df.long$measurement[!is.na(df.long$measurement)]
 summary(Y) #total burnt area
 length(Y)
-psi <- 20
-threshold <- 0.95
+psi <- 10
+threshold <- 0.99
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
 # x.scale <- x.scale[which(y>quantile(y, threshold)),]
@@ -828,8 +828,9 @@ ev.linear <- as.vector(c(1,bs.linear[which.max(y),]))
 ev.nonlinear <- (matrix(bs.nonlinear[which.max(y),], ncol = 10))
 ev.y <- as.data.frame(matrix(, nrow = 1, ncol = 0))
 # for(i ?in 1:ncol(t(posterior$theta))){
+ev.alpha.single <- c()  
 for(i in random.alpha.idx){
-  ev.alpha.single <- exp(sum(t(posterior$theta)[,i]*ev.linear) + 
+  ev.alpha.single[i] <- exp(sum(t(posterior$theta)[,i]*ev.linear) + 
                               sum(t(posterior$gamma[i,,]) %*% ev.nonlinear))
   ev.y <- cbind(ev.y, log(rPareto(1, t = u, alpha = ev.alpha.single)))
 }
@@ -886,7 +887,7 @@ plot(fwi.loo, label_points = TRUE)
 
 constraint.elpd.loo <- loo(fit.log.lik, is_method = "sis", cores = 2)
 constraint.waic <- waic(fit.log.lik, cores = 2)
-save(constraint.elpd.loo, constraint.waic, file = (paste0("./BRSTIR/application/BRSTIR_constraint_",Sys.Date(),"_",psi,"_",floor(threshold*100),"quantile_IC.Rdata")))
+# save(constraint.elpd.loo, constraint.waic, file = (paste0("./BRSTIR/application/BRSTIR_constraint_",Sys.Date(),"_",psi,"_",floor(threshold*100),"quantile_IC.Rdata")))
 
 
 
