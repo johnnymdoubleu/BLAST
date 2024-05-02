@@ -6,9 +6,9 @@ library(rmutil)
 library(MESS)
 # Scenario D
 
-total.iter <- 500
+total.iter <- 250
 
-n <- n.origin <- 15000
+n <- n.origin <- 20000
 psi <- 10
 threshold <- 0.95
 p <- 5
@@ -308,8 +308,8 @@ if(total.iter <= 50){
 
 print(plt + 
         # geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) + ylim(0.5, 2.5) +
-        geom_line(aes(y=true, col = "True"), linewidth = 2) + 
-        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5, linetype = 2) +
+        geom_line(aes(y=true, col = "True"), linewidth = 2, linetype = 2) + 
+        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5) +
         scale_fill_manual(values=c("steelblue"), name = "") +
         scale_color_manual(values = c("steelblue", "red"))+
         guides(color = guide_legend(order = 2), 
@@ -429,8 +429,8 @@ if(total.iter <= 50){
   }
 }
 print(plt + 
-        geom_line(aes(y=true, col = "True"), linewidth = 2) + 
-        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5, linetype = 2) + 
+        geom_line(aes(y=true, col = "True"), linewidth = 2, linetype = 2) + 
+        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5) + 
         ylim(-1, 1) +
         facet_grid(covariate ~ ., scales = "free_x", switch = "y", 
         labeller = label_parsed) +
@@ -540,7 +540,7 @@ print(plt +
 
 # save(alpha.container, newgsmooth.container, mise.container, qqplot.container, file = (paste0("./simulation/results/MC-Scenario_D/",Sys.Date(),"_",total.iter,"_MC_scD_",n.origin,".Rdata")))
 total.iter <- 250
-load(paste0("./simulation/results/MC-Scenario_D/2024-04-21_",total.iter,"_MC_scD_",n.origin,".Rdata"))
+load(paste0("./simulation/results/MC-Scenario_D/2024-05-01_",total.iter,"_MC_scD_",n.origin,".Rdata"))
 
 # alpha.container.comb <- alpha.container[,1:total.iter]
 # newgsmooth.container.comb <- newgsmooth.container[,1:total.iter]

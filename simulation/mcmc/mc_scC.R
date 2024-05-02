@@ -8,7 +8,7 @@ library(MESS)
 
 total.iter <- 250
 
-n <- n.origin <- 20000
+n <- n.origin <- 5000
 psi <- 10
 threshold <- 0.95
 p <- 5
@@ -307,8 +307,8 @@ if(total.iter <= 50){
 
 print(plt + 
         # geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) + ylim(0.5, 2.5) +
-        geom_line(aes(y=true, col = "True"), linewidth = 2) + 
-        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5, linetype = 2) +
+        geom_line(aes(y=true, col = "True"), linewidth = 2, linetype=2) + 
+        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5) +
         scale_fill_manual(values=c("steelblue"), name = "") +
         scale_color_manual(values = c("steelblue", "red"))+
         guides(color = guide_legend(order = 2), 
@@ -427,8 +427,8 @@ if(total.iter <= 50){
   }
 }
 print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
-        geom_line(aes(y=true, col = "True"), linewidth = 2) + 
-        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5, linetype = 2) + 
+        geom_line(aes(y=true, col = "True"), linewidth = 2, linetype=2) + 
+        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5) + 
         ylim(-1, 1) +
         # facet_wrap(covariate ~ ., scales = "free_x", nrow = 5,
         #             labeller = label_parsed, strip.position = "left") +
@@ -549,7 +549,7 @@ print(plt + geom_line(aes(y = mean), colour = "steelblue", linewidth = 1.5, line
 # save(alpha.container, newgsmooth.container, mise.container, qqplot.container, file = (paste0("./simulation/results/MC-Scenario_C/",Sys.Date(),"_",total.iter,"_MC_scC_",n.origin,".Rdata")))
 total.iter <- 50
 
-load(paste0("./simulation/results/MC-Scenario_C/2024-05-05_",total.iter,"_MC_scC_",n.origin,".Rdata"))
+load(paste0("./simulation/results/MC-Scenario_C/2024-05-01_",total.iter,"_MC_scC_",n.origin,".Rdata"))
 
 # alpha.container.comb <- alpha.container[,1:total.iter]
 # newgsmooth.container.comb <- newgsmooth.container[,1:total.iter]
