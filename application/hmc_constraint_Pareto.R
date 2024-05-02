@@ -1,20 +1,13 @@
 library(npreg)
 library(Pareto)
 suppressMessages(library(tidyverse))
-library(JOPS)
 library(readxl)
 library(gridExtra)
-library(colorspace)
 library(corrplot)
-library(ReIns)
 library(rstan)
 library(loo)
-library(bayesplot)
-library(evir)
-library(mev)
-library(cmdstanr)
-library(scales)
-# library(ggExtra)
+library(qqboxplot)
+
 
 
 options(mc.cores = parallel::detectCores())
@@ -744,6 +737,15 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
   coord_fixed(xlim = c(-3, 3),
               ylim = c(-3, 3))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_qqplot.pdf"), width=10, height = 7.78)
+
+ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat, 
+                         u.band = u.band)) + 
+  geom_qqboxplot(aes(y=trajhat), notch=TRUE, varwidth=TRUE, reference_dist="norm")+ xlim(-0.5,0.5) + ylim(-2.5,2.5)+
+  labs(x = "", y = "Residuals") + 
+  theme_minimal(base_size = 20) +
+  theme(axis.text = element_text(size = 30),
+        axis.title = element_text(size = 30))
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_qqboxplot.pdf"), width=10, height = 7.78)
              
 # saveRDS(data.scenario, file=paste0("Simulation/BayesianPsplines/results/",date,"-",time, "_sc1_data_samp1.rds"))
 
