@@ -7,6 +7,7 @@ library(corrplot)
 library(rstan)
 library(loo)
 library(qqboxplot)
+library(ggdensity)
 
 
 
@@ -158,6 +159,22 @@ p <- dim(fwi.scaled)[[2]]
 # dev.off()
 # ggsave("./BRSTIR/application/figures/correlation.pdf", plot = replayPlot(p1), width=10, height = 7.78)
 # -------------------------------------------------------------------
+fwi.index[]
+g1 <- subset(a, GeneName == "G1")
+
+ggplot(fwi.index, aes(x=ISI, y=FFMC)) + 
+  geom_point(shape=21, alpha = 0.5) + 
+  # geom_hdr_lines(color = "steelblue")+
+  geom_density2d(colour="steelblue", linewidth = 1.3) +
+  # stat_density_2d(aes(fill = ..level..), geom = "polygon", colour="steelblue")+ 
+  theme_minimal(base_size = 30) +
+  theme(plot.title = element_text(hjust = 0.5, size = 30),
+        legend.position="none", 
+        legend.key.size = unit(1, 'cm'),
+        legend.text = element_text(size=20),
+        # plot.margin = margin(0,0,0,-1),
+        strip.text = element_blank(),
+        axis.title.x = element_text(size = 35))
 
 # ------------- Explanatory Analaysis
 # first.extreme <- which(Y==max(y))
@@ -654,7 +671,7 @@ data.scenario <- data.frame("x" = newx,
 #                             "q3" = (alp.x.samples[,6]))
 
 ggplot(data.scenario, aes(x=x)) + 
-  ylab(expression(alpha(bold(x)))) + xlab(expression(c)) + labs(col = "") +
+  ylab(expression(expression(alpha(c,...,c)))) + xlab(expression(c)) + labs(col = "") +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
   # geom_line(aes(y = true, col = "True"), linewidth = 2) +
   # xlim(-1,1) + #ylim(0, 6.2) + 
