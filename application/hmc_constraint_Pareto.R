@@ -345,18 +345,13 @@ model {
 }
 generated quantities {
     // Used in Posterior predictive check    
-    real pred_alpha;
-    real log_ba;
-    vector[p] pred_gnl;
-    vector[p] pred_gl;
+    real log_lik;
+    real yrep;
 
-    for(j in 1:p){
-        pred_gnl[j] = bsNonlinear[145,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
-        pred_gl[j] = bsLinear[145,j] * theta[j+1];
+    yrep = pareto_rng(u, alpha[145]);
+    for(i in 1:n){
+      log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
     }
-
-    pred_alpha = exp(theta[1] + sum(pred_gnl) + sum(pred_gl));
-    log_ba = pareto_rng(u, pred_alpha);
 }
 "
 , "model_BRSTIR_constraint.stan")
@@ -814,25 +809,44 @@ print(plt + geom_area(data = subset(d, x>12.44009), aes(x=x,y=y), fill = "slateg
               y=0, yend=approx(x = d$x, y = d$y, xout = 12.4409)$y,
               colour="red", linewidth=1.2, linetype = "dotted"))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRSTIR_generative.pdf"), width = 10, height = 7.78)
-# scaleFUN <- function(x) sprintf("%.1f", x)
 
-# p <- ggplot(data= ev.y, aes(x=yrep, y = logy)) +
-#       geom_vline(xintercept = log(max(y)), color = "red", linewidth = 0.7, linetype = "dotted") +
-#       geom_point(size = 0.8, color = "steelblue", alpha = 0.2) +
-#       geom_point(aes(x=max(log(y))), size = 3.5, color = "steelblue") + 
-#       ylab("True log(Burnt Area)") + xlab("") +
-#       #xlab("Generated log(Burnt Area)") + 
-#       theme_minimal(base_size = 30) + xlim(min(ev.y$yrep), 200) +
-#       ylim(min(ev.y$yrep), 200) +
-#       # scale_y_continuous(labels=scaleFUN) +  
-#       theme(legend.position = "none",
-#               axis.text = element_text(size = 35))
-# grid.arrange(p, (plt+scale_y_reverse() + theme(axis.text.x=element_text(size=10))), nrow=2, ncol=1, widths=4, heights = c(4,1))
-
-# library(ggExtra)
-# p <- p %>% ggMarginal(margins = 'y', color="steelblue", size=10)
-# print(p, newpage = TRUE)
-# detach("package:ggExtra", unload = TRUE)
+library(ggdist)
+geom_vdensity <- function(data, at, ...) {
+  ggplot2::geom_segment(
+    data = dplyr::filter(as.data.frame(density(data)[1:2]),
+                         seq_along(x) == which.min(abs(x - at))),
+    ggplot2::aes(x, 0, xend = x, yend = y), ...)
+}
+plt <- ggplot(data = ev.y, aes(x = yrep)) + ylab("density") + xlab("log(Burnt Area)") + labs(col = "") +
+  # stat_slab(aes(thickness = after_stat(pdf*n)),scale = 1, colour = "steelblue", fill=NA, position = "dodge",slab_linewidth = 1.5, trim = FALSE, density = "unbounded") +
+  # geom_vline(xintercept = log(max(y)), linetype="dashed", color = "red",) +
+  geom_density(color = "steelblue", linewidth = 1.2) +
+   # geom_area(fill="transparent") +
+  # geom_ribbon(aes(ymin = 0, ymax = ifelse(y >= 10,10,y)),fill = "blue") +
+  # geom_ribbon(data=ev.y, aes(xmin=0, xmax=ifelse(yrep>=log(max(y)),log(max(y)), yrep)), fill = "slategray1", alpha=0.5) +
+  # stat_dotsinterval(side = "bottom", binwidth=NA, scale = 2/3, fill="grey") + 
+  geom_rug(alpha = 0.1) + 
+  # geom_point(aes(x=yrep,y=-Inf),color="steelblue", size = 3.5, alpha = 0.2) +
+  xlim(7.5, 30) + ylim(-1, 0.5) +
+  theme_minimal(base_size = 30) +  
+  theme(legend.position = "none",
+        # axis.text.y = element_blank(),
+        axis.title = element_text(size = 30))
+d <- ggplot_build(plt)$data[[1]]
+print(plt + geom_area(data = subset(d, x>12.44009), aes(x=x,y=density), fill = "slategray1", alpha = 0.5) +
+          #  geom_vdensity(data = subset(d, x>12.44009)$x, at = 12.44009, color = "red", linetype = "dashed"))
+        geom_segment(x=12.44009, xend=12.44009, 
+              y=-(approx(x = d$x, y = d$scale, xout = 12.4409)$y-0.023), yend=(approx(x = d$x, y = d$y, xout = 12.4409)$y+0.023),
+              colour="red", linewidth=1.2, linetype = "dotted"))
+# density.y <- density(ev.y$yrep) # see ?density for parameters
+# plot(density.y$x,density.y$y, type="l") #can use ggplot for this too
+# # set an Avg.position value
+# Avg.pos <- 12.44009
+# xt <- diff(density.y$x[density.y$x>Avg.pos])
+# library(zoo)
+# yt <- rollmean(density.y$y[density.y$x>Avg.pos],2)
+# # This gives you the area
+# sum(xt*yt)
 
 # library(ismev)
 # gpd.fit(y, u)
