@@ -160,16 +160,15 @@ p <- dim(fwi.scaled)[[2]]
 # dev.off()
 # ggsave("./BRSTIR/application/figures/correlation.pdf", plot = replayPlot(p1), width=10, height = 7.78)
 # -------------------------------------------------------------------
-g1 <- subset(a, GeneName == "G1")
 fwi.origin <- fwi.index[which(Y>u),]
 max.fwi <- fwi.origin[which.max(y),]
 
 ggplot(fwi.origin, aes(x=ISI, y=FFMC)) + 
   geom_point(shape=21, alpha = 0.5) + 
   # geom_hdr_lines(color = "steelblue")+
-  geom_density2d(colour="steelblue", linewidth = 1.3) +
+  geom_density2d(colour="steelblue", linewidth = 1.3) + xlim(7.5, 25) + 
   # stat_density_2d(aes(fill = ..level..), geom = "polygon", colour="steelblue")+ 
-  geom_mark_circle(aes(x = max.fwi$ISI, y = max.fwi$FFMC, label = "15th Oct 2017"), 
+  geom_mark_circle(aes(x = max.fwi$ISI, y = max.fwi$FFMC, label = "15th Oct 2017"), con.type = "straight",
                    radius = unit(2.5, "mm"), color = "red", size = 1, 
                    con.colour = "red", con.cap = unit(0, "mm"),
                    label.colour = "red", label.buffer = unit(5, "mm"),
@@ -181,8 +180,8 @@ ggplot(fwi.origin, aes(x=ISI, y=FFMC)) +
         legend.text = element_text(size=20),
         # plot.margin = margin(0,0,0,-1),
         strip.text = element_blank(),
-        axis.title.x = element_text(size = 35))
-ggsave("./BRSTIR/application/figures/extremeviz.pdf", width = 10, height = 7.78)
+        axis.title = element_text(size = 30))
+# ggsave("./BRSTIR/application/figures/extremeviz.pdf", width = 10, height = 7.78)
 # ------------- Explanatory Analaysis
 # first.extreme <- which(Y==max(y))
 # second.extreme <- which(Y==max(y[-which.max(y)]))
@@ -347,11 +346,19 @@ model {
     }
 }
 generated quantities {
-    // Used in Posterior predictive check
-    vector[n] log_lik;
-    for (i in 1:n) {
-        log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
+    // Used in Posterior predictive check    
+    real pred_alpha;
+    real log_ba;
+    vector[p] pred_gnl;
+    vector[p] pred_gl;
+
+    for(j in 1:p){
+        pred_gnl[j] = bsNonlinear[145,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
+        pred_gl[j] = bsLinear[145,j] * theta[j+1];
     }
+
+    pred_alpha = exp(theta[1] + sum(pred_gnl) + sum(pred_gl));
+    log_ba = pareto_rng(u, pred_alpha);
 }
 "
 , "model_BRSTIR_constraint.stan")
@@ -360,13 +367,6 @@ data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi,
                     atau = ((psi+1)/2), indexFL = as.vector(t(index.holder)),
                     bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
                     xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear, basisFL = basis.holder)
-
-set_cmdstan_path(path = NULL)
-#> CmdStan path set to: /Users/jgabry/.cmdstan/cmdstan-2.32.2
-
-# Create a CmdStanModel object from a Stan program,
-# here using the example model that comes with CmdStan
-file <- file.path(cmdstan_path(), "model.stan")
 
 init.alpha <- list(list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c((psi-2),p)),
                         theta = rep(0, (p+1)), 
@@ -398,52 +398,6 @@ fit1 <- stan(
 posterior <- extract(fit1)
 # str(posterior)
 
-# print(as.mcmc(fit1), pars=c("alpha", "gamma", "intercept", "theta", "lambda1", "lambda2","lp__"), probs=c(.05,.5,.95))
-# plot(fit1, plotfun = "trace", pars = c("theta"), nrow = 3)
-# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_theta_trace.pdf"), width=10, height = 7.78)
-# plot(fit1, plotfun = "trace", pars = c("lambda1", "lambda2"), nrow = 2)
-# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_lambda.pdf"), width=10, height = 7.78)
-
-# traceplot(fit1, pars = c("theta"))
-# traceplot(fit1, pars = c("lambda1", "lambda2"), inc_warmup = TRUE, nrow = 2)
-# fit.v2 <- as.mcmc(fit1)
-
-# alpha.summary <- fit.v2$summary$all.chains
-
-# alpha.summary[701:711,]
-
-# MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2,
-#             HPD = TRUE, xlab="theta", offset = 0.05, exact = TRUE,
-#             horiz = FALSE, params = c("theta0", "theta"))
-# MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2,
-#             HPD = TRUE, xlab="gamma", offset = 0.5,
-#             horiz = FALSE, params = c("gamma"))
-# gg.fit <- ggs(fit.v2$samples)
-# lambda.p1 <- gg.fit %>% filter(Parameter == c("lambda.1", "lambda.2")) %>% 
-#   ggs_traceplot() + theme_minimal(base_size = 20) + theme(, legend.position = "none")
-# lambda.p2 <- gg.fit %>% filter(Parameter == c("lambda.1", "lambda.2")) %>% 
-#   ggs_density() + theme_minimal(base_size = 20)
-# grid.arrange(lambda.p1, lambda.p2, ncol=2)
-# # MCMCplot(object = fit.v2$samples$chain1, object2 = fit.v2$samples$chain2,
-# #             HPD = TRUE, xlab="lambda", offset = 0.5,
-# #             horiz = FALSE, params = c("lambda.1", "lambda.2"))            
-# # print(alpha.summary)
-# MCMCsummary(object = fit.v2$samples, round = 3)[((dim(alpha.summary)[1]-p-2-(psi*p)):dim(alpha.summary)[1]),]
-
-# print(MCMCtrace(object = fit.v2$samples,
-#           pdf = FALSE, # no export to PDF
-#           ind = TRUE, # separate density lines per chain
-#           n.eff = TRUE,# add eff sample size
-#           params = c("gamma")))
-# print(MCMCtrace(object = fit.v2$samples,
-#           pdf = FALSE, # no export to PDF
-#           ind = TRUE, # separate density lines per chain
-#           n.eff = TRUE,# add eff sample size
-#           params = c("lambda.1", "lambda.2")))
-
-# samples <- fit.v2$samples$chain1
-# len <- dim(samples)[1]
-
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
 lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
@@ -455,6 +409,7 @@ gsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95)
 # smooth.samples <- summary(fit1,par=c("gsmooth"), probs = c(0.05, 0.5, 0.95))$summary
 alp.x.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
 alpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
+logba.samples <- summary(fit1, par=c("log_ba"), probs = c(0.05,0.5, 0.95))$summary
 # summary(fit1, par=c("sigma"), probs = c(0.05,0.5, 0.95))$summary
 # summary(fit1, par=c("tau"), probs = c(0.05,0.5, 0.95))$summary
 # gammafl.samples <- summary(fit1, par=c("gammaFL"), probs = c(0.05,0.5, 0.95))$summary
@@ -500,22 +455,6 @@ ggplot(df.theta, aes(x = covariate, y=m, color = covariate)) + ylab("") + xlab('
           axis.text.x = element_text(hjust=0.35),
           axis.text = element_text(size = 28))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_theta.pdf"), width=10, height = 7.78)
-
-# ggplot(data.frame(group = factor(1:(p+1)), m=theta.post.mean, l = theta.q1, u = theta.q3), 
-#        aes(group)) +
-#   geom_hline(yintercept = 0, linetype = "dashed", color = "grey", size = 1.4) +
-#   geom_point(aes(x = group, y = m), size = 4.5) + 
-#   #geom_point(aes(x = group, y = beta), shape=8, size = 4.5, col="red")+
-#   geom_errorbar(aes(ymin = l, ymax = u), width = 0.3, size = 1.2) + 
-#   labs(x = "Regression coefficients", y = "") + 
-#   ylim(-5,5) + 
-#   scale_x_discrete(labels = c("DSR", "FWI", "BUI", "ISI", "FFMC", "DMC", "DC"))+
-#                               #,expression(beta[8]),
-#                               #expression(beta[9]))) + 
-#   theme_minimal(base_size = 30) + 
-#   theme(text = element_text(size = 30), 
-#         axis.text.x = element_text(angle = 0, hjust = 0.5))
-
 
 df.gamma <- data.frame("seq" = seq(1, ((psi)*p)), 
                   "m" = as.vector(gamma.q2),
@@ -576,10 +515,6 @@ data.smooth <- data.frame("x"= as.vector(xholder),
                           "q1" = as.vector(g.smooth.q1),
                           "q2" = as.vector(g.smooth.q2),
                           "q3" = as.vector(g.smooth.q3),
-                          # "post.mean" = as.vector(sort(g.smooth.mean)),
-                          # "q1" = as.vector(sort(g.smooth.q1)),
-                          # "q2" = as.vector(sort(g.smooth.q2)),
-                          # "q3" = as.vector(sort(g.smooth.q3)),
                           "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)),
                           # "fakelab" = rep(1, (p*n)),
                           "replicate" = gl(p, n, (p*n), labels = names(fwi.scaled)))
@@ -690,14 +625,13 @@ ggplot(data.scenario, aes(x=x)) +
           fill = guide_legend(order = 1)) +
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 30),
-        legend.position="none", 
-        legend.key.size = unit(1, 'cm'),
-        legend.text = element_text(size=20),
+        legend.position="none",
         plot.margin = margin(0,0,0,-1),
         strip.text = element_blank(),
         axis.title.x = element_text(size = 35))
 
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_alpha.pdf"), width=10, height = 7.78)
+
 # data.scenario <- data.frame("x" = seq(0, 1, length.out = n),
 #                             "post.mean" = (alp.x.samples[,3]),
 #                             "post.median" = (alpha.samples[,5]),
@@ -769,13 +703,13 @@ for(i in 1:n){
 rp <- data.frame(rp, group = rep("residuals", n))
 
 ggplot(data = rp) + 
-  geom_qqboxplot(aes(factor(group, levels=c("residuals")), y=rp), notch=FALSE, varwidth=TRUE, reference_dist="norm")+ 
-  # geom_qqboxplot(aes(y=rp), notch=FALSE, varwidth=TRUE, reference_dist="norm")+   
+  # geom_qqboxplot(aes(factor(group, levels=c("residuals")), y=rp), notch=FALSE, varwidth=TRUE, reference_dist="norm")+ 
+  geom_qqboxplot(aes(y=rp), notch=FALSE, varwidth=TRUE, reference_dist="norm")+   
   labs(x = "", y = "Residuals") + ylim(-4,4) +
   theme_minimal(base_size = 20) +
-  theme(axis.text = element_text(size = 30),
+  theme(axis.text = element_text(size = 25),
         axis.title = element_text(size = 30))
-# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_qqboxplot.pdf"), width=10, height = 7.78)
+ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_qqboxplot.pdf"), width = 10, height = 7.78)
              
 # saveRDS(data.scenario, file=paste0("Simulation/BayesianPsplines/results/",date,"-",time, "_sc1_data_samp1.rds"))
 
@@ -855,29 +789,22 @@ print(plt + geom_density(aes(x=logy), color = "steelblue", linewidth = 2) +
                 axis.text = element_text(size = 35)))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRSTIR_predictive_distribution.pdf"), width=10, height = 7.78)
 
-random.alpha.idx <- floor(runif(3000, 1, ncol(t(posterior$alpha))))
-ev.linear <- as.vector(c(1,bs.linear[which.max(y),]))
-ev.nonlinear <- (matrix(bs.nonlinear[which.max(y),], ncol = 10))
+random.alpha.idx <- floor(runif(1000, 1, ncol(t(posterior$alpha))))
 ev.y <- as.data.frame(matrix(, nrow = 1, ncol = 0))
 # for(i ?in 1:ncol(t(posterior$theta))){
 ev.alpha.single <- c()  
 for(i in random.alpha.idx){
-  ev.alpha.single[i] <- exp(sum(t(posterior$theta)[,i]*ev.linear) + 
-                              sum(t(posterior$gamma[i,,]) %*% ev.nonlinear))
-  ev.y <- cbind(ev.y, log(rPareto(1, t = u, alpha = ev.alpha.single)))
+  ev.y <- rbind(ev.y, as.numeric(posterior$log_ba[i]))
 }
-# colnames(ev.y) <- paste("col", 1:ncol(t(posterior$theta)), sep="")
-ev.y <- as.data.frame(as.numeric(t(ev.y)))
-ev.y <- as.data.frame(ev.y[!is.infinite(rowSums(ev.y)),])
+ev.y <- as.data.frame(log(ev.y))
 ev.y$logy <- max(log(y))
-colnames(ev.y) <- c("yrep")
+colnames(ev.y) <- c("yrep", "logy")
 
 plt <- ggplot(data = ev.y, aes(x = yrep)) + ylab("density") + xlab("log(Burnt Area)") + labs(col = "") +
   geom_density(color = "steelblue", linewidth = 1.2) + 
   geom_rug(alpha = 0.1) + 
   # geom_point(aes(x=yrep,y=-Inf),color="steelblue", size = 3.5, alpha = 0.2) +
-  xlim(0, 150) +
-  # xlim(min(ev.y$yrep), 300) +
+  xlim(7.5, 30) +
   theme_minimal(base_size = 30) +  
   theme(legend.position = "none",
   axis.text = element_text(size = 35))
@@ -888,7 +815,7 @@ print(plt + geom_area(data = subset(d, x>12.44009), aes(x=x,y=y), fill = "slateg
         geom_segment(x=12.44009, xend=12.44009, 
               y=0, yend=approx(x = d$x, y = d$y, xout = 12.4409)$y,
               colour="red", linewidth=1.2, linetype = "dotted"))
-# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRSTIR_generative.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRSTIR_generative.pdf"), width = 10, height = 7.78)
 # scaleFUN <- function(x) sprintf("%.1f", x)
 
 # p <- ggplot(data= ev.y, aes(x=yrep, y = logy)) +
