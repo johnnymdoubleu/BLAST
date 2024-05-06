@@ -175,9 +175,7 @@ ggplot(fwi.origin, aes(x=ISI, y=FFMC)) +
                    label.fill = "transparent")  +
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 30),
-        legend.position="none", 
-        legend.key.size = unit(1, 'cm'),
-        legend.text = element_text(size=20),
+        legend.position="none",
         # plot.margin = margin(0,0,0,-1),
         strip.text = element_blank(),
         axis.title = element_text(size = 30))
@@ -807,7 +805,7 @@ plt <- ggplot(data = ev.y, aes(x = yrep)) + ylab("density") + xlab("log(Burnt Ar
   xlim(7.5, 30) +
   theme_minimal(base_size = 30) +  
   theme(legend.position = "none",
-  axis.text = element_text(size = 35))
+        axis.title = element_text(size = 30))
   # geom_vline(xintercept = log(max(y)), linetype="dotted", color = "red",) +
 
 d <- ggplot_build(plt)$data[[1]]
