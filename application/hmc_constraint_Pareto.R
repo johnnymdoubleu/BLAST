@@ -172,7 +172,8 @@ ggplot(fwi.origin, aes(x=ISI, y=FFMC)) +
   geom_mark_circle(aes(x = max.fwi$ISI, y = max.fwi$FFMC, label = "15th Oct 2017"), 
                    radius = unit(2.5, "mm"), color = "red", size = 1, 
                    con.colour = "red", con.cap = unit(0, "mm"),
-                   label.colour = "red", label.buffer = unit(5, "mm"))  +
+                   label.colour = "red", label.buffer = unit(5, "mm"),
+                   label.fill = "transparent")  +
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 30),
         legend.position="none", 
