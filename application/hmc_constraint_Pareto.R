@@ -160,14 +160,19 @@ p <- dim(fwi.scaled)[[2]]
 # dev.off()
 # ggsave("./BRSTIR/application/figures/correlation.pdf", plot = replayPlot(p1), width=10, height = 7.78)
 # -------------------------------------------------------------------
-fwi.index[]
 g1 <- subset(a, GeneName == "G1")
+fwi.origin <- fwi.index[which(Y>u),]
+max.fwi <- fwi.origin[which.max(y),]
 
-ggplot(fwi.index, aes(x=ISI, y=FFMC)) + 
+ggplot(fwi.origin, aes(x=ISI, y=FFMC)) + 
   geom_point(shape=21, alpha = 0.5) + 
   # geom_hdr_lines(color = "steelblue")+
   geom_density2d(colour="steelblue", linewidth = 1.3) +
   # stat_density_2d(aes(fill = ..level..), geom = "polygon", colour="steelblue")+ 
+  geom_mark_circle(aes(x = max.fwi$ISI, y = max.fwi$FFMC, label = "15th Oct 2017"), 
+                   radius = unit(2.5, "mm"), color = "red", size = 1, 
+                   con.colour = "red", con.cap = unit(0, "mm"),
+                   label.colour = "red", label.buffer = unit(5, "mm"))  +
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 30),
         legend.position="none", 
@@ -176,7 +181,7 @@ ggplot(fwi.index, aes(x=ISI, y=FFMC)) +
         # plot.margin = margin(0,0,0,-1),
         strip.text = element_blank(),
         axis.title.x = element_text(size = 35))
-
+ggsave("./BRSTIR/application/figures/extremeviz.pdf", width = 10, height = 7.78)
 # ------------- Explanatory Analaysis
 # first.extreme <- which(Y==max(y))
 # second.extreme <- which(Y==max(y[-which.max(y)]))
