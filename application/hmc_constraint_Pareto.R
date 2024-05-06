@@ -677,7 +677,7 @@ data.scenario <- data.frame("x" = newx,
 #                             "q3" = (alp.x.samples[,6]))
 
 ggplot(data.scenario, aes(x=x)) + 
-  ylab(expression(expression(alpha(c,...,c)))) + xlab(expression(c)) + labs(col = "") +
+  ylab(expression(alpha(bold("c"),"...",bold("c")))) + xlab(expression(c)) + labs(col = "") +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
   # geom_line(aes(y = true, col = "True"), linewidth = 2) +
   # xlim(-1,1) + #ylim(0, 6.2) + 
