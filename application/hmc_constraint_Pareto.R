@@ -827,7 +827,7 @@ plt <- ggplot(data = ev.y, aes(x = yrep)) + ylab("density") + xlab("log(Burnt Ar
   # stat_dotsinterval(side = "bottom", binwidth=NA, scale = 2/3, fill="grey") + 
   geom_rug(alpha = 0.1) + 
   # geom_point(aes(x=yrep,y=-Inf),color="steelblue", size = 3.5, alpha = 0.2) +
-  xlim(7.5, 30) + ylim(-1, 0.5) +
+  xlim(7.5, 30) + #ylim(-1, 0.5) +
   theme_minimal(base_size = 30) +  
   theme(legend.position = "none",
         # axis.text.y = element_blank(),
@@ -836,7 +836,7 @@ d <- ggplot_build(plt)$data[[1]]
 print(plt + geom_area(data = subset(d, x>12.44009), aes(x=x,y=density), fill = "slategray1", alpha = 0.5) +
           #  geom_vdensity(data = subset(d, x>12.44009)$x, at = 12.44009, color = "red", linetype = "dashed"))
         geom_segment(x=12.44009, xend=12.44009, 
-              y=-(approx(x = d$x, y = d$scale, xout = 12.4409)$y-0.023), yend=(approx(x = d$x, y = d$y, xout = 12.4409)$y+0.023),
+              y=0, yend=(approx(x = d$x, y = d$y, xout = 12.4409)$y),
               colour="red", linewidth=1.2, linetype = "dotted"))
 # density.y <- density(ev.y$yrep) # see ?density for parameters
 # plot(density.y$x,density.y$y, type="l") #can use ggplot for this too
