@@ -345,10 +345,12 @@ model {
 }
 generated quantities {
     // Used in Posterior predictive check    
-    real log_lik;
-    real yrep;
+    vector[n] log_lik;
+    real yrep1;
+    real yrep2;
 
-    yrep = pareto_rng(u, alpha[145]);
+    yrep1 = pareto_rng(u, alpha[145]);
+    yrep2 = pareto_rng(u, alpha[133]);
     for(i in 1:n){
       log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
     }
@@ -402,7 +404,9 @@ gsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95)
 # smooth.samples <- summary(fit1,par=c("gsmooth"), probs = c(0.05, 0.5, 0.95))$summary
 alp.x.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
 alpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
-logba.samples <- summary(fit1, par=c("log_ba"), probs = c(0.05,0.5, 0.95))$summary
+yrep1 <- summary(fit1, par=c("yrep1"), probs = c(0.05,0.5, 0.95))$summary
+yrep2 <- summary(fit1, par=c("yrep2"), probs = c(0.05,0.5, 0.95))$summary
+
 # summary(fit1, par=c("sigma"), probs = c(0.05,0.5, 0.95))$summary
 # summary(fit1, par=c("tau"), probs = c(0.05,0.5, 0.95))$summary
 # gammafl.samples <- summary(fit1, par=c("gammaFL"), probs = c(0.05,0.5, 0.95))$summary
@@ -702,7 +706,7 @@ ggplot(data = rp) +
   theme_minimal(base_size = 20) +
   theme(axis.text = element_text(size = 25),
         axis.title = element_text(size = 30))
-ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_qqboxplot.pdf"), width = 10, height = 7.78)
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_qqboxplot.pdf"), width = 10, height = 7.78)
              
 # saveRDS(data.scenario, file=paste0("Simulation/BayesianPsplines/results/",date,"-",time, "_sc1_data_samp1.rds"))
 
@@ -783,15 +787,37 @@ print(plt + geom_density(aes(x=logy), color = "steelblue", linewidth = 2) +
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRSTIR_predictive_distribution.pdf"), width=10, height = 7.78)
 
 random.alpha.idx <- floor(runif(1000, 1, ncol(t(posterior$alpha))))
-ev.y <- as.data.frame(matrix(, nrow = 1, ncol = 0))
+ev.y1 <- ev.y2 <- as.data.frame(matrix(, nrow = 1, ncol = 0))
 # for(i ?in 1:ncol(t(posterior$theta))){
 ev.alpha.single <- c()  
 for(i in random.alpha.idx){
-  ev.y <- rbind(ev.y, as.numeric(posterior$log_ba[i]))
+  ev.y1 <- rbind(ev.y1, as.numeric(posterior$yrep1[i]))
+  ev.y2 <- rbind(ev.y2, as.numeric(posterior$yrep2[i]))
 }
-ev.y <- as.data.frame(log(ev.y))
-ev.y$logy <- max(log(y))
-colnames(ev.y) <- c("yrep", "logy")
+ev.y1 <- as.data.frame(log(ev.y1))
+ev.y2 <- as.data.frame(log(ev.y2))
+ev.y1$logy <- max(log(y))
+ev.y2$logy <- log(y[133])
+colnames(ev.y2) <- colnames(ev.y1) <- c("yrep", "logy")
+ev.y <- rbind(ev.y1, ev.y2)
+ev.y$group <- c(rep("15th Oct 2017",1000), rep("18th Jun 2017",1000))
+ev.y$group <- as.factor(ev.y$group)
+ggplot(data=ev.y, aes(x=yrep, y = group)) +
+  ylab("") + 
+  xlab("log(Burnt Area)") + labs(col = "") +
+  stat_slab(scale = 1, colour = "steelblue", fill=NA, slab_linewidth = 1.5, trim = FALSE, expand = TRUE, density = "unbounded", subguide="outside", justification = -0.01) +
+  # stat_spike(aes(linetype = after_stat(at)), at = c("median"), scale=0.7)+
+  # stat_dotsinterval(subguide = 'integer', side = "bottom", scale = 0.7, slab_linewidth = NA, position = "dodge") +
+  geom_point(position = position_jitter(seed = 1, height = 0.05), alpha = 0.1) +  
+  # geom_boxplot(width = 0.2, notch = TRUE, alpha = 0.25, outlier.color = NA) +
+  geom_vline(xintercept = log(max(y)), linetype="dotted", color = "red",) +
+  geom_vline(xintercept = log(y[133]), linetype="dotted", color = "black",) +
+  # geom_segment(aes(xend = max(y), yend = 0)) + 
+  theme_minimal(base_size = 30) +  
+  theme(legend.position = "none",
+        plot.margin = margin(0,0,0,25),
+        axis.text.y = element_text(angle = 90, size = 15, vjust = 15, hjust = 0.5),
+        axis.title = element_text(size = 30))
 
 plt <- ggplot(data = ev.y, aes(x = yrep)) + ylab("density") + xlab("log(Burnt Area)") + labs(col = "") +
   geom_density(color = "steelblue", linewidth = 1.2) + 
@@ -824,13 +850,13 @@ plt <- ggplot(data = ev.y, aes(x = yrep)) + ylab("density") + xlab("log(Burnt Ar
    # geom_area(fill="transparent") +
   # geom_ribbon(aes(ymin = 0, ymax = ifelse(y >= 10,10,y)),fill = "blue") +
   # geom_ribbon(data=ev.y, aes(xmin=0, xmax=ifelse(yrep>=log(max(y)),log(max(y)), yrep)), fill = "slategray1", alpha=0.5) +
-  # stat_dotsinterval(side = "bottom", binwidth=NA, scale = 2/3, fill="grey") + 
+  stat_dotsinterval(side = "bottom", binwidth=NA, scale = 2/3, fill="grey") + 
   geom_rug(alpha = 0.1) + 
   # geom_point(aes(x=yrep,y=-Inf),color="steelblue", size = 3.5, alpha = 0.2) +
   xlim(7.5, 30) + #ylim(-1, 0.5) +
   theme_minimal(base_size = 30) +  
   theme(legend.position = "none",
-        # axis.text.y = element_blank(),
+        axis.text.y = element_blank(),
         axis.title = element_text(size = 30))
 d <- ggplot_build(plt)$data[[1]]
 print(plt + geom_area(data = subset(d, x>12.44009), aes(x=x,y=density), fill = "slategray1", alpha = 0.5) +
@@ -838,6 +864,8 @@ print(plt + geom_area(data = subset(d, x>12.44009), aes(x=x,y=density), fill = "
         geom_segment(x=12.44009, xend=12.44009, 
               y=0, yend=(approx(x = d$x, y = d$y, xout = 12.4409)$y),
               colour="red", linewidth=1.2, linetype = "dotted"))
+
+
 # density.y <- density(ev.y$yrep) # see ?density for parameters
 # plot(density.y$x,density.y$y, type="l") #can use ggplot for this too
 # # set an Avg.position value
