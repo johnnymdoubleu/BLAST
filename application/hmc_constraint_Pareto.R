@@ -777,16 +777,16 @@ print(plt + geom_density(aes(x=logy), color = "steelblue", linewidth = 2) +
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRSTIR_predictive_distribution.pdf"), width=10, height = 7.78)
 
 
+data.extreme <- data.frame("x" = y,
+                            "post.mean" = (f.samples[,1]),
+                            "post.median" = (f.samples[,5]),
+                            "q1" = (f.samples[,4]),
+                            "q3" = (f.samples[,6]))
 # data.extreme <- data.frame("x" = log(y),
-#                             "post.mean" = (f.samples[,1]),
-#                             "post.median" = (f.samples[,5]),
-#                             "q1" = (f.samples[,4]),
-#                             "q3" = (f.samples[,6]))
-data.extreme <- data.frame("x" = log(y),
-                            "post.mean" = (logfy.samples[,1]),
-                            "post.median" = (logfy.samples[,5]),
-                            "q1" = (logfy.samples[,4]),
-                            "q3" = (logfy.samples[,6]))
+#                             "post.mean" = (logfy.samples[,1]),
+#                             "post.median" = (logfy.samples[,5]),
+#                             "q1" = (logfy.samples[,4]),
+#                             "q3" = (logfy.samples[,6]))
 ggplot(data.extreme, aes(x=x)) + 
   ylab("Density") + xlab("Burned Area") + labs(col = "") +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
