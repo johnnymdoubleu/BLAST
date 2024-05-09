@@ -766,7 +766,7 @@ for(i in random.alpha.idx){
 colnames(y.container) <- paste("col", 1:100, sep="")
 y.container$x <- seq(1,n)
 y.container$logy <- log(y)
-plt <- ggplot(data = y.container, aes(x = logy)) + ylab("density") + xlab("log(Burnt Area)") + labs(col = "")
+plt <- ggplot(data = y.container, aes(x = logy)) + ylab("Density") + xlab("log(Burnt Area)") + labs(col = "")
 
 for(i in names(y.container)){
   plt <- plt + geom_density(aes(x=.data[[i]]), color = "slategray1", alpha = 0.1, linewidht = 0.7)
