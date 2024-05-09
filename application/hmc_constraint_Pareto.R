@@ -358,8 +358,7 @@ generated quantities {
 
     yrep1 = pareto_rng(u, alpha[145]);
     for(i in 1:n){
-      f[i] = alpha[145] * (log(y[i])/log(u))^(-alpha[145])/log(y[i]);
-      logfy[i] = exponential_rng(alpha[145]);
+      f[i] = alpha[145] * (y[i]/u)^(-alpha[145])/y[i];
       log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
     }
 }
@@ -407,13 +406,14 @@ lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5,
 gl.samples <- summary(fit1, par=c("newgl"), probs = c(0.05, 0.5, 0.95))$summary
 gnl.samples <- summary(fit1, par=c("newgnl"), probs = c(0.05, 0.5, 0.95))$summary
 # gnlfl.samples <- summary(fit1, par=c("newgfnl", "newglnl"), probs = c(0.05, 0.5, 0.95))$summary
-
+# y.samples <- summary(fit1, par=c("y"), probs = c(0.05,0.5, 0.95))$summary
 gsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
 # smooth.samples <- summary(fit1,par=c("gsmooth"), probs = c(0.05, 0.5, 0.95))$summary
 alp.x.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
 alpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
 yrep1 <- summary(fit1, par=c("yrep1"), probs = c(0.05,0.5, 0.95))$summary
 f.samples <- summary(fit1, par=c("f"), probs = c(0.05,0.5, 0.95))$summary
+logfy.samples <- summary(fit1, par=c("logfy"), probs = c(0.05,0.5, 0.95))$summary
 
 # summary(fit1, par=c("sigma"), probs = c(0.05,0.5, 0.95))$summary
 # summary(fit1, par=c("tau"), probs = c(0.05,0.5, 0.95))$summary
@@ -629,11 +629,9 @@ ggplot(data.scenario, aes(x=x)) +
   guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) +
   theme_minimal(base_size = 30) +
-  theme(plot.title = element_text(hjust = 0.5, size = 30),
-        legend.position="none",
-        plot.margin = margin(0,0,0,-1),
+  theme(legend.position = "none",
         strip.text = element_blank(),
-        axis.title.x = element_text(size = 35))
+        axis.text = element_text(size = 20))
 
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_alpha.pdf"), width=10, height = 7.78)
 
@@ -709,8 +707,8 @@ rp <- data.frame(rp, group = rep("residuals", n))
 
 ggplot(data = rp) + 
   # geom_qqboxplot(aes(factor(group, levels=c("residuals")), y=rp), notch=FALSE, varwidth=TRUE, reference_dist="norm")+ 
-  geom_qqboxplot(aes(y=rp), notch=FALSE, varwidth=TRUE, reference_dist="norm")+   
-  labs(x = "", y = "Residuals") + ylim(-4,4) +
+  geom_qqboxplot(aes(y=rp), notch=FALSE, varwidth=FALSE, reference_dist="norm")+   
+  labs(x = "", y = "Residuals") + ylim(-4,4) + 
   theme_minimal(base_size = 20) +
   theme(axis.text = element_text(size = 25),
         axis.title = element_text(size = 30))
@@ -779,12 +777,16 @@ print(plt + geom_density(aes(x=logy), color = "steelblue", linewidth = 2) +
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRSTIR_predictive_distribution.pdf"), width=10, height = 7.78)
 
 
+# data.extreme <- data.frame("x" = log(y),
+#                             "post.mean" = (f.samples[,1]),
+#                             "post.median" = (f.samples[,5]),
+#                             "q1" = (f.samples[,4]),
+#                             "q3" = (f.samples[,6]))
 data.extreme <- data.frame("x" = log(y),
-                            "post.mean" = (f.samples[,1]),
-                            "post.median" = (f.samples[,5]),
-                            "q1" = (f.samples[,4]),
-                            "q3" = (f.samples[,6]))
-
+                            "post.mean" = (logfy.samples[,1]),
+                            "post.median" = (logfy.samples[,5]),
+                            "q1" = (logfy.samples[,4]),
+                            "q3" = (logfy.samples[,6]))
 ggplot(data.extreme, aes(x=x)) + 
   ylab("Density") + xlab("Burned Area") + labs(col = "") +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
@@ -813,7 +815,7 @@ for(i in random.alpha.idx){
 ev.y1 <- as.data.frame(log(ev.y1))
 ev.y1$logy <- max(log(y))
 colnames(ev.y1) <- c("yrep", "logy")
-ev.y$group <- rep("15th Oct 2017",1000)
+ev.y1$group <- rep("15th Oct 2017",1000)
 # ggplot(data=ev.y, aes(x=yrep, y = group)) +
 #   ylab("") + 
 #   xlab("log(Burnt Area)") + labs(col = "") +
@@ -835,7 +837,7 @@ ev.y$group <- rep("15th Oct 2017",1000)
 #         annotate(x=(log(y[133])-2), y= 0.1, label = "18th Jun 2017", geom="label")
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRSTIR_two_generative.pdf"), width = 10, height = 7.78)
 
-plt <- ggplot(data = ev.y1, aes(x = yrep)) + ylab("density") + xlab("log(Burnt Area)") + labs(col = "") +
+plt <- ggplot(data = ev.y1, aes(x = yrep)) + ylab("Density") + xlab("log(Burned Area)") + labs(col = "") +
   geom_density(color = "steelblue", linewidth = 1.2) + 
   geom_rug(alpha = 0.1) + 
   # geom_point(aes(x=yrep,y=-Inf),color="steelblue", size = 3.5, alpha = 0.2) +

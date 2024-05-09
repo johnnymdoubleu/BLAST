@@ -5,9 +5,9 @@ library(rstan)
 library(MESS)
 # Scenario A
 
-total.iter <- 250
+total.iter <- 500
 
-n <- n.origin <- 20000
+n <- n.origin <- 15000
 psi <- 10
 threshold <- 0.95
 p <- 5
@@ -288,7 +288,7 @@ alpha.container$q3 <- apply(alpha.upper.container[,1:total.iter], 1, quantile, c
 alpha.container <- as.data.frame(alpha.container)
 
 
-plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab(expression(alpha(bold("c"),"...",bold("c")))) #+ ylab("")
+plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab(expression(alpha(c,...,c))) #+ ylab("")
 if(total.iter <= 50){
   for(i in 1:total.iter){
     plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.2, linewidth = 0.7)
