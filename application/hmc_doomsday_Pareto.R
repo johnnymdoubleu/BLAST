@@ -79,38 +79,38 @@ fwi.index$date <- as.numeric(fwi.index$date)
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 
 psi <- 10
-threshold <- 0.99
-Y <- Y[1:13801]
+threshold <- 0.975
+Y.temp <- Y[1:13801]
 u <- quantile(Y, threshold)
-y <- Y[Y>u]
+y <- Y.temp[Y.temp>u]
 fwi.scaled <- fwi.scaled[1:13801,]
-fwi.origin <- fwi.scaled <-fwi.scaled[which(Y>u),]
-
-range01 <- function(x){(x-min(x))/(max(x)-min(x))}
-fwi.scaled$DSR <- (fwi.scaled$DSR - min(fwi.index$DSR))/(max(fwi.index$DSR-min(fwi.index$DSR)))
-fwi.scaled$FWI <- (fwi.scaled$FWI - min(fwi.index$FWI))/(max(fwi.index$FWI-min(fwi.index$FWI)))
-fwi.scaled$BUI <- (fwi.scaled$BUI - min(fwi.index$BUI))/(max(fwi.index$BUI-min(fwi.index$BUI)))
-fwi.scaled$ISI <- (fwi.scaled$ISI - min(fwi.index$ISI))/(max(fwi.index$ISI-min(fwi.index$ISI)))
-fwi.scaled$FFMC <- (fwi.scaled$FFMC - min(fwi.index$FFMC))/(max(fwi.index$FFMC-min(fwi.index$FFMC)))
-fwi.scaled$DMC <- (fwi.scaled$DMC - min(fwi.index$DMC))/(max(fwi.index$DMC-min(fwi.index$DMC)))
-fwi.scaled$DC <- (fwi.scaled$DC - min(fwi.index$DC))/(max(fwi.index$DC-min(fwi.index$DC)))
+fwi.origin <- fwi.scaled <-fwi.scaled[which(Y.temp>u),]
+fwi.minmax <- fwi.index[which(Y>quantile(Y,0.975)),]
+# range01 <- function(x){(x-min(x))/(max(x)-min(x))}
+fwi.scaled$DSR <- (fwi.scaled$DSR - min(fwi.minmax$DSR))/(max(fwi.minmax$DSR)-min(fwi.minmax$DSR))
+fwi.scaled$FWI <- (fwi.scaled$FWI - min(fwi.minmax$FWI))/(max(fwi.minmax$FWI)-min(fwi.minmax$FWI))
+fwi.scaled$BUI <- (fwi.scaled$BUI - min(fwi.minmax$BUI))/(max(fwi.minmax$BUI)-min(fwi.minmax$BUI))
+fwi.scaled$ISI <- (fwi.scaled$ISI - min(fwi.minmax$ISI))/(max(fwi.minmax$ISI)-min(fwi.minmax$ISI))
+fwi.scaled$FFMC <- (fwi.scaled$FFMC - min(fwi.minmax$FFMC))/(max(fwi.minmax$FFMC)-min(fwi.minmax$FFMC))
+fwi.scaled$DMC <- (fwi.scaled$DMC - min(fwi.minmax$DMC))/(max(fwi.minmax$DMC)-min(fwi.minmax$DMC))
+fwi.scaled$DC <- (fwi.scaled$DC - min(fwi.minmax$DC))/(max(fwi.minmax$DC)-min(fwi.minmax$DC))
 # range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 # fwi.scaled <- as.data.frame(sapply(fwi.origin, FUN = range01))
 n <- dim(fwi.scaled)[[1]]
 p <- dim(fwi.scaled)[[2]]
 
-fwi.origin <- data.frame(fwi.index[which(Y>u),], BA=y)
+fwi.origin <- data.frame(fwi.index[which(Y.temp>u),], BA=y)
 max.fwi <- fwi.origin[which.max(y),]
 
-ggplot(fwi.origin, aes(x=ISI, y=FFMC)) + 
+ggplot(fwi.origin, aes(x=DSR, y=FFMC)) + 
   geom_point(aes(colour = BA), size= 2.5) + 
   scale_colour_stepsn(colours = c("slategray1", "red"), labels=function(x) format(x, big.mark = ",", scientific = TRUE)) +
   # scale_colour_stepsn(colours = heat.colors(2, rev=TRUE), labels=function(x) format(x, big.mark = ",", scientific = TRUE)) +
   # guides(colour = guide_coloursteps(show.limits = TRUE)) +
   # scale_color_gradientn(colours = heat.colors(2)) +
-  geom_density2d(aes(x=ISI, y=FFMC), colour="steelblue", linewidth = 1.3) + xlim(7.5, 26) + 
+  geom_density2d(aes(x=DSR, y=FFMC), colour="steelblue", linewidth = 1.3) + 
   # stat_density_2d(aes(fill = ..level..), geom = "polygon", colour="steelblue")+ 
-  geom_mark_circle(aes(x = max.fwi$ISI, y = max.fwi$FFMC, label = "15th Oct 2017"), con.type = "straight",
+  geom_mark_circle(aes(x = max.fwi$DSR, y = max.fwi$FFMC, label = "15th Oct 2017"), con.type = "straight",
                    radius = unit(2.5, "mm"), color = "steelblue", size = 1, 
                    con.colour = "steelblue", con.cap = unit(0, "mm"),
                    label.colour = "steelblue", label.buffer = unit(5, "mm"),
@@ -154,8 +154,8 @@ ggplot(fwi.origin, aes(x=ISI, y=FFMC)) +
 # fwi.index[13682:13694,]
 # fwi.index[second.extreme:(second.extreme+12),]
 
-df.extreme <- cbind(y, fwi.scaled)
-df.extreme <- as.data.frame(cbind(month = fwi.index$month[which(Y>u)], df.extreme))
+# df.extreme <- cbind(y, fwi.scaled)
+# df.extreme <- as.data.frame(cbind(month = fwi.index$month[which(Y>u)], df.extreme))
 # ggplot(df.extreme, aes(x=month, y=y, color=month)) + geom_point(size=6) + theme_minimal() +
 #     theme(plot.title = element_text(hjust = 0.5, size = 20),
 #         legend.title = element_blank(),
@@ -294,7 +294,7 @@ generated quantities {
     
     for(i in 1:n){
       yrep[i] = pareto_rng(u, alpha[i]);
-      f[i] = alpha[65] * (y[i]/u)^(-alpha[65])/y[i];
+      f[i] = alpha[i] * (y[i]/u)^(-alpha[i])/y[i];
       log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
     }
 }
@@ -347,7 +347,7 @@ gsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95)
 # smooth.samples <- summary(fit1,par=c("gsmooth"), probs = c(0.05, 0.5, 0.95))$summary
 alp.x.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
 alpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
-yrep <- summary(fit1, par=c("yrep"), probs = c(0.05,0.5, 0.95))$summary
+yrep.samples <- summary(fit1, par=c("yrep"), probs = c(0.05,0.5, 0.95))$summary
 f.samples <- summary(fit1, par=c("f"), probs = c(0.05,0.5, 0.95))$summary
 
 # summary(fit1, par=c("sigma"), probs = c(0.05,0.5, 0.95))$summary
@@ -711,26 +711,74 @@ print(plt + geom_density(aes(x=logy), color = "steelblue", linewidth = 2) +
                 axis.text = element_text(size = 35)))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRSTIR_predictive_distribution.pdf"), width=10, height = 7.78)
 
+extreme.container <- as.data.frame(matrix(, nrow = n, ncol = 3000))
+for(i in 1:3000){
+  extreme.container[,i] <- density(log(posterior$yrep[i,]), n=n)$y
+}
+extreme.container <- cbind(extreme.container, t(apply(extreme.container[,1:3000], 1, quantile, c(0.05, .5, .95))))
+colnames(extreme.container)[(dim(extreme.container)[2]-2):(dim(extreme.container)[2])] <- c("q1","q2","q3")
+colnames(extreme.container)[1:3000] <- as.character(1:3000)
+extreme.container$mean <- rowMeans(extreme.container[,1:3000])
+extreme.container$y <- seq(0, 30, length.out = n)
+extreme.container <- as.data.frame(extreme.container)
 
-data.extreme <- data.frame("x" = y,
-                            "post.mean" = (yrep.samples[,1]),
-                            "post.median" = (yrep.samples[,5]),
-                            "q1" = (yrep.samples[,4]),
-                            "q3" = (yrep.samples[,6]))
-# data.extreme <- data.frame("x" = log(y),
-#                             "post.mean" = (logfy.samples[,1]),
-#                             "post.median" = (logfy.samples[,5]),
-#                             "q1" = (logfy.samples[,4]),
-#                             "q3" = (logfy.samples[,6]))
+
+plt <- ggplot(data = extreme.container, aes(x = y)) + xlab("Burned Area") + ylab("Density")+
+        # geom_line(aes(y=q2), colour = "steelblue", linewidth = 1.5) +
+        geom_line(aes(y=mean), colour = "steelblue", linewidth = 1.5) +
+        geom_ribbon(aes(ymin = q1, ymax = q3), fill = "steelblue", alpha = 0.2) + 
+        theme_minimal(base_size = 30) + 
+        theme(legend.position = "none",
+              axis.title = element_text(size = 30))
+d <- ggplot_build(plt)$data[[1]]
+print(plt + geom_area(data = subset(d, x>12.44009), aes(x=x,y=y), fill = "slategray1", alpha = 0.5) +
+        geom_segment(x=12.44009, xend=12.44009, 
+              y=0, yend=approx(x = d$x, y = d$y, xout = 12.4409)$y,
+              colour="red", linewidth=1.2, linetype = "dotted"))
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_doomsday_generative.pdf"), width = 10, height = 7.78)              
+
+data.extreme <- data.frame("x" = log(y),
+                            "post.mean" = log(yrep.samples[,1]),
+                            "post.median" = log(yrep.samples[,5]),
+                            "q1" = log(yrep.samples[,4]),
+                            "q3" = log(yrep.samples[,6]))
+# data.extreme <- data.frame("x" = y,
+#                             "post.mean" = (f.samples[,1]),
+#                             "post.median" = (f.samples[,5]),
+#                             "q1" = (f.samples[,4]),
+#                             "q3" = (f.samples[,6]))
+
+
+
 ggplot(data.extreme, aes(x=x)) + 
-  ylab("Density") + xlab("Burned Area") + labs(col = "") +
-  geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
-  geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
-  scale_fill_manual(values=c("steelblue"), name = "") +
-  scale_color_manual(values = c("steelblue")) + 
+  ylab("Density") + xlab("Burned Area") + #labs(col = "") +
+  geom_density(aes(x=post.mean), colour = "steelblue") + 
+  # geom_density(aes(x=post.median), colour = "steelblue") + 
+  # geom_density(aes(x=q1), colour = "purple") + 
+  geom_density(aes(x=q3), colour = "red") + 
+  # geom_line(aes(x, y = post.mean), colour="steelblue", linewidth = 1) +
+  # geom_ribbon(aes(ymin = q1, ymax = q3), fill = "steelblue", alpha = 0.2) +
+  # scale_fill_manual(values=c("steelblue"), name = "") +
+  # scale_color_manual(values = c("steelblue")) + 
   # scale_y_log10() + 
-  guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) +
+  # guides(color = guide_legend(order = 2), 
+          # fill = guide_legend(order = 1)) +
+  theme_minimal(base_size = 30) +
+  theme(plot.title = element_text(hjust = 0.5, size = 30),
+        legend.position="none",
+        strip.text = element_blank(),
+        axis.title.x = element_text(size = 35))
+
+
+temp.data <- curve_interval(log(posterior$yrep), .width=c(0.05,0.5,0.95))
+data.extreme <- data.frame(temp.data[(n+1):(2*n),], logy = log(y), y.origin = y)
+# data.extreme <- data.frame(median_qi(log(posterior$yrep), .width=c(0.05,0.5,0.95)),logy = log(y), y.origin = y)
+ggplot(data.extreme, aes(x=logy)) + xlab("Burned Area") + ylab("Density")+
+  geom_density(aes(x=log(.value)), colour = "steelblue") + 
+  # geom_density(aes(x=post.median), colour = "steelblue") + 
+  # geom_density(aes(x=log(.lower)), colour = "purple") + 
+  geom_density(aes(x=log(.upper)), colour = "red") + xlim(1, 30) + 
+  # geom_lineribbon(aes(ymin=sort(.lower), ymax=sort(.upper))) + 
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 30),
         legend.position="none",
@@ -738,17 +786,16 @@ ggplot(data.extreme, aes(x=x)) +
         strip.text = element_blank(),
         axis.title.x = element_text(size = 35))
 
-
 random.alpha.idx <- floor(runif(1000, 1, ncol(t(posterior$alpha))))
 ev.y1 <- ev.y2 <- as.data.frame(matrix(, nrow = 1, ncol = 0))
 # for(i ?in 1:ncol(t(posterior$theta))){
 ev.alpha.single <- c()  
 for(i in random.alpha.idx){
-  ev.y1 <- rbind(ev.y1, as.numeric(posterior$yrep1[i]))
+  ev.y1 <- rbind(ev.y1, as.numeric(posterior$yrep[i]))
   # ev.y2 <- rbind(ev.y2, as.numeric(posterior$yrep2[i]))
 }
 ev.y1 <- as.data.frame(log(ev.y1))
-ev.y1$logy <- max(log(y))
+ev.y1$logy <- log(max(y))
 colnames(ev.y1) <- c("yrep", "logy")
 ev.y1$group <- rep("15th Oct 2017",1000)
 # ggplot(data=ev.y, aes(x=yrep, y = group)) +
@@ -776,7 +823,7 @@ plt <- ggplot(data = ev.y1, aes(x = yrep)) + ylab("Density") + xlab("log(Burned 
   geom_density(color = "steelblue", linewidth = 1.2) + 
   geom_rug(alpha = 0.1) + 
   # geom_point(aes(x=yrep,y=-Inf),color="steelblue", size = 3.5, alpha = 0.2) +
-  xlim(7.5, 35) +
+  xlim(5.5, 40) +
   theme_minimal(base_size = 30) +  
   theme(legend.position = "none",
         axis.title = element_text(size = 30))
@@ -786,10 +833,10 @@ d <- ggplot_build(plt)$data[[1]]
 print(plt + geom_area(data = subset(d, x>11.48771), aes(x=x,y=y), fill = "slategray1", alpha = 0.5) +
         geom_segment(x=11.48771, xend=11.48771, 
               y=0, yend=approx(x = d$x, y = d$y, xout = 11.48771)$y,
-              colour="red", linewidth=1.2, linetype = "dotted"))
+              colour="red", linewidth=1.2, linetype = "dashed"))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRSTIR_generative.pdf"), width = 10, height = 7.78)
 
-# density.y <- density(ev.y$yrep[1:1000]) # see ?density for parameters
+# density.y <- density(ev.y1$yrep[1:1000]) # see ?density for parameters
 # plot(density.y$x,density.y$y, type="l") #can use ggplot for this too
 # # set an Avg.position value
 # Avg.pos <- 12.44009

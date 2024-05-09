@@ -43,7 +43,7 @@ Y <- df.long$measurement[!is.na(df.long$measurement)]
 summary(Y) #total burnt area
 length(Y)
 psi <- 10
-threshold <- 0.99
+threshold <- 0.975
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
 # x.scale <- x.scale[which(y>quantile(y, threshold)),]
@@ -164,17 +164,18 @@ p <- dim(fwi.scaled)[[2]]
 fwi.origin <- data.frame(fwi.index[which(Y>u),], BA=y)
 max.fwi <- fwi.origin[which.max(y),]
 
-ggplot(fwi.origin, aes(x=ISI, y=FFMC)) + 
+ggplot(fwi.origin, aes(x=DSR, y=FFMC)) + 
   geom_point(aes(colour = BA), size= 2.5) + 
   # scale_color_gradient(low = "blue", high = "red") +
   # scale_color_binned(type = gradient) +
-  scale_colour_stepsn(colours = c("slategray1", "red"), labels=function(x) format(x, big.mark = ",", scientific = TRUE)) +
+  scale_colour_stepsn(colours = c("slategray1", "red"), labels=function(x) format(x, big.mark = ",", scientific = TRUE), breaks=c(0.1e5, 0.5e5, 1e5, 2e5)) +
   # scale_colour_stepsn(colours = heat.colors(2, rev=TRUE), labels=function(x) format(x, big.mark = ",", scientific = TRUE)) +
   # guides(colour = guide_coloursteps(show.limits = TRUE)) +
   # scale_color_gradientn(colours = heat.colors(2)) +
-  geom_density2d(aes(x=ISI, y=FFMC), colour="steelblue", linewidth = 1.3) + xlim(7.5, 26) + 
+  geom_density2d(colour="steelblue", linewidth = 1.3) + 
+  # xlim(7.5, 26) + 
   # stat_density_2d(aes(fill = ..level..), geom = "polygon", colour="steelblue")+ 
-  geom_mark_circle(aes(x = max.fwi$ISI, y = max.fwi$FFMC, label = "15th Oct 2017"), con.type = "straight",
+  geom_mark_circle(aes(x = max.fwi$DSR, y = max.fwi$FFMC, label = "15th Oct 2017"), con.type = "straight",
                    radius = unit(2.5, "mm"), color = "steelblue", size = 1, 
                    con.colour = "steelblue", con.cap = unit(0, "mm"),
                    label.colour = "steelblue", label.buffer = unit(5, "mm"),
@@ -218,8 +219,8 @@ ggplot(fwi.origin, aes(x=ISI, y=FFMC)) +
 # fwi.index[13682:13694,]
 # fwi.index[second.extreme:(second.extreme+12),]
 
-df.extreme <- cbind(y, fwi.scaled)
-df.extreme <- as.data.frame(cbind(month = fwi.index$month[which(Y>u)], df.extreme))
+# df.extreme <- cbind(y, fwi.scaled)
+# df.extreme <- as.data.frame(cbind(month = fwi.index$month[which(Y>u)], df.extreme))
 # ggplot(df.extreme, aes(x=month, y=y, color=month)) + geom_point(size=6) + theme_minimal() +
 #     theme(plot.title = element_text(hjust = 0.5, size = 20),
 #         legend.title = element_blank(),
@@ -353,13 +354,13 @@ model {
 generated quantities {
     // Used in Posterior predictive check    
     vector[n] log_lik;
-    real yrep1;
+    real yrep;
     vector[n] f;
     vector[n] logfy;
 
-    yrep1 = pareto_rng(u, alpha[145]);
+    yrep = pareto_rng(u, alpha[362]);
     for(i in 1:n){
-      f[i] = alpha[145] * (y[i]/u)^(-alpha[145])/y[i];
+      f[i] = alpha[362] * (y[i]/u)^(-alpha[362])/y[i];
       log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
     }
 }
@@ -709,7 +710,7 @@ rp <- data.frame(rp, group = rep("residuals", n))
 ggplot(data = rp) + 
   # geom_qqboxplot(aes(factor(group, levels=c("residuals")), y=rp), notch=FALSE, varwidth=TRUE, reference_dist="norm")+ 
   geom_qqboxplot(aes(y=rp), notch=FALSE, varwidth=FALSE, reference_dist="norm")+   
-  labs(x = "", y = "Residuals") + ylim(-4,4) + 
+  labs(x = "", y = "Residuals") + ylim(-3,3) + 
   theme_minimal(base_size = 20) +
   theme(axis.text = element_text(size = 25),
         axis.title = element_text(size = 30))
@@ -842,7 +843,7 @@ plt <- ggplot(data = ev.y1, aes(x = yrep)) + ylab("Density") + xlab("log(Burned 
   geom_density(color = "steelblue", linewidth = 1.2) + 
   geom_rug(alpha = 0.1) + 
   # geom_point(aes(x=yrep,y=-Inf),color="steelblue", size = 3.5, alpha = 0.2) +
-  xlim(7.5, 35) +
+  xlim(5.5, 40) +
   theme_minimal(base_size = 30) +  
   theme(legend.position = "none",
         axis.title = element_text(size = 30))
@@ -855,7 +856,7 @@ print(plt + geom_area(data = subset(d, x>12.44009), aes(x=x,y=y), fill = "slateg
               colour="red", linewidth=1.2, linetype = "dotted"))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRSTIR_generative.pdf"), width = 10, height = 7.78)
 
-# density.y <- density(ev.y$yrep[1:1000]) # see ?density for parameters
+# density.y <- density(ev.y1$yrep[1:1000]) # see ?density for parameters
 # plot(density.y$x,density.y$y, type="l") #can use ggplot for this too
 # # set an Avg.position value
 # Avg.pos <- 12.44009
