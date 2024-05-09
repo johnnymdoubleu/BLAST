@@ -39,16 +39,7 @@ df.long[which(is.na(df.long$...1))+1,]
 #considering the case of leap year, the missing values are the 29th of Feb
 #Thus, each year consist of 366 data with either 1 or 0 missing value.
 Y <- df.long$measurement[!is.na(df.long$measurement)]
-
 summary(Y) #total burnt area
-length(Y)
-psi <- 10
-threshold <- 0.99
-u <- quantile(Y, threshold)
-y <- Y[Y>u]
-# x.scale <- x.scale[which(y>quantile(y, threshold)),]
-# u <- quantile(y, threshold)
-
 multiplesheets <- function(fname) {
     setwd("C:/Users/Johnny Lee/Documents/GitHub")
     # getting info about all excel sheets
@@ -86,88 +77,33 @@ fwi.index$month <- factor(format(as.Date(substr(cov.long$...1[missing.values],1,
                             levels = c("Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"))
 fwi.index$date <- as.numeric(fwi.index$date)
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
+
+psi <- 10
+threshold <- 0.99
+Y <- Y[1:13801]
+u <- quantile(Y, threshold)
+y <- Y[Y>u]
+fwi.scaled <- fwi.scaled[1:13801,]
 fwi.origin <- fwi.scaled <-fwi.scaled[which(Y>u),]
 
-# fwi.scaled <- as.data.frame(scale(fwi.scaled))
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
-fwi.scaled <- as.data.frame(sapply(fwi.origin, FUN = range01))
+fwi.scaled$DSR <- (fwi.scaled$DSR - min(fwi.index$DSR))/(max(fwi.index$DSR-min(fwi.index$DSR)))
+fwi.scaled$FWI <- (fwi.scaled$FWI - min(fwi.index$FWI))/(max(fwi.index$FWI-min(fwi.index$FWI)))
+fwi.scaled$BUI <- (fwi.scaled$BUI - min(fwi.index$BUI))/(max(fwi.index$BUI-min(fwi.index$BUI)))
+fwi.scaled$ISI <- (fwi.scaled$ISI - min(fwi.index$ISI))/(max(fwi.index$ISI-min(fwi.index$ISI)))
+fwi.scaled$FFMC <- (fwi.scaled$FFMC - min(fwi.index$FFMC))/(max(fwi.index$FFMC-min(fwi.index$FFMC)))
+fwi.scaled$DMC <- (fwi.scaled$DMC - min(fwi.index$DMC))/(max(fwi.index$DMC-min(fwi.index$DMC)))
+fwi.scaled$DC <- (fwi.scaled$DC - min(fwi.index$DC))/(max(fwi.index$DC-min(fwi.index$DC)))
+# range01 <- function(x){(x-min(x))/(max(x)-min(x))}
+# fwi.scaled <- as.data.frame(sapply(fwi.origin, FUN = range01))
 n <- dim(fwi.scaled)[[1]]
 p <- dim(fwi.scaled)[[2]]
 
-# fwi.scaled.cov <- cov(fwi.scaled)
-# fwi.scaled.eigen <- eigen(fwi.scaled.cov)
-# phi <- fwi.scaled.eigen$vectors[, 1:7]
-# phi <- -phi
-# centre.fwi <- colMeans(fwi.scaled)
-
-# PC1 <- (as.matrix(fwi.scaled)-(matrix(rep(1, n),nrow=n) %*% matrix(centre.fwi, ncol=p))) %*% phi[,1]
-# PVE <- fwi.scaled.eigen$values / sum(fwi.scaled.eigen$values)
-# dim((as.matrix(fwi.scaled)-(matrix(rep(1, n),nrow=n) %*% matrix(centre.fwi, ncol=p))))
-# matrix(rep(1, n),nrow=n) %*% matrix(centre.fwi, ncol=p)
-# plot((fwi.scaled[,2]), (log(y)))
-# plot((fwi.scaled[,5]), (log(y)))
-# range01 <- function(x){(x-min(x))/(max(x)-min(x))}
-# fwi.scaled <- as.data.frame(sapply(fwi.origin, FUN = range01))
-
-# fwi.scaled <- as.data.frame(lapply(fwi.scaled, rescale, to=c(-1,1)))
-
-# ---------------------------------------------------------------------------
-# Computing Hills Estimator plot
-# orderred <- rev(sort(Y)[14462:14609])
-# # orderred <- rev(sort(Y)[13863:14609])
-# # ordered <- rev(sort(Y))
-# n.hill <- length(orderred)
-# k <- 1:n.hill
-# loggs <- logb(orderred/u)
-# avesumlog <- cumsum(loggs)/k
-# xihat <- c(NA, (avesumlog)[2:n.hill])
-# xihat <- c(NA, (avesumlog-loggs)[2:n.hill])
-# alphahat <- 1/xihat
-# ses <- alphahat/sqrt(k)
-# xx <- trunc(seq(from = n.hill, to = 15))
-# y.alpha <- alphahat[xx]
-# ## ylabel <- alphahat
-# yrange <- range(y.alpha)
-# qq <- qnorm(1-(1-threshold)/2)
-# uu <- y.alpha + ses[xx] * qq
-# ll <- y.alpha - ses[xx] * qq
-# ## yrange <- range(uu, ll)
-# data.hill <- data.frame(k = c(15:n.hill),
-#                         u = uu,
-#                         l = ll,
-#                         alpha = y.alpha,
-#                         order = xx)
-# ggplot(data = data.hill) + 
-#   geom_ribbon(aes(x = order, ymin = l, ymax = u, fill = "confidenceband"),
-#               alpha = 0.2, linetype = "dashed") + 
-#   geom_line(aes(x = order, y = alpha, color="hillestimator" ), linewidth = 1.2) + 
-#   xlim(15, n.hill) +
-#   labs(x = "Order Statistics", y = "Tail Index") + 
-#   scale_color_manual(values=c("steelblue")) + 
-#   scale_fill_manual(values=c("steelblue"), name = "") +
-#   theme_minimal(base_size = 30) +
-#   theme(text = element_text(size = 30), 
-#         axis.text.x = element_text(angle = 0, hjust = 0.5),
-#         legend.position = "none")
-# ggsave("./BRSTIR/application/figures/hillestimator.pdf", width=10, height = 7.78)
-
-
-# pdf(file = "./BRSTIR/application/figures/correlation.pdf")
-# corrplot.mixed(#cor(fwi.scaled),
-#                 cor(cbind(data.frame(BA = y),fwi.scaled)),
-#                 upper = "ellipse",
-#                 lower = "number",
-#                 addgrid.col = "black")
-# dev.off()
-# ggsave("./BRSTIR/application/figures/correlation.pdf", plot = replayPlot(p1), width=10, height = 7.78)
-# -------------------------------------------------------------------
 fwi.origin <- data.frame(fwi.index[which(Y>u),], BA=y)
 max.fwi <- fwi.origin[which.max(y),]
 
 ggplot(fwi.origin, aes(x=ISI, y=FFMC)) + 
   geom_point(aes(colour = BA), size= 2.5) + 
-  # scale_color_gradient(low = "blue", high = "red") +
-  # scale_color_binned(type = gradient) +
   scale_colour_stepsn(colours = c("slategray1", "red"), labels=function(x) format(x, big.mark = ",", scientific = TRUE)) +
   # scale_colour_stepsn(colours = heat.colors(2, rev=TRUE), labels=function(x) format(x, big.mark = ",", scientific = TRUE)) +
   # guides(colour = guide_coloursteps(show.limits = TRUE)) +
@@ -353,18 +289,17 @@ model {
 generated quantities {
     // Used in Posterior predictive check    
     vector[n] log_lik;
-    real yrep1;
+    vector[n] yrep;
     vector[n] f;
-    vector[n] logfy;
-
-    yrep1 = pareto_rng(u, alpha[145]);
+    
     for(i in 1:n){
-      f[i] = alpha[145] * (y[i]/u)^(-alpha[145])/y[i];
+      yrep[i] = pareto_rng(u, alpha[i]);
+      f[i] = alpha[65] * (y[i]/u)^(-alpha[65])/y[i];
       log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
     }
 }
 "
-, "model_BRSTIR_constraint.stan")
+, "model_BRSTIR_doomsday.stan")
 
 data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, 
                     atau = ((psi+1)/2), indexFL = as.vector(t(index.holder)),
@@ -386,7 +321,7 @@ init.alpha <- list(list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c((psi-2),p))
 
 # stanc("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/application/model1.stan")
 fit1 <- stan(
-    file = "model_BRSTIR_constraint.stan",  # Stan program
+    file = "model_BRSTIR_doomsday.stan",  # Stan program
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
     # init_r = 1,
@@ -412,9 +347,8 @@ gsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95)
 # smooth.samples <- summary(fit1,par=c("gsmooth"), probs = c(0.05, 0.5, 0.95))$summary
 alp.x.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
 alpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
-yrep1 <- summary(fit1, par=c("yrep1"), probs = c(0.05,0.5, 0.95))$summary
+yrep <- summary(fit1, par=c("yrep"), probs = c(0.05,0.5, 0.95))$summary
 f.samples <- summary(fit1, par=c("f"), probs = c(0.05,0.5, 0.95))$summary
-logfy.samples <- summary(fit1, par=c("logfy"), probs = c(0.05,0.5, 0.95))$summary
 
 # summary(fit1, par=c("sigma"), probs = c(0.05,0.5, 0.95))$summary
 # summary(fit1, par=c("tau"), probs = c(0.05,0.5, 0.95))$summary
@@ -779,10 +713,10 @@ print(plt + geom_density(aes(x=logy), color = "steelblue", linewidth = 2) +
 
 
 data.extreme <- data.frame("x" = y,
-                            "post.mean" = (f.samples[,1]),
-                            "post.median" = (f.samples[,5]),
-                            "q1" = (f.samples[,4]),
-                            "q3" = (f.samples[,6]))
+                            "post.mean" = (yrep.samples[,1]),
+                            "post.median" = (yrep.samples[,5]),
+                            "q1" = (yrep.samples[,4]),
+                            "q3" = (yrep.samples[,6]))
 # data.extreme <- data.frame("x" = log(y),
 #                             "post.mean" = (logfy.samples[,1]),
 #                             "post.median" = (logfy.samples[,5]),
@@ -849,9 +783,9 @@ plt <- ggplot(data = ev.y1, aes(x = yrep)) + ylab("Density") + xlab("log(Burned 
   # geom_vline(xintercept = log(max(y)), linetype="dotted", color = "red",) +
 
 d <- ggplot_build(plt)$data[[1]]
-print(plt + geom_area(data = subset(d, x>12.44009), aes(x=x,y=y), fill = "slategray1", alpha = 0.5) +
-        geom_segment(x=12.44009, xend=12.44009, 
-              y=0, yend=approx(x = d$x, y = d$y, xout = 12.4409)$y,
+print(plt + geom_area(data = subset(d, x>11.48771), aes(x=x,y=y), fill = "slategray1", alpha = 0.5) +
+        geom_segment(x=11.48771, xend=11.48771, 
+              y=0, yend=approx(x = d$x, y = d$y, xout = 11.48771)$y,
               colour="red", linewidth=1.2, linetype = "dotted"))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRSTIR_generative.pdf"), width = 10, height = 7.78)
 
