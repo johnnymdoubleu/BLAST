@@ -743,18 +743,18 @@ for(i in 1:p){
                   ylab("") + xlab(names(fwi.scaled)[i]) +
                   scale_fill_manual(values=c("steelblue"), name = "") + 
                   scale_color_manual(values=c("steelblue")) +
-                  ylim(-4, 4) +
-                  
+                  ylim(-4.1, 4.1) +
+                  # geom_circle(aes(x0=fwi.scaled[362,i], y0=-4.01, r=0.1), inherit.aes=FALSE) +
                   theme_minimal(base_size = 30) +
                   theme(legend.position = "none",
                           plot.margin = margin(0,0,0,-20),
                           axis.text = element_text(size = 35),
                           axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt
+  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[362, i], y=-4.1, color = "red", size = 4)
 }
 
-grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
-grid.plts[[1]]
+# grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
+grid.plts[[i]]
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=10, height = 7.78)
 
 #Predictive Distribution check
