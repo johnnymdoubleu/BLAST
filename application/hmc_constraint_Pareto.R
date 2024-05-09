@@ -743,8 +743,8 @@ for(i in 1:p){
                   ylab("") + xlab(names(fwi.scaled)[i]) +
                   scale_fill_manual(values=c("steelblue"), name = "") + 
                   scale_color_manual(values=c("steelblue")) +
-                  ylim(-3, 3) +
-                  # scale_y_continuous(breaks=equal_breaks(n=5, s=0.1)) + 
+                  ylim(-4, 4) +
+                  
                   theme_minimal(base_size = 30) +
                   theme(legend.position = "none",
                           plot.margin = margin(0,0,0,-20),
@@ -754,7 +754,7 @@ for(i in 1:p){
 }
 
 grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
-# grid.plts[[7]]
+grid.plts[[1]]
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=10, height = 7.78)
 
 #Predictive Distribution check
