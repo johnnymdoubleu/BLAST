@@ -708,8 +708,9 @@ rp <- data.frame(rp, group = rep("residuals", n))
 
 ggplot(data = rp) + 
   # geom_qqboxplot(aes(factor(group, levels=c("residuals")), y=rp), notch=FALSE, varwidth=TRUE, reference_dist="norm")+ 
-  geom_qqboxplot(aes(y=rp), notch=FALSE, varwidth=FALSE, reference_dist="norm", width = 0.1)+
-  labs(x = "", y = "Residuals") + ylim(-3,3) + xlim(-.2,.2)+
+  geom_qqboxplot(aes(y=rp), notch=FALSE, varwidth=FALSE, reference_dist="norm", width = 0.15)+
+  labs(x = "", y = "Residuals") + ylim(-4,4) + xlim(-.2,.2)+
+  scale_fill_manual(values=c("steelblue"), name = "") +
   theme_minimal(base_size = 20) +
   theme(axis.text = element_text(size = 25),
         axis.title = element_text(size = 30))
