@@ -753,9 +753,9 @@ for(i in 1:p){
   grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[362, i], y=-4.1, color = "red", size = 4)
 }
 
-# grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
-grid.plts[[7]]
-ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=10, height = 7.78)
+grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
+# grid.plts[[7]]
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=10, height = 7.78)
 
 #Predictive Distribution check
 y.container <- as.data.frame(matrix(, nrow = n, ncol = 0))  
