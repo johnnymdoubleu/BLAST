@@ -43,7 +43,7 @@ Y <- df.long$measurement[!is.na(df.long$measurement)]
 summary(Y) #total burnt area
 length(Y)
 psi <- 10
-threshold <- 0.99
+threshold <- 0.975
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
 # x.scale <- x.scale[which(y>quantile(y, threshold)),]
@@ -360,7 +360,7 @@ generated quantities {
 
     yrep = pareto_rng(u, alpha[362]);
     for(i in 1:n){
-      f[i] = alpha[362] * (y[i]/u)^(-alpha[362])/y[i];
+      f[i] = pareto_rng(u, alpha[i]);
       log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
     }
 }
