@@ -723,7 +723,7 @@ extreme.container$y <- seq(0, 30, length.out = n)
 extreme.container <- as.data.frame(extreme.container)
 
 
-plt <- ggplot(data = extreme.container, aes(x = y)) + xlab("Burned Area") + ylab("Density")+
+plt <- ggplot(data = extreme.container, aes(x = y)) + xlab("log(Burned Area)") + ylab("Density")+
         # geom_line(aes(y=q2), colour = "steelblue", linewidth = 1.5) +
         geom_line(aes(y=mean), colour = "steelblue", linewidth = 1.5) +
         geom_ribbon(aes(ymin = q1, ymax = q3), fill = "steelblue", alpha = 0.2) + 
@@ -731,7 +731,8 @@ plt <- ggplot(data = extreme.container, aes(x = y)) + xlab("Burned Area") + ylab
         theme(legend.position = "none",
               axis.title = element_text(size = 30))
 d <- ggplot_build(plt)$data[[1]]
-print(plt + geom_area(data = subset(d, x>12.44009), aes(x=x,y=y), fill = "slategray1", alpha = 0.5) +
+print(plt + 
+        # geom_area(data = subset(d, x>12.44009), aes(x=x,y=y), fill = "slategray1", alpha = 0.5) +
         geom_segment(x=12.44009, xend=12.44009, 
               y=0, yend=approx(x = d$x, y = d$y, xout = 12.4409)$y,
               colour="red", linewidth=1.2, linetype = "dotted"))

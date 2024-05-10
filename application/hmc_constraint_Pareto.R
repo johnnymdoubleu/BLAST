@@ -413,7 +413,7 @@ gsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95)
 # smooth.samples <- summary(fit1,par=c("gsmooth"), probs = c(0.05, 0.5, 0.95))$summary
 alp.x.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
 alpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
-yrep1 <- summary(fit1, par=c("yrep1"), probs = c(0.05,0.5, 0.95))$summary
+yrep <- summary(fit1, par=c("yrep"), probs = c(0.05,0.5, 0.95))$summary
 f.samples <- summary(fit1, par=c("f"), probs = c(0.05,0.5, 0.95))$summary
 logfy.samples <- summary(fit1, par=c("logfy"), probs = c(0.05,0.5, 0.95))$summary
 
@@ -779,39 +779,39 @@ print(plt + geom_density(aes(x=logy), color = "steelblue", linewidth = 2) +
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRSTIR_predictive_distribution.pdf"), width=10, height = 7.78)
 
 
-data.extreme <- data.frame("x" = y,
-                            "post.mean" = (f.samples[,1]),
-                            "post.median" = (f.samples[,5]),
-                            "q1" = (f.samples[,4]),
-                            "q3" = (f.samples[,6]))
-# data.extreme <- data.frame("x" = log(y),
-#                             "post.mean" = (logfy.samples[,1]),
-#                             "post.median" = (logfy.samples[,5]),
-#                             "q1" = (logfy.samples[,4]),
-#                             "q3" = (logfy.samples[,6]))
-ggplot(data.extreme, aes(x=x)) + 
-  ylab("Density") + xlab("Burned Area") + labs(col = "") +
-  geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
-  geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
-  scale_fill_manual(values=c("steelblue"), name = "") +
-  scale_color_manual(values = c("steelblue")) + 
-  # scale_y_log10() + 
-  guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) +
-  theme_minimal(base_size = 30) +
-  theme(plot.title = element_text(hjust = 0.5, size = 30),
-        legend.position="none",
-        plot.margin = margin(0,0,0,-1),
-        strip.text = element_blank(),
-        axis.title.x = element_text(size = 35))
+extreme.container <- as.data.frame(matrix(, nrow = n, ncol = 3000))
+for(i in 1:3000){
+  extreme.container[,i] <- density(log(posterior$f[i,]), n=n)$y
+}
+extreme.container <- cbind(extreme.container, t(apply(extreme.container[,1:3000], 1, quantile, c(0.05, .5, .95))))
+colnames(extreme.container)[(dim(extreme.container)[2]-2):(dim(extreme.container)[2])] <- c("q1","q2","q3")
+colnames(extreme.container)[1:3000] <- as.character(1:3000)
+extreme.container$mean <- rowMeans(extreme.container[,1:3000])
+extreme.container$y <- seq(0, 30, length.out = n)
+extreme.container <- as.data.frame(extreme.container)
 
+
+plt <- ggplot(data = extreme.container, aes(x = y)) + xlab("log(Burned Area)") + ylab("Density")+
+        # geom_line(aes(y=q2), colour = "steelblue", linewidth = 1.5) +
+        geom_line(aes(y=mean), colour = "steelblue", linewidth = 1.5) +
+        geom_ribbon(aes(ymin = q1, ymax = q3), fill = "steelblue", alpha = 0.2) + 
+        theme_minimal(base_size = 30) + 
+        theme(legend.position = "none",
+              axis.title = element_text(size = 30))
+d <- ggplot_build(plt)$data[[1]]
+print(plt + 
+        # geom_area(data = subset(d, x>12.44009), aes(x=x,y=y), fill = "slategray1", alpha = 0.5) +
+        geom_segment(x=12.44009, xend=12.44009, 
+              y=0, yend=approx(x = d$x, y = d$y, xout = 12.4409)$y,
+              colour="red", linewidth=1.2, linetype = "dotted"))
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_post_generative.pdf"), width = 10, height = 7.78)
 
 random.alpha.idx <- floor(runif(1000, 1, ncol(t(posterior$alpha))))
 ev.y1 <- ev.y2 <- as.data.frame(matrix(, nrow = 1, ncol = 0))
 # for(i ?in 1:ncol(t(posterior$theta))){
 ev.alpha.single <- c()  
 for(i in random.alpha.idx){
-  ev.y1 <- rbind(ev.y1, as.numeric(posterior$yrep1[i]))
+  ev.y1 <- rbind(ev.y1, as.numeric(posterior$yrep[i]))
   # ev.y2 <- rbind(ev.y2, as.numeric(posterior$yrep2[i]))
 }
 ev.y1 <- as.data.frame(log(ev.y1))
