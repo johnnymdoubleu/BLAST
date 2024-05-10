@@ -761,7 +761,8 @@ grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
 y.container <- as.data.frame(matrix(, nrow = n, ncol = 0))  
 random.alpha.idx <- floor(runif(100, 1, ncol(t(posterior$f))))
 for(i in random.alpha.idx){
-  y.container <- cbind(y.container, log(rPareto(n, u, t(posterior$alpha)[i])))
+  # y.container <- cbind(y.container, log(rPareto(n, u, t(posterior$alpha)[i])))
+  y.container <- cbind(y.container, log(t(posterior$f)[i]))
 }
 colnames(y.container) <- paste("col", 1:100, sep="")
 y.container$x <- seq(1,n)
@@ -773,7 +774,7 @@ for(i in names(y.container)){
 }
 
 print(plt + geom_density(aes(x=logy), color = "steelblue", linewidth = 2) +
-        theme_minimal(base_size = 30) + ylim(0, 2) + #xlim(7.5,25) +
+        theme_minimal(base_size = 30) + ylim(0, 2) + xlim(7.5,30) +
         theme(legend.position = "none",
                 axis.text = element_text(size = 35)))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRSTIR_predictive_distribution.pdf"), width=10, height = 7.78)
