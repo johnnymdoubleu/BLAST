@@ -694,9 +694,8 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
   geom_line(aes(x = grid, y = trajhat), colour = "steelblue", linetype = "dashed", linewidth = 1.2) + 
   geom_abline(intercept = 0, slope = 1, linewidth = 1.2) + 
   labs(x = "Theoretical quantiles", y = "Sample quantiles") + 
-  theme_minimal(base_size = 20) +
-  theme(axis.text = element_text(size = 30),
-        axis.title = element_text(size = 30)) + 
+  theme_minimal(base_size = 30) +
+  theme(axis.text = element_text(size = 20)) + 
   coord_fixed(xlim = c(-3, 3),
               ylim = c(-3, 3))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_qqplot.pdf"), width=10, height = 7.78)
@@ -709,8 +708,8 @@ rp <- data.frame(rp, group = rep("residuals", n))
 
 ggplot(data = rp) + 
   # geom_qqboxplot(aes(factor(group, levels=c("residuals")), y=rp), notch=FALSE, varwidth=TRUE, reference_dist="norm")+ 
-  geom_qqboxplot(aes(y=rp), notch=FALSE, varwidth=FALSE, reference_dist="norm")+   
-  labs(x = "", y = "Residuals") + ylim(-3,3) + 
+  geom_qqboxplot(aes(y=rp), notch=FALSE, varwidth=FALSE, reference_dist="norm", width=0.5)+
+  labs(x = "", y = "Residuals") + ylim(-3,3) + xlim(-3,3)+
   theme_minimal(base_size = 20) +
   theme(axis.text = element_text(size = 25),
         axis.title = element_text(size = 30))
@@ -754,8 +753,8 @@ for(i in 1:p){
 }
 
 # grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
-grid.plts[[i]]
-# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=10, height = 7.78)
+grid.plts[[7]]
+ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=10, height = 7.78)
 
 #Predictive Distribution check
 y.container <- as.data.frame(matrix(, nrow = n, ncol = 0))  
@@ -856,15 +855,15 @@ print(plt + geom_area(data = subset(d, x>12.44009), aes(x=x,y=y), fill = "slateg
               colour="red", linewidth=1.2, linetype = "dotted"))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRSTIR_generative.pdf"), width = 10, height = 7.78)
 
-# density.y <- density(ev.y1$yrep[1:1000]) # see ?density for parameters
-# plot(density.y$x,density.y$y, type="l") #can use ggplot for this too
-# # set an Avg.position value
-# Avg.pos <- 12.44009
-# xt <- diff(density.y$x[density.y$x>Avg.pos])
-# library(zoo)
-# yt <- rollmean(density.y$y[density.y$x>Avg.pos],2)
-# # This gives you the area
-# sum(xt*yt)
+density.y <- density(ev.y1$yrep) # see ?density for parameters
+plot(density.y$x,density.y$y, type="l") #can use ggplot for this too
+# set an Avg.position value
+Avg.pos <- 12.44009
+xt <- diff(density.y$x[density.y$x>Avg.pos])
+library(zoo)
+yt <- rollmean(density.y$y[density.y$x>Avg.pos],2)
+# This gives you the area
+sum(xt*yt)
 
 # library(ismev)
 # gpd.fit(y, u)
