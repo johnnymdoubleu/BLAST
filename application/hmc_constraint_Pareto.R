@@ -42,7 +42,7 @@ Y <- df.long$measurement[!is.na(df.long$measurement)]
 
 summary(Y) #total burnt area
 length(Y)
-psi <- 10
+psi <- 20
 threshold <- 0.975
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
@@ -860,7 +860,7 @@ print(plt + geom_area(data = subset(d, x>12.44009), aes(x=x,y=y), fill = "slateg
 density.y <- density(ev.y1$yrep) # see ?density for parameters
 plot(density.y$x,density.y$y, type="l") #can use ggplot for this too
 # set an Avg.position value
-Avg.pos <- 12.44009
+Avg.pos <- log(max(y))
 xt <- diff(density.y$x[density.y$x>Avg.pos])
 library(zoo)
 yt <- rollmean(density.y$y[density.y$x>Avg.pos],2)
