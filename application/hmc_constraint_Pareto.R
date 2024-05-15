@@ -247,10 +247,12 @@ for(i in 1:p){
 # for(i in 1:n){
 #   xholder[i,] <- centre.fwi + seq(min(PC1), max(PC1), length.out = n)[i] %*% phi[,1]
 # }
-
 for(i in 1:p){
-  xholder[,i] <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n)
-  test.knot <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
+  fwi.fn <- ecdf(fwi.scaled[,i])
+  # xholder[,i] <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n)
+  # test.knot <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
+  xholder[,i] <- sort(fwi.fn(fwi.scaled[,i]))
+  test.knot <- seq(min(xholder[,i]), max(xholder[,i]), length.out = psi)
   # test.knot <- seq(min(xholder[,i]), max(xholder[,i]), length.out = psi)  
   splines <- basis.tps(xholder[,i], test.knot, m=2, rk=FALSE, intercept = FALSE)
   xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
@@ -729,9 +731,11 @@ cat("Finished Running")
 
 grid.plts <- list()
 for(i in 1:p){
-  grid.plt <- ggplot(data = data.frame(data.smooth[((((i-1)*n)+1):(i*n)),], origin = fwi.scaled[,i] 
+  fwi.fn <- ecdf(fwi.scaled[,i])
+  fwi.data <- data.frame(data.smooth[((((i-1)*n)+1):(i*n)),], origin = sort(fwi.fn(fwi.scaled[,i])))
+  grid.plt <- ggplot(data = fwi.data 
                   # c = seq(min(PC1), max(PC1), length.out = n)
-                  ), aes(x=x)) + 
+                  , aes(x=origin)) + 
   # grid.plt <- ggplot(data = data.frame(data.smooth[((((i-1)*n)+1):(i*n)),], origin = fwi.index[which(Y>u),i]), aes(x=x)) +   
                   # geom_point(aes(x= origin, y=q2), alpha = 0.3) + 
                   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
