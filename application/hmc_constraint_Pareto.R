@@ -248,10 +248,10 @@ for(i in 1:p){
 #   xholder[i,] <- centre.fwi + seq(min(PC1), max(PC1), length.out = n)[i] %*% phi[,1]
 # }
 for(i in 1:p){
-  fwi.fn <- ecdf(fwi.scaled[,i])
+  fwi.fn <- ecdf(fwi.index[which(Y>u),i])
   # xholder[,i] <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n)
   # test.knot <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
-  xholder[,i] <- sort(fwi.fn(fwi.scaled[,i]))
+  xholder[,i] <- sort(fwi.fn(fwi.index[which(Y>u),i]))
   test.knot <- seq(min(xholder[,i]), max(xholder[,i]), length.out = psi)
   # test.knot <- seq(min(xholder[,i]), max(xholder[,i]), length.out = psi)  
   splines <- basis.tps(xholder[,i], test.knot, m=2, rk=FALSE, intercept = FALSE)
@@ -606,7 +606,7 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
           axis.text = element_text(size = 20))
 # #ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_nonlinear.pdf"), width=12.5, height = 15)
 
-data.scenario <- data.frame("x" = newx,
+data.scenario <- data.frame("x" = xholder[,1],
                             #"x" = seq(min(PC1), max(PC1), length.out = n),
                             "post.mean" = (alpha.samples[,1]),
                             "post.median" = (alpha.samples[,5]),
@@ -729,19 +729,31 @@ cat("Finished Running")
 #   lw = weights(fwi.loo$psis_object)
 # )
 
+g.smooth.mean <- as.vector(matrix(gsmooth.samples[,1], nrow = n, byrow=TRUE))
+g.smooth.q1 <- as.vector(matrix(gsmooth.samples[,4], nrow = n, byrow=TRUE))
+g.smooth.q2 <- as.vector(matrix(gsmooth.samples[,5], nrow = n, byrow=TRUE))
+g.smooth.q3 <- as.vector(matrix(gsmooth.samples[,6], nrow = n, byrow=TRUE))
+data.smooth <- data.frame("x" = as.vector(xholder),
+                          "post.mean" = as.vector(g.smooth.mean),
+                          "q1" = as.vector(g.smooth.q1),
+                          "q2" = as.vector(g.smooth.q2),
+                          "q3" = as.vector(g.smooth.q3),
+                          "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)))
+
+
 grid.plts <- list()
 for(i in 1:p){
   fwi.fn <- ecdf(fwi.scaled[,i])
-  fwi.data <- data.frame(data.smooth[((((i-1)*n)+1):(i*n)),], origin = sort(fwi.fn(fwi.scaled[,i])))
+  fwi.data <- data.frame(data.smooth[((((i-1)*n)+1):(i*n)),])
   grid.plt <- ggplot(data = fwi.data 
                   # c = seq(min(PC1), max(PC1), length.out = n)
-                  , aes(x=origin)) + 
+                  , aes(x=x)) + 
   # grid.plt <- ggplot(data = data.frame(data.smooth[((((i-1)*n)+1):(i*n)),], origin = fwi.index[which(Y>u),i]), aes(x=x)) +   
                   # geom_point(aes(x= origin, y=q2), alpha = 0.3) + 
                   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
                   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
                   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
-                  geom_rug(aes(x= origin, y=q2), sides = "b") +
+                  geom_rug(aes(x=x, y=q2), sides = "b") +
                   ylab("") + xlab(names(fwi.scaled)[i]) +
                   scale_fill_manual(values=c("steelblue"), name = "") + 
                   scale_color_manual(values=c("steelblue")) +
@@ -752,7 +764,7 @@ for(i in 1:p){
                           plot.margin = margin(0,0,0,-20),
                           axis.text = element_text(size = 35),
                           axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[362, i], y=-4.1, color = "red", size = 4)
+  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.fn(fwi.scaled[362,i]), y=-4.1, color = "red", size = 4)
 }
 
 grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
