@@ -353,10 +353,10 @@ model {
 generated quantities {
     // Used in Posterior predictive check    
     vector[n] log_lik;
-    real yrep;
     vector[n] f;
+    real yrep;
 
-    yrep = pareto_rng(u, alpha[362]);
+    yrep = pareto_rng(u, alpha[362]); 
     for(i in 1:n){
       f[i] = pareto_rng(u, alpha[i]);
       log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
@@ -364,6 +364,7 @@ generated quantities {
 }
 "
 , "model_BRSTIR_constraint.stan")
+
 
 data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, 
                     atau = ((psi+1)/2), indexFL = as.vector(t(index.holder)),

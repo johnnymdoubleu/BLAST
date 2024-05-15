@@ -42,7 +42,7 @@ Y <- df.long$measurement[!is.na(df.long$measurement)]
 
 summary(Y) #total burnt area
 length(Y)
-psi <- 20
+psi <- 10
 threshold <- 0.98
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
@@ -361,10 +361,10 @@ model {
 generated quantities {
     // Used in Posterior predictive check    
     vector[n] log_lik;
-    real yrep;
     vector[n] f;
+    real yrep;
 
-    yrep = pareto_rng(u, alpha[362]);
+    yrep = pareto_rng(u, alpha[2]);
     for(i in 1:n){
       f[i] = pareto_rng(u, alpha[i]);
       log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
