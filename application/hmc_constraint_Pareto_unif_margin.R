@@ -42,7 +42,7 @@ Y <- df.long$measurement[!is.na(df.long$measurement)]
 
 summary(Y) #total burnt area
 length(Y)
-psi <- 10
+psi <- 20
 threshold <- 0.975
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
@@ -91,6 +91,7 @@ fwi.origin <- fwi.scaled <-fwi.scaled[which(Y>u),]
 # fwi.scaled <- as.data.frame(scale(fwi.scaled))
 # range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 # fwi.scaled <- as.data.frame(sapply(fwi.origin, FUN = range01))
+p <- dim(fwi.scaled)[[2]]
 for(i in 1:p){
   fwi.fn <- ecdf(fwi.index[which(Y>u),i])
   fwi.scaled[,i] <- fwi.fn(fwi.index[which(Y>u),i])
@@ -347,8 +348,8 @@ model {
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += normal_lpdf(theta[1] | 0, 100);
-    target += gamma_lpdf(lambda1 | 1, 1e-5);
-    target += gamma_lpdf(lambda2o | 1, 1e-5);
+    target += gamma_lpdf(lambda1 | 1, 1e-1);
+    target += gamma_lpdf(lambda2o | 1, 1e-1);
     target += (2*p*log(lambda2o));
     for (j in 1:p){
         target += gamma_lpdf(tau1[j] | 1, lambda1^2*0.5);
