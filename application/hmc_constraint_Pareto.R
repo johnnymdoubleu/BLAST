@@ -42,7 +42,7 @@ Y <- df.long$measurement[!is.na(df.long$measurement)]
 
 summary(Y) #total burnt area
 length(Y)
-psi <- 20
+psi <- 10
 threshold <- 0.975
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
@@ -356,7 +356,6 @@ generated quantities {
     vector[n] log_lik;
     real yrep;
     vector[n] f;
-    vector[n] logfy;
 
     yrep = pareto_rng(u, alpha[362]);
     for(i in 1:n){
@@ -415,7 +414,6 @@ alp.x.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summar
 alpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
 yrep <- summary(fit1, par=c("yrep"), probs = c(0.05,0.5, 0.95))$summary
 f.samples <- summary(fit1, par=c("f"), probs = c(0.05,0.5, 0.95))$summary
-logfy.samples <- summary(fit1, par=c("logfy"), probs = c(0.05,0.5, 0.95))$summary
 
 # summary(fit1, par=c("sigma"), probs = c(0.05,0.5, 0.95))$summary
 # summary(fit1, par=c("tau"), probs = c(0.05,0.5, 0.95))$summary
@@ -821,7 +819,7 @@ colnames(ev.y1) <- c("yrep", "logy")
 ev.y1$group <- rep("15th Oct 2017",1000)
 # ggplot(data=ev.y, aes(x=yrep, y = group)) +
 #   ylab("") + 
-#   xlab("log(Burnt Area)") + labs(col = "") +
+#   xlab("log(Burnt Area)") + labs(col = "") +  
 #   stat_slab(scale = 0.6, colour = "steelblue", fill=NA, slab_linewidth = 1.5, trim = FALSE, expand = TRUE, density = "unbounded", subguide="outside", justification = -0.01) +
 #   # stat_spike(aes(linetype = after_stat(at)), at = c("median"), scale=0.7)+
 #   stat_dotsinterval(subguide = 'integer', side = "bottom", scale = 0.6, slab_linewidth = NA, position = "dodge") +
