@@ -88,10 +88,14 @@ fwi.index$date <- as.numeric(fwi.index$date)
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 fwi.scaled <- fwi.scaled[which(Y>u),]
 # fwi.scaled <- as.data.frame(scale(fwi.scaled))
-range01 <- function(x){(x-min(x))/(max(x)-min(x))}
-fwi.scaled <- as.data.frame(sapply(fwi.scaled, FUN = range01))
+# range01 <- function(x){(x-min(x))/(max(x)-min(x))}
+# fwi.scaled <- as.data.frame(sapply(fwi.scaled, FUN = range01))
 # fwi.scaled <- as.data.frame(lapply(fwi.scaled, rescale, to=c(-1,1)))
-
+p <- dim(fwi.scaled)[[2]]
+for(i in 1:p){
+  fwi.fn <- ecdf(fwi.index[which(Y>u),i])
+  fwi.scaled[,i] <- fwi.fn(fwi.index[which(Y>u),i])
+}
 
 
 # ---------------------------------------------------------------------------
@@ -191,7 +195,9 @@ no.theta <- 1
 newx <- seq(0, 1, length.out=n)
 xholder <- matrix(nrow=n, ncol=p)
 for(i in 1:p){
-  xholder[,i] <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n)
+  fwi.fn <- ecdf(fwi.index[which(Y>u),i])
+  xholder[,i] <- sort(fwi.fn(fwi.index[which(Y>u),i]))
+  # xholder[,i] <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n)
 }
 
 
@@ -216,7 +222,6 @@ transformed parameters {
     array[n] real <lower=0> newalpha; // new tail index
     matrix[n, p] gl; // linear component
     matrix[n, p] newgl; // linear component
-    matrix[n, p] newgsmooth; // smooth function    
     for (j in 1:p){
         gl[,j] = bsLinear[,j] * theta[j+1];
         newgl[,j] = xholderLinear[,j] * theta[j+1];
@@ -232,7 +237,7 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += gamma_lpdf(lambda1 | 1, 1e-2);
+    target += gamma_lpdf(lambda1 | 1, 1e-8);
     target += normal_lpdf(theta[1] | 0, 100);
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
@@ -434,6 +439,34 @@ ggplot(data.scenario, aes(x=x)) +
         axis.title.x = element_text(size = 35))
 
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRTIR_mcmc_alpha.pdf"), width=10, height = 7.78)
+
+grid.plts <- list()
+for(i in 1:p){
+  fwi.fn <- ecdf(fwi.scaled[,i])
+  fwi.data <- data.frame(data.linear[((((i-1)*n)+1):(i*n)),])
+  grid.plt <- ggplot(data = fwi.data 
+                  # c = seq(min(PC1), max(PC1), length.out = n)
+                  , aes(x=x)) + 
+  # grid.plt <- ggplot(data = data.frame(data.smooth[((((i-1)*n)+1):(i*n)),], origin = fwi.index[which(Y>u),i]), aes(x=x)) +   
+                  # geom_point(aes(x= origin, y=q2), alpha = 0.3) + 
+                  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+                  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
+                  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
+                  geom_rug(aes(x=x, y=q2), sides = "b") +
+                  ylab("") + xlab(names(fwi.scaled)[i]) +
+                  scale_fill_manual(values=c("steelblue"), name = "") + 
+                  scale_color_manual(values=c("steelblue")) +
+                  ylim(-4.1, 4.1) +
+                  # geom_circle(aes(x0=fwi.scaled[362,i], y0=-4.01, r=0.1), inherit.aes=FALSE) +
+                  theme_minimal(base_size = 30) +
+                  theme(legend.position = "none",
+                          plot.margin = margin(0,0,0,-20),
+                          axis.text = element_text(size = 35),
+                          axis.title.x = element_text(size = 45))
+  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.fn(fwi.scaled[362,i]), y=-4.1, color = "red", size = 4)
+}
+
+grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
 
 len <- dim(posterior$alpha)[1]
 r <- matrix(, nrow = n, ncol = 30)
