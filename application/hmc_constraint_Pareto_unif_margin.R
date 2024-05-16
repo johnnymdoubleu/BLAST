@@ -25,8 +25,11 @@ options(mc.cores = parallel::detectCores())
 
 
 setwd("C:/Users/Johnny Lee/Documents/GitHub")
-# install.packages("BRSTIR/qqboxplot.tgz", repo = NULL, type="source")
-# library(qqboxplot)
+install.packages("BRSTIR/qqboxplot.tgz", repo = NULL, type="source")
+library(qqboxplot)
+# remove.packages("qqboxplot")
+# detach("package:qqboxplot", unload=TRUE)
+
 df <- read_excel("./BRSTIR/application/AADiarioAnual.xlsx", col_types = c("date", rep("numeric",40)))
 df.long <- gather(df, condition, measurement, "1980":"2019", factor_key=TRUE)
 df.long
@@ -715,7 +718,7 @@ rp <- data.frame(rp, group = rep("residuals", n))
 
 ggplot(data = rp) + 
   # geom_qqboxplot(aes(factor(group, levels=c("residuals")), y=rp), notch=FALSE, varwidth=TRUE, reference_dist="norm")+ 
-  geom_qqboxplot(aes(y=rp), notch=FALSE, varwidth=FALSE, reference_dist="norm", width = 0.15, bg.colour="red")+
+  geom_qqboxplot(aes(y=rp), notch=FALSE, varwidth=FALSE, reference_dist="norm", width = 0.15, qq.colour="steelblue")+
   labs(x = "", y = "Residuals") + ylim(-4,4) + xlim(-.2,.2)+
   theme_minimal(base_size = 20) +
   theme(axis.text = element_text(size = 25),
