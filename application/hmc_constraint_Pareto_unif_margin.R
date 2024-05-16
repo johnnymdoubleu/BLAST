@@ -25,8 +25,8 @@ options(mc.cores = parallel::detectCores())
 
 
 setwd("C:/Users/Johnny Lee/Documents/GitHub")
-install.packages("BRSTIR/qqboxplot.tgz", repo = NULL, type="source")
-library(qqboxplot)
+# install.packages("BRSTIR/qqboxplot.tgz", repo = NULL, type="source")
+# library(qqboxplot)
 # remove.packages("qqboxplot")
 # detach("package:qqboxplot", unload=TRUE)
 
