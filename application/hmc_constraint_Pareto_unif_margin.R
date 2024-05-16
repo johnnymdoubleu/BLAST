@@ -25,6 +25,8 @@ options(mc.cores = parallel::detectCores())
 
 
 setwd("C:/Users/Johnny Lee/Documents/GitHub")
+# install.packages("BRSTIR/qqboxplot.tgz", repo = NULL, type="source")
+# library(qqboxplot)
 df <- read_excel("./BRSTIR/application/AADiarioAnual.xlsx", col_types = c("date", rep("numeric",40)))
 df.long <- gather(df, condition, measurement, "1980":"2019", factor_key=TRUE)
 df.long
