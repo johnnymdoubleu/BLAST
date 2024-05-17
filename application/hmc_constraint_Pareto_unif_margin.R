@@ -308,7 +308,7 @@ parameters {
     real <lower=0> lambda2; // group lasso penalty
     array[p] real <lower=0> tau1;
     array[p] real <lower=0> tau2;
-    array[n] real <lower=0> tau2;
+    array[n] real <lower=0> prec;
 }
 transformed parameters {
     array[n] real <lower=0> alpha; // covariate-adjusted tail index
@@ -386,7 +386,7 @@ data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi,
                     xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear, basisFL = basis.holder)
 
 init.alpha <- list(list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c((psi-2),p)),
-                        theta = rep(0, (p+1)), prec = reP(0.1,n),
+                        theta = rep(0, (p+1)), prec = rep(0.1,n),
                         tau1 = rep(0.1, p),tau2 = rep(0.1, p),
                         lambda1 = 0.1, lambda2 = 0.01),
                    list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c((psi-2),p)),
