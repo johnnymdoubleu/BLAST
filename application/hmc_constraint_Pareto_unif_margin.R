@@ -47,7 +47,7 @@ Y <- df.long$measurement[!is.na(df.long$measurement)]
 
 summary(Y) #total burnt area
 length(Y)
-psi <- 5
+psi <- 10
 threshold <- 0.975
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
@@ -308,6 +308,7 @@ parameters {
     real <lower=0> lambda2; // group lasso penalty
     array[p] real <lower=0> tau1;
     array[p] real <lower=0> tau2;
+    real prec;
 }
 transformed parameters {
     array[n] real <lower=0> alpha; // covariate-adjusted tail index
@@ -356,6 +357,7 @@ model {
     target += gamma_lpdf(lambda1 | 1, 1e-5);
     target += gamma_lpdf(lambda2o | 1, 1e-5);
     target += (2*p*log(lambda2o));
+    target += gamma_lpdf(prec | 1, 1e-5);
     for (j in 1:p){
         target += gamma_lpdf(tau1[j] | 1, lambda1^2*0.5);
         target += normal_lpdf(theta[(j+1)] | 0, sqrt(1/tau1[j]));
@@ -384,15 +386,15 @@ data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi,
                     xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear, basisFL = basis.holder)
 
 init.alpha <- list(list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c((psi-2),p)),
-                        theta = rep(0, (p+1)), 
+                        theta = rep(0, (p+1)), prec = 0.1,
                         tau1 = rep(0.1, p),tau2 = rep(0.1, p),
                         lambda1 = 0.1, lambda2 = 0.01),
                    list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c((psi-2),p)),
-                        theta = rep(0, (p+1)), 
+                        theta = rep(0, (p+1)), prec = 0.01,
                         tau1 = rep(0.001, p),tau2 = rep(0.001, p),
                         lambda1 = 100, lambda2 = 1),
                    list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c((psi-2),p)),
-                        theta = rep(0.1, (p+1)), 
+                        theta = rep(0.1, (p+1)), prec = 0.4,
                         tau1 = rep(0.5, p),tau2 = rep(0.5, p),
                         lambda1 = 5, lambda2 = 5.5))
 
