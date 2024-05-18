@@ -48,9 +48,10 @@ Y <- df.long$measurement[!is.na(df.long$measurement)]
 summary(Y) #total burnt area
 length(Y)
 psi <- 10
-threshold <- 0.975
+threshold <- 0.98
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
+day.idx <- which(Y>u)
 # x.scale <- x.scale[which(y>quantile(y, threshold)),]
 # u <- quantile(y, threshold)
 
@@ -300,6 +301,7 @@ write("data {
     real <lower=0> atau;
     matrix[2, (2*p)] basisFL;
     array[(p*2)] int indexFL;
+    array[n] int dayIdx;
 }
 parameters {
     vector[(p+1)] theta; // linear predictor
@@ -308,7 +310,8 @@ parameters {
     real <lower=0> lambda2; // group lasso penalty
     array[p] real <lower=0> tau1;
     array[p] real <lower=0> tau2;
-    array[n] real <lower=0> prec;
+    real prec;
+    array[n] real epsilon;
 }
 transformed parameters {
     array[n] real <lower=0> alpha; // covariate-adjusted tail index
@@ -316,13 +319,8 @@ transformed parameters {
     vector[2] gammaFL[p];
     real <lower=0> lambda2o;
     matrix[2, p] subgnl;
-    matrix[n, p] gnl; // nonlinear component
-    matrix[n, p] gl; // linear component
     matrix[n, p] gsmooth; // linear component
-    array[n] real <lower=0> newalpha; // new tail index
-    matrix[n, p] newgnl; // nonlinear component
-    matrix[n, p] newgl; // linear component
-    matrix[n, p] newgsmooth; // linear component
+    array[n] real epsp;
 
     lambda2o=lambda2*100;
     for(j in 1:p){
@@ -334,17 +332,15 @@ transformed parameters {
     };
 
     for (j in 1:p){
-        gnl[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
-        newgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
-        gl[,j] = bsLinear[,j] * theta[j+1];
-        newgl[,j] = xholderLinear[,j] * theta[j+1];
-        gsmooth[,j] = gl[,j] + gnl[,j];
-        newgsmooth[,j] = newgl[,j] + newgnl[,j];
+        gsmooth[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j] + bsLinear[,j] * theta[j+1];
     };
+    epsp[1] = epsilon[1];
+    for (i in 1:(n-1)){
+      epsp[i+1]=epsp[i] + epsilon[i+1]*sqrt(dayIdx[i+1]-dayIdx[i]);
+    }
 
     for (i in 1:n){
-        alpha[i] = exp(theta[1] + sum(gsmooth[i,])+prec[i]); 
-        newalpha[i] = exp(theta[1] + sum(newgsmooth[i,]));
+        alpha[i] = exp(theta[1] + sum(gsmooth[i,]) + epsp[i]); 
     };
 }
 
@@ -352,8 +348,9 @@ model {
     // likelihood
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
-        target += normal_lpdf(prec[i] | 1, 1e-5);
+        target += normal_lpdf(epsilon[i] | 0, sqrt(1/prec));
     }
+    target += lognormal_lpdf(prec | log(14600), 2); //target += gamma_lpdf(prec | 1, 1e-5);
     target += normal_lpdf(theta[1] | 0, 100);
     target += gamma_lpdf(lambda1 | 1, 1e-5);
     target += gamma_lpdf(lambda2o | 1, 1e-5);
@@ -370,8 +367,18 @@ generated quantities {
     vector[n] log_lik;
     vector[n] f;
     real yrep;
+    array[n] real <lower=0> newalpha; // new tail index
+    matrix[n, p] newgsmooth; // linear component
 
-    yrep = pareto_rng(u, alpha[362]);
+    for (j in 1:p){
+      newgsmooth[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j] + xholderLinear[,j] * theta[j+1];
+    };
+
+    for (i in 1:n){
+      newalpha[i] = exp(theta[1] + sum(newgsmooth[i,]));
+    }
+
+    yrep = pareto_rng(u, alpha[1]);
     for(i in 1:n){
       f[i] = pareto_rng(u, alpha[i]);
       log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
@@ -379,23 +386,33 @@ generated quantities {
 }
 "
 , "model_BRSTIR_constraint.stan")
+    # array[n] real newepsilon;
+    # array[n] real nepsp;
+    # for (i in 1:n){
+    #   newepsilon[i] = normal_rng(0, sqrt(1/prec));
+    # }
+    # nepsp[1] = newepsilon[1];
+    # for (i in 1:(n-1)){
+    #   nepsp[i+1]=nepsp[i] + newepsilon[i+1]*sqrt(dayIdx[i+1]-dayIdx[i]);
+    # }
 
 data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, 
                     atau = ((psi+1)/2), indexFL = as.vector(t(index.holder)),
                     bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
-                    xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear, basisFL = basis.holder)
+                    xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear, basisFL = basis.holder,
+                    dayIdx = day.idx)
 
 init.alpha <- list(list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c((psi-2),p)),
-                        theta = rep(0, (p+1)), prec = rep(0.1,n),
-                        tau1 = rep(0.1, p),tau2 = rep(0.1, p),
+                        theta = rep(0, (p+1)), epsilon = rep(0.1,n),
+                        tau1 = rep(0.1, p),tau2 = rep(0.1, p), prec = 100,
                         lambda1 = 0.1, lambda2 = 0.01),
                    list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c((psi-2),p)),
-                        theta = rep(0, (p+1)), prec = rep(0.01, n),
-                        tau1 = rep(0.001, p),tau2 = rep(0.001, p),
+                        theta = rep(0, (p+1)), epsilon = rep(0.01, n),
+                        tau1 = rep(0.001, p),tau2 = rep(0.001, p),prec = 400,
                         lambda1 = 100, lambda2 = 1),
                    list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c((psi-2),p)),
-                        theta = rep(0.1, (p+1)), prec = rep(0.4,n),
-                        tau1 = rep(0.5, p),tau2 = rep(0.5, p),
+                        theta = rep(0.1, (p+1)), epsilon = rep(0.4,n),
+                        tau1 = rep(0.5, p),tau2 = rep(0.5, p),prec = 1000,
                         lambda1 = 5, lambda2 = 5.5))
 
 # stanc("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/application/model1.stan")
@@ -406,7 +423,7 @@ fit1 <- stan(
     # init_r = 1,
     chains = 3,             # number of Markov chains
     # warmup = 1000,          # number of warmup iterations per chain
-    iter = 2000,            # total number of iterations per chain
+    iter = 40000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
     refresh = 500           # no progress shown
 )
@@ -418,11 +435,13 @@ posterior <- extract(fit1)
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
 lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
-gl.samples <- summary(fit1, par=c("newgl"), probs = c(0.05, 0.5, 0.95))$summary
-gnl.samples <- summary(fit1, par=c("newgnl"), probs = c(0.05, 0.5, 0.95))$summary
+# gl.samples <- summary(fit1, par=c("newgl"), probs = c(0.05, 0.5, 0.95))$summary
+# gnl.samples <- summary(fit1, par=c("newgnl"), probs = c(0.05, 0.5, 0.95))$summary
 # gnlfl.samples <- summary(fit1, par=c("newgfnl", "newglnl"), probs = c(0.05, 0.5, 0.95))$summary
 # y.samples <- summary(fit1, par=c("y"), probs = c(0.05,0.5, 0.95))$summary
 gsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
+prec.samples <- summary(fit1, par=c("prec"), probs = c(0.05, 0.5, 0.95))$summary
+epsp.samples <- summary(fit1, par=c("epsp"), probs = c(0.05, 0.5, 0.95))$summary
 # smooth.samples <- summary(fit1,par=c("gsmooth"), probs = c(0.05, 0.5, 0.95))$summary
 alp.x.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
 alpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
@@ -512,10 +531,10 @@ ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) +
 # g.linear.q1 <- as.vector(matrix(gl.samples[,4], nrow = n, byrow=TRUE))
 # g.linear.q2 <- as.vector(matrix(gl.samples[,5], nrow = n, byrow=TRUE))
 # g.linear.q3 <- as.vector(matrix(gl.samples[,6], nrow = n, byrow=TRUE))
-g.nonlinear.mean <- as.vector(matrix(gnl.samples[,1], nrow = n, byrow=TRUE))
-g.nonlinear.q1 <- as.vector(matrix(gnl.samples[,4], nrow = n, byrow=TRUE))
-g.nonlinear.q2 <- as.vector(matrix(gnl.samples[,5], nrow = n, byrow=TRUE))
-g.nonlinear.q3 <- as.vector(matrix(gnl.samples[,6], nrow = n, byrow=TRUE))
+# g.nonlinear.mean <- as.vector(matrix(gnl.samples[,1], nrow = n, byrow=TRUE))
+# g.nonlinear.q1 <- as.vector(matrix(gnl.samples[,4], nrow = n, byrow=TRUE))
+# g.nonlinear.q2 <- as.vector(matrix(gnl.samples[,5], nrow = n, byrow=TRUE))
+# g.nonlinear.q3 <- as.vector(matrix(gnl.samples[,6], nrow = n, byrow=TRUE))
 g.smooth.mean <- as.vector(matrix(gsmooth.samples[,1], nrow = n, byrow=TRUE))
 g.smooth.q1 <- as.vector(matrix(gsmooth.samples[,4], nrow = n, byrow=TRUE))
 g.smooth.q2 <- as.vector(matrix(gsmooth.samples[,5], nrow = n, byrow=TRUE))
@@ -589,33 +608,33 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
 # # #ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_linear.pdf"), width=12.5, height = 15)
 
 
-data.nonlinear <- data.frame("x"=as.vector(xholder),
-                          "post.mean" = as.vector(g.nonlinear.mean),
-                          "q1" = as.vector(g.nonlinear.q1),
-                          "q2" = as.vector(g.nonlinear.q2),
-                          "q3" = as.vector(g.nonlinear.q3),
-                          "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)),
-                          "fakelab" = rep(1, (p*n)),
-                          "replicate" = gl(p, n, (p*n), labels = names(fwi.scaled)))
+# data.nonlinear <- data.frame("x"=as.vector(xholder),
+#                           "post.mean" = as.vector(g.nonlinear.mean),
+#                           "q1" = as.vector(g.nonlinear.q1),
+#                           "q2" = as.vector(g.nonlinear.q2),
+#                           "q3" = as.vector(g.nonlinear.q3),
+#                           "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)),
+#                           "fakelab" = rep(1, (p*n)),
+#                           "replicate" = gl(p, n, (p*n), labels = names(fwi.scaled)))
 
-ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) + 
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
-  # geom_line(aes(y=true, colour = "True"), linewidth=2) + 
-  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
-  ylab("") + xlab("") +
-  facet_grid(covariates ~ ., scales = "free", #switch = "y",
-              labeller = label_parsed) + 
-  scale_fill_manual(values=c("steelblue"), name = "") +
-  scale_color_manual(values=c("steelblue")) + 
-  guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) + #ylim(-0.65, 0.3) +
-  scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
-  theme_minimal(base_size = 30) +
-  theme(legend.position = "none",
-          plot.margin = margin(0,0,0,-20),
-          # strip.text = element_blank(),
-          axis.text = element_text(size = 20))
+# ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) + 
+#   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+#   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
+#   # geom_line(aes(y=true, colour = "True"), linewidth=2) + 
+#   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
+#   ylab("") + xlab("") +
+#   facet_grid(covariates ~ ., scales = "free", #switch = "y",
+#               labeller = label_parsed) + 
+#   scale_fill_manual(values=c("steelblue"), name = "") +
+#   scale_color_manual(values=c("steelblue")) + 
+#   guides(color = guide_legend(order = 2), 
+#           fill = guide_legend(order = 1)) + #ylim(-0.65, 0.3) +
+#   scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
+#   theme_minimal(base_size = 30) +
+#   theme(legend.position = "none",
+#           plot.margin = margin(0,0,0,-20),
+#           # strip.text = element_blank(),
+#           axis.text = element_text(size = 20))
 # #ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_nonlinear.pdf"), width=12.5, height = 15)
 
 data.scenario <- data.frame("x" = xholder[,1],
