@@ -2,7 +2,8 @@ library(npreg)
 library(Pareto)
 suppressMessages(library(tidyverse))
 library(readxl)
-library(gridExtra)
+# library(gridExtra)
+library(patchwork)
 library(corrplot)
 library(rstan)
 library(loo)
@@ -102,7 +103,7 @@ for(i in 1:p){
   fwi.scaled[,i] <- fwi.fn(fwi.index[which(Y>u),i])
 }
 n <- dim(fwi.scaled)[[1]]
-p <- dim(fwi.scaled)[[2]]
+# p <- dim(fwi.scaled)[[2]]
 
 # fwi.scaled.cov <- cov(fwi.scaled)
 # fwi.scaled.eigen <- eigen(fwi.scaled.cov)
@@ -308,43 +309,28 @@ parameters {
     real <lower=0> lambda2; // group lasso penalty
     array[p] real <lower=0> tau1;
     array[p] real <lower=0> tau2;
-    array[n] real <lower=0> prec;
 }
 transformed parameters {
     array[n] real <lower=0> alpha; // covariate-adjusted tail index
     vector[psi] gamma[p]; // splines coefficient 
     vector[2] gammaFL[p];
     real <lower=0> lambda2o;
-    matrix[2, p] subgnl;
-    matrix[n, p] gnl; // nonlinear component
-    matrix[n, p] gl; // linear component
     matrix[n, p] gsmooth; // linear component
-    array[n] real <lower=0> newalpha; // new tail index
-    matrix[n, p] newgnl; // nonlinear component
-    matrix[n, p] newgl; // linear component
-    matrix[n, p] newgsmooth; // linear component
 
     lambda2o=lambda2*100;
     for(j in 1:p){
         gamma[j][2:(psi-1)] = gammaTemp[j][1:(psi-2)]*100;
-        subgnl[,j] = bsNonlinear[indexFL[(((j-1)*2)+1):(((j-1)*2)+2)], (((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] * gammaTemp[j]*100;
-        gammaFL[j] = basisFL[, (((j-1)*2)+1):(((j-1)*2)+2)] * subgnl[,j] * (-1);
+        gammaFL[j] = basisFL[, (((j-1)*2)+1):(((j-1)*2)+2)] * (bsNonlinear[indexFL[(((j-1)*2)+1):(((j-1)*2)+2)], (((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] * gammaTemp[j]*100) * (-1);
         gamma[j][1] = gammaFL[j][1];
         gamma[j][psi] = gammaFL[j][2];  
     };
 
     for (j in 1:p){
-        gnl[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
-        newgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
-        gl[,j] = bsLinear[,j] * theta[j+1];
-        newgl[,j] = xholderLinear[,j] * theta[j+1];
-        gsmooth[,j] = gl[,j] + gnl[,j];
-        newgsmooth[,j] = newgl[,j] + newgnl[,j];
+        gsmooth[,j] = bsLinear[,j] * theta[j+1] + bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
     };
 
     for (i in 1:n){
-        alpha[i] = exp(theta[1] + sum(gsmooth[i,])+prec[i]); 
-        newalpha[i] = exp(theta[1] + sum(newgsmooth[i,]));
+        alpha[i] = exp(theta[1] + sum(gsmooth[i,]));
     };
 }
 
@@ -352,7 +338,6 @@ model {
     // likelihood
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
-        target += normal_lpdf(prec[i] | 1, 1e-5);
     }
     target += normal_lpdf(theta[1] | 0, 100);
     target += gamma_lpdf(lambda1 | 1, 1e-5);
@@ -370,6 +355,16 @@ generated quantities {
     vector[n] log_lik;
     vector[n] f;
     real yrep;
+    array[n] real <lower=0> newalpha; // new tail index
+    matrix[n, p] newgsmooth; // linear component
+
+    for (j in 1:p){
+        newgsmooth[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j] + xholderLinear[,j] * theta[j+1];
+    };    
+
+    for (i in 1:n){
+        newalpha[i] = exp(theta[1] + sum(newgsmooth[i,]));
+    };
 
     yrep = pareto_rng(u, alpha[362]);
     for(i in 1:n){
@@ -385,16 +380,16 @@ data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi,
                     bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
                     xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear, basisFL = basis.holder)
 
-init.alpha <- list(list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c((psi-2),p)),
-                        theta = rep(0, (p+1)), prec = rep(0.1,n),
+init.alpha <- list(list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c(p, (psi-2))),
+                        theta = rep(0, (p+1)), 
                         tau1 = rep(0.1, p),tau2 = rep(0.1, p),
                         lambda1 = 0.1, lambda2 = 0.01),
-                   list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c((psi-2),p)),
-                        theta = rep(0, (p+1)), prec = rep(0.01, n),
+                   list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c(p, (psi-2))),
+                        theta = rep(0, (p+1)), 
                         tau1 = rep(0.001, p),tau2 = rep(0.001, p),
                         lambda1 = 100, lambda2 = 1),
-                   list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c((psi-2),p)),
-                        theta = rep(0.1, (p+1)), prec = rep(0.4,n),
+                   list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c(p, (psi-2))),
+                        theta = rep(0.1, (p+1)),
                         tau1 = rep(0.5, p),tau2 = rep(0.5, p),
                         lambda1 = 5, lambda2 = 5.5))
 
@@ -418,8 +413,8 @@ posterior <- extract(fit1)
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
 lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
-gl.samples <- summary(fit1, par=c("newgl"), probs = c(0.05, 0.5, 0.95))$summary
-gnl.samples <- summary(fit1, par=c("newgnl"), probs = c(0.05, 0.5, 0.95))$summary
+# gl.samples <- summary(fit1, par=c("newgl"), probs = c(0.05, 0.5, 0.95))$summary
+# gnl.samples <- summary(fit1, par=c("newgnl"), probs = c(0.05, 0.5, 0.95))$summary
 # gnlfl.samples <- summary(fit1, par=c("newgfnl", "newglnl"), probs = c(0.05, 0.5, 0.95))$summary
 # y.samples <- summary(fit1, par=c("y"), probs = c(0.05,0.5, 0.95))$summary
 gsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
@@ -512,10 +507,10 @@ ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) +
 # g.linear.q1 <- as.vector(matrix(gl.samples[,4], nrow = n, byrow=TRUE))
 # g.linear.q2 <- as.vector(matrix(gl.samples[,5], nrow = n, byrow=TRUE))
 # g.linear.q3 <- as.vector(matrix(gl.samples[,6], nrow = n, byrow=TRUE))
-g.nonlinear.mean <- as.vector(matrix(gnl.samples[,1], nrow = n, byrow=TRUE))
-g.nonlinear.q1 <- as.vector(matrix(gnl.samples[,4], nrow = n, byrow=TRUE))
-g.nonlinear.q2 <- as.vector(matrix(gnl.samples[,5], nrow = n, byrow=TRUE))
-g.nonlinear.q3 <- as.vector(matrix(gnl.samples[,6], nrow = n, byrow=TRUE))
+# g.nonlinear.mean <- as.vector(matrix(gnl.samples[,1], nrow = n, byrow=TRUE))
+# g.nonlinear.q1 <- as.vector(matrix(gnl.samples[,4], nrow = n, byrow=TRUE))
+# g.nonlinear.q2 <- as.vector(matrix(gnl.samples[,5], nrow = n, byrow=TRUE))
+# g.nonlinear.q3 <- as.vector(matrix(gnl.samples[,6], nrow = n, byrow=TRUE))
 g.smooth.mean <- as.vector(matrix(gsmooth.samples[,1], nrow = n, byrow=TRUE))
 g.smooth.q1 <- as.vector(matrix(gsmooth.samples[,4], nrow = n, byrow=TRUE))
 g.smooth.q2 <- as.vector(matrix(gsmooth.samples[,5], nrow = n, byrow=TRUE))
@@ -589,33 +584,33 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
 # # #ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_linear.pdf"), width=12.5, height = 15)
 
 
-data.nonlinear <- data.frame("x"=as.vector(xholder),
-                          "post.mean" = as.vector(g.nonlinear.mean),
-                          "q1" = as.vector(g.nonlinear.q1),
-                          "q2" = as.vector(g.nonlinear.q2),
-                          "q3" = as.vector(g.nonlinear.q3),
-                          "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)),
-                          "fakelab" = rep(1, (p*n)),
-                          "replicate" = gl(p, n, (p*n), labels = names(fwi.scaled)))
+# data.nonlinear <- data.frame("x"=as.vector(xholder),
+#                           "post.mean" = as.vector(g.nonlinear.mean),
+#                           "q1" = as.vector(g.nonlinear.q1),
+#                           "q2" = as.vector(g.nonlinear.q2),
+#                           "q3" = as.vector(g.nonlinear.q3),
+#                           "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)),
+#                           "fakelab" = rep(1, (p*n)),
+#                           "replicate" = gl(p, n, (p*n), labels = names(fwi.scaled)))
 
-ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) + 
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
-  # geom_line(aes(y=true, colour = "True"), linewidth=2) + 
-  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
-  ylab("") + xlab("") +
-  facet_grid(covariates ~ ., scales = "free", #switch = "y",
-              labeller = label_parsed) + 
-  scale_fill_manual(values=c("steelblue"), name = "") +
-  scale_color_manual(values=c("steelblue")) + 
-  guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) + #ylim(-0.65, 0.3) +
-  scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
-  theme_minimal(base_size = 30) +
-  theme(legend.position = "none",
-          plot.margin = margin(0,0,0,-20),
-          # strip.text = element_blank(),
-          axis.text = element_text(size = 20))
+# ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) + 
+#   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+#   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
+#   # geom_line(aes(y=true, colour = "True"), linewidth=2) + 
+#   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
+#   ylab("") + xlab("") +
+#   facet_grid(covariates ~ ., scales = "free", #switch = "y",
+#               labeller = label_parsed) + 
+#   scale_fill_manual(values=c("steelblue"), name = "") +
+#   scale_color_manual(values=c("steelblue")) + 
+#   guides(color = guide_legend(order = 2), 
+#           fill = guide_legend(order = 1)) + #ylim(-0.65, 0.3) +
+#   scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
+#   theme_minimal(base_size = 30) +
+#   theme(legend.position = "none",
+#           plot.margin = margin(0,0,0,-20),
+#           # strip.text = element_blank(),
+#           axis.text = element_text(size = 20))
 # #ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_nonlinear.pdf"), width=12.5, height = 15)
 
 data.scenario <- data.frame("x" = xholder[,1],
@@ -768,17 +763,18 @@ for(i in 1:p){
                   ylab("") + xlab(names(fwi.scaled)[i]) +
                   scale_fill_manual(values=c("steelblue"), name = "") + 
                   scale_color_manual(values=c("steelblue")) +
-                  ylim(-2.1, 2.1) +
+                  ylim(-1.8, 1.8) +
                   # geom_circle(aes(x0=fwi.scaled[362,i], y0=-4.01, r=0.1), inherit.aes=FALSE) +
                   theme_minimal(base_size = 30) +
                   theme(legend.position = "none",
                           plot.margin = margin(0,0,0,-20),
                           axis.text = element_text(size = 35),
                           axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.fn(fwi.scaled[362,i]), y=-4.1, color = "red", size = 4)
+  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.fn(fwi.scaled[362,i]), y=-1.8, color = "red", size = 4)
 }
 
-grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
+grid.plts[[1]] + grid.plts[[2]] +grid.plts[[3]] + grid.plts[[4]] + grid.plts[[5]] + grid.plts[[6]] + grid.plts[[7]] + plot_layout(widths = c(1,1))
+# grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
 # grid.plts[[7]]
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=10, height = 7.78)
 

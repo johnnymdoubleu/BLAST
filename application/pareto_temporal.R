@@ -2,7 +2,8 @@ library(npreg)
 library(Pareto)
 suppressMessages(library(tidyverse))
 library(readxl)
-library(gridExtra)
+# library(gridExtra)
+library(patchwork)
 library(corrplot)
 library(rstan)
 library(loo)
@@ -93,7 +94,7 @@ fwi.index$month <- factor(format(as.Date(substr(cov.long$...1[missing.values],1,
 fwi.index$date <- as.numeric(fwi.index$date)
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 fwi.scaled$time <- (1:length(Y))/length(Y)
-fwi.origin <- fwi.scaled <-fwi.scaled[which(Y>u),]
+fwi.origin <- fwi.scaled <-fwi.scaled[which(Y>u),c(1,4,5,8)]
 
 # fwi.scaled <- as.data.frame(scale(fwi.scaled))
 # range01 <- function(x){(x-min(x))/(max(x)-min(x))}
@@ -779,6 +780,7 @@ for(i in 1:p){
   grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.fn(fwi.scaled[which.max(y),i]), y=-2.1, color = "red", size = 4)
 }
 
+grid.plts[[1]] + grid.plts[[2]] +grid.plts[[3]] + grid.plts[[4]] + grid.plts[[5]] + grid.plts[[6]] + grid.plts[[7]] + plot_layout(widths = c(1,1))
 # grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
 # grid.plts[[7]]
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=10, height = 7.78)
