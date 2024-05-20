@@ -1,6 +1,6 @@
 library(npreg)
 library(Pareto)
-suppressMessages(library(tidyverse))
+suppressMessages(library(ggplot2))
 library(readxl)
 library(gridExtra)
 library(corrplot)
@@ -31,7 +31,7 @@ setwd("C:/Users/Johnny Lee/Documents/GitHub")
 # detach("package:qqboxplot", unload=TRUE)
 
 df <- read_excel("./BRSTIR/application/AADiarioAnual.xlsx", col_types = c("date", rep("numeric",40)))
-df.long <- gather(df, condition, measurement, "1980":"2019", factor_key=TRUE)
+df.long <- tidyr::gather(df, condition, measurement, "1980":"2019", factor_key=TRUE)
 df.long
 head(df.long)
 tail(df.long)
@@ -47,8 +47,8 @@ Y <- df.long$measurement[!is.na(df.long$measurement)]
 
 summary(Y) #total burnt area
 length(Y)
-psi <- 10
-threshold <- 0.98
+psi <- 20
+threshold <- 0.975
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
 day.idx <- which(Y>u)
@@ -187,7 +187,7 @@ ggplot(fwi.origin, aes(x=DSR, y=FFMC)) +
   geom_density2d(colour="steelblue", linewidth = 1.3) + 
   # xlim(7.5, 26) + 
   # stat_density_2d(aes(fill = ..level..), geom = "polygon", colour="steelblue")+ 
-  geom_mark_circle(aes(x = max.fwi$DSR, y = max.fwi$FFMC, label = "15th Oct 2017"), con.type = "straight",
+  geom_mark_circle(data = max.fwi, aes(x = DSR, y = FFMC, label = "15th Oct 2017"), con.type = "straight",
                    radius = unit(2.5, "mm"), color = "steelblue", size = 1, 
                    con.colour = "steelblue", con.cap = unit(0, "mm"),
                    label.colour = "steelblue", label.buffer = unit(5, "mm"),
@@ -260,10 +260,15 @@ for(i in 1:p){
 #   xholder[i,] <- centre.fwi + seq(min(PC1), max(PC1), length.out = n)[i] %*% phi[,1]
 # }
 for(i in 1:p){
-  fwi.fn <- ecdf(fwi.index[which(Y>u),i])
-  # xholder[,i] <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n)
-  # test.knot <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
-  xholder[,i] <- sort(fwi.fn(fwi.index[which(Y>u),i]))
+  if(i < p){
+    fwi.fn <- ecdf(fwi.index[which(Y>u),i])
+    # xholder[,i] <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n)
+    # test.knot <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
+    xholder[,i] <- sort(fwi.fn(fwi.index[which(Y>u),i]))
+  }
+  else{
+    xholder[,i] <- seq(0, 1, length.out = n)
+  }
   test.knot <- seq(min(xholder[,i]), max(xholder[,i]), length.out = psi)
   # test.knot <- seq(min(xholder[,i]), max(xholder[,i]), length.out = psi)  
   splines <- basis.tps(xholder[,i], test.knot, m=2, rk=FALSE, intercept = FALSE)
@@ -302,7 +307,6 @@ write("data {
     real <lower=0> atau;
     matrix[2, (2*p)] basisFL;
     array[(p*2)] int indexFL;
-    array[n] int dayIdx;
 }
 parameters {
     vector[(p+1)] theta; // linear predictor
@@ -378,15 +382,6 @@ generated quantities {
 }
 "
 , "model_BRSTIR_constraint.stan")
-    # array[n] real newepsilon;
-    # array[n] real nepsp;
-    # for (i in 1:n){
-    #   newepsilon[i] = normal_rng(0, sqrt(1/prec));
-    # }
-    # nepsp[1] = newepsilon[1];
-    # for (i in 1:(n-1)){
-    #   nepsp[i+1]=nepsp[i] + newepsilon[i+1]*sqrt(dayIdx[i+1]-dayIdx[i]);
-    # }
 
 data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, 
                     atau = ((psi+1)/2), indexFL = as.vector(t(index.holder)),
@@ -406,8 +401,6 @@ init.alpha <- list(list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c((psi-2),p))
                         theta = rep(0.1, (p+1)),
                         tau1 = rep(0.5, p),tau2 = rep(0.5, p),
                         lambda1 = 5, lambda2 = 5.5))
-
-# stanc("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/application/model1.stan")
 fit1 <- stan(
     file = "model_BRSTIR_constraint.stan",  # Stan program
     data = data.stan,    # named list of data
@@ -415,7 +408,7 @@ fit1 <- stan(
     # init_r = 1,
     chains = 3,             # number of Markov chains
     # warmup = 1000,          # number of warmup iterations per chain
-    iter = 40000,            # total number of iterations per chain
+    iter = 2000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
     refresh = 500           # no progress shown
 )
@@ -432,8 +425,6 @@ lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5,
 # gnlfl.samples <- summary(fit1, par=c("newgfnl", "newglnl"), probs = c(0.05, 0.5, 0.95))$summary
 # y.samples <- summary(fit1, par=c("y"), probs = c(0.05,0.5, 0.95))$summary
 gsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
-prec.samples <- summary(fit1, par=c("prec"), probs = c(0.05, 0.5, 0.95))$summary
-epsp.samples <- summary(fit1, par=c("epsp"), probs = c(0.05, 0.5, 0.95))$summary
 # smooth.samples <- summary(fit1,par=c("gsmooth"), probs = c(0.05, 0.5, 0.95))$summary
 alp.x.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
 alpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
