@@ -12,7 +12,6 @@ library(loo)
 # library(bayesplot)
 # library(evir)
 # library(mev)
-library(cmdstanr)
 library(scales)
 
 # Structure of the FWI System
@@ -76,7 +75,7 @@ fwi.scaled <- fwi.index <- data.frame(DSR = double(length(Y)),
                                         stringsAsFactors = FALSE)
 # cov.long$ <- gather(cov$DSR[!is.na(df.long$measurement)][,1:41], )
 for(i in 1:length(cov)){
-    cov.long <- gather(cov[[i]][,1:41], condition, measurement, "1980":"2019", factor_key=TRUE)
+    cov.long <- tidyr::gather(cov[[i]][,1:41], condition, measurement, "1980":"2019", factor_key=TRUE)
     fwi.index[,i] <- cov.long$measurement[missing.values]
     fwi.scaled[,i] <- cov.long$measurement[missing.values]
 }
@@ -93,7 +92,7 @@ fwi.scaled <- fwi.scaled[which(Y>u),]
 # fwi.scaled <- as.data.frame(sapply(fwi.scaled, FUN = range01))
 # fwi.scaled <- as.data.frame(lapply(fwi.scaled, rescale, to=c(-1,1)))
 p <- dim(fwi.scaled)[[2]]
-for(i in 1:p){
+for(i in 1:(p-1)){
   fwi.fn <- ecdf(fwi.index[which(Y>u),i])
   fwi.scaled[,i] <- fwi.fn(fwi.index[which(Y>u),i])
 }
@@ -252,9 +251,10 @@ generated quantities {
     vector[n] log_lik;
     array[n] real <lower=0> newalpha; // new tail index
     matrix[n, p] newgl; // linear component
-
+    for (j in 1:p){
+        newgl[,j] = xholderLinear[,j] * theta[j+1];
+    };
     for (i in 1:n){
-        alpha[i] = exp(theta[1] + sum(gl[i,]));
         newalpha[i] = exp(theta[1] + sum(newgl[i,]));        
     };
 
@@ -263,7 +263,7 @@ generated quantities {
     }
 }
 "
-, "model_BRTIR.stan")
+, "model_BRTIR_temporal.stan")
 
 data.stan <- list(y = as.vector(y), u = u, p = p, n= n, newp = (p+1),
                     bsLinear = fwi.scaled, 
@@ -274,7 +274,7 @@ init.alpha <- list(list(theta = rep(0, (p+1)), lambda1 = 0.1),
 
 # stanc("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/application/model1.stan")
 fit1 <- stan(
-    file = "model_BRTIR.stan",  # Stan program
+    file = "model_BRTIR_temporal.stan",  # Stan program
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
     # init_r = 1,
@@ -468,14 +468,14 @@ for(i in 1:p){
                   ylab("") + xlab(names(fwi.scaled)[i]) +
                   scale_fill_manual(values=c("steelblue"), name = "") + 
                   scale_color_manual(values=c("steelblue")) +
-                  ylim(-4.1, 4.1) +
+                  ylim(-2.1, 2.1) +
                   # geom_circle(aes(x0=fwi.scaled[362,i], y0=-4.01, r=0.1), inherit.aes=FALSE) +
                   theme_minimal(base_size = 30) +
                   theme(legend.position = "none",
                           plot.margin = margin(0,0,0,-20),
                           axis.text = element_text(size = 35),
                           axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.fn(fwi.scaled[362,i]), y=-4.1, color = "red", size = 4)
+  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.fn(fwi.scaled[which.max(y),i]), y=-4.1, color = "red", size = 4)
 }
 
 grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)

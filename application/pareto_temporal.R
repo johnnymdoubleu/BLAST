@@ -51,7 +51,7 @@ psi <- 20
 threshold <- 0.975
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
-day.idx <- which(Y>u)
+# day.idx <- which(Y>u)
 # x.scale <- x.scale[which(y>quantile(y, threshold)),]
 # u <- quantile(y, threshold)
 
@@ -82,7 +82,7 @@ fwi.scaled <- fwi.index <- data.frame(DSR = double(length(Y)),
                                         stringsAsFactors = FALSE)
 # cov.long$ <- gather(cov$DSR[!is.na(df.long$measurement)][,1:41], )
 for(i in 1:length(cov)){
-    cov.long <- gather(cov[[i]][,1:41], condition, measurement, "1980":"2019", factor_key=TRUE)
+    cov.long <- tidyr::gather(cov[[i]][,1:41], condition, measurement, "1980":"2019", factor_key=TRUE)
     fwi.index[,i] <- cov.long$measurement[missing.values]
     fwi.scaled[,i] <- cov.long$measurement[missing.values]
 }
@@ -381,28 +381,27 @@ generated quantities {
     }
 }
 "
-, "model_BRSTIR_constraint.stan")
+, "model_BRSTIR_temporal.stan")
 
 data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, 
                     atau = ((psi+1)/2), indexFL = as.vector(t(index.holder)),
                     bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
-                    xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear, basisFL = basis.holder,
-                    dayIdx = day.idx)
+                    xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear, basisFL = basis.holder)
 
-init.alpha <- list(list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c((psi-2),p)),
+init.alpha <- list(list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c(p, (psi-2))),
                         theta = rep(0, (p+1)), 
-                        tau1 = rep(0.1, p),tau2 = rep(0.1, p), 
+                        tau1 = rep(0.1, p), tau2 = rep(0.1, p), 
                         lambda1 = 0.1, lambda2 = 0.01),
-                   list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c((psi-2),p)),
+                   list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c(p,(psi-2))),
                         theta = rep(0, (p+1)), 
-                        tau1 = rep(0.001, p),tau2 = rep(0.001, p),
+                        tau1 = rep(0.001, p), tau2 = rep(0.001, p),
                         lambda1 = 100, lambda2 = 1),
-                   list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c((psi-2),p)),
+                   list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c(p, (psi-2))),
                         theta = rep(0.1, (p+1)),
-                        tau1 = rep(0.5, p),tau2 = rep(0.5, p),
+                        tau1 = rep(0.5, p), tau2 = rep(0.5, p),
                         lambda1 = 5, lambda2 = 5.5))
 fit1 <- stan(
-    file = "model_BRSTIR_constraint.stan",  # Stan program
+    file = "model_BRSTIR_temporal.stan",  # Stan program
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
     # init_r = 1,
@@ -777,7 +776,7 @@ for(i in 1:p){
                           plot.margin = margin(0,0,0,-20),
                           axis.text = element_text(size = 35),
                           axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.fn(fwi.scaled[362,i]), y=-4.1, color = "red", size = 4)
+  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.fn(fwi.scaled[which.max(y),i]), y=-4.1, color = "red", size = 4)
 }
 
 grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
