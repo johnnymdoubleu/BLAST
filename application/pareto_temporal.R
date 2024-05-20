@@ -348,9 +348,7 @@ model {
     // likelihood
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
-        target += normal_lpdf(epsilon[i] | 0, sqrt(1/prec));
     }
-    target += lognormal_lpdf(prec | log(14600), 2); //target += gamma_lpdf(prec | 1, 1e-5);
     target += normal_lpdf(theta[1] | 0, 100);
     target += gamma_lpdf(lambda1 | 1, 1e-5);
     target += gamma_lpdf(lambda2o | 1, 1e-5);
