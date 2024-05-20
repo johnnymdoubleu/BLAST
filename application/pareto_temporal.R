@@ -310,8 +310,6 @@ parameters {
     real <lower=0> lambda2; // group lasso penalty
     array[p] real <lower=0> tau1;
     array[p] real <lower=0> tau2;
-    real prec;
-    array[n] real epsilon;
 }
 transformed parameters {
     array[n] real <lower=0> alpha; // covariate-adjusted tail index
@@ -320,7 +318,6 @@ transformed parameters {
     real <lower=0> lambda2o;
     matrix[2, p] subgnl;
     matrix[n, p] gsmooth; // linear component
-    array[n] real epsp;
 
     lambda2o=lambda2*100;
     for(j in 1:p){
@@ -334,13 +331,9 @@ transformed parameters {
     for (j in 1:p){
         gsmooth[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j] + bsLinear[,j] * theta[j+1];
     };
-    epsp[1] = epsilon[1];
-    for (i in 1:(n-1)){
-      epsp[i+1]=epsp[i] + epsilon[i+1]*sqrt(dayIdx[i+1]-dayIdx[i]);
-    }
 
     for (i in 1:n){
-        alpha[i] = exp(theta[1] + sum(gsmooth[i,]) + epsp[i]); 
+        alpha[i] = exp(theta[1] + sum(gsmooth[i,])); 
     };
 }
 
@@ -401,16 +394,16 @@ data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi,
                     dayIdx = day.idx)
 
 init.alpha <- list(list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c((psi-2),p)),
-                        theta = rep(0, (p+1)), epsilon = rep(0.1,n),
-                        tau1 = rep(0.1, p),tau2 = rep(0.1, p), prec = 100,
+                        theta = rep(0, (p+1)), 
+                        tau1 = rep(0.1, p),tau2 = rep(0.1, p), 
                         lambda1 = 0.1, lambda2 = 0.01),
                    list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c((psi-2),p)),
-                        theta = rep(0, (p+1)), epsilon = rep(0.01, n),
-                        tau1 = rep(0.001, p),tau2 = rep(0.001, p),prec = 400,
+                        theta = rep(0, (p+1)), 
+                        tau1 = rep(0.001, p),tau2 = rep(0.001, p),
                         lambda1 = 100, lambda2 = 1),
                    list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c((psi-2),p)),
-                        theta = rep(0.1, (p+1)), epsilon = rep(0.4,n),
-                        tau1 = rep(0.5, p),tau2 = rep(0.5, p),prec = 1000,
+                        theta = rep(0.1, (p+1)),
+                        tau1 = rep(0.5, p),tau2 = rep(0.5, p),
                         lambda1 = 5, lambda2 = 5.5))
 
 # stanc("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/application/model1.stan")
