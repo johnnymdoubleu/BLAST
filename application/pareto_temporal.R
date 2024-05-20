@@ -92,18 +92,19 @@ fwi.index$month <- factor(format(as.Date(substr(cov.long$...1[missing.values],1,
                             levels = c("Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"))
 fwi.index$date <- as.numeric(fwi.index$date)
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
+fwi.scaled$time <- (1:length(Y))/length(Y)
 fwi.origin <- fwi.scaled <-fwi.scaled[which(Y>u),]
 
 # fwi.scaled <- as.data.frame(scale(fwi.scaled))
 # range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 # fwi.scaled <- as.data.frame(sapply(fwi.origin, FUN = range01))
+
+n <- dim(fwi.scaled)[[1]]
 p <- dim(fwi.scaled)[[2]]
-for(i in 1:p){
+for(i in 1:(p-1)){
   fwi.fn <- ecdf(fwi.index[which(Y>u),i])
   fwi.scaled[,i] <- fwi.fn(fwi.index[which(Y>u),i])
 }
-n <- dim(fwi.scaled)[[1]]
-p <- dim(fwi.scaled)[[2]]
 
 # fwi.scaled.cov <- cov(fwi.scaled)
 # fwi.scaled.eigen <- eigen(fwi.scaled.cov)
