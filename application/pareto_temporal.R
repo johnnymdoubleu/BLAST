@@ -1,6 +1,6 @@
 library(npreg)
 library(Pareto)
-suppressMessages(library(ggplot2))
+suppressMessages(library(tidyverse))
 library(readxl)
 library(gridExtra)
 library(corrplot)
@@ -32,7 +32,7 @@ setwd("C:/Users/Johnny Lee/Documents/GitHub")
 
 df <- read_excel("./BRSTIR/application/AADiarioAnual.xlsx", col_types = c("date", rep("numeric",40)))
 df.long <- tidyr::gather(df, condition, measurement, "1980":"2019", factor_key=TRUE)
-df.long
+df.long 
 head(df.long)
 tail(df.long)
 # View(df.long[is.na(df.long$measurement),])
@@ -47,7 +47,7 @@ Y <- df.long$measurement[!is.na(df.long$measurement)]
 
 summary(Y) #total burnt area
 length(Y)
-psi <- 30
+psi <- 10
 threshold <- 0.975
 u <- quantile(Y, threshold)
 y <- Y[Y>u]

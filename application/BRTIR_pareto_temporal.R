@@ -1,6 +1,6 @@
 library(npreg)
 library(Pareto)
-suppressMessages(library(ggplot2))
+suppressMessages(library(tidyverse))
 # library(JOPS)
 library(readxl)
 library(gridExtra)
