@@ -779,7 +779,7 @@ for(i in 1:p){
   grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.fn(fwi.scaled[which.max(y),i]), y=-2.1, color = "red", size = 4)
 }
 
-grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
+# grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
 # grid.plts[[7]]
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=10, height = 7.78)
 
@@ -795,12 +795,12 @@ y.container$x <- seq(1,n)
 y.container$logy <- log(y)
 plt <- ggplot(data = y.container, aes(x = logy)) + ylab("Density") + xlab("log(Burnt Area)") + labs(col = "")
 
-for(i in names(y.container)){
+for(i in names(y.container)[1:100]){
   plt <- plt + geom_density(aes(x=.data[[i]]), color = "slategray1", alpha = 0.1, linewidht = 0.7)
 }
 
 print(plt + geom_density(aes(x=logy), color = "steelblue", linewidth = 2) +
-        theme_minimal(base_size = 30) + ylim(0, 1.25) + xlim(7.5,30) +
+        theme_minimal(base_size = 30) + ylim(0, 1.25) + xlim(7.4,20) +
         theme(legend.position = "none",
                 axis.text = element_text(size = 35)))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRSTIR_predictive_distribution.pdf"), width=10, height = 7.78)
@@ -870,7 +870,7 @@ plt <- ggplot(data = ev.y1, aes(x = yrep)) + ylab("Density") + xlab("log(Burned 
   geom_density(color = "steelblue", linewidth = 1.2) + 
   geom_rug(alpha = 0.1) + 
   # geom_point(aes(x=yrep,y=-Inf),color="steelblue", size = 3.5, alpha = 0.2) +
-  xlim(5.5, 40) +
+  xlim(7.5, 15) +
   theme_minimal(base_size = 30) +  
   theme(legend.position = "none",
         axis.title = element_text(size = 30))

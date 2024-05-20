@@ -794,7 +794,7 @@ y.container$x <- seq(1,n)
 y.container$logy <- log(y)
 plt <- ggplot(data = y.container, aes(x = logy)) + ylab("Density") + xlab("log(Burnt Area)") + labs(col = "")
 
-for(i in names(y.container)){
+for(i in names(y.container)[1:100]){
   plt <- plt + geom_density(aes(x=.data[[i]]), color = "slategray1", alpha = 0.1, linewidht = 0.7)
 }
 
