@@ -1,18 +1,22 @@
 library(npreg)
 library(Pareto)
 suppressMessages(library(tidyverse))
-# library(JOPS)
 library(readxl)
 library(gridExtra)
-# library(colorspace)
 library(corrplot)
-# library(ReIns)
 library(rstan)
 library(loo)
-# library(bayesplot)
-# library(evir)
-# library(mev)
 library(scales)
+
+if (interactive() && Sys.getenv("TERM_PROGRAM") == "vscode") {
+  if (requireNamespace("httpgd", quietly = TRUE)) {
+    options(vsc.plot = FALSE)
+    options(device = function(...) {
+      httpgd::hgd(silent = TRUE)
+      .vsc.browser(httpgd::hgd_url(history = FALSE), viewer = "Beside")
+    })
+  }
+}
 
 # Structure of the FWI System
 #DSR : Dail Severity Rating

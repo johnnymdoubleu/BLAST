@@ -94,7 +94,7 @@ fwi.index$month <- factor(format(as.Date(substr(cov.long$...1[missing.values],1,
 fwi.index$date <- as.numeric(fwi.index$date)
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 fwi.scaled$time <- (1:length(Y))/length(Y)
-fwi.origin <- fwi.scaled <-fwi.scaled[which(Y>u),c(1,4,5,8)]
+fwi.origin <- fwi.scaled <-fwi.scaled[which(Y>u),]
 
 # fwi.scaled <- as.data.frame(scale(fwi.scaled))
 # range01 <- function(x){(x-min(x))/(max(x)-min(x))}
@@ -408,7 +408,7 @@ fit1 <- stan(
     # init_r = 1,
     chains = 3,             # number of Markov chains
     # warmup = 1000,          # number of warmup iterations per chain
-    iter = 4000,            # total number of iterations per chain
+    iter = 6000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
     refresh = 500           # no progress shown
 )
