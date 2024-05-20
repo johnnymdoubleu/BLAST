@@ -468,14 +468,14 @@ for(i in 1:p){
                   ylab("") + xlab(names(fwi.scaled)[i]) +
                   scale_fill_manual(values=c("steelblue"), name = "") + 
                   scale_color_manual(values=c("steelblue")) +
-                  ylim(-2.1, 2.1) +
+                  ylim(-1.5, 1.5) +
                   # geom_circle(aes(x0=fwi.scaled[362,i], y0=-4.01, r=0.1), inherit.aes=FALSE) +
                   theme_minimal(base_size = 30) +
                   theme(legend.position = "none",
                           plot.margin = margin(0,0,0,-20),
                           axis.text = element_text(size = 35),
                           axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.fn(fwi.scaled[which.max(y),i]), y=-4.1, color = "red", size = 4)
+  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.fn(fwi.scaled[which.max(y),i]), y=-1.5, color = "red", size = 4)
 }
 
 grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)

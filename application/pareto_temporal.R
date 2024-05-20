@@ -776,7 +776,7 @@ for(i in 1:p){
                           plot.margin = margin(0,0,0,-20),
                           axis.text = element_text(size = 35),
                           axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.fn(fwi.scaled[which.max(y),i]), y=-4.1, color = "red", size = 4)
+  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.fn(fwi.scaled[which.max(y),i]), y=-2.1, color = "red", size = 4)
 }
 
 grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
