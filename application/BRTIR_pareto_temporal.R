@@ -90,10 +90,10 @@ fwi.index$month <- factor(format(as.Date(substr(cov.long$...1[missing.values],1,
 fwi.index$date <- as.numeric(fwi.index$date)
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 fwi.scaled$time <- (1:length(Y))/length(Y)
-fwi.scaled <- fwi.scaled[which(Y>u),]
+fwi.origin <- fwi.scaled <- fwi.scaled[which(Y>u),]
 
 sqrt01 <- function(x){sqrt(abs(x-mean(x))) * sign(x-mean(x))}
-log01 <- function(x){log(1+abs(x-mean(x))) * sign(x-mean(x))}
+log01 <- function(x){log(1+abs(x-mean(x))/sd(x)) * sign(x-mean(x))}
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 # fwi.scaled <- as.data.frame(scale(fwi.scaled))
 # fwi.scaled <- as.data.frame(sapply(fwi.scaled, FUN = range01))
