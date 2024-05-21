@@ -32,8 +32,8 @@ setwd("C:/Users/Johnny Lee/Documents/GitHub")
 # detach("package:qqboxplot", unload=TRUE)
 
 df <- read_excel("./BRSTIR/application/AADiarioAnual.xlsx", col_types = c("date", rep("numeric",40)))
-df.long <- tidyr::gather(df, condition, measurement, "1980":"2019", factor_key=TRUE)
-df.long 
+df.long <- gather(df, condition, measurement, "1980":"2019", factor_key=TRUE)
+df.long
 head(df.long)
 tail(df.long)
 # View(df.long[is.na(df.long$measurement),])
@@ -52,7 +52,6 @@ psi <- 10
 threshold <- 0.975
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
-# day.idx <- which(Y>u)
 # x.scale <- x.scale[which(y>quantile(y, threshold)),]
 # u <- quantile(y, threshold)
 
@@ -83,7 +82,7 @@ fwi.scaled <- fwi.index <- data.frame(DSR = double(length(Y)),
                                         stringsAsFactors = FALSE)
 # cov.long$ <- gather(cov$DSR[!is.na(df.long$measurement)][,1:41], )
 for(i in 1:length(cov)){
-    cov.long <- tidyr::gather(cov[[i]][,1:41], condition, measurement, "1980":"2019", factor_key=TRUE)
+    cov.long <- gather(cov[[i]][,1:41], condition, measurement, "1980":"2019", factor_key=TRUE)
     fwi.index[,i] <- cov.long$measurement[missing.values]
     fwi.scaled[,i] <- cov.long$measurement[missing.values]
 }
@@ -97,15 +96,16 @@ fwi.scaled$time <- (1:length(Y))/length(Y)
 fwi.origin <- fwi.scaled <-fwi.scaled[which(Y>u),]
 
 # fwi.scaled <- as.data.frame(scale(fwi.scaled))
-# range01 <- function(x){(x-min(x))/(max(x)-min(x))}
-# fwi.scaled <- as.data.frame(sapply(fwi.origin, FUN = range01))
-
-n <- dim(fwi.scaled)[[1]]
+sqrt01 <- function(x){sqrt(abs(x-mean(x))) * sign(x-mean(x))}
+log01 <- function(x){log(1+abs(x-mean(x))) * sign(x-mean(x))}
+range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 p <- dim(fwi.scaled)[[2]]
-for(i in 1:(p-1)){
-  fwi.fn <- ecdf(fwi.index[which(Y>u),i])
-  fwi.scaled[,i] <- fwi.fn(fwi.index[which(Y>u),i])
-}
+n <- dim(fwi.scaled)[[1]]
+
+fwi.origin[,1:(p-1)] <- as.data.frame(sapply(fwi.origin[,1:(p-1)], FUN = sqrt01))
+fwi.scaled[,1:(p-1)] <- as.data.frame(sapply(fwi.origin[,1:(p-1)], FUN = range01))
+
+
 
 # fwi.scaled.cov <- cov(fwi.scaled)
 # fwi.scaled.eigen <- eigen(fwi.scaled.cov)
@@ -188,7 +188,7 @@ ggplot(fwi.origin, aes(x=DSR, y=FFMC)) +
   geom_density2d(colour="steelblue", linewidth = 1.3) + 
   # xlim(7.5, 26) + 
   # stat_density_2d(aes(fill = ..level..), geom = "polygon", colour="steelblue")+ 
-  geom_mark_circle(data = max.fwi, aes(x = DSR, y = FFMC, label = "15th Oct 2017"), con.type = "straight",
+  geom_mark_circle(aes(x = max.fwi$DSR, y = max.fwi$FFMC, label = "15th Oct 2017"), con.type = "straight",
                    radius = unit(2.5, "mm"), color = "steelblue", size = 1, 
                    con.colour = "steelblue", con.cap = unit(0, "mm"),
                    label.colour = "steelblue", label.buffer = unit(5, "mm"),
@@ -261,17 +261,11 @@ for(i in 1:p){
 #   xholder[i,] <- centre.fwi + seq(min(PC1), max(PC1), length.out = n)[i] %*% phi[,1]
 # }
 for(i in 1:p){
-  if(i < p){
-    fwi.fn <- ecdf(fwi.index[which(Y>u),i])
-    # xholder[,i] <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n)
-    # test.knot <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
-    xholder[,i] <- sort(fwi.fn(fwi.index[which(Y>u),i]))
-  }
-  else{
-    xholder[,i] <- seq(0, 1, length.out = n)
-  }
+  # fwi.fn <- ecdf(fwi.index[which(Y>u),i])
+  # xholder[,i] <- sort(fwi.fn(fwi.index[which(Y>u),i]))
+  xholder[,i] <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n)
+  test.knot <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)  
   test.knot <- seq(min(xholder[,i]), max(xholder[,i]), length.out = psi)
-  # test.knot <- seq(min(xholder[,i]), max(xholder[,i]), length.out = psi)  
   splines <- basis.tps(xholder[,i], test.knot, m=2, rk=FALSE, intercept = FALSE)
   xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
   xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
@@ -314,7 +308,6 @@ parameters {
     vector[(psi-2)] gammaTemp[p]; // constraint splines coefficient from 2 to psi-1
     real <lower=0> lambda1; // lasso penalty
     real <lower=0> lambda2; // group lasso penalty
-    real <lower=0> lambda3; // group lasso penalty for time
     array[p] real <lower=0> tau1;
     array[p] real <lower=0> tau2;
 }
@@ -323,24 +316,22 @@ transformed parameters {
     vector[psi] gamma[p]; // splines coefficient 
     vector[2] gammaFL[p];
     real <lower=0> lambda2o;
-    matrix[2, p] subgnl;
     matrix[n, p] gsmooth; // linear component
 
     lambda2o=lambda2*100;
     for(j in 1:p){
         gamma[j][2:(psi-1)] = gammaTemp[j][1:(psi-2)]*100;
-        subgnl[,j] = bsNonlinear[indexFL[(((j-1)*2)+1):(((j-1)*2)+2)], (((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] * gammaTemp[j]*100;
-        gammaFL[j] = basisFL[, (((j-1)*2)+1):(((j-1)*2)+2)] * subgnl[,j] * (-1);
+        gammaFL[j] = basisFL[, (((j-1)*2)+1):(((j-1)*2)+2)] * (bsNonlinear[indexFL[(((j-1)*2)+1):(((j-1)*2)+2)], (((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] * gammaTemp[j]*100) * (-1);
         gamma[j][1] = gammaFL[j][1];
         gamma[j][psi] = gammaFL[j][2];  
     };
 
     for (j in 1:p){
-        gsmooth[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j] + bsLinear[,j] * theta[j+1];
+        gsmooth[,j] = bsLinear[,j] * theta[j+1] + bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
     };
 
     for (i in 1:n){
-        alpha[i] = exp(theta[1] + sum(gsmooth[i,])); 
+        alpha[i] = exp(theta[1] + sum(gsmooth[i,]));
     };
 }
 
@@ -352,18 +343,13 @@ model {
     target += normal_lpdf(theta[1] | 0, 100);
     target += gamma_lpdf(lambda1 | 1, 1e-5);
     target += gamma_lpdf(lambda2o | 1, 1e-5);
-    target += gamma_lpdf(lambda3 | 1, 1e-5);
     target += (2*p*log(lambda2o));
-    for (j in 1:(p-1)){
+    for (j in 1:p){
         target += gamma_lpdf(tau1[j] | 1, lambda1^2*0.5);
         target += normal_lpdf(theta[(j+1)] | 0, sqrt(1/tau1[j]));
         target += gamma_lpdf(tau2[j] | atau, lambda2o^2*0.5);
         target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * (1/tau2[j]));
     }
-    target += gamma_lpdf(tau1[p] | 1, lambda1^2*0.5);
-    target += normal_lpdf(theta[(p+1)] | 0, sqrt(1/tau1[p]));
-    target += gamma_lpdf(tau2[p] | atau, lambda3^2*0.5);
-    target += multi_normal_lpdf(gamma[p] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * (1/tau2[p]));
 }
 generated quantities {
     // Used in Posterior predictive check    
@@ -374,21 +360,21 @@ generated quantities {
     matrix[n, p] newgsmooth; // linear component
 
     for (j in 1:p){
-      newgsmooth[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j] + xholderLinear[,j] * theta[j+1];
-    };
+        newgsmooth[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j] + xholderLinear[,j] * theta[j+1];
+    };    
 
     for (i in 1:n){
-      newalpha[i] = exp(theta[1] + sum(newgsmooth[i,]));
-    }
+        newalpha[i] = exp(theta[1] + sum(newgsmooth[i,]));
+    };
 
-    yrep = pareto_rng(u, alpha[1]);
+    yrep = pareto_rng(u, alpha[362]);
     for(i in 1:n){
       f[i] = pareto_rng(u, alpha[i]);
       log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
     }
 }
 "
-, "model_BRSTIR_temporal.stan")
+, "model_BRSTIR_constraint.stan")
 
 data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, 
                     atau = ((psi+1)/2), indexFL = as.vector(t(index.holder)),
@@ -396,25 +382,27 @@ data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi,
                     xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear, basisFL = basis.holder)
 
 init.alpha <- list(list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c(p, (psi-2))),
-                        theta = rep(0, (p+1)), lambda3 = 0.1,
-                        tau1 = rep(0.1, p), tau2 = rep(0.1, p), 
+                        theta = rep(0, (p+1)), 
+                        tau1 = rep(0.1, p),tau2 = rep(0.1, p),
                         lambda1 = 0.1, lambda2 = 0.01),
-                   list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c(p,(psi-2))),
-                        theta = rep(0, (p+1)), lambda3 = 1,
-                        tau1 = rep(0.001, p), tau2 = rep(0.001, p),
+                   list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c(p, (psi-2))),
+                        theta = rep(0, (p+1)), 
+                        tau1 = rep(0.001, p),tau2 = rep(0.001, p),
                         lambda1 = 100, lambda2 = 1),
                    list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c(p, (psi-2))),
-                        theta = rep(0.1, (p+1)), lambda3 = 10,
-                        tau1 = rep(0.5, p), tau2 = rep(0.5, p),
+                        theta = rep(0.1, (p+1)),
+                        tau1 = rep(0.5, p),tau2 = rep(0.5, p),
                         lambda1 = 5, lambda2 = 5.5))
+
+# stanc("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/application/model1.stan")
 fit1 <- stan(
-    file = "model_BRSTIR_temporal.stan",  # Stan program
+    file = "model_BRSTIR_constraint.stan",  # Stan program
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
     # init_r = 1,
     chains = 3,             # number of Markov chains
     # warmup = 1000,          # number of warmup iterations per chain
-    iter = 10000,            # total number of iterations per chain
+    iter = 2000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
     refresh = 500           # no progress shown
 )
@@ -425,7 +413,7 @@ posterior <- extract(fit1)
 
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
-lambda.samples <- summary(fit1, par=c("lambda1", "lambda2o", "lambda3"), probs = c(0.05,0.5, 0.95))$summary
+lambda.samples <- summary(fit1, par=c("lambda1", "lambda2o"), probs = c(0.05,0.5, 0.95))$summary
 # gl.samples <- summary(fit1, par=c("newgl"), probs = c(0.05, 0.5, 0.95))$summary
 # gnl.samples <- summary(fit1, par=c("newgnl"), probs = c(0.05, 0.5, 0.95))$summary
 # gnlfl.samples <- summary(fit1, par=c("newgfnl", "newglnl"), probs = c(0.05, 0.5, 0.95))$summary
@@ -762,7 +750,7 @@ data.smooth <- data.frame("x" = as.vector(xholder),
 
 grid.plts <- list()
 for(i in 1:p){
-  fwi.fn <- ecdf(fwi.scaled[,i])
+  # fwi.fn <- ecdf(fwi.scaled[,i])
   fwi.data <- data.frame(data.smooth[((((i-1)*n)+1):(i*n)),])
   grid.plt <- ggplot(data = fwi.data 
                   # c = seq(min(PC1), max(PC1), length.out = n)
@@ -776,18 +764,18 @@ for(i in 1:p){
                   ylab("") + xlab(names(fwi.scaled)[i]) +
                   scale_fill_manual(values=c("steelblue"), name = "") + 
                   scale_color_manual(values=c("steelblue")) +
-                  ylim(-2.1, 2.1) +
+                  ylim(-1.8, 1.8) +
                   # geom_circle(aes(x0=fwi.scaled[362,i], y0=-4.01, r=0.1), inherit.aes=FALSE) +
                   theme_minimal(base_size = 30) +
                   theme(legend.position = "none",
                           plot.margin = margin(0,0,0,-20),
                           axis.text = element_text(size = 35),
                           axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.fn(fwi.scaled[which.max(y),i]), y=-2.1, color = "red", size = 4)
+  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=-1.8, color = "red", size = 4)
 }
 
 grid.plts[[1]] + grid.plts[[2]] +grid.plts[[3]] + grid.plts[[4]] + grid.plts[[5]] + grid.plts[[6]] + grid.plts[[7]] + grid.plts[[8]] + plot_layout(widths = c(1,1))
-# grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
+# gridExtra::grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
 # grid.plts[[7]]
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=10, height = 7.78)
 
@@ -808,7 +796,7 @@ for(i in names(y.container)[1:100]){
 }
 
 print(plt + geom_density(aes(x=logy), color = "steelblue", linewidth = 2) +
-        theme_minimal(base_size = 30) + ylim(0, 1.25) + xlim(7.4,20) +
+        theme_minimal(base_size = 30) + ylim(0, 1.25) + xlim(7.5,30) +
         theme(legend.position = "none",
                 axis.text = element_text(size = 35)))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRSTIR_predictive_distribution.pdf"), width=10, height = 7.78)
@@ -878,7 +866,7 @@ plt <- ggplot(data = ev.y1, aes(x = yrep)) + ylab("Density") + xlab("log(Burned 
   geom_density(color = "steelblue", linewidth = 1.2) + 
   geom_rug(alpha = 0.1) + 
   # geom_point(aes(x=yrep,y=-Inf),color="steelblue", size = 3.5, alpha = 0.2) +
-  xlim(7.5, 15) +
+  xlim(5.5, 40) +
   theme_minimal(base_size = 30) +  
   theme(legend.position = "none",
         axis.title = element_text(size = 30))

@@ -368,7 +368,7 @@ generated quantities {
 
     yrep = pareto_rng(u, alpha[362]);
     for(i in 1:n){
-      f[i] = pareto_rng(u, alpha[i]);
+      f[i] = alpha[i]*(y[i]/u)^(alpha[i])*y[i]^(-1); // pareto_rng(u, alpha[i])
       log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
     }
 }
@@ -794,10 +794,11 @@ for(i in names(y.container)[1:100]){
   plt <- plt + geom_density(aes(x=.data[[i]]), color = "slategray1", alpha = 0.1, linewidht = 0.7)
 }
 
-print(plt + geom_density(aes(x=logy), color = "steelblue", linewidth = 2) +
-        theme_minimal(base_size = 30) + ylim(0, 1.25) + xlim(7.5,30) +
-        theme(legend.position = "none",
-                axis.text = element_text(size = 35)))
+print(plt +
+      geom_density(aes(x=logy), color = "steelblue", linewidth = 2) +
+      theme_minimal(base_size = 30) + ylim(0, 1.25) + xlim(7.5,30) +
+      theme(legend.position = "none",
+            axis.text = element_text(size = 35)))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRSTIR_predictive_distribution.pdf"), width=10, height = 7.78)
 
 
