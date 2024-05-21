@@ -97,7 +97,7 @@ fwi.origin <- fwi.scaled <-fwi.scaled[which(Y>u),]
 
 # fwi.scaled <- as.data.frame(scale(fwi.scaled))
 sqrt01 <- function(x){sqrt(abs(x-mean(x))) * sign(x-mean(x))}
-log01 <- function(x){log(1+abs(x-mean(x))/std(x)) * sign(x-mean(x))}
+log01 <- function(x){log(1+abs(x-mean(x))/sd(x)) * sign(x-mean(x))}
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 
 p <- dim(fwi.scaled)[[2]]
@@ -402,7 +402,7 @@ fit1 <- stan(
     # init_r = 1,
     chains = 3,             # number of Markov chains
     # warmup = 1000,          # number of warmup iterations per chain
-    iter = 2000,            # total number of iterations per chain
+    iter = 10000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
     refresh = 500           # no progress shown
 )
