@@ -48,8 +48,8 @@ Y <- df.long$measurement[!is.na(df.long$measurement)]
 
 summary(Y) #total burnt area
 length(Y)
-psi <- 10
-threshold <- 0.975
+psi <- 20
+threshold <- 0.99
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
 # x.scale <- x.scale[which(y>quantile(y, threshold)),]
@@ -96,7 +96,7 @@ fwi.scaled$time <- (1:length(Y))/length(Y)
 fwi.origin <- fwi.scaled <-fwi.scaled[which(Y>u),]
 
 # fwi.scaled <- as.data.frame(scale(fwi.scaled))
-sqrt01 <- function(x){sqrt(abs(x-mean(x))) * sign(x-mean(x))}
+sqrt01 <- function(x){sqrt(abs(x-median(x))) * sign(x-median(x))}
 log01 <- function(x){log(1+abs(x-mean(x))) * sign(x-mean(x))}
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 p <- dim(fwi.scaled)[[2]]
@@ -367,7 +367,7 @@ generated quantities {
         newalpha[i] = exp(theta[1] + sum(newgsmooth[i,]));
     };
 
-    yrep = pareto_rng(u, alpha[362]);
+    yrep = pareto_rng(u, alpha[1]);
     for(i in 1:n){
       f[i] = pareto_rng(u, alpha[i]);
       log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
@@ -899,7 +899,7 @@ plot(fwi.loo, label_points = TRUE)
 
 constraint.elpd.loo <- loo(fit.log.lik, is_method = "sis", cores = 2)
 constraint.waic <- waic(fit.log.lik, cores = 2)
-# save(constraint.elpd.loo, constraint.waic, file =  (paste0("./BRSTIR/application/BRSTIR_constraint_",Sys.Date(),"_",psi,"_",floor(threshold*100),"quantile_IC.Rdata")))
+save(constraint.elpd.loo, constraint.waic, file =  (paste0("./BRSTIR/application/BRSTIR_constraint_",Sys.Date(),"_",psi,"_",floor(threshold*100),"quantile_IC.Rdata")))
 
 
 

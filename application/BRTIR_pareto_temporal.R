@@ -46,7 +46,7 @@ Y <- df.long$measurement[!is.na(df.long$measurement)]
 summary(Y) #total burnt area
 length(Y)
 
-threshold <- 0.975
+threshold <- 0.99
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
 # x.scale <- x.scale[which(y>quantile(y, threshold)),]
@@ -92,7 +92,7 @@ fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 fwi.scaled$time <- (1:length(Y))/length(Y)
 fwi.origin <- fwi.scaled <- fwi.scaled[which(Y>u),]
 
-sqrt01 <- function(x){sqrt(abs(x-mean(x))) * sign(x-mean(x))}
+sqrt01 <- function(x){sqrt(abs(x-median(x))) * sign(x-median(x))}
 log01 <- function(x){log(1+abs(x-mean(x))/sd(x)) * sign(x-mean(x))}
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 # fwi.scaled <- as.data.frame(scale(fwi.scaled))
@@ -530,7 +530,7 @@ plot(fwi.loo, label_points = TRUE)
 loo(fit.log.lik, is_method = "sis", cores = 2)
 brtir.elpd.loo <- loo(fit.log.lik, is_method = "sis", cores = 2)
 brtir.waic <- waic(fit.log.lik, cores = 2)
-# save(brtir.elpd.loo, brtir.waic, file = (paste0("./BRSTIR/application/BRTIR_",Sys.Date(),"_",floor(threshold*100),"quantile_IC.Rdata")))
+save(brtir.elpd.loo, brtir.waic, file = (paste0("./BRSTIR/application/BRTIR_",Sys.Date(),"_",floor(threshold*100),"quantile_IC.Rdata")))
 
 #https://discourse.mc-stan.org/t/four-questions-about-information-criteria-cross-validation-and-hmc-in-relation-to-a-manuscript-review/13841
 
@@ -547,7 +547,7 @@ y.container$x <- seq(1,n)
 y.container$logy <- log(y)
 plt <- ggplot(data = y.container, aes(x = x)) + ylab("density") + xlab("log(Burnt Area)") + labs(col = "")
 
-for(i in names(y.container)){
+for(i in names(y.container)[1:100]){
   # plt <- plt + geom_line(aes(y = .data[[i]]), alpha = 0.2, linewidth = 0.7)
   plt <- plt + geom_density(aes(x=.data[[i]]), color = "slategray1", alpha = 0.1, linewidht = 0.7)
 }
