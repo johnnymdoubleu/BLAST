@@ -81,14 +81,14 @@ fwi.index$date <- as.numeric(fwi.index$date)
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 fwi.scaled <- fwi.scaled[which(Y>u),]
 # fwi.scaled <- as.data.frame(scale(fwi.scaled))
-# range01 <- function(x){(x-min(x))/(max(x)-min(x))}
-# fwi.scaled <- as.data.frame(sapply(fwi.scaled, FUN = range01))
+range01 <- function(x){(x-min(x))/(max(x)-min(x))}
+fwi.scaled <- as.data.frame(sapply(fwi.scaled, FUN = range01))
 # fwi.scaled <- as.data.frame(lapply(fwi.scaled, rescale, to=c(-1,1)))
 p <- dim(fwi.scaled)[[2]]
-for(i in 1:p){
-  fwi.fn <- ecdf(fwi.index[which(Y>u),i])
-  fwi.scaled[,i] <- fwi.fn(fwi.index[which(Y>u),i])
-}
+# for(i in 1:p){
+#   fwi.fn <- ecdf(fwi.index[which(Y>u),i])
+#   fwi.scaled[,i] <- fwi.fn(fwi.index[which(Y>u),i])
+# }
 
 
 # ---------------------------------------------------------------------------
@@ -188,9 +188,9 @@ no.theta <- 1
 newx <- seq(0, 1, length.out=n)
 xholder <- matrix(nrow=n, ncol=p)
 for(i in 1:p){
-  fwi.fn <- ecdf(fwi.index[which(Y>u),i])
-  xholder[,i] <- sort(fwi.fn(fwi.index[which(Y>u),i]))
-  # xholder[,i] <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n)
+  # fwi.fn <- ecdf(fwi.index[which(Y>u),i])
+  # xholder[,i] <- sort(fwi.fn(fwi.index[which(Y>u),i]))
+  xholder[,i] <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n)
 }
 
 
@@ -435,7 +435,7 @@ ggplot(data.scenario, aes(x=x)) +
 
 grid.plts <- list()
 for(i in 1:p){
-  fwi.fn <- ecdf(fwi.scaled[,i])
+  # fwi.fn <- ecdf(fwi.scaled[,i])
   fwi.data <- data.frame(data.linear[((((i-1)*n)+1):(i*n)),])
   grid.plt <- ggplot(data = fwi.data 
                   # c = seq(min(PC1), max(PC1), length.out = n)
@@ -456,7 +456,7 @@ for(i in 1:p){
                           plot.margin = margin(0,0,0,-20),
                           axis.text = element_text(size = 35),
                           axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.fn(fwi.scaled[362,i]), y=-4.1, color = "red", size = 4)
+  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i]), y=-4.1, color = "red", size = 4)
 }
 
 grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)

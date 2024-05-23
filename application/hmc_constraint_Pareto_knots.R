@@ -42,7 +42,7 @@ Y <- df.long$measurement[!is.na(df.long$measurement)]
 
 summary(Y) #total burnt area
 length(Y)
-psi <- 5
+psi <- 20
 threshold <- 0.975
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
@@ -109,12 +109,12 @@ for(i in 1:p){
 
 for(i in 1:p){
   xholder[,i] <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n)
-  test.knot <- quantile(fwi.scaled[,i], probs=seq(1/(psi+1),psi/(psi+1),length.out = psi))
+  test.knot <- quantile(fwi.scaled[,i], probs=seq(0,1,length.out = psi))
   splines <- basis.tps(xholder[,i], test.knot, m=2, rk=FALSE, intercept = FALSE)
   xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
   xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
   # knots <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
-  knots <- quantile(fwi.scaled[,i], probs=seq(1/(psi+1),psi/(psi+1),length.out = psi))
+  knots <- knots <- quantile(fwi.scaled[,i], probs=seq(0,1,length.out = psi))
   tps <- basis.tps(fwi.scaled[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
   basis.holder <- cbind(basis.holder, 
           solve(matrix(c(tps[index.holder[i,1], no.theta+1],
@@ -249,7 +249,7 @@ fit1 <- stan(
     # init_r = 1,
     chains = 3,             # number of Markov chains
     # warmup = 1000,          # number of warmup iterations per chain
-    iter = 10000,            # total number of iterations per chain
+    iter = 5000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
     refresh = 500           # no progress shown
 )
