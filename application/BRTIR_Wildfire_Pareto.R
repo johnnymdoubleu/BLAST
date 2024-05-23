@@ -1,19 +1,12 @@
 library(npreg)
 library(Pareto)
 suppressMessages(library(tidyverse))
-library(JOPS)
 library(readxl)
 library(gridExtra)
 library(colorspace)
 library(corrplot)
-library(ReIns)
 library(rstan)
 library(loo)
-library(bayesplot)
-library(evir)
-library(mev)
-library(cmdstanr)
-library(scales)
 
 # Structure of the FWI System
 #DSR : Dail Severity Rating
