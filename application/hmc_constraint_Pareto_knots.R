@@ -2,7 +2,8 @@ library(npreg)
 library(Pareto)
 suppressMessages(library(tidyverse))
 library(readxl)
-library(gridExtra)
+# library(gridExtra)
+library(patchwork)
 library(corrplot)
 library(rstan)
 library(loo)
@@ -420,8 +421,8 @@ for(i in 1:p){
                           axis.title.x = element_text(size = 45))
   grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=-7, color = "red", size = 4)
 }
-
-grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
+grid.plts[[1]] + grid.plts[[2]] +grid.plts[[3]] + grid.plts[[4]] + grid.plts[[5]] + grid.plts[[6]] + grid.plts[[7]] + plot_layout(widths = c(1,1))
+# grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
 # grid.plts[[7]]
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=10, height = 7.78)
 
