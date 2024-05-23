@@ -254,7 +254,8 @@ for(i in 1:p){
   splines <- basis.tps(xholder[,i], test.knot, m=2, rk=FALSE, intercept = FALSE)
   xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
   xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
-  knots <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
+  # knots <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
+  knots <- quantile(fwi.scaled[,i], probs=seq(1/(psi+1),psi/(psi+1),length.out = psi))
   tps <- basis.tps(fwi.scaled[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
   basis.holder <- cbind(basis.holder, 
           solve(matrix(c(tps[index.holder[i,1], no.theta+1],
