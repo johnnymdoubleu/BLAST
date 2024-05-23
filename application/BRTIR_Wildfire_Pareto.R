@@ -456,7 +456,7 @@ for(i in 1:p){
                           plot.margin = margin(0,0,0,-20),
                           axis.text = element_text(size = 35),
                           axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i]), y=-4.1, color = "red", size = 4)
+  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=-4.1, color = "red", size = 4)
 }
 
 grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
@@ -507,7 +507,7 @@ plot(fwi.loo, label_points = TRUE)
 loo(fit.log.lik, is_method = "sis", cores = 2)
 brtir.elpd.loo <- loo(fit.log.lik, is_method = "sis", cores = 2)
 brtir.waic <- waic(fit.log.lik, cores = 2)
-# save(brtir.elpd.loo, brtir.waic, file = (paste0("./BRSTIR/application/BRTIR_",Sys.Date(),"_",floor(threshold*100),"quantile_IC.Rdata")))
+save(brtir.elpd.loo, brtir.waic, file = (paste0("./BRSTIR/application/BRTIR_",Sys.Date(),"_",floor(threshold*100),"quantile_IC.Rdata")))
 
 #https://discourse.mc-stan.org/t/four-questions-about-information-criteria-cross-validation-and-hmc-in-relation-to-a-manuscript-review/13841
 
