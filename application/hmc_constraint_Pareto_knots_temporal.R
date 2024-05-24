@@ -92,7 +92,8 @@ fwi.origin <- fwi.scaled <-fwi.scaled[which(Y>u),]
 # fwi.scaled <- as.data.frame(scale(fwi.scaled))
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 fwi.scaled <- as.data.frame(sapply(fwi.origin, FUN = range01))
-
+time <- (1:length(Y))/length(Y)
+fwi.scaled$time <- time[which(Y>u)]
 n <- dim(fwi.scaled)[[1]]
 p <- dim(fwi.scaled)[[2]]
 
@@ -191,12 +192,14 @@ model {
     target += gamma_lpdf(lambda1 | 1, 1e-3);
     target += gamma_lpdf(lambda2o | 1, 1e-3);
     target += (2*p*log(lambda2o));
-    for (j in 1:p){
+    for (j in 1:(p-1)){
         target += gamma_lpdf(tau1[j] | 1, lambda1^2*0.5);
         target += normal_lpdf(theta[(j+1)] | 0, sqrt(1/tau1[j]));
         target += gamma_lpdf(tau2[j] | atau, lambda2o^2*0.5);
         target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * (1/tau2[j]));
     }
+    target += normal_lpdf(theta[p] | 0, 100);
+    target += multi_normal_lpdf(gamma[p] | rep_vector(0, psi), diag_matrix(rep_vector(100, psi)));
 }
 generated quantities {
     // Used in Posterior predictive check    
@@ -221,7 +224,7 @@ generated quantities {
     }
 }
 "
-, "model_BRSTIR_constraint.stan")
+, "model_BRSTIR_constraint_temporal.stan")
 
 
 data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, 
@@ -244,13 +247,13 @@ init.alpha <- list(list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c(p, (psi-2))
 
 # stanc("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/application/model1.stan")
 fit1 <- stan(
-    file = "model_BRSTIR_constraint.stan",  # Stan program
+    file = "model_BRSTIR_constraint_temporal.stan",  # Stan program
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
     # init_r = 1,
     chains = 3,             # number of Markov chains
     # warmup = 1000,          # number of warmup iterations per chain
-    iter = 2000,            # total number of iterations per chain
+    iter = 5000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
     refresh = 500           # no progress shown
 )
@@ -421,7 +424,7 @@ for(i in 1:p){
                           axis.title.x = element_text(size = 45))
   grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=-7, color = "red", size = 4)
 }
-grid.plts[[1]] + grid.plts[[2]] +grid.plts[[3]] + grid.plts[[4]] + grid.plts[[5]] + grid.plts[[6]] + grid.plts[[7]] + plot_layout(widths = c(1,1))
+grid.plts[[1]] + grid.plts[[2]] +grid.plts[[3]] + grid.plts[[4]] + grid.plts[[5]] + grid.plts[[6]] + grid.plts[[7]] + grid.plts[[8]] + plot_layout(widths = c(1,1))
 # grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
 # grid.plts[[7]]
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=10, height = 7.78)
@@ -522,7 +525,7 @@ plot(fwi.loo, label_points = TRUE)
 
 constraint.elpd.loo <- loo(fit.log.lik, is_method = "sis", cores = 2)
 constraint.waic <- waic(fit.log.lik, cores = 2)
-save(constraint.elpd.loo, constraint.waic, file = (paste0("./BRSTIR/application/BRSTIR_constraint_",Sys.Date(),"_",psi,"_",floor(threshold*100),"quantile_IC.Rdata")))
+# save(constraint.elpd.loo, constraint.waic, file = (paste0("./BRSTIR/application/BRSTIR_constraint_",Sys.Date(),"_",psi,"_",floor(threshold*100),"quantile_IC.Rdata")))
 
 
 
