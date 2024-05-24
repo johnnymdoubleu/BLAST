@@ -43,7 +43,7 @@ Y <- df.long$measurement[!is.na(df.long$measurement)]
 
 summary(Y) #total burnt area
 length(Y)
-psi <- 5
+psi <- 20
 threshold <- 0.98
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
@@ -199,7 +199,7 @@ model {
         target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * (1/tau2[j]));
     }
     target += normal_lpdf(theta[p] | 0, 100);
-    target += multi_normal_lpdf(gamma[p] | rep_vector(0, psi), diag_matrix(rep_vector(100, psi)));
+    target += multi_normal_lpdf(gamma[p] | rep_vector(0, psi), diag_matrix(rep_vector(10, psi)));
 }
 generated quantities {
     // Used in Posterior predictive check    
