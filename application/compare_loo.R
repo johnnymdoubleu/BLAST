@@ -1,13 +1,14 @@
 library(loo)
 setwd("C:/Users/Johnny Lee/Documents/GitHub")
 threshold <- 0.97
-load(paste0("./BRSTIR/application/BRTIR_",Sys.Date(),"_",floor(threshold*100),"quantile_IC.Rdata"))
+date <- "2024-05-23"
+load(paste0("./BRSTIR/application/BRTIR_",date,"_",floor(threshold*100),"quantile_IC.Rdata"))
 # load(paste0("./BRSTIR/application/BRSTIR_",Sys.Date(),"_",floor(threshold*100),"quantile_IC.Rdata"))
-load(paste0("./BRSTIR/application/BRSTIR_constraint_",Sys.Date(),"_",20,"_",floor(threshold*100),"quantile_IC.Rdata"))
+load(paste0("./BRSTIR/application/BRSTIR_constraint_",date,"_",10,"_",floor(threshold*100),"quantile_IC.Rdata"))
 constraint.elpd.loo.5 <- constraint.elpd.loo
-load(paste0("./BRSTIR/application/BRSTIR_constraint_",Sys.Date(),"_",30,"_",floor(threshold*100),"quantile_IC.Rdata"))
+load(paste0("./BRSTIR/application/BRSTIR_constraint_",date,"_",30,"_",floor(threshold*100),"quantile_IC.Rdata"))
 constraint.elpd.loo.10 <- constraint.elpd.loo
-load(paste0("./BRSTIR/application/BRSTIR_constraint_",Sys.Date(),"_",40,"_",floor(threshold*100),"quantile_IC.Rdata"))
+load(paste0("./BRSTIR/application/BRSTIR_constraint_",date,"_",40,"_",floor(threshold*100),"quantile_IC.Rdata"))
 constraint.elpd.loo.20 <- constraint.elpd.loo
 
 
