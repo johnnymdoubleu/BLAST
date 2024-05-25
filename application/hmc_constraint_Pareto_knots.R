@@ -45,8 +45,7 @@ summary(Y) #total burnt area
 length(Y)
 psi <- 5
 threshold <- 0.98
-u <- quantile(Y, threshold)
-y <- Y[Y>u]
+
 # x.scale <- x.scale[which(y>quantile(y, threshold)),]
 # u <- quantile(y, threshold)
 
@@ -90,8 +89,7 @@ fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 fwi.origin <- fwi.scaled <-fwi.scaled[which(Y>u),]
 
 # fwi.scaled <- as.data.frame(scale(fwi.scaled))
-range01 <- function(x){(x-min(x))/(max(x)-min(x))}
-fwi.scaled <- as.data.frame(sapply(fwi.origin, FUN = range01))
+
 
 n <- dim(fwi.scaled)[[1]]
 p <- dim(fwi.scaled)[[2]]
