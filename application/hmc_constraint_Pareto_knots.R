@@ -11,7 +11,7 @@ library(qqboxplot)
 library(ggdensity)
 library(ggforce)
 library(ggdist)
-
+source("C:/Users/Johnny Lee/Documents/Github/extremis/R/bltir.R")
 
 options(mc.cores = parallel::detectCores())
 
@@ -43,8 +43,6 @@ Y <- df.long$measurement[!is.na(df.long$measurement)]
 
 psi <- 30
 threshold <- 0.975
-u <- quantile(Y, threshold)
-y <- Y[Y>u]
 
 # x.scale <- x.scale[which(y>quantile(y, threshold)),]
 # u <- quantile(y, threshold)
@@ -86,8 +84,13 @@ fwi.index$month <- factor(format(as.Date(substr(cov.long$...1[missing.values],1,
                             levels = c("Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"))
 fwi.index$date <- as.numeric(fwi.index$date)
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
-fwi.origin <- fwi.scaled <-fwi.scaled[which(Y>u),]
 
+
+fit <- bltir(Y, fwi.scaled, threshold = 0.975, psi = 10, T = 2000)
+
+u <- quantile(Y, threshold)
+y <- Y[Y>u]
+fwi.origin <- fwi.scaled <-fwi.scaled[which(Y>u),]
 # fwi.scaled <- as.data.frame(scale(fwi.scaled))
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 fwi.scaled <- as.data.frame(sapply(fwi.origin, FUN = range01))
