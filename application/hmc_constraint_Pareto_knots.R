@@ -41,8 +41,8 @@ df.long[which(is.na(df.long$...1))+1,]
 #Thus, each year consist of 366 data with either 1 or 0 missing value.
 Y <- df.long$measurement[!is.na(df.long$measurement)]
 
-psi <- 5
-threshold <- 0.98
+psi <- 30
+threshold <- 0.975
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
 
@@ -89,7 +89,8 @@ fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 fwi.origin <- fwi.scaled <-fwi.scaled[which(Y>u),]
 
 # fwi.scaled <- as.data.frame(scale(fwi.scaled))
-
+range01 <- function(x){(x-min(x))/(max(x)-min(x))}
+fwi.scaled <- as.data.frame(sapply(fwi.origin, FUN = range01))
 
 n <- dim(fwi.scaled)[[1]]
 p <- dim(fwi.scaled)[[2]]
