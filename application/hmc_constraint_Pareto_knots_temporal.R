@@ -199,7 +199,7 @@ model {
         target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * (1/tau2[j]));
     }
     target += normal_lpdf(theta[p] | 0, 100);
-    target += multi_normal_lpdf(gamma[p] | rep_vector(0, psi), diag_matrix(rep_vector(10, psi)));
+    target += multi_normal_lpdf(gamma[p] | rep_vector(0, psi), diag_matrix(rep_vector(10000, psi)));
 }
 generated quantities {
     // Used in Posterior predictive check    
@@ -217,7 +217,7 @@ generated quantities {
         newalpha[i] = exp(theta[1] + sum(newgsmooth[i,]));
     };    
 
-    yrep = pareto_rng(u, alpha[1]); 
+    yrep = pareto_rng(u, alpha[362]); 
     for(i in 1:n){
       f[i] = pareto_rng(u, alpha[i]);
       log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
@@ -253,7 +253,7 @@ fit1 <- stan(
     # init_r = 1,
     chains = 3,             # number of Markov chains
     # warmup = 1000,          # number of warmup iterations per chain
-    iter = 5000,            # total number of iterations per chain
+    iter = 2000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
     refresh = 500           # no progress shown
 )

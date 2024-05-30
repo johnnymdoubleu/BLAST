@@ -216,7 +216,7 @@ generated quantities {
         newalpha[i] = exp(theta[1] + sum(newgsmooth[i,]));
     };    
 
-    yrep = pareto_rng(u, alpha[1]); 
+    yrep = pareto_rng(u, alpha[362]); 
     for(i in 1:n){
       f[i] = alpha[i]*(y[i]/u)^(-alpha[i])/y[i]; //pareto_rng(u, alpha[i])
       log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
