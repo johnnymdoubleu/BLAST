@@ -430,15 +430,18 @@ grid.plts[[1]] + grid.plts[[2]] +grid.plts[[3]] + grid.plts[[4]] + grid.plts[[5]
 y.container <- as.data.frame(matrix(, nrow = n, ncol = 0))  
 random.alpha.idx <- floor(runif(100, 1, ncol(t(posterior$f))))
 for(i in random.alpha.idx){
-  y.container <- cbind(y.container, log(t(posterior$f)[,i]))
+  # y.container <- cbind(y.container, log(t(posterior$f)[,i]))
+  y.container <- cbind(y.container, t(posterior$f)[,i])
 }
+
 colnames(y.container) <- paste("col", 1:100, sep="")
 y.container$x <- seq(1,n)
 y.container$logy <- log(y)
 plt <- ggplot(data = y.container, aes(x = logy)) + ylab("Density") + xlab("log(Burnt Area)") + labs(col = "")
 
 for(i in names(y.container)){
-  plt <- plt + geom_density(aes(x=.data[[i]]), color = "slategray1", alpha = 0.1, linewidht = 0.7)
+  # plt <- plt + geom_density(aes(x=.data[[i]]), color = "slategray1", alpha = 0.1, linewidht = 0.7)
+  plt <- plt + geom_line(aes(x=.data[[i]]), color = "slategray1", alpha = 0.1, linewidht = 0.7)  
 }
 
 print(plt + geom_density(aes(x=logy), color = "steelblue", linewidth = 2) +

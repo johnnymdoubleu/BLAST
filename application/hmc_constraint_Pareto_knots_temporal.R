@@ -189,8 +189,8 @@ model {
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += normal_lpdf(theta[1] | 0, 100);
-    target += gamma_lpdf(lambda1 | 1, 1e-3);
-    target += gamma_lpdf(lambda2o | 1, 1e-3);
+    target += gamma_lpdf(lambda1 | 1, 1e-5);
+    target += gamma_lpdf(lambda2o | 1, 1e-5);
     target += (2*p*log(lambda2o));
     for (j in 1:(p-1)){
         target += gamma_lpdf(tau1[j] | 1, lambda1^2*0.5);
