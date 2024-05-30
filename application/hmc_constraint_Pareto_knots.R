@@ -218,7 +218,7 @@ generated quantities {
 
     yrep = pareto_rng(u, alpha[1]); 
     for(i in 1:n){
-      f[i] = alpha[i](y[i]/u)^(-alpha[i])/y[i[]]; //pareto_rng(u, alpha[i])
+      f[i] = alpha[i]*(y[i]/u)^(-alpha[i])/y[i]; //pareto_rng(u, alpha[i])
       log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
     }
 }
