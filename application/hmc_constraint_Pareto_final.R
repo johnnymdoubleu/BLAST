@@ -86,4 +86,4 @@ fwi.index$month <- factor(format(as.Date(substr(cov.long$...1[missing.values],1,
 fwi.index$date <- as.numeric(fwi.index$date)
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 
-bltir(Y, fwi.scaled, psi=20, T=5000, prior=list(a=1, b=1e-3), knot.pos="quantile", threshold=0.975)
+fit <- bltir(Y, fwi.scaled, psi=20, T=5000, prior=list(a=1, b=1e-3), knot.pos="quantile", threshold=0.975)
