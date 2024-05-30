@@ -117,7 +117,7 @@ for(i in 1:p){
   xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
   xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
   # knots <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
-  knots <- knots <- quantile(fwi.scaled[,i], probs=seq(1/(psi+1),psi/(psi+1),length.out = psi))
+  knots <- quantile(fwi.scaled[,i], probs=seq(1/(psi+1),psi/(psi+1),length.out = psi))
   tps <- basis.tps(fwi.scaled[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
   basis.holder <- cbind(basis.holder, 
           solve(matrix(c(tps[index.holder[i,1], no.theta+1],
@@ -383,9 +383,8 @@ rp <- data.frame(rp, group = rep("residuals", n))
 
 ggplot(data = rp) + 
   # geom_qqboxplot(aes(factor(group, levels=c("residuals")), y=rp), notch=FALSE, varwidth=TRUE, reference_dist="norm")+ 
-  geom_qqboxplot(aes(y=rp), notch=FALSE, varwidth=FALSE, reference_dist="norm", qq.colour = "steelblue")+
-  labs(x = "", y = "Residuals") + ylim(-4,4) + xlim(-.2,.2)+
-  # scale_fill_manual(values=c("steelblue"), name = "") +
+  geom_qqboxplot(aes(y=rp), notch=FALSE, varwidth=FALSE, reference_dist="norm", width = 0.15, qq.colour="steelblue")+
+  labs(x = "", y = "Residuals") + ylim(-3,3) + xlim(-.2,.2)+
   theme_minimal(base_size = 20) +
   theme(axis.text = element_text(size = 25),
         axis.title = element_text(size = 30))
