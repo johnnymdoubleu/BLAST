@@ -216,7 +216,7 @@ generated quantities {
         newalpha[i] = exp(theta[1] + sum(newgsmooth[i,]));
     };    
 
-    yrep = pareto_rng(u, alpha[362]); 
+    yrep = alpha[362]*(y[362]/u)^(-alpha[362])/y[362]; // pareto_rng(u, alpha[362])
     for(i in 1:n){
       f[i] = alpha[i]*(y[i]/u)^(-alpha[i])/y[i]; //pareto_rng(u, alpha[i])
       log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
@@ -232,15 +232,15 @@ data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi,
 
 init.alpha <- list(list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c(p, (psi-2))),
                         theta = rep(0, (p+1)), 
-                        tau1 = rep(0.1, p),tau2 = rep(0.1, p),
+                        tau1 = rep(0.1, p), tau2 = rep(0.1, p),
                         lambda1 = 0.1, lambda2 = 0.01),
                    list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c(p, (psi-2))),
                         theta = rep(0, (p+1)), 
-                        tau1 = rep(0.001, p),tau2 = rep(0.001, p),
+                        tau1 = rep(0.001, p), tau2 = rep(0.001, p),
                         lambda1 = 100, lambda2 = 1),
                    list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c(p, (psi-2))),
                         theta = rep(0.1, (p+1)), 
-                        tau1 = rep(0.5, p),tau2 = rep(0.5, p),
+                        tau1 = rep(0.5, p), tau2 = rep(0.5, p),
                         lambda1 = 5, lambda2 = 5.5))
 
 # stanc("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/application/model1.stan")
@@ -431,21 +431,23 @@ y.container <- as.data.frame(matrix(, nrow = n, ncol = 0))
 random.alpha.idx <- floor(runif(100, 1, ncol(t(posterior$f))))
 for(i in random.alpha.idx){
   # y.container <- cbind(y.container, log(t(posterior$f)[,i]))
-  y.container <- cbind(y.container, t(posterior$f)[,i])
+  y.container <- cbind(y.container, sort(t(posterior$f)[,i]))
 }
 
 colnames(y.container) <- paste("col", 1:100, sep="")
 y.container$x <- seq(1,n)
 y.container$logy <- log(y)
-plt <- ggplot(data = y.container, aes(x = logy)) + ylab("Density") + xlab("log(Burnt Area)") + labs(col = "")
+y.container$y <- y
+plt <- ggplot(data = y.container, aes(x = y)) + ylab("Density") + xlab("log(Burnt Area)") + labs(col = "")
 
 for(i in names(y.container)){
   # plt <- plt + geom_density(aes(x=.data[[i]]), color = "slategray1", alpha = 0.1, linewidht = 0.7)
-  plt <- plt + geom_line(aes(x=.data[[i]]), color = "slategray1", alpha = 0.1, linewidht = 0.7)  
+  plt <- plt + geom_line(aes(x=y, y=.data[[i]]), color = "slategray1", alpha = 0.1, linewidht = 0.7)  
 }
 
-print(plt + geom_density(aes(x=logy), color = "steelblue", linewidth = 2) +
-        theme_minimal(base_size = 30) + ylim(0, 1.25) + xlim(7.5,30) +
+print(plt + geom_density(aes(x=y), color = "steelblue", linewidth = 2) +
+        # scale_y_log10() +
+        theme_minimal(base_size = 30) + ylim(0, 1) + #xlim(7.5,30) +
         theme(legend.position = "none",
                 axis.text = element_text(size = 35)))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRSTIR_predictive_distribution.pdf"), width=10, height = 7.78)
