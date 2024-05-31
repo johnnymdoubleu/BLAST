@@ -249,4 +249,3 @@ fit1 <- stan(
 posterior <- extract(fit1)
 save(fit1, posterior, file = "eddie.Rdata")
 
-
