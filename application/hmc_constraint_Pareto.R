@@ -189,6 +189,36 @@ ggplot(fwi.origin, aes(x=DSR, y=FFMC)) +
         strip.text = element_blank(),
         axis.title = element_text(size = 30))
 # ggsave("./BRSTIR/application/figures/extremeviz.pdf", width = 10, height = 7.78)
+
+ggplot(fwi.origin, aes(x=as.numeric(year), y=log(BA))) + 
+  ylab("Hectares (log)") + xlab("Time (years)") + 
+  geom_point(aes(colour = BA), size= 2.5) + 
+  scale_colour_stepsn(colours = c("slategray1", "red"), labels=function(x) format(x, big.mark = ",", scientific = TRUE), breaks=c(0.1e5, 0.5e5, 1e5, 2e5)) +
+  theme_minimal(base_size = 30) +
+  theme(plot.title = element_text(hjust = 0.5, size = 30),
+        legend.position = "none",
+        legend.title = element_text(size = 15),
+        legend.text = element_text(size = 15),
+        # plot.margin = margin(0,0,0,-1),
+        strip.text = element_blank(),
+        axis.title = element_text(size = 30))
+# ggsave("./BRSTIR/application/figures/hectareslog.pdf", width = 10, height = 7.78)
+
+ggplot(fwi.origin, aes(x=as.numeric(year))) + 
+  ylab("Density") + xlab("Time (years)") + 
+  geom_histogram(aes(y = after_stat(density)), fill = "steelblue", color = "gray", alpha = .2) +
+  geom_rug() +
+  theme_minimal(base_size = 30) +
+  theme(plot.title = element_text(hjust = 0.5, size = 30),
+        legend.position = "none",
+        legend.title = element_text(size = 15),
+        legend.text = element_text(size = 15),
+        # plot.margin = margin(0,0,0,-1),
+        strip.text = element_blank(),
+        axis.title = element_text(size = 30))
+
+# ggsave("./BRSTIR/application/figures/intensityfn.pdf", width = 10, height = 7.78)
+
 # ------------- Explanatory Analaysis
 # first.extreme <- which(Y==max(y))
 # second.extreme <- which(Y==max(y[-which.max(y)]))
