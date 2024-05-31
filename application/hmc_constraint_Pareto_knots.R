@@ -510,14 +510,14 @@ print(plt + geom_area(data = subset(d, x>12.44009), aes(x=x,y=y), fill = "slateg
               colour="red", linewidth=1.2, linetype = "dotted"))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRSTIR_generative.pdf"), width = 10, height = 7.78)
 
-data.yrep <- data.frame("x" = log(y),
+data.yrep <- data.frame("x" = y,
                           "post.mean" = f.samples[,1],
-                          "q1" = f.samples[,1],
-                          "q2" = f.samples[,2],
-                          "q3" = f.samples[,3])
+                          "q1" = f.samples[,4],
+                          "q2" = f.samples[,5],
+                          "q3" = f.samples[,6])
 
 ggplot(data.yrep, aes(x=x)) + 
-  ylab("Density") + xlab("log(Burnt Area)") + labs(col = "") +
+  ylab("Density") + xlab("Burnt Area") + labs(col = "") +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
   # geom_line(aes(y = true, col = "True"), linewidth = 2) +
   # xlim(-1,1) + #ylim(0, 6.2) + 
