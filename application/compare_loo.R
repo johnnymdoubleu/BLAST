@@ -1,6 +1,6 @@
 library(loo)
 setwd("C:/Users/Johnny Lee/Documents/GitHub")
-threshold <- 0.98
+threshold <- 0.97
 date <- "2024-05-23"
 load(paste0("./BRSTIR/application/BRTIR_",date,"_",floor(threshold*100),"quantile_IC.Rdata"))
 # load(paste0("./BRSTIR/application/BRSTIR_",Sys.Date(),"_",floor(threshold*100),"quantile_IC.Rdata"))
