@@ -216,9 +216,9 @@ generated quantities {
         newalpha[i] = exp(theta[1] + sum(newgsmooth[i,]));
     };    
 
-    yrep = alpha[362]*(y[362]/u)^(-alpha[362])/y[362]; // pareto_rng(u, alpha[362])
+    yrep = pareto_rng(u, alpha[362]);
     for(i in 1:n){
-      f[i] = alpha[i]*(y[i]/u)^(-alpha[i])/y[i]; //pareto_rng(u, alpha[i])
+      f[i] = alpha[362]*(y[i]/u)^(-alpha[362])/y[i]; //pareto_rng(u, alpha[i])
       log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
     }
 }
@@ -251,7 +251,7 @@ fit1 <- stan(
     # init_r = 1,
     chains = 3,             # number of Markov chains
     # warmup = 1000,          # number of warmup iterations per chain
-    iter = 5000,            # total number of iterations per chain
+    iter = 2000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
     refresh = 500           # no progress shown
 )
@@ -265,7 +265,7 @@ gsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95)
 
 alp.x.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
 alpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
-yrep <- summary(fit1, par=c("yrep"), probs = c(0.05,0.5, 0.95))$summary
+yrep.samples <- summary(fit1, par=c("yrep"), probs = c(0.05,0.5, 0.95))$summary
 f.samples <- summary(fit1, par=c("f"), probs = c(0.05,0.5, 0.95))$summary
 
 g.smooth.mean <- as.vector(matrix(gsmooth.samples[,1], nrow = n, byrow=TRUE))
@@ -486,7 +486,7 @@ ev.y1 <- ev.y2 <- as.data.frame(matrix(, nrow = 1, ncol = 0))
 ev.alpha.single <- c()  
 for(i in random.alpha.idx){
   ev.y1 <- rbind(ev.y1, as.numeric(posterior$yrep[i]))
-  # ev.y2 <- rbind(ev.y2, as.numeric(posterior$yrep2[i]))
+  ev.y2 <- rbind(ev.y2, as.numeric(posterior$yrep[i]))
 }
 ev.y1 <- as.data.frame(log(ev.y1))
 ev.y1$logy <- max(log(y))
@@ -509,6 +509,23 @@ print(plt + geom_area(data = subset(d, x>12.44009), aes(x=x,y=y), fill = "slateg
               y=0, yend=approx(x = d$x, y = d$y, xout = 12.4409)$y,
               colour="red", linewidth=1.2, linetype = "dotted"))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRSTIR_generative.pdf"), width = 10, height = 7.78)
+
+ev.y2 <- as.data.frame(ev.y2)
+ev.y2$y <- log(y)
+colnames(ev.y2) <- c("yrep", "y")
+ev.y2$group <- rep("15th Oct 2017",1000)
+
+plt <- ggplot(data = ev.y2) + ylab("Density") + xlab("log(Burned Area)") + labs(col = "") +
+  geom_line(aes(y = yrep, x= y)) +
+  # geom_density(color = "steelblue", linewidth = 1.2) + 
+  geom_rug(aes(x=y), alpha = 0.1) + 
+  # geom_point(aes(x=yrep,y=-Inf),color="steelblue", size = 3.5, alpha = 0.2) +
+  xlim(5.5, 40) +
+  theme_minimal(base_size = 30) +  
+  theme(legend.position = "none",
+        axis.title = element_text(size = 30))
+print(plt)
+
 
 density.y <- density(ev.y1$yrep) # see ?density for parameters
 # set an Avg.position value
