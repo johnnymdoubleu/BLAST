@@ -453,31 +453,31 @@ print(plt + geom_density(aes(x=y), color = "steelblue", linewidth = 2) +
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRSTIR_predictive_distribution.pdf"), width=10, height = 7.78)
 
 
-extreme.container <- as.data.frame(matrix(, nrow = n, ncol = 3000))
-for(i in 1:3000){
-  extreme.container[,i] <- density(log(posterior$f[i,]), n=n)$y
-}
-extreme.container <- cbind(extreme.container, t(apply(extreme.container[,1:3000], 1, quantile, c(0.05, .5, .95))))
-colnames(extreme.container)[(dim(extreme.container)[2]-2):(dim(extreme.container)[2])] <- c("q1","q2","q3")
-colnames(extreme.container)[1:3000] <- as.character(1:3000)
-extreme.container$mean <- rowMeans(extreme.container[,1:3000])
-extreme.container$y <- seq(0, 30, length.out = n)
-extreme.container <- as.data.frame(extreme.container)
+# extreme.container <- as.data.frame(matrix(, nrow = n, ncol = 3000))
+# for(i in 1:3000){
+#   extreme.container[,i] <- density(log(posterior$f[i,]), n=n)$y
+# }
+# extreme.container <- cbind(extreme.container, t(apply(extreme.container[,1:3000], 1, quantile, c(0.05, .5, .95))))
+# colnames(extreme.container)[(dim(extreme.container)[2]-2):(dim(extreme.container)[2])] <- c("q1","q2","q3")
+# colnames(extreme.container)[1:3000] <- as.character(1:3000)
+# extreme.container$mean <- rowMeans(extreme.container[,1:3000])
+# extreme.container$y <- seq(0, 30, length.out = n)
+# extreme.container <- as.data.frame(extreme.container)
 
 
-plt <- ggplot(data = extreme.container, aes(x = y)) + xlab("log(Burned Area)") + ylab("Density")+
-        # geom_line(aes(y=q2), colour = "steelblue", linewidth = 1.5) +
-        geom_line(aes(y=mean), colour = "steelblue", linewidth = 1.5) +
-        geom_ribbon(aes(ymin = q1, ymax = q3), fill = "steelblue", alpha = 0.2) + 
-        theme_minimal(base_size = 30) + 
-        theme(legend.position = "none",
-              axis.title = element_text(size = 30))
-d <- ggplot_build(plt)$data[[1]]
-print(plt + 
-        # geom_area(data = subset(d, x>12.44009), aes(x=x,y=y), fill = "slategray1", alpha = 0.5) +
-        geom_segment(x=12.44009, xend=12.44009, 
-              y=0, yend=approx(x = d$x, y = d$y, xout = 12.4409)$y,
-              colour="red", linewidth=1.2, linetype = "dotted"))
+# plt <- ggplot(data = extreme.container, aes(x = y)) + xlab("log(Burned Area)") + ylab("Density")+
+#         # geom_line(aes(y=q2), colour = "steelblue", linewidth = 1.5) +
+#         geom_line(aes(y=mean), colour = "steelblue", linewidth = 1.5) +
+#         geom_ribbon(aes(ymin = q1, ymax = q3), fill = "steelblue", alpha = 0.2) + 
+#         theme_minimal(base_size = 30) + 
+#         theme(legend.position = "none",
+#               axis.title = element_text(size = 30))
+# d <- ggplot_build(plt)$data[[1]]
+# print(plt + 
+#         # geom_area(data = subset(d, x>12.44009), aes(x=x,y=y), fill = "slategray1", alpha = 0.5) +
+#         geom_segment(x=12.44009, xend=12.44009, 
+#               y=0, yend=approx(x = d$x, y = d$y, xout = 12.4409)$y,
+              # colour="red", linewidth=1.2, linetype = "dotted"))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_post_generative.pdf"), width = 10, height = 7.78)
 
 random.alpha.idx <- floor(runif(1000, 1, ncol(t(posterior$alpha))))
@@ -510,21 +510,27 @@ print(plt + geom_area(data = subset(d, x>12.44009), aes(x=x,y=y), fill = "slateg
               colour="red", linewidth=1.2, linetype = "dotted"))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRSTIR_generative.pdf"), width = 10, height = 7.78)
 
-ev.y2 <- as.data.frame(ev.y2)
-ev.y2$y <- log(y)
-colnames(ev.y2) <- c("yrep", "y")
-ev.y2$group <- rep("15th Oct 2017",1000)
+data.yrep <- data.frame("x" = log(y),
+                          "post.mean" = f.samples[,1],
+                          "q1" = f.samples[,1],
+                          "q2" = f.samples[,2],
+                          "q3" = f.samples[,3])
 
-plt <- ggplot(data = ev.y2) + ylab("Density") + xlab("log(Burned Area)") + labs(col = "") +
-  geom_line(aes(y = yrep, x= y)) +
-  # geom_density(color = "steelblue", linewidth = 1.2) + 
-  geom_rug(aes(x=y), alpha = 0.1) + 
-  # geom_point(aes(x=yrep,y=-Inf),color="steelblue", size = 3.5, alpha = 0.2) +
-  xlim(5.5, 40) +
-  theme_minimal(base_size = 30) +  
+ggplot(data.yrep, aes(x=x)) + 
+  ylab("Density") + xlab("log(Burnt Area)") + labs(col = "") +
+  geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
+  # geom_line(aes(y = true, col = "True"), linewidth = 2) +
+  # xlim(-1,1) + #ylim(0, 6.2) + 
+  geom_line(aes(y=post.mean, col = "Posterior Median"), linewidth=1) +
+  scale_fill_manual(values=c("steelblue"), name = "") +
+  scale_color_manual(values = c("steelblue")) + 
+  # scale_y_log10() + 
+  guides(color = guide_legend(order = 2), 
+          fill = guide_legend(order = 1)) +
+  theme_minimal(base_size = 30) +
   theme(legend.position = "none",
-        axis.title = element_text(size = 30))
-print(plt)
+        strip.text = element_blank(),
+        axis.text = element_text(size = 20))
 
 
 density.y <- density(ev.y1$yrep) # see ?density for parameters
