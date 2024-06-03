@@ -192,14 +192,12 @@ model {
     target += gamma_lpdf(lambda1 | 1, 1e-5);
     target += gamma_lpdf(lambda2o | 1, 1e-5);
     target += (2*p*log(lambda2o));
-    for (j in 1:(p-1)){
+    for (j in 1:p){
         target += gamma_lpdf(tau1[j] | 1, lambda1^2*0.5);
         target += normal_lpdf(theta[(j+1)] | 0, sqrt(1/tau1[j]));
         target += gamma_lpdf(tau2[j] | atau, lambda2o^2*0.5);
         target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * (1/tau2[j]));
     }
-    target += normal_lpdf(theta[p] | 0, 100);
-    target += multi_normal_lpdf(gamma[p] | rep_vector(0, psi), diag_matrix(rep_vector(10000, psi)));
 }
 generated quantities {
     // Used in Posterior predictive check    
