@@ -1,5 +1,5 @@
 setwd("C:/Users/Johnny Lee/Documents/GitHub")
-source("./extremis/R/bltir.R")
+# source("./extremis/R/bltir.R")
 
 library(npreg)
 library(Pareto)
@@ -13,6 +13,7 @@ library(qqboxplot)
 library(ggdensity)
 library(ggforce)
 library(ggdist)
+library(extremis)
 
 
 options(mc.cores = parallel::detectCores())
@@ -87,3 +88,70 @@ fwi.index$date <- as.numeric(fwi.index$date)
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 
 fit <- bltir(Y, fwi.scaled, psi=20, T=5000, prior=list(a=1, b=1e-3), knot.pos="quantile", threshold=0.975)
+
+
+
+
+
+n <- 5000; psi <- 10; threshold <- 0.95; p <- 6;
+
+# Function to generate Gaussian copula in uniform margin
+C <- diag(p)
+xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow = n, ncol = 0)
+x.origin <- pnorm(matrix(rnorm(n*p), ncol = p) %*% chol(C))
+
+basis.holder <- matrix(, nrow = 2, ncol = 0)
+index.holder <- matrix(, nrow = 0, ncol = 2)
+for(i in 1:p){
+  index.holder <- rbind(index.holder, 
+                        matrix(c(which.min(x.origin[,i]),
+                                 which.max(x.origin[,i])), ncol = 2))
+}
+for(i in 1:p){
+  knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)
+  tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
+  bs.linear <- cbind(bs.linear, tps[,1])
+  bs.nonlinear <- cbind(bs.nonlinear, tps[,-1])
+  basis.holder <- cbind(basis.holder, 
+                        solve(t(matrix(c(tps[index.holder[i,1], 2],
+                                         tps[index.holder[i,1], 1+psi],
+                                         tps[index.holder[i,2], 2],
+                                         tps[index.holder[i,2], 1+psi]), 
+                                       nrow = 2, ncol = 2))))
+}
+
+## Setting true parameters
+gamma.origin <- matrix(, nrow = psi, ncol = p)
+for(j in 1:p){
+  for (ps in 1:psi){
+    if(j %in% c(1,4,5,6)){gamma.origin[ps,j] <- 0}
+    else {
+      if(ps==1 || ps==psi){gamma.origin[ps,j] <- 0}
+      else{gamma.origin[ps,j] <- -25}
+    }
+  }
+}
+theta.origin <- c(-0.5, 0, -0.5, -0.5, 0, 0, -0.5)
+
+## Injecting constraints to each ends of the smooth functions
+g.sub.origin <- matrix(, nrow = 2, ncol = p)
+for(j in 1:p){
+  g.sub.origin[,j] <- as.matrix(bs.nonlinear[index.holder[j,], (((j-1)*psi)+2):(((j-1)*psi)+(psi-1))], nrow = 2) %*% gamma.origin[(2:(psi-1)), j]
+  gamma.origin[c(1,psi),j] <- -1 * basis.holder[,(((j-1)*2)+1):(((j-1)*2)+2)] %*% as.matrix(g.sub.origin[,j], nrow=2)
+}
+
+g.origin <- matrix(, nrow = n, ncol = p)
+for(j in 1:p){ 
+  g.origin[,j] <- (bs.linear[,j] * theta.origin[j+1]) + (bs.nonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j])
+}
+
+y.origin <- NULL
+for(i in 1:n){
+  y.origin[i] <- rPareto(1, 1, alpha = exp(theta.origin[1] + sum(g.origin[i,]))) 
+}
+
+fit <- bltir(Y = y.origin, X = x.origin, knot.pos = "equal", 
+              threshold = 0.95, psi = 10, T = 3000)
+
+plot(fit, bands = TRUE, option = "alpha")
+plot(fit, bands = TRUE, option = "smooth")
