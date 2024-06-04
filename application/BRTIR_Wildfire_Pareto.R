@@ -227,9 +227,7 @@ transformed parameters {
 
 model {
     // likelihood
-    for (i in 1:n){
-        target += pareto_lpdf(y[i] | u, alpha[i]);
-    }
+    target += pareto_lpdf(y | u, alpha);
     target += gamma_lpdf(lambda1 | 1, 1e-5);
     target += normal_lpdf(theta[1] | 0, 100);
     for (j in 1:p){
@@ -266,7 +264,7 @@ fit1 <- stan(
     # init_r = 1,
     chains = 8,             # number of Markov chains
     # warmup = 2500,          # number of warmup iterations per chain
-    iter = 2000,            # total number of iterations per chain
+    iter = 10000,            # total number of iterations per chain
     cores = parallel::detectCores(),              # number of cores (could use one per chain)
     refresh = 500           # no progress shown
 )
@@ -417,7 +415,7 @@ data.scenario <- data.frame("x" = seq(0, 1, length.out = n),
                             "q3" = (alpha.samples[,6]))
 
 ggplot(data.scenario, aes(x=x)) + 
-  ylab(expression(alpha(bold(x)))) + xlab(expression(c)) + labs(col = "") +
+  ylab(expression(alpha(c,...,c))) + xlab(expression(c)) + labs(col = "") +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
   # geom_line(aes(y = true, col = "True"), linewidth = 2) +
   # ylim(0, 2500) +
@@ -428,13 +426,9 @@ ggplot(data.scenario, aes(x=x)) +
   guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) +
   theme_minimal(base_size = 30) +
-  theme(plot.title = element_text(hjust = 0.5, size = 30),
-        legend.position="none", 
-        legend.key.size = unit(1, 'cm'),
-        legend.text = element_text(size=20),
-        plot.margin = margin(0,0,0,-1),
+  theme(legend.position = "none",
         strip.text = element_blank(),
-        axis.title.x = element_text(size = 35))
+        axis.text = element_text(size = 20))
 
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRTIR_mcmc_alpha.pdf"), width=10, height = 7.78)
 
