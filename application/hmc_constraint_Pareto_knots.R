@@ -440,7 +440,7 @@ y.container$logy <- log(y)
 y.container$y <- y
 plt <- ggplot(data = y.container, aes(x = y)) + ylab("Density") + xlab("log(Burnt Area)") + labs(col = "")
 
-for(i in names(y.container)){
+for(i in names(y.container)[1:100]){
   # plt <- plt + geom_density(aes(x=.data[[i]]), color = "slategray1", alpha = 0.1, linewidht = 0.7)
   plt <- plt + geom_line(aes(x=y, y=.data[[i]]), color = "slategray1", alpha = 0.1, linewidht = 0.7)  
 }

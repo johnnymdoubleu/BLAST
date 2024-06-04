@@ -155,3 +155,8 @@ fit <- bltir(Y = y.origin, X = x.origin, knot.pos = "equal",
 
 plot(fit, bands = TRUE, option = "alpha")
 plot(fit, bands = TRUE, option = "smooth")
+
+readRDS("C:\\Users\\Johnny Lee\\OneDrive - University of Edinburgh\\Johnny\\R\\portugal_forest_fire\\2024-06-03_psi_30_no_time_40000_samples_per_chain_stanfit.rds")
+
+fit.log.lik <- extract_log_lik(fit1)
+loo(fit.log.lik, is_method = "sis", cores = parallel::detectCores())
