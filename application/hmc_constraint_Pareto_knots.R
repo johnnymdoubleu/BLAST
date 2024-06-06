@@ -223,7 +223,7 @@ data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi,
                     atau = ((psi+1)/2), indexFL = as.vector(t(index.holder)),
                     bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
                     xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear, basisFL = basis.holder,
-                    newy = seq(log(u), 30, length.out = n))
+                    newy = seq(log(u), 20, length.out = n))
 
 init.alpha <- list(list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c(p, (psi-2))),
                         theta = rep(0, (p+1)), 
@@ -508,7 +508,7 @@ print(plt + geom_area(data = subset(d, x>12.44009), aes(x=x,y=y), fill = "slateg
               colour="red", linewidth=1.2, linetype = "dotted"))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRSTIR_generative.pdf"), width = 10, height = 7.78)
 
-data.yrep <- data.frame("y" = seq(log(u), 30, length.out=n),
+data.yrep <- data.frame("y" = seq(log(u), 20, length.out=n),
                           "post.mean" = f.samples[,1],
                           "q1" = f.samples[,4],
                           "q2" = f.samples[,5],
