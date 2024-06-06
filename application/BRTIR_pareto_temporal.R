@@ -101,7 +101,13 @@ range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 p <- dim(fwi.scaled)[[2]]
 fwi.origin[,1:(p-1)] <- as.data.frame(sapply(fwi.origin[,1:(p-1)], FUN = sqrt01))
 fwi.scaled[,1:(p-1)] <- as.data.frame(sapply(fwi.origin[,1:(p-1)], FUN = range01))
-
+year.data<-floor((1:length(Y))/366)
+day.data<-(1:length(Y))-year.data*366
+year.data<-year.data/max(year.data)
+day.data<-day.data/max(day.data)
+#fwi.scaled$time <- time.data[which(Y>u)]
+fwi.scaled$year<-year.data[which(Y>u)]
+fwi.scaled$day<-day.data[which(Y>u)]
 
 # ---------------------------------------------------------------------------
 # Computing Hills Estimator plot
@@ -273,7 +279,12 @@ data.stan <- list(y = as.vector(y), u = u, p = p, n= n, newp = (p+1),
                     bsLinear = fwi.scaled, 
                     xholderLinear = xholder)
 init.alpha <- list(list(theta = rep(0, (p+1)), lambda1 = 0.1),
-                  list(theta = rep(0.01, (p+1)), lambda1 = 0.01),
+                  list(theta = rep(0.01, (p+1)), lambda1 = 0.1),
+                  list(theta = rep(0.02, (p+1)), lambda1 = 1),
+                  list(theta = rep(-0.05, (p+1)), lambda1 = 10),
+                  list(theta = rep(0.1, (p+1)), lambda1 = 2),
+                  list(theta = rep(-0.35, (p+1)), lambda1 = 0.2),
+                  list(theta = rep(0.5, (p+1)), lambda1 = 0.01),
                   list(theta = rep(0.05, (p+1)), lambda1 = 0.1))
 
 # stanc("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/application/model1.stan")
@@ -282,13 +293,13 @@ fit1 <- stan(
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
     # init_r = 1,
-    chains = 3,             # number of Markov chains
+    chains = 8,             # number of Markov chains
     # warmup = 2500,          # number of warmup iterations per chain
-    iter = 10000,            # total number of iterations per chain
-    cores = 4,              # number of cores (could use one per chain)
+    iter = 40000,            # total number of iterations per chain
+    thin = 10,
+    cores = parallel::detectCores(),              # number of cores (could use one per chain)
     refresh = 500           # no progress shown
 )
-
 # saveRDS(fit1, file=paste0("./BRSTIR/application/",Sys.Date(),"_stanfit.rds"))
 posterior <- extract(fit1)
 # str(posterior)
@@ -530,7 +541,7 @@ plot(fwi.loo, label_points = TRUE)
 loo(fit.log.lik, is_method = "sis", cores = 2)
 brtir.elpd.loo <- loo(fit.log.lik, is_method = "sis", cores = 2)
 brtir.waic <- waic(fit.log.lik, cores = 2)
-save(brtir.elpd.loo, brtir.waic, file = (paste0("./BRSTIR/application/BRTIR_",Sys.Date(),"_",floor(threshold*100),"quantile_IC.Rdata")))
+save(brtir.elpd.loo, brtir.waic, file = (paste0("./BRSTIR/application/BRTIR_",Sys.Date(),"_",floor(threshold*100),"quantile_time_IC.Rdata")))
 
 #https://discourse.mc-stan.org/t/four-questions-about-information-criteria-cross-validation-and-hmc-in-relation-to-a-manuscript-review/13841
 
