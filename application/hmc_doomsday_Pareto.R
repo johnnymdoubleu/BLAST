@@ -713,7 +713,7 @@ ggplot(data.yrep, aes(x=y)) +
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 20))
-
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_post_generative_dooms.pdf"), width = 10, height = 7.78)
 
 #Predictive Distribution check
 y.container <- as.data.frame(matrix(, nrow = n, ncol = 0))  
