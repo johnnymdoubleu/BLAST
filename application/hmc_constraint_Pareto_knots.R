@@ -102,7 +102,7 @@ no.theta <- 1
 newx <- seq(0, 1, length.out=n)
 xholder.linear <- xholder.nonlinear <- bs.linear <- bs.nonlinear <- matrix(,nrow=n, ncol=0)
 xholder <- matrix(nrow=n, ncol=p)
-end.holder <- basis.holder <- matrix(, nrow = 2, ncol =0)
+basis.holder <- matrix(, nrow = 2, ncol =0)
 index.holder <- matrix(, nrow = 0, ncol = 2)
 for(i in 1:p){
   index.holder <- rbind(index.holder, 
@@ -125,13 +125,6 @@ for(i in 1:p){
                   tps[index.holder[i,2], no.theta+1],
                   tps[index.holder[i,2], no.theta+psi]), 
                   nrow = 2, ncol = 2)))
-  end.holder <- cbind(end.holder, 
-                matrix(c(tps[index.holder[i,1], no.theta+1],
-                  tps[index.holder[i,1], no.theta+psi],
-                  tps[index.holder[i,2], no.theta+1],
-                  tps[index.holder[i,2], no.theta+psi]), 
-                  nrow = 2, ncol = 2))
-  # mid.holder <- cbind(mid.holder,)                  
   bs.linear <- cbind(bs.linear, tps[,1:no.theta])
   bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])
 }
@@ -150,6 +143,7 @@ write("data {
     real <lower=0> atau;
     matrix[2, (2*p)] basisFL;
     array[(p*2)] int indexFL;
+    vector[n] newy; // extreme response on grid
 }
 parameters {
     vector[(p+1)] theta; // linear predictor
@@ -218,7 +212,7 @@ generated quantities {
 
     yrep = pareto_rng(u, alpha[362]);
     for(i in 1:n){
-      f[i] = alpha[362]*(y[i]/u)^(-alpha[362])/y[i]; //pareto_rng(u, alpha[i])
+      f[i] = (newalpha[i]/exp(newy[i]))*(exp(newy[i])/u)^(-newalpha[i]); //pareto_rng(u, alpha[i])
       log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
     }
 }
@@ -228,7 +222,8 @@ generated quantities {
 data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, 
                     atau = ((psi+1)/2), indexFL = as.vector(t(index.holder)),
                     bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
-                    xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear, basisFL = basis.holder)
+                    xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear, basisFL = basis.holder,
+                    newy = seq(log(u), 30, length.out = n))
 
 init.alpha <- list(list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c(p, (psi-2))),
                         theta = rep(0, (p+1)), 
@@ -419,35 +414,38 @@ for(i in 1:p){
                           plot.margin = margin(0,0,0,-20),
                           axis.text = element_text(size = 35),
                           axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=-7, color = "red", size = 4)
+  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=-7, color = "red", size = 7)
 }
 grid.plts[[1]] + grid.plts[[2]] +grid.plts[[3]] + grid.plts[[4]] + grid.plts[[5]] + grid.plts[[6]] + grid.plts[[7]] + plot_layout(widths = c(1,1))
 # grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
-# grid.plts[[7]]
-# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=10, height = 7.78)
+grid.plts[[7]]
+ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=10, height = 7.78)
 
 #Predictive Distribution check
 y.container <- as.data.frame(matrix(, nrow = n, ncol = 0))  
-random.alpha.idx <- floor(runif(100, 1, ncol(t(posterior$f))))
+random.alpha.idx <- floor(runif(1000, 1, ncol(t(posterior$f))))
 for(i in random.alpha.idx){
   # y.container <- cbind(y.container, log(t(posterior$f)[,i]))
-  y.container <- cbind(y.container, sort(t(posterior$f)[,i]))
+  y.container <- cbind(y.container, t(posterior$f)[,i])
 }
 
-colnames(y.container) <- paste("col", 1:100, sep="")
+colnames(y.container) <- paste("col", 1:length(random.alpha.idx), sep="")
 y.container$x <- seq(1,n)
-y.container$logy <- log(y)
+y.container$logy <- seq(log(u), 30, length.out = n)
 y.container$y <- y
-plt <- ggplot(data = y.container, aes(x = y)) + ylab("Density") + xlab("log(Burnt Area)") + labs(col = "")
+y.container <- cbind(y.container, t(apply(y.container[,1:length(random.alpha.idx)], 1, quantile, c(0.05, .5, .95))))
+colnames(y.container)[(dim(y.container)[2]-2):(dim(y.container)[2])] <- c("q1","q2","q3")
+plt <- ggplot(data = y.container, aes(x = logy)) + ylab("Density") + xlab("log(Burned Area)") + labs(col = "")
 
-for(i in names(y.container)[1:100]){
+for(i in names(y.container)[1:length(random.alpha.idx)]){
   # plt <- plt + geom_density(aes(x=.data[[i]]), color = "slategray1", alpha = 0.1, linewidht = 0.7)
-  plt <- plt + geom_line(aes(x=y, y=.data[[i]]), color = "slategray1", alpha = 0.1, linewidht = 0.7)  
+  plt <- plt + geom_line(aes(x=logy, y=.data[[i]]), color = "slategray1", alpha = 0.1, linewidht = 0.7)  
 }
 
-print(plt + geom_density(aes(x=y), color = "steelblue", linewidth = 2) +
+print(plt + geom_line(aes(x=logy, y=q2), color = "steelblue", linewidth = 2) +
+        geom_ribbon(aes(ymin = q1, ymax = q3), fill = "steelblue", alpha = 0.2) +
         # scale_y_log10() +
-        theme_minimal(base_size = 30) + ylim(0, 1) + #xlim(7.5,30) +
+        theme_minimal(base_size = 30) + #ylim(0, 1) + #xlim(7.5,30) +
         theme(legend.position = "none",
                 axis.text = element_text(size = 35)))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRSTIR_predictive_distribution.pdf"), width=10, height = 7.78)
@@ -510,27 +508,28 @@ print(plt + geom_area(data = subset(d, x>12.44009), aes(x=x,y=y), fill = "slateg
               colour="red", linewidth=1.2, linetype = "dotted"))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRSTIR_generative.pdf"), width = 10, height = 7.78)
 
-data.yrep <- data.frame("x" = y,
+data.yrep <- data.frame("y" = seq(log(u), 30, length.out=n),
                           "post.mean" = f.samples[,1],
                           "q1" = f.samples[,4],
                           "q2" = f.samples[,5],
                           "q3" = f.samples[,6])
 
-ggplot(data.yrep, aes(x=x)) + 
-  ylab("Density") + xlab("Burnt Area") + labs(col = "") +
+ggplot(data.yrep, aes(x=y)) + 
+  ylab("Density") + xlab("log(Burned Area)") + labs(col = "") +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
   # geom_line(aes(y = true, col = "True"), linewidth = 2) +
-  # xlim(-1,1) + #ylim(0, 6.2) + 
-  geom_line(aes(y=post.mean, col = "Posterior Median"), linewidth=1) +
+  xlim(7.5, 30) + #ylim(0, 6.2) + 
+  geom_line(aes(y=q2, col = "Posterior Median"), linewidth=2) +
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values = c("steelblue")) + 
-  # scale_y_log10() + 
+  annotate("point", x= log(max(Y)), y=0, color = "red", size = 7) +
   guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) +
   theme_minimal(base_size = 30) +
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 20))
+        
 
 
 density.y <- density(ev.y1$yrep) # see ?density for parameters

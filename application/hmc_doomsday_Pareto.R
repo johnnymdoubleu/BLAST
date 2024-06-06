@@ -185,12 +185,12 @@ for(i in 1:p){
 
 for(i in 1:p){
   xholder[,i] <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n)
-  test.knot <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
+  test.knot <- quantile(fwi.scaled[,i], probs=seq(1/(psi+1),psi/(psi+1),length.out = psi))
   # test.knot <- seq(min(xholder[,i]), max(xholder[,i]), length.out = psi)  
   splines <- basis.tps(xholder[,i], test.knot, m=2, rk=FALSE, intercept = FALSE)
   xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
   xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
-  knots <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
+  knots <- quantile(fwi.scaled[,i], probs=seq(1/(psi+1),psi/(psi+1),length.out = psi))
   tps <- basis.tps(fwi.scaled[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
   basis.holder <- cbind(basis.holder, 
           solve(matrix(c(tps[index.holder[i,1], no.theta+1],
@@ -223,6 +223,7 @@ write("data {
     real <lower=0> atau;
     matrix[2, (2*p)] basisFL;
     array[(p*2)] int indexFL;
+    vector[n] newy;
 }
 parameters {
     vector[(p+1)] theta; // linear predictor
@@ -294,7 +295,7 @@ generated quantities {
     
     for(i in 1:n){
       yrep[i] = pareto_rng(u, alpha[i]);
-      f[i] = alpha[i] * (y[i]/u)^(-alpha[i])/y[i];
+      f[i] = (alpha[215]/exp(newy[i]))*(exp(newy[i])/u)^(-alpha[215]); //pareto_rng(u, alpha[i])
       log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
     }
 }
@@ -304,17 +305,18 @@ generated quantities {
 data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, 
                     atau = ((psi+1)/2), indexFL = as.vector(t(index.holder)),
                     bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
-                    xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear, basisFL = basis.holder)
+                    xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear, basisFL = basis.holder,
+                    newy = seq(log(u), 30, length.out = n))
 
-init.alpha <- list(list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c((psi-2),p)),
+init.alpha <- list(list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c(p, (psi-2))),
                         theta = rep(0, (p+1)), 
                         tau1 = rep(0.1, p),tau2 = rep(0.1, p),
                         lambda1 = 0.1, lambda2 = 0.01),
-                   list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c((psi-2),p)),
+                   list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c(p, (psi-2))),
                         theta = rep(0, (p+1)), 
                         tau1 = rep(0.001, p),tau2 = rep(0.001, p),
                         lambda1 = 100, lambda2 = 1),
-                   list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c((psi-2),p)),
+                   list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c(p, (psi-2))),
                         theta = rep(0.1, (p+1)), 
                         tau1 = rep(0.5, p),tau2 = rep(0.5, p),
                         lambda1 = 5, lambda2 = 5.5))
@@ -327,7 +329,7 @@ fit1 <- stan(
     # init_r = 1,
     chains = 3,             # number of Markov chains
     # warmup = 1000,          # number of warmup iterations per chain
-    iter = 2000,            # total number of iterations per chain
+    iter = 5000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
     refresh = 500           # no progress shown
 )
@@ -689,6 +691,29 @@ for(i in 1:p){
 grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
 # grid.plts[[7]]
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=10, height = 7.78)
+
+data.yrep <- data.frame("y" = seq(log(u), 30, length.out=n),
+                          "post.mean" = f.samples[,1],
+                          "q1" = f.samples[,4],
+                          "q2" = f.samples[,5],
+                          "q3" = f.samples[,6])
+
+ggplot(data.yrep, aes(x=y)) + 
+  ylab("Density") + xlab("log(Burned Area)") + labs(col = "") +
+  geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
+  # geom_line(aes(y = true, col = "True"), linewidth = 2) +
+  xlim(7.5, 30) + #ylim(0, 6.2) + 
+  geom_line(aes(y=q2, col = "Posterior Median"), linewidth=2) +
+  scale_fill_manual(values=c("steelblue"), name = "") +
+  scale_color_manual(values = c("steelblue")) + 
+  annotate("point", x= log(max(Y)), y=0, color = "red", size = 7) +
+  guides(color = guide_legend(order = 2), 
+          fill = guide_legend(order = 1)) +
+  theme_minimal(base_size = 30) +
+  theme(legend.position = "none",
+        strip.text = element_blank(),
+        axis.text = element_text(size = 20))
+
 
 #Predictive Distribution check
 y.container <- as.data.frame(matrix(, nrow = n, ncol = 0))  
