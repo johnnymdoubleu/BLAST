@@ -518,7 +518,7 @@ ggplot(data.yrep, aes(x=y)) +
   ylab("Density") + xlab("log(Burned Area)") + labs(col = "") +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
   # geom_line(aes(y = true, col = "True"), linewidth = 2) +
-  xlim(7.5, 30) + #ylim(0, 6.2) + 
+  xlim(7.5, 30) + ylim(0, 3e-3) + 
   geom_line(aes(y=q2, col = "Posterior Median"), linewidth = 1.5) +
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values = c("steelblue")) + 
