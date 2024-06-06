@@ -316,7 +316,8 @@ generated quantities {
 data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, 
                     atau = ((psi+1)/2), indexFL = as.vector(t(index.holder)),
                     bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
-                    xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear, basisFL = basis.holder,
+                    xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear, basisFL = basis.holder, supermax = supermax.x,
+                    supermaxbs = super.holder,
                     newy = seq(log(u), 30, length.out = n))
 
 init.alpha <- list(list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c(p, (psi-2))),
