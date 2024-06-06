@@ -295,7 +295,7 @@ generated quantities {
     
     for(i in 1:n){
       yrep[i] = pareto_rng(u, alpha[i]);
-      f[i] = (alpha[215]/exp(newy[i]))*(exp(newy[i])/u)^(-alpha[215]); //pareto_rng(u, alpha[i])
+      f[i] = (newalpha[215]/exp(newy[i]))*(exp(newy[i])/u)^(-newalpha[215]); //pareto_rng(u, alpha[i])
       log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
     }
 }
