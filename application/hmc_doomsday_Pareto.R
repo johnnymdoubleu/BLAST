@@ -303,7 +303,7 @@ generated quantities {
     for (j in 1:p){
       supersmooth[1,j] = supermax[1,j] * theta[j+1] + supermaxbs[1,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
     };
-    superalpha = exp(theta[1] + sum(supersmooth))
+    superalpha = exp(theta[1] + sum(supersmooth));
     for(i in 1:n){
       yrep[i] = pareto_rng(u, alpha[i]);
       f[i] = (superalpha/exp(newy[i]))*(exp(newy[i])/u)^(-superalpha); //pareto_rng(u, alpha[i])
