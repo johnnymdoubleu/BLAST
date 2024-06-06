@@ -519,17 +519,17 @@ ggplot(data.yrep, aes(x=y)) +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
   # geom_line(aes(y = true, col = "True"), linewidth = 2) +
   xlim(7.5, 30) + #ylim(0, 6.2) + 
-  geom_line(aes(y=q2, col = "Posterior Median"), linewidth=2) +
+  geom_line(aes(y=q2, col = "Posterior Median"), linewidth = 1.5) +
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values = c("steelblue")) + 
-  annotate("point", x= log(max(Y)), y=0, color = "red", size = 7) +
+  annotate("point", x= log(max(Y)), y=0, color = "red", size = 5) +
   guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) +
   theme_minimal(base_size = 30) +
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 20))
-        
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_post_generative.pdf"), width = 10, height = 7.78)        
 
 
 density.y <- density(ev.y1$yrep) # see ?density for parameters
