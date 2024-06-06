@@ -248,10 +248,6 @@ transformed parameters {
     matrix[n, p] gnl; // nonlinear component
     matrix[n, p] gl; // linear component
     matrix[n, p] gsmooth; // linear component
-    array[n] real <lower=0> newalpha; // new tail index
-    matrix[n, p] newgnl; // nonlinear component
-    matrix[n, p] newgl; // linear component
-    matrix[n, p] newgsmooth; // linear component
 
     lambda2o=lambda2*100;
     for(j in 1:p){
@@ -264,16 +260,12 @@ transformed parameters {
 
     for (j in 1:p){
         gnl[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
-        newgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
         gl[,j] = bsLinear[,j] * theta[j+1];
-        newgl[,j] = xholderLinear[,j] * theta[j+1];
         gsmooth[,j] = gl[,j] + gnl[,j];
-        newgsmooth[,j] = newgl[,j] + newgnl[,j];
     };
 
     for (i in 1:n){
         alpha[i] = exp(theta[1] + sum(gsmooth[i,])); 
-        newalpha[i] = exp(theta[1] + sum(newgsmooth[i,]));
     };
 }
 
@@ -298,6 +290,8 @@ generated quantities {
     vector[n] log_lik;
     vector[n] yrep;
     vector[n] f;
+    matrix[n, p] newgsmooth; // linear component
+    array[n] real <lower=0> newalpha; // new tail index
     real <lower=0> superalpha;
     matrix[1, p] supersmooth;
     for (j in 1:p){
@@ -306,9 +300,16 @@ generated quantities {
     superalpha = exp(theta[1] + sum(supersmooth));
     for(i in 1:n){
       yrep[i] = pareto_rng(u, alpha[i]);
-      f[i] = (superalpha/exp(newy[i]))*(exp(newy[i])/u)^(-superalpha); //pareto_rng(u, alpha[i])
       log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
     }
+    for (j in 1:p){
+        newgsmooth[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j] + xholderLinear[,j] * theta[j+1];
+    };
+
+    for (i in 1:n){
+        newalpha[i] = exp(theta[1] + sum(newgsmooth[i,]));
+        f[i] = (newalpha[i]/exp(newy[i]))*(exp(newy[i])/u)^(-newalpha[i]); //pareto_rng(u, alpha[i])
+    };    
 }
 "
 , "model_BRSTIR_doomsday.stan")
@@ -353,10 +354,6 @@ posterior <- extract(fit1)
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
 lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
-gl.samples <- summary(fit1, par=c("newgl"), probs = c(0.05, 0.5, 0.95))$summary
-gnl.samples <- summary(fit1, par=c("newgnl"), probs = c(0.05, 0.5, 0.95))$summary
-# gnlfl.samples <- summary(fit1, par=c("newgfnl", "newglnl"), probs = c(0.05, 0.5, 0.95))$summary
-# y.samples <- summary(fit1, par=c("y"), probs = c(0.05,0.5, 0.95))$summary
 gsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
 # smooth.samples <- summary(fit1,par=c("gsmooth"), probs = c(0.05, 0.5, 0.95))$summary
 alp.x.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary

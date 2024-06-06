@@ -499,7 +499,7 @@ for(i in 1:p){
   grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=-1.5, color = "red", size = 4)
 }
 
-grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
+grid.arrange(grobs = grid.plts, ncol = 2, nrow = 5)
 
 len <- dim(posterior$alpha)[1]
 r <- matrix(, nrow = n, ncol = 30)
