@@ -78,11 +78,13 @@ fwi.index$month <- factor(format(as.Date(substr(cov.long$...1[missing.values],1,
 fwi.index$date <- as.numeric(fwi.index$date)
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 
-psi <- 10
+psi <- 30
 threshold <- 0.975
 Y.temp <- Y[1:13801]
 u <- quantile(Y, threshold)
 y <- Y.temp[Y.temp>u]
+supermax.x <- fwi.scaled[which.max(Y),]
+supermax.y <- max(Y)
 fwi.scaled <- fwi.scaled[1:13801,]
 fwi.origin <- fwi.scaled <-fwi.scaled[which(Y.temp>u),]
 fwi.minmax <- fwi.index[which(Y>quantile(Y,0.975)),]
@@ -94,34 +96,42 @@ fwi.scaled$ISI <- (fwi.scaled$ISI - min(fwi.minmax$ISI))/(max(fwi.minmax$ISI)-mi
 fwi.scaled$FFMC <- (fwi.scaled$FFMC - min(fwi.minmax$FFMC))/(max(fwi.minmax$FFMC)-min(fwi.minmax$FFMC))
 fwi.scaled$DMC <- (fwi.scaled$DMC - min(fwi.minmax$DMC))/(max(fwi.minmax$DMC)-min(fwi.minmax$DMC))
 fwi.scaled$DC <- (fwi.scaled$DC - min(fwi.minmax$DC))/(max(fwi.minmax$DC)-min(fwi.minmax$DC))
+supermax.x$DSR <- (supermax.x$DSR - min(fwi.minmax$DSR))/(max(fwi.minmax$DSR)-min(fwi.minmax$DSR))
+supermax.x$FWI <- (supermax.x$FWI - min(fwi.minmax$FWI))/(max(fwi.minmax$FWI)-min(fwi.minmax$FWI))
+supermax.x$BUI <- (supermax.x$BUI - min(fwi.minmax$BUI))/(max(fwi.minmax$BUI)-min(fwi.minmax$BUI))
+supermax.x$ISI <- (supermax.x$ISI - min(fwi.minmax$ISI))/(max(fwi.minmax$ISI)-min(fwi.minmax$ISI))
+supermax.x$FFMC <- (supermax.x$FFMC - min(fwi.minmax$FFMC))/(max(fwi.minmax$FFMC)-min(fwi.minmax$FFMC))
+supermax.x$DMC <- (supermax.x$DMC - min(fwi.minmax$DMC))/(max(fwi.minmax$DMC)-min(fwi.minmax$DMC))
+supermax.x$DC <- (supermax.x$DC - min(fwi.minmax$DC))/(max(fwi.minmax$DC)-min(fwi.minmax$DC))
 # range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 # fwi.scaled <- as.data.frame(sapply(fwi.origin, FUN = range01))
 n <- dim(fwi.scaled)[[1]]
 p <- dim(fwi.scaled)[[2]]
 
+
 fwi.origin <- data.frame(fwi.index[which(Y.temp>u),], BA=y)
 max.fwi <- fwi.origin[which.max(y),]
 
-ggplot(fwi.origin, aes(x=DSR, y=FFMC)) + 
-  geom_point(aes(colour = BA), size= 2.5) + 
-  scale_colour_stepsn(colours = c("slategray1", "red"), labels=function(x) format(x, big.mark = ",", scientific = TRUE)) +
-  # scale_colour_stepsn(colours = heat.colors(2, rev=TRUE), labels=function(x) format(x, big.mark = ",", scientific = TRUE)) +
-  # guides(colour = guide_coloursteps(show.limits = TRUE)) +
-  # scale_color_gradientn(colours = heat.colors(2)) +
-  geom_density2d(aes(x=DSR, y=FFMC), colour="steelblue", linewidth = 1.3) + 
-  # stat_density_2d(aes(fill = ..level..), geom = "polygon", colour="steelblue")+ 
-  geom_mark_circle(aes(x = max.fwi$DSR, y = max.fwi$FFMC, label = "15th Oct 2017"), con.type = "straight",
-                   radius = unit(2.5, "mm"), color = "steelblue", size = 1, 
-                   con.colour = "steelblue", con.cap = unit(0, "mm"),
-                   label.colour = "steelblue", label.buffer = unit(5, "mm"),
-                   label.fill = "transparent")  +
-  theme_minimal(base_size = 30) +
-  theme(plot.title = element_text(hjust = 0.5, size = 30),
-        legend.title = element_text(size = 15),
-        legend.text = element_text(size = 15),
-        # plot.margin = margin(0,0,0,-1),
-        strip.text = element_blank(),
-        axis.title = element_text(size = 30))
+# ggplot(fwi.origin, aes(x=DSR, y=FFMC)) + 
+#   geom_point(aes(colour = BA), size= 2.5) + 
+#   scale_colour_stepsn(colours = c("slategray1", "red"), labels=function(x) format(x, big.mark = ",", scientific = TRUE)) +
+#   # scale_colour_stepsn(colours = heat.colors(2, rev=TRUE), labels=function(x) format(x, big.mark = ",", scientific = TRUE)) +
+#   # guides(colour = guide_coloursteps(show.limits = TRUE)) +
+#   # scale_color_gradientn(colours = heat.colors(2)) +
+#   geom_density2d(aes(x=DSR, y=FFMC), colour="steelblue", linewidth = 1.3) + 
+#   # stat_density_2d(aes(fill = ..level..), geom = "polygon", colour="steelblue")+ 
+#   geom_mark_circle(aes(x = max.fwi$DSR, y = max.fwi$FFMC, label = "15th Oct 2017"), con.type = "straight",
+#                    radius = unit(2.5, "mm"), color = "steelblue", size = 1, 
+#                    con.colour = "steelblue", con.cap = unit(0, "mm"),
+#                    label.colour = "steelblue", label.buffer = unit(5, "mm"),
+#                    label.fill = "transparent")  +
+#   theme_minimal(base_size = 30) +
+#   theme(plot.title = element_text(hjust = 0.5, size = 30),
+#         legend.title = element_text(size = 15),
+#         legend.text = element_text(size = 15),
+#         # plot.margin = margin(0,0,0,-1),
+#         strip.text = element_blank(),
+#         axis.title = element_text(size = 30))
 # ggsave("./BRSTIR/application/figures/extremeviz.pdf", width = 10, height = 7.78)
 # ------------- Explanatory Analaysis
 # first.extreme <- which(Y==max(y))
@@ -172,6 +182,7 @@ no.theta <- 1
 newx <- seq(0, 1, length.out=n)
 xholder.linear <- xholder.nonlinear <- bs.linear <- bs.nonlinear <- matrix(,nrow=n, ncol=0)
 xholder <- matrix(nrow=n, ncol=p)
+super.holder <- matrix(nrow=1, ncol=0)
 end.holder <- basis.holder <- matrix(, nrow = 2, ncol =0)
 index.holder <- matrix(, nrow = 0, ncol = 2)
 for(i in 1:p){
@@ -179,13 +190,12 @@ for(i in 1:p){
                       matrix(c(which.min(fwi.scaled[,i]),
                               which.max(fwi.scaled[,i])), ncol=2))
 }
-# for(i in 1:n){
-#   xholder[i,] <- centre.fwi + seq(min(PC1), max(PC1), length.out = n)[i] %*% phi[,1]
-# }
 
 for(i in 1:p){
   xholder[,i] <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n)
   test.knot <- quantile(fwi.scaled[,i], probs=seq(1/(psi+1),psi/(psi+1),length.out = psi))
+  super.tps <- basis.tps(supermax.x[i], test.knot, m=2, rk = FALSE)
+  super.holder <- cbind(super.holder, matrix(super.tps[,-1], ncol = psi))
   # test.knot <- seq(min(xholder[,i]), max(xholder[,i]), length.out = psi)  
   splines <- basis.tps(xholder[,i], test.knot, m=2, rk=FALSE, intercept = FALSE)
   xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
@@ -198,12 +208,6 @@ for(i in 1:p){
                   tps[index.holder[i,2], no.theta+1],
                   tps[index.holder[i,2], no.theta+psi]), 
                   nrow = 2, ncol = 2)))
-  end.holder <- cbind(end.holder, 
-                matrix(c(tps[index.holder[i,1], no.theta+1],
-                  tps[index.holder[i,1], no.theta+psi],
-                  tps[index.holder[i,2], no.theta+1],
-                  tps[index.holder[i,2], no.theta+psi]), 
-                  nrow = 2, ncol = 2))
   # mid.holder <- cbind(mid.holder,)                  
   bs.linear <- cbind(bs.linear, tps[,1:no.theta])
   bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])
@@ -224,6 +228,8 @@ write("data {
     matrix[2, (2*p)] basisFL;
     array[(p*2)] int indexFL;
     vector[n] newy;
+    matrix[1,p] supermax;
+    matrix[1, (psi*p)] supermaxbs;
 }
 parameters {
     vector[(p+1)] theta; // linear predictor
@@ -292,10 +298,15 @@ generated quantities {
     vector[n] log_lik;
     vector[n] yrep;
     vector[n] f;
-    
+    real <lower=0> superalpha;
+    matrix[1, p] supersmooth;
+    for (j in 1:p){
+      supersmooth[1,j] = supermax[1,j] * theta[j+1] + supermaxbs[1,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
+    };
+    superalpha = exp(theta[1] + sum(supersmooth))
     for(i in 1:n){
       yrep[i] = pareto_rng(u, alpha[i]);
-      f[i] = (newalpha[215]/exp(newy[i]))*(exp(newy[i])/u)^(-newalpha[215]); //pareto_rng(u, alpha[i])
+      f[i] = (superalpha/exp(newy[i]))*(exp(newy[i])/u)^(-superalpha); //pareto_rng(u, alpha[i])
       log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
     }
 }

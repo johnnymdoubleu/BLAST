@@ -46,7 +46,7 @@ Y <- df.long$measurement[!is.na(df.long$measurement)]
 summary(Y) #total burnt area
 length(Y)
 
-threshold <- 0.99
+threshold <- 0.975
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
 # x.scale <- x.scale[which(y>quantile(y, threshold)),]
@@ -89,7 +89,7 @@ fwi.index$month <- factor(format(as.Date(substr(cov.long$...1[missing.values],1,
                             levels = c("Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"))
 fwi.index$date <- as.numeric(fwi.index$date)
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
-fwi.scaled$time <- (1:length(Y))/length(Y)
+# fwi.scaled$time <- (1:length(Y))/length(Y)
 fwi.origin <- fwi.scaled <- fwi.scaled[which(Y>u),]
 
 sqrt01 <- function(x){sqrt(abs(x-median(x))) * sign(x-median(x))}
@@ -303,7 +303,13 @@ fit1 <- stan(
 # saveRDS(fit1, file=paste0("./BRSTIR/application/",Sys.Date(),"_stanfit.rds"))
 posterior <- extract(fit1)
 # str(posterior)
-
+fit.log.lik <- extract_log_lik(fit1)
+fwi.loo <- loo(fit.log.lik, cores = 2)
+plot(fwi.loo, label_points = TRUE)
+loo(fit.log.lik, is_method = "sis", cores = 2)
+brtir.elpd.loo <- loo(fit.log.lik, is_method = "sis", cores = 2)
+brtir.waic <- waic(fit.log.lik, cores = 2)
+save(brtir.elpd.loo, brtir.waic, file = (paste0("./BRSTIR/application/BRTIR_",Sys.Date(),"_",floor(threshold*100),"quantile_time_IC.Rdata")))
 # print(as.mcmc(fit1), pars=c("alpha", "gamma", "intercept", "theta", "lambda1", "lambda2","lp__"), probs=c(.05,.5,.95))
 # plot(fit1, plotfun = "trace", pars = c("theta"), nrow = 3)
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_mcmc_theta_trace.pdf"), width=10, height = 7.78)
@@ -535,13 +541,7 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
 
 cat("Finished Running")
 
-fit.log.lik <- extract_log_lik(fit1)
-fwi.loo <- loo(fit.log.lik, cores = 2)
-plot(fwi.loo, label_points = TRUE)
-loo(fit.log.lik, is_method = "sis", cores = 2)
-brtir.elpd.loo <- loo(fit.log.lik, is_method = "sis", cores = 2)
-brtir.waic <- waic(fit.log.lik, cores = 2)
-save(brtir.elpd.loo, brtir.waic, file = (paste0("./BRSTIR/application/BRTIR_",Sys.Date(),"_",floor(threshold*100),"quantile_time_IC.Rdata")))
+
 
 #https://discourse.mc-stan.org/t/four-questions-about-information-criteria-cross-validation-and-hmc-in-relation-to-a-manuscript-review/13841
 
