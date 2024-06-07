@@ -252,6 +252,8 @@ fit1 <- stan(
 )
 
 # saveRDS(fit1, file=paste0("./BRSTIR/application/",Sys.Date(),"_stanfit.rds"))
+
+# fit1 <- readRDS("./BRSTIR/application/WITH_TIME_30_99_2024-06-07061842_stanfit.rds")
 posterior <- extract(fit1)
 
 
@@ -383,7 +385,7 @@ ggplot(data = rp) +
   theme_minimal(base_size = 20) +
   theme(axis.text = element_text(size = 25),
         axis.title = element_text(size = 30))
-# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_qqboxplot.pdf"), width = 10, height = 7.78)
+ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_qqboxplot.pdf"), width = 10, height = 7.78)
              
 # saveRDS(data.scenario, file=paste0("Simulation/BayesianPsplines/results/",date,"-",time, "_sc1_data_samp1.rds"))
 
@@ -418,8 +420,8 @@ for(i in 1:p){
 }
 grid.plts[[1]] + grid.plts[[2]] +grid.plts[[3]] + grid.plts[[4]] + grid.plts[[5]] + grid.plts[[6]] + grid.plts[[7]] + plot_layout(widths = c(1,1))
 # grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
-grid.plts[[7]]
-ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=10, height = 7.78)
+# grid.plts[[7]]
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=10, height = 7.78)
 
 #Predictive Distribution check
 y.container <- as.data.frame(matrix(, nrow = n, ncol = 0))  
