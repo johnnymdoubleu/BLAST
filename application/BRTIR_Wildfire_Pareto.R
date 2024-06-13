@@ -325,7 +325,7 @@ lambda.samples <- summary(fit1, par=c("lambda1"), probs = c(0.05,0.5, 0.95))$sum
 gl.samples <- summary(fit1, par=c("newgl"), probs = c(0.05, 0.5, 0.95))$summary
 alp.x.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
 alpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
-saveRDS(gl.samples, file=paste0("./BRSTIR/application/",Sys.Date(),"linear_stanfit.rds"))
+saveRDS(gl.samples, file=paste0("./BRSTIR/application/",Sys.Date(),"_linear_stanfit.rds"))
 
 theta.post.mean <- theta.samples[,1]
 theta.q1 <- theta.samples[,4]

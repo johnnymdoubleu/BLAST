@@ -385,7 +385,7 @@ ggplot(data = rp) +
   theme_minimal(base_size = 20) +
   theme(axis.text = element_text(size = 25),
         axis.title = element_text(size = 30))
-ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_qqboxplot.pdf"), width = 10, height = 7.78)
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_qqboxplot.pdf"), width = 10, height = 7.78)
              
 # saveRDS(data.scenario, file=paste0("Simulation/BayesianPsplines/results/",date,"-",time, "_sc1_data_samp1.rds"))
 
@@ -402,7 +402,7 @@ data.smooth <- data.frame("x" = as.vector(xholder),
                           "q1" = as.vector(g.smooth.q1),
                           "q2" = as.vector(g.smooth.q2),
                           "q3" = as.vector(g.smooth.q3),
-                          "g1.mean" = as.vector(g1.mean),
+                          "gl.mean" = as.vector(gl.mean),
                           "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)))
 
 
