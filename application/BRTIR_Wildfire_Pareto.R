@@ -249,12 +249,12 @@ data.stan <- list(y = as.vector(y), u = u, p = p, n= n, newp = (p+1),
                     xholderLinear = xholder)
 init.alpha <- list(list(theta = rep(0, (p+1)), lambda1 = 0.1),
                   list(theta = rep(0.01, (p+1)), lambda1 = 0.1),
-                  list(theta = rep(0.02, (p+1)), lambda1 = 1),
-                  list(theta = rep(-0.05, (p+1)), lambda1 = 10),
-                  list(theta = rep(0.1, (p+1)), lambda1 = 2),
-                  list(theta = rep(-0.35, (p+1)), lambda1 = 0.2),
-                  list(theta = rep(0.5, (p+1)), lambda1 = 0.01),
-                  list(theta = rep(0.05, (p+1)), lambda1 = 0.1))
+                  list(theta = rep(0.02, (p+1)), lambda1 = 1))#,
+                  # list(theta = rep(-0.05, (p+1)), lambda1 = 10),
+                  # list(theta = rep(0.1, (p+1)), lambda1 = 2),
+                  # list(theta = rep(-0.35, (p+1)), lambda1 = 0.2),
+                  # list(theta = rep(0.5, (p+1)), lambda1 = 0.01),
+                  # list(theta = rep(0.05, (p+1)), lambda1 = 0.1))
 
 # stanc("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/application/model1.stan")
 fit1 <- stan(
@@ -262,9 +262,9 @@ fit1 <- stan(
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
     # init_r = 1,
-    chains = 8,             # number of Markov chains
+    chains = 3,             # number of Markov chains
     # warmup = 2500,          # number of warmup iterations per chain
-    iter = 40000,            # total number of iterations per chain
+    iter = 5000,            # total number of iterations per chain
     thin = 10,
     cores = parallel::detectCores(),              # number of cores (could use one per chain)
     refresh = 500           # no progress shown

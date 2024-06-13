@@ -42,8 +42,8 @@ Y <- df.long$measurement[!is.na(df.long$measurement)]
 
 summary(Y) #total burnt area
 length(Y)
-psi <- 20
-threshold <- 0.99
+psi <- 30
+threshold <- 0.975
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
 # x.scale <- x.scale[which(y>quantile(y, threshold)),]
@@ -190,10 +190,13 @@ ggplot(fwi.origin, aes(x=DSR, y=FFMC)) +
         axis.title = element_text(size = 30))
 # ggsave("./BRSTIR/application/figures/extremeviz.pdf", width = 10, height = 7.78)
 
-ggplot(fwi.origin, aes(x=as.numeric(year), y=log(BA))) + 
+ggplot(fwi.origin, aes(x=as.numeric(year), y=log(BA), color = BA)) + 
   ylab("Hectares (log)") + xlab("Time (years)") + 
-  geom_point(aes(colour = BA), size= 2.5) + 
-  scale_colour_stepsn(colours = c("slategray1", "red"), labels=function(x) format(x, big.mark = ",", scientific = TRUE), breaks=c(0.1e5, 0.5e5, 1e5, 2e5)) +
+  geom_point(size= 2.5, alpha = 0.5) + 
+  # scale_color_gradient(low = "steelblue1", high = "red", breaks = c(0.1e4, 0.5e4, 5e4, 1e5)) + 
+  scale_colour_stepsn(colours = c("slategray1", "red"), labels=function(y) format(y, big.mark = ",", scientific = TRUE), 
+  breaks = quantile(fwi.origin$BA, probs = seq(0,1,length.out = 20))) + 
+  # breaks=c(0.5e4, 5e4, 1e5, 1.5e5, 1.8e5)) +
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 30),
         legend.position = "none",
