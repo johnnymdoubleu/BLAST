@@ -390,6 +390,11 @@ ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_qqboxplot
 # saveRDS(data.scenario, file=paste0("Simulation/BayesianPsplines/results/",date,"-",time, "_sc1_data_samp1.rds"))
 
 cat("Finished Running")
+gl.samples <- readRDS("./BRSTIR/application/2024-06-13_linear_stanfit.rds")
+gl.mean <- as.vector(matrix(gl.samples[,1], nrow = n, byrow=TRUE))
+# gl.q1 <- as.vector(matrix(gl.samples[,4], nrow = n, byrow=TRUE))
+# gl.q2 <- as.vector(matrix(gl.samples[,5], nrow = n, byrow=TRUE))
+# gl.q3 <- as.vector(matrix(gl.samples[,6], nrow = n, byrow=TRUE))
 
 
 data.smooth <- data.frame("x" = as.vector(xholder),
@@ -397,6 +402,7 @@ data.smooth <- data.frame("x" = as.vector(xholder),
                           "q1" = as.vector(g.smooth.q1),
                           "q2" = as.vector(g.smooth.q2),
                           "q3" = as.vector(g.smooth.q3),
+                          "g1.mean" = as.vector(g1.mean),
                           "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)))
 
 

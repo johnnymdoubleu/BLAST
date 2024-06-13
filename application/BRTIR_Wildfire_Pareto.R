@@ -36,7 +36,7 @@ Y <- df.long$measurement[!is.na(df.long$measurement)]
 summary(Y) #total burnt area
 length(Y)
 
-threshold <- 0.99
+threshold <- 0.975
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
 # x.scale <- x.scale[which(y>quantile(y, threshold)),]
@@ -265,12 +265,11 @@ fit1 <- stan(
     chains = 3,             # number of Markov chains
     # warmup = 2500,          # number of warmup iterations per chain
     iter = 5000,            # total number of iterations per chain
-    thin = 10,
+    # thin = 10,
     cores = parallel::detectCores(),              # number of cores (could use one per chain)
     refresh = 500           # no progress shown
 )
 
-# saveRDS(fit1, file=paste0("./BRSTIR/application/",Sys.Date(),"_stanfit.rds"))
 posterior <- extract(fit1)
 # str(posterior)
 
@@ -326,7 +325,7 @@ lambda.samples <- summary(fit1, par=c("lambda1"), probs = c(0.05,0.5, 0.95))$sum
 gl.samples <- summary(fit1, par=c("newgl"), probs = c(0.05, 0.5, 0.95))$summary
 alp.x.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
 alpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
-
+saveRDS(gl.samples, file=paste0("./BRSTIR/application/",Sys.Date(),"linear_stanfit.rds"))
 
 theta.post.mean <- theta.samples[,1]
 theta.q1 <- theta.samples[,4]
