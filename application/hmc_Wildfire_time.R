@@ -120,14 +120,14 @@ alpha.samples <- summary(fit, par=c("invxi"), probs = c(0.05,0.5, 0.95))$summary
 
 posterior <- extract(fit)
 
-data.scenario <- data.frame("x" = xholder[,1],
+data.scenario <- data.frame("x" = time[Y>u],
                             "post.mean" = (alpha.samples[,1]),
                             "post.median" = (alpha.samples[,5]),
                             "q1" = (alpha.samples[,4]),
                             "q3" = (alpha.samples[,6]))
 
 ggplot(data.scenario, aes(x=x)) + 
-  ylab(expression(alpha(c,...,c))) + xlab(expression(c)) + labs(col = "") +
+  ylab(expression(alpha(t))) + xlab("Time") + labs(col = "") +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
   # geom_line(aes(y = true, col = "True"), linewidth = 2) +
   # xlim(-1,1) + #ylim(0, 6.2) + 
