@@ -145,14 +145,14 @@ ggplot(data.scenario, aes(x=x)) +
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_alpha.pdf"), width=10, height = 7.78)
 
 
-len <- dim(posterior$alpha)[1]
+len <- dim(posterior$invxi)[1]
 r <- matrix(, nrow = n, ncol = 100)
 # beta <- as.matrix(mcmc[[1]])[, 1:7] 
 T <- 100
 for(i in 1:n){
   for(t in 1:T){
     # r[i, t] <- qnorm(pPareto(y[i], u, alpha = alp.x.samples[i,5]))
-    r[i, t] <- qnorm(pPareto(y[i], u, alpha = posterior$alpha[round(runif(1,1,len)),i]))
+    r[i, t] <- qnorm(pPareto(y[i], u, alpha = posterior$invxi[round(runif(1,1,len)),i]))
     # r[i, t] <- qnorm(pPareto(y[i], u, alpha = posterior$newalpha[round(runif(1,1,len)),i]))
   }
 }

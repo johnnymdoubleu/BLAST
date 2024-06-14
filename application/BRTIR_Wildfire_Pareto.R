@@ -497,6 +497,21 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
   coord_fixed(xlim = c(-3, 3),  
               ylim = c(-3, 3))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRTIR_mcmc_qqplot.pdf"), width=10, height = 7.78)
+library(qqboxplot)
+rp <-c()
+for(i in 1:n){
+  rp[i] <- qnorm(pPareto(y[i], u, alpha = posterior$alpha[round(runif(1,1,len)),i]))
+}
+rp <- data.frame(rp, group = rep("residuals", n))
+
+ggplot(data = rp) + 
+  # geom_qqboxplot(aes(factor(group, levels=c("residuals")), y=rp), notch=FALSE, varwidth=TRUE, reference_dist="norm")+ 
+  geom_qqboxplot(aes(y=rp), notch=FALSE, varwidth=FALSE, reference_dist="norm", width = 0.15, qq.colour="steelblue")+
+  labs(x = "", y = "Residuals") + ylim(-3,3) + xlim(-.2,.2)+
+  theme_minimal(base_size = 20) +
+  theme(axis.text = element_text(size = 25),
+        axis.title = element_text(size = 30))
+# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRTIR_qqboxplot.pdf"), width = 10, height = 7.78)
 
 cat("Finished Running")
 
