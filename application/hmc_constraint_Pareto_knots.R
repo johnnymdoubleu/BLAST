@@ -427,8 +427,8 @@ for(i in 1:p){
 }
 grid.plts[[1]] + grid.plts[[2]] +grid.plts[[3]] + grid.plts[[4]] + grid.plts[[5]] + grid.plts[[6]] + grid.plts[[7]] + plot_layout(widths = c(1,1))
 # grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
-# grid.plts[[7]]
-# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=10, height = 7.78)
+grid.plts[[7]]
+ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=10, height = 7.78)
 
 #Predictive Distribution check
 y.container <- as.data.frame(matrix(, nrow = n, ncol = 0))  

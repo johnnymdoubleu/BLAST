@@ -70,26 +70,27 @@ time <- as.Date(paste0(cov.long$condition[missing.values], substr(cov.long$...1[
 
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
-time <- time[Y>u]
-x <- cbind(rep(1, length(y)), bs(time))
+t <-  as.numeric(time) / 10000
+t <- t[Y>u]
+x <- cbind(rep(1, length(y)), bs(t))
 p <- ncol(x)
 n <- nrow(x)
-model.stan <- "
-data {
+
+model.stan <- "data {
   int <lower=1> n; // Sample size
   int <lower=1> p; // regression coefficient size
   real <lower=0> u; // large threshold value
   
   vector[n] y; // extreme response
-  matrix[n, q] x;
+  matrix[n, p] x;
 }
 
 parameters {
-  vector[q] beta;
+  vector[p] beta;
 }
 
 transformed parameters {
-  vector[k] invxi;
+  vector[n] invxi;
 
   invxi = 1/exp(x * beta);
 }
@@ -103,7 +104,7 @@ model {
 data.stan <- list(y = as.vector(y), u = u, p = p, n= n, x = x)
 
 fit <- stan(
-    model_code = "model_BRSTIR_constraint.stan",  # Stan program
+    model_code = model.stan,  # Stan program
     data = data.stan,    # named list of data
     init = "random",      # initial value
     # init_r = 1,
@@ -114,60 +115,10 @@ fit <- stan(
     refresh = 500           # no progress shown
 )
 
+beta.samples <- summary(fit, par=c("beta"), probs = c(0.05,0.5, 0.95))$summary
+alpha.samples <- summary(fit, par=c("invxi"), probs = c(0.05,0.5, 0.95))$summary
+
 posterior <- extract(fit)
-
-
-lambda.samples <- summary(fit1, par=c("lambda1", "lambda2o"), probs = c(0.05,0.5, 0.95))$summary
-gsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
-
-alp.x.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
-alpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
-yrep.samples <- summary(fit1, par=c("yrep"), probs = c(0.05,0.5, 0.95))$summary
-f.samples <- summary(fit1, par=c("f"), probs = c(0.05,0.5, 0.95))$summary
-
-g.smooth.mean <- as.vector(matrix(gsmooth.samples[,1], nrow = n, byrow=TRUE))
-g.smooth.q1 <- as.vector(matrix(gsmooth.samples[,4], nrow = n, byrow=TRUE))
-g.smooth.q2 <- as.vector(matrix(gsmooth.samples[,5], nrow = n, byrow=TRUE))
-g.smooth.q3 <- as.vector(matrix(gsmooth.samples[,6], nrow = n, byrow=TRUE))
-
-equal_breaks <- function(n = 3, s = 0.1,...){
-  function(x){
-    d <- s * diff(range(x)) / (1+2*s)
-    seq = seq(min(x)+d, max(x)-d, length=n)
-    round(seq, -floor(log10(abs(seq[2]-seq[1]))))
-  }
-}
-
-data.smooth <- data.frame("x"= as.vector(xholder),
-                          "post.mean" = as.vector(g.smooth.mean),
-                          "q1" = as.vector(g.smooth.q1),
-                          "q2" = as.vector(g.smooth.q2),
-                          "q3" = as.vector(g.smooth.q3),
-                          "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)),
-                          # "fakelab" = rep(1, (p*n)),
-                          "replicate" = gl(p, n, (p*n), labels = names(fwi.scaled)))
-
-ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) + 
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
-  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
-  ylab("") + xlab("") +
-  facet_grid(covariates ~ ., scales = "free",
-              labeller = label_parsed) + 
-  scale_fill_manual(values=c("steelblue"), name = "") +
-  scale_color_manual(values=c("steelblue")) + 
-  guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) + 
-  # scale_y_continuous(breaks=c(-3,-2,-1,1,2)) +        
-          ylim(-3.5, 3.5) +
-  # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
-  theme_minimal(base_size = 30) +
-  theme(legend.position = "none",
-          plot.margin = margin(0,0,0,-20),
-          # strip.text = element_blank(),
-          axis.text = element_text(size = 20))
-# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=12.5, height = 15)
-
 
 data.scenario <- data.frame("x" = xholder[,1],
                             "post.mean" = (alpha.samples[,1]),
