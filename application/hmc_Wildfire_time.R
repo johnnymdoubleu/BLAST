@@ -11,6 +11,7 @@ library(qqboxplot)
 library(ggdensity)
 library(ggforce)
 library(ggdist)
+library(splines)
 # source("C:/Users/Johnny Lee/Documents/Github/extremis/R/bltir.R")
 
 options(mc.cores = parallel::detectCores())
@@ -43,165 +44,68 @@ Y <- df.long$measurement[!is.na(df.long$measurement)]
 
 psi <- 30
 threshold <- 0.975
+multiplesheets <- function(fname) {
+    setwd("C:/Users/Johnny Lee/Documents/GitHub")
+    # getting info about all excel sheets
+    sheets <- excel_sheets(fname)
+    tibble <- lapply(sheets, function(x) read_excel(fname, sheet = x, col_types = c("date", rep("numeric", 41))))
+    # print(tibble)
+    data_frame <- lapply(tibble, as.data.frame)
+    # assigning names to data frames
+    names(data_frame) <- sheets
+    return(data_frame)
+}
+setwd("C:/Users/Johnny Lee/Documents/GitHub")
+path <- "./BRSTIR/application/DadosDiariosPT_FWI.xlsx"
+# importing fire weather index
+cov <- multiplesheets(path)
 
-# x.scale <- x.scale[which(y>quantile(y, threshold)),]
-# u <- quantile(y, threshold)
+for(i in 1:length(cov)){
+    cov.long <- gather(cov[[i]][,1:41], condition, measurement, "1980":"2019", factor_key=TRUE)
+}
+
+
+time <- as.Date(paste0(cov.long$condition[missing.values], substr(cov.long$...1[missing.values],5,10)), "%Y-%m-%d")
+
 
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
-fwi.origin <- fwi.scaled <-fwi.scaled[which(Y>u),]
-# fwi.scaled <- as.data.frame(scale(fwi.scaled))
-range01 <- function(x){(x-min(x))/(max(x)-min(x))}
-fwi.scaled <- as.data.frame(sapply(fwi.origin, FUN = range01))
-
-n <- dim(fwi.scaled)[[1]]
-p <- dim(fwi.scaled)[[2]]
-
-no.theta <- 1
-newx <- seq(0, 1, length.out=n)
-xholder.linear <- xholder.nonlinear <- bs.linear <- bs.nonlinear <- matrix(,nrow=n, ncol=0)
-xholder <- matrix(nrow=n, ncol=p)
-basis.holder <- matrix(, nrow = 2, ncol =0)
-index.holder <- matrix(, nrow = 0, ncol = 2)
-for(i in 1:p){
-  index.holder <- rbind(index.holder, 
-                      matrix(c(which.min(fwi.scaled[,i]),
-                              which.max(fwi.scaled[,i])), ncol=2))
+time <- time[Y>u]
+x <- cbind(rep(1, length(y)), bs(time))
+p <- ncol(x)
+n <- nrow(x)
+model.stan <- "
+data {
+  int <lower=1> n; // Sample size
+  int <lower=1> p; // regression coefficient size
+  real <lower=0> u; // large threshold value
+  
+  vector[n] y; // extreme response
+  matrix[n, q] x;
 }
 
-for(i in 1:p){
-  xholder[,i] <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n)
-  test.knot <- quantile(fwi.scaled[,i], probs=seq(1/(psi+1),psi/(psi+1),length.out = psi))
-  splines <- basis.tps(xholder[,i], test.knot, m=2, rk=FALSE, intercept = FALSE)
-  xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
-  xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
-  # knots <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
-  knots <- quantile(fwi.scaled[,i], probs=seq(1/(psi+1),psi/(psi+1),length.out = psi))
-  tps <- basis.tps(fwi.scaled[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
-  basis.holder <- cbind(basis.holder, 
-          solve(matrix(c(tps[index.holder[i,1], no.theta+1],
-                  tps[index.holder[i,1], no.theta+psi],
-                  tps[index.holder[i,2], no.theta+1],
-                  tps[index.holder[i,2], no.theta+psi]), 
-                  nrow = 2, ncol = 2)))
-  bs.linear <- cbind(bs.linear, tps[,1:no.theta])
-  bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])
-}
-
-
-write("data {
-    int <lower=1> n; // Sample size
-    int <lower=1> p; // regression coefficient size
-    int <lower=1> psi; // splines coefficient size
-    real <lower=0> u; // large threshold value
-    matrix[n,p] bsLinear; // fwi dataset
-    matrix[n, (psi*p)] bsNonlinear; // thin plate splines basis
-    matrix[n,p] xholderLinear; // fwi dataset
-    matrix[n, (psi*p)] xholderNonlinear; // thin plate splines basis    
-    vector[n] y; // extreme response
-    real <lower=0> atau;
-    matrix[2, (2*p)] basisFL;
-    array[(p*2)] int indexFL;
-    vector[n] newy; // extreme response on grid
-}
 parameters {
-    vector[(p+1)] theta; // linear predictor
-    vector[(psi-2)] gammaTemp[p]; // constraint splines coefficient from 2 to psi-1
-    real <lower=0> lambda1; // lasso penalty
-    real <lower=0> lambda2; // group lasso penalty
-    array[p] real <lower=0> tau1;
-    array[p] real <lower=0> tau2;
+  vector[q] beta;
 }
+
 transformed parameters {
-    array[n] real <lower=0> alpha; // covariate-adjusted tail index
-    vector[psi] gamma[p]; // splines coefficient 
-    vector[2] gammaFL[p];
-    real <lower=0> lambda2o;
-    matrix[n, p] gsmooth; // linear component
+  vector[k] invxi;
 
-
-    lambda2o=lambda2*100;
-    for(j in 1:p){
-        gamma[j][2:(psi-1)] = gammaTemp[j][1:(psi-2)]*100;
-        gammaFL[j] = basisFL[, (((j-1)*2)+1):(((j-1)*2)+2)] * (bsNonlinear[indexFL[(((j-1)*2)+1):(((j-1)*2)+2)], (((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] * gammaTemp[j]*100) * (-1);
-        gamma[j][1] = gammaFL[j][1];
-        gamma[j][psi] = gammaFL[j][2];
-    };
-
-    for (j in 1:p){
-        gsmooth[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j] + bsLinear[,j] * theta[j+1];
-    };
-
-    for (i in 1:n){
-        alpha[i] = exp(theta[1] + sum(gsmooth[i,]));
-    };
+  invxi = 1/exp(x * beta);
 }
 
 model {
-    // likelihood
-    for (i in 1:n){
-        target += pareto_lpdf(y[i] | u, alpha[i]);
-    }
-    target += normal_lpdf(theta[1] | 0, 100);
-    target += gamma_lpdf(lambda1 | 1, 1e-3);
-    target += gamma_lpdf(lambda2o | 1, 1e-3);
-    target += (2*p*log(lambda2o));
-    for (j in 1:p){
-        target += gamma_lpdf(tau1[j] | 1, lambda1^2*0.5);
-        target += normal_lpdf(theta[(j+1)] | 0, sqrt(1/tau1[j]));
-        target += gamma_lpdf(tau2[j] | atau, lambda2o^2*0.5);
-        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * (1/tau2[j]));
-    }
-}
-generated quantities {
-    // Used in Posterior predictive check    
-    vector[n] log_lik;
-    vector[n] f;
-    real yrep;
-    array[n] real <lower=0> newalpha; // new tail index
-    matrix[n, p] newgsmooth; // linear component    
-
-    for (j in 1:p){
-        newgsmooth[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j] + xholderLinear[,j] * theta[j+1];
-    };    
-
-    for (i in 1:n){ 
-        newalpha[i] = exp(theta[1] + sum(newgsmooth[i,]));
-    };    
-
-    yrep = pareto_rng(u, alpha[362]);
-    for(i in 1:n){
-      f[i] = (alpha[362]/exp(newy[i]))*(exp(newy[i])/u)^(-alpha[362]); //pareto_rng(u, alpha[i])
-      log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
-    }
+  target += pareto_lpdf(y | u, invxi);
+  target += normal_lpdf(beta | 0, 1e2);
 }
 "
-, "model_BRSTIR_constraint.stan")
 
-data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, 
-                    atau = ((psi+1)/2), indexFL = as.vector(t(index.holder)),
-                    bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
-                    xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear, basisFL = basis.holder,
-                    newy = seq(log(u), 20, length.out = n))
+data.stan <- list(y = as.vector(y), u = u, p = p, n= n, x = x)
 
-init.alpha <- list(list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c(p, (psi-2))),
-                        theta = rep(0, (p+1)), 
-                        tau1 = rep(0.1, p), tau2 = rep(0.1, p),
-                        lambda1 = 0.1, lambda2 = 0.01),
-                   list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c(p, (psi-2))),
-                        theta = rep(0, (p+1)), 
-                        tau1 = rep(0.001, p), tau2 = rep(0.001, p),
-                        lambda1 = 100, lambda2 = 1),
-                   list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c(p, (psi-2))),
-                        theta = rep(0.1, (p+1)), 
-                        tau1 = rep(0.5, p), tau2 = rep(0.5, p),
-                        lambda1 = 5, lambda2 = 5.5))
-
-# stanc("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/application/model1.stan")
-fit1 <- stan(
-    file = "model_BRSTIR_constraint.stan",  # Stan program
+fit <- stan(
+    model_code = "model_BRSTIR_constraint.stan",  # Stan program
     data = data.stan,    # named list of data
-    init = init.alpha,      # initial value
+    init = "random",      # initial value
     # init_r = 1,
     chains = 3,             # number of Markov chains
     # warmup = 1000,          # number of warmup iterations per chain
@@ -210,10 +114,7 @@ fit1 <- stan(
     refresh = 500           # no progress shown
 )
 
-# saveRDS(fit1, file=paste0("./BRSTIR/application/",Sys.Date(),"_stanfit.rds"))
-
-# fit1 <- readRDS("./BRSTIR/application/WITH_TIME_30_99_2024-06-07061842_stanfit.rds")
-posterior <- extract(fit1)
+posterior <- extract(fit)
 
 
 lambda.samples <- summary(fit1, par=c("lambda1", "lambda2o"), probs = c(0.05,0.5, 0.95))$summary
