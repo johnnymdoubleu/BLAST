@@ -308,7 +308,7 @@ generated quantities {
 
     for (i in 1:n){
         newalpha[i] = exp(theta[1] + sum(newgsmooth[i,]));
-        f[i] = (newalpha[i]/exp(newy[i]))*(exp(newy[i])/u)^(-newalpha[i]); //pareto_rng(u, alpha[i])
+        f[i] = (superalpha/exp(newy[i]))*(exp(newy[i])/u)^(-superalpha); //pareto_rng(u, alpha[i])
     };    
 }
 "

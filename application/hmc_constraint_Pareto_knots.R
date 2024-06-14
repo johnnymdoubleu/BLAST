@@ -212,7 +212,7 @@ generated quantities {
 
     yrep = pareto_rng(u, alpha[362]);
     for(i in 1:n){
-      f[i] = (newalpha[i]/exp(newy[i]))*(exp(newy[i])/u)^(-newalpha[i]); //pareto_rng(u, alpha[i])
+      f[i] = (alpha[362]/exp(newy[i]))*(exp(newy[i])/u)^(-alpha[362]); //pareto_rng(u, alpha[i])
       log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
     }
 }
@@ -412,10 +412,11 @@ for(i in 1:p){
                   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
                   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
                   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
+                  geom_line(aes(y=gl.mean, colour = "linear"), linewidth=1, linetype=2) + 
                   geom_rug(aes(x=fwi.scaled[,i], y=q2), sides = "b") +
                   ylab("") + xlab(names(fwi.scaled)[i]) +
                   scale_fill_manual(values=c("steelblue"), name = "") + 
-                  scale_color_manual(values=c("steelblue")) +
+                  scale_color_manual(values=c("red","steelblue")) +
                   ylim(-7, 7) +
                   theme_minimal(base_size = 30) +
                   theme(legend.position = "none",
@@ -537,7 +538,7 @@ ggplot(data.yrep, aes(x=y)) +
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 20))
-# ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_post_generative.pdf"), width = 10, height = 7.78)        
+ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_post_generative.pdf"), width = 10, height = 7.78)        
 
 
 density.y <- density(ev.y1$yrep) # see ?density for parameters
