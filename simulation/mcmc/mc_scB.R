@@ -247,12 +247,12 @@ alpha.container <- as.data.frame(alpha.container)
 plt <- ggplot(data = alpha.container, aes(x = x)) + ylab("") + xlab(expression(c)) + labs(col = "")
 if(total.iter <= 50){
   for(i in 1:total.iter){
-    plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.2, linewidth = 0.7)
+    plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.075, linewidth = 0.7)
   }
 } else{
   for(i in 1:total.iter){
   # for(i in 50:100){
-    plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.2, linewidth = 0.7)
+    plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.075, linewidth = 0.7)
   }
 }
 
@@ -480,10 +480,10 @@ print(plt + #geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha 
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_nonlinear_sc2-wi.pdf"), width=10, height = 7.78) 
 
-save(alpha.container, newgsmooth.container, file = (paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_sc2.Rdata")))
-# total.iter <- 250
+# save(alpha.container, newgsmooth.container, file = (paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_sc2.Rdata")))
+total.iter <- 250
 # load(paste0("./simulation/results/MC-Scenario_B/",Sys.Date(),"_",total.iter,"_MC_sc2.Rdata"))
-load(paste0("./simulation/results/2024-03-18","_",total.iter,"_MC_scB2.Rdata"))
+load(paste0("./simulation/results/MC-Scenario_B/2024-03-18","_",total.iter,"_MC_sc2.Rdata"))
 # alpha.container.comb <- alpha.container[,1:250]
 # newgsmooth.container.comb <- newgsmooth.container[,1:250]
 
