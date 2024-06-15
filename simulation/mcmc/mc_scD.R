@@ -8,7 +8,7 @@ library(MESS)
 
 total.iter <- 250
 
-n <- n.origin <- 15000
+n <- n.origin <- 20000
 psi <- 10
 threshold <- 0.95
 p <- 5
@@ -297,19 +297,19 @@ alpha.container <- as.data.frame(alpha.container)
 plt <- ggplot(data = alpha.container, aes(x = x)) + ylab("") + xlab(expression(c)) + labs(col = "") #+ ylab(expression(alpha(bold("c"),"...",bold("c"))))
 if(total.iter <= 50){
   for(i in 1:total.iter){
-    plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.2, linewidth = 0.7)
+    plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.075, linewidth = 0.7)
   }
 } else{
   for(i in 1:total.iter){
   # for(i in 50:100){
-    plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.2, linewidth = 0.7)
+    plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.075, linewidth = 0.7)
   }
 }
 
 print(plt + 
         # geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) + ylim(0.5, 2.5) +
         geom_line(aes(y=true, col = "True"), linewidth = 2, linetype = 2) + 
-        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5) +
+        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.8) +
         scale_fill_manual(values=c("steelblue"), name = "") +
         scale_color_manual(values = c("steelblue", "red"))+
         guides(color = guide_legend(order = 2), 
@@ -419,12 +419,12 @@ plt <- ggplot(data = newgsmooth.container, aes(x = x, group = covariate)) +
         ylab("") + xlab(expression(c))
 if(total.iter <= 50){
   for(i in 1:total.iter){
-    plt <- plt + geom_line(aes(y = .data[[names(newgsmooth.container)[i]]]), alpha = 0.2, linewidth = 0.7)
+    plt <- plt + geom_line(aes(y = .data[[names(newgsmooth.container)[i]]]), alpha = 0.075, linewidth = 0.7)
     # plt <- plt + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
   }
 } else{
   for(i in 1:total.iter){
-    plt <- plt + geom_line(aes(y = .data[[names(newgsmooth.container)[i]]]), alpha = 0.2, linewidth = 0.7)
+    plt <- plt + geom_line(aes(y = .data[[names(newgsmooth.container)[i]]]), alpha = 0.075, linewidth = 0.7)
     # plt <- plt + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
   }
 }
@@ -525,7 +525,7 @@ qqplot.container$grid <- grid
 qqplot.container$mean <- rowMeans(qqplot.container[,1:total.iter])
 plt <- ggplot(data = qqplot.container, aes(x = grid))
 for(i in 1:total.iter){
-  plt <- plt + geom_line(aes(y = .data[[names(qqplot.container)[i]]]), alpha = 0.2, linewidth = 0.7)
+  plt <- plt + geom_line(aes(y = .data[[names(qqplot.container)[i]]]), alpha = 0.075, linewidth = 0.7)
 }
 print(plt + 
         geom_line(aes(y = mean), colour = "steelblue", linewidth = 1.5, linetype = 2) + 
@@ -539,7 +539,7 @@ print(plt +
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_qqplot_scD_",n.origin,".pdf"), width=9.5, height = 7.78)
 
 # save(alpha.container, newgsmooth.container, mise.container, qqplot.container, file = (paste0("./simulation/results/MC-Scenario_D/",Sys.Date(),"_",total.iter,"_MC_scD_",n.origin,".Rdata")))
-total.iter <- 250
+# total.iter <- 250
 load(paste0("./simulation/results/MC-Scenario_D/2024-05-01_",total.iter,"_MC_scD_",n.origin,".Rdata"))
 
 # alpha.container.comb <- alpha.container[,1:total.iter]
