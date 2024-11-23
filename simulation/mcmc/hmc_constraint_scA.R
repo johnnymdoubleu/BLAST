@@ -1,23 +1,8 @@
 library(npreg)
-library(tmvnsim)
-library(reshape2)
-library(splines2)
-library(scales)
-library(MASS)
-library(Pareto)
-suppressMessages(library(tidyverse))
-library(JOPS)
-library(readxl)
-library(gridExtra)
-library(colorspace)
-library(corrplot)
-library(ReIns)
-library(evir)
+suppressMessages(library(ggplot2))
 library(rstan)
-library(ggmcmc)
-library(MCMCvis)
-#library(cmdstanr)
-library(ggh4x)
+library(Pareto)
+# library(gridExtra)
 
 #Scenario 1
 set.seed(10)
@@ -133,12 +118,6 @@ for(i in 1:p){
                                          tps[index.holder[i,2], no.theta+1],
                                          tps[index.holder[i,2], no.theta+psi]), 
                                        nrow = 2, ncol = 2))))
-  # end.holder <- cbind(end.holder, 
-  #             matrix(c(tps[index.holder[i,1], no.theta+1],
-  #                 tps[index.holder[i,1], no.theta+psi],
-  #                 tps[index.holder[i,2], no.theta+1],
-  #                 tps[index.holder[i,2], no.theta+psi]), 
-  #                nrow = 2, ncol = 2)) 
   bs.linear <- cbind(bs.linear, tps[,1:no.theta])
   bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)]) 
 }
@@ -161,7 +140,7 @@ for(i in 1:n){
   alp.new[i] <- exp(theta.origin[1] + sum(f.new[i,]))
 }
 
-write("// Stan model for BRSTIR Pareto Uncorrelated Samples
+stan.code <- "// Stan model for BRSTIR Pareto Uncorrelated Samples
 data {
     int <lower=1> n; // Sample size
     int <lower=1> p; // regression coefficient size
@@ -178,47 +157,50 @@ data {
 }
 parameters {
     vector[(p+1)] theta; // linear predictor
-    vector[(psi-2)] gammaTemp[p]; // constraint splines coefficient from 2 to psi-1
-    //vector[(psi)] gammaTemp[p];
+    array[p] vector[(psi-2)] gammaTemp; // constraint splines coefficient from 2 to psi-1
     real <lower=0> lambda1; // lasso penalty
     real <lower=0> lambda2; // group lasso penalty
     array[p] real <lower=0> tau;
 }
+
 transformed parameters {
     array[n] real <lower=0> alpha; // covariate-adjusted tail index
-    vector[psi] gamma[p]; // splines coefficient 
-    vector[2] gammaFL[p];
-    matrix[2, p] subgnl;
-    matrix[n, p] gnl; // nonlinear component
-    matrix[n, p] gl; // linear component
-    matrix[n, p] gsmooth; // linear component
     array[n] real <lower=0> newalpha; // new tail index
+    array[p] vector[psi] gamma; // splines coefficient
     matrix[n, p] newgnl; // nonlinear component
     matrix[n, p] newgl; // linear component
     matrix[n, p] newgsmooth; // linear component
-
-    for(j in 1:p){
-        gamma[j][2:(psi-1)] = gammaTemp[j][1:(psi-2)];
-        subgnl[,j] = bsNonlinear[indexFL[(((j-1)*2)+1):(((j-1)*2)+2)], (((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] * gammaTemp[j];
-        gammaFL[j] = basisFL[, (((j-1)*2)+1):(((j-1)*2)+2)] * subgnl[,j] * (-1);
-        gamma[j][1] = gammaFL[j][1];
-        gamma[j][psi] = gammaFL[j][2];  
-    };
-    //gamma=gammaTemp;
     
-    for (j in 1:p){
-        gnl[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
-        newgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
-        gl[,j] = bsLinear[,j] * theta[j+1];
-        newgl[,j] = xholderLinear[,j] * theta[j+1];
-        gsmooth[,j] = gl[,j] + gnl[,j];
-        newgsmooth[,j] = newgl[,j] + newgnl[,j];
-    };
+    {
+      array[p] vector[2] gammaFL;
+      matrix[2, p] subgnl;
+      matrix[n, p] gnl; // nonlinear component
+      matrix[n, p] gl; // linear component
+      matrix[n, p] gsmooth; // linear component
 
-    for (i in 1:n){
-        alpha[i] = exp(theta[1] + sum(gsmooth[i,])); 
-        newalpha[i] = exp(theta[1] + sum(newgsmooth[i,]));
-    };
+
+      for(j in 1:p){
+          gamma[j][2:(psi-1)] = gammaTemp[j][1:(psi-2)];
+          subgnl[,j] = bsNonlinear[indexFL[(((j-1)*2)+1):(((j-1)*2)+2)], (((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] * gammaTemp[j];
+          gammaFL[j] = basisFL[, (((j-1)*2)+1):(((j-1)*2)+2)] * subgnl[,j] * (-1);
+          gamma[j][1] = gammaFL[j][1];
+          gamma[j][psi] = gammaFL[j][2];  
+      };
+      
+      for (j in 1:p){
+          gnl[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
+          newgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
+          gl[,j] = bsLinear[,j] * theta[j+1];
+          newgl[,j] = xholderLinear[,j] * theta[j+1];
+          gsmooth[,j] = gl[,j] + gnl[,j];
+          newgsmooth[,j] = newgl[,j] + newgnl[,j];
+      };
+
+      for (i in 1:n){
+          alpha[i] = exp(theta[1] + sum(gsmooth[i,])); 
+          newalpha[i] = exp(theta[1] + sum(newgsmooth[i,]));
+      };
+    }
 }
 
 model {
@@ -237,17 +219,6 @@ model {
     }
 }
 "
-, "model_simulation_sc1_constraint.stan")
-# for ( i in 1:psi){
-# target += inv_gamma_lpdf(sigma | 0.1, 0.1); 
-#     target += double_exponential_lpdf(gamma[j][i] | 0, sqrt(lambda2));
-#  target += double_exponential_lpdf(theta[(j+1)] | 0, sqrt(lambda1));
-# }
-# target += beta_lpdf(pie | 3, 1);
-# target += ((p * log(lambda1)/2) + (p * psi * log(lambda2)/2));
-# target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * (1/tau1[j]));
-# target += normal_lpdf(tau2[j] | 0, 0.01);
-# target += log_mix(pie, multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * (1/tau1[j])), multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * (1/tau2[j])));
 
 data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, 
                   atau = ((psi+1)/2), basisFL = basis.holder,
@@ -255,36 +226,18 @@ data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi,
                   bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
                   xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear)
 
-init.alpha <- list(list(gammaTemp = array(rep(2, ((psi-2)*p)), dim=c((psi-2),p)),
+init.alpha <- list(list(gammaTemp = array(rep(2, ((psi-2)*p)), dim=c(p,(psi-2))),
                         theta = rep(0, (p+1)), tau = rep(0.1, p),
-                        # pie = 0.05,tau2 = rep(0.1, p),
                         lambda1 = 0.1, lambda2 = 1),
-                   list(gammaTemp = array(rep(-1, ((psi-2)*p)), dim=c((psi-2),p)),
+                   list(gammaTemp = array(rep(-1, ((psi-2)*p)), dim=c(p,(psi-2))),
                         theta = rep(0, (p+1)), tau = rep(0.001, p),
-                        #tau2 = rep(0.5, p),pie = 0.75,
                         lambda1 = 100, lambda2 = 100),
-                   list(gammaTemp = array(rep(-3, ((psi-2)*p)), dim=c((psi-2),p)),
+                   list(gammaTemp = array(rep(-3, ((psi-2)*p)), dim=c(p,(psi-2))),
                         theta = rep(0.1, (p+1)), tau = rep(0.5, p),
-                        # pie = 0.5,  tau2 = rep(0.01, p),
                         lambda1 = 5, lambda2 = 55))
 
-# init.alpha <- list(list(gammaTemp = array(rep(2, ((psi)*p)), dim=c(p,(psi))),
-#                         theta = rep(0, (p+1)), tau1 = rep(0.1, p), 
-#                         # pie = 0.05,tau2 = rep(0.1, p),
-#                         lambda1 = 0.1, lambda2 = 1),
-#                    list(gammaTemp = array(rep(-1, ((psi)*p)), dim=c(p,(psi))),
-#                         theta = rep(0, (p+1)), tau1 = rep(0.001, p), 
-#                         #tau2 = rep(0.5, p),pie = 0.75,
-#                         lambda1 = 100, lambda2 = 100),
-#                    list(gammaTemp = array(rep(-3, ((psi)*p)), dim=c(p,(psi))),
-#                         theta = rep(0.1, (p+1)), tau1 = rep(0.5, p),
-#                         # pie = 0.5,  tau2 = rep(0.01, p),
-#                         lambda1 = 5, lambda2 = 55))
-                   
-# setwd("C:/Users/Johnny Lee/Documents/GitHub")
-fit1 <- stan(
-  file = "model_simulation_sc1_constraint.stan",  # Stan program
-  # file = "model_BRSTIR.stan",  # Stan program
+system.time(fit1 <- stan(
+  model_code = stan.code,  # Stan program
   data = data.stan,    # named list of data
   init = init.alpha,      # initial value
   chains = 3,             # number of Markov chains
@@ -292,8 +245,7 @@ fit1 <- stan(
   iter = 2000,            # total number of iterations per chain
   cores = parallel::detectCores(), # number of cores (could use one per chain)
   refresh = 500             # no progress shown
-  # control=list(adapt_delta=0.99, max_treedepth=15)
-)
+))
 
 posterior <- extract(fit1)
 
@@ -303,17 +255,16 @@ plot(fit1, plotfun = "trace", pars = c("theta"), nrow = 3)
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_lambda_sc1-wi.pdf"), width=10, height = 7.78)
 
 tau.samples <- summary(fit1, par=c("tau"), probs = c(0.05,0.5, 0.95))$summary
-# pie.samples <- summary(fit1, par=c("pie"), probs = c(0.05,0.5, 0.95))$summary
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
 lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
-alpha.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
+# alpha.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
 newgl.samples <- summary(fit1, par=c("newgl"), probs = c(0.05, 0.5, 0.95))$summary
 newgnl.samples <- summary(fit1, par=c("newgnl"), probs = c(0.05, 0.5, 0.95))$summary
 newgsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
 newalpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
-subgnl.samples <- summary(fit1, par=c("subgnl"), probs = c(0.05,0.5, 0.95))$summary
-gammafl.samples <- summary(fit1, par=c("gammaFL"), probs = c(0.05,0.5, 0.95))$summary
+# subgnl.samples <- summary(fit1, par=c("subgnl"), probs = c(0.05,0.5, 0.95))$summary
+# gammafl.samples <- summary(fit1, par=c("gammaFL"), probs = c(0.05,0.5, 0.95))$summary
 
 gamma.post.mean <- gamma.samples[,1]
 gamma.q1 <- gamma.samples[,4]

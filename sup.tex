@@ -1,0 +1,197 @@
+\documentclass{article}\usepackage[]{graphicx}\usepackage[]{xcolor}
+% maxwidth is the original width if it is less than linewidth
+% otherwise use linewidth (to make sure the graphics do not exceed the margin)
+\makeatletter
+\def\maxwidth{ %
+  \ifdim\Gin@nat@width>\linewidth
+    \linewidth
+  \else
+    \Gin@nat@width
+  \fi
+}
+\makeatother
+
+\definecolor{fgcolor}{rgb}{0.345, 0.345, 0.345}
+\newcommand{\hlnum}[1]{\textcolor[rgb]{0.686,0.059,0.569}{#1}}%
+\newcommand{\hlsng}[1]{\textcolor[rgb]{0.192,0.494,0.8}{#1}}%
+\newcommand{\hlcom}[1]{\textcolor[rgb]{0.678,0.584,0.686}{\textit{#1}}}%
+\newcommand{\hlopt}[1]{\textcolor[rgb]{0,0,0}{#1}}%
+\newcommand{\hldef}[1]{\textcolor[rgb]{0.345,0.345,0.345}{#1}}%
+\newcommand{\hlkwa}[1]{\textcolor[rgb]{0.161,0.373,0.58}{\textbf{#1}}}%
+\newcommand{\hlkwb}[1]{\textcolor[rgb]{0.69,0.353,0.396}{#1}}%
+\newcommand{\hlkwc}[1]{\textcolor[rgb]{0.333,0.667,0.333}{#1}}%
+\newcommand{\hlkwd}[1]{\textcolor[rgb]{0.737,0.353,0.396}{\textbf{#1}}}%
+\let\hlipl\hlkwb
+
+\usepackage{framed}
+\makeatletter
+\newenvironment{kframe}{%
+ \def\at@end@of@kframe{}%
+ \ifinner\ifhmode%
+  \def\at@end@of@kframe{\end{minipage}}%
+  \begin{minipage}{\columnwidth}%
+ \fi\fi%
+ \def\FrameCommand##1{\hskip\@totalleftmargin \hskip-\fboxsep
+ \colorbox{shadecolor}{##1}\hskip-\fboxsep
+     % There is no \\@totalrightmargin, so:
+     \hskip-\linewidth \hskip-\@totalleftmargin \hskip\columnwidth}%
+ \MakeFramed {\advance\hsize-\width
+   \@totalleftmargin\z@ \linewidth\hsize
+   \@setminipage}}%
+ {\par\unskip\endMakeFramed%
+ \at@end@of@kframe}
+\makeatother
+
+\definecolor{shadecolor}{rgb}{.97, .97, .97}
+\definecolor{messagecolor}{rgb}{0, 0, 0}
+\definecolor{warningcolor}{rgb}{1, 0, 1}
+\definecolor{errorcolor}{rgb}{1, 0, 0}
+\newenvironment{knitrout}{}{} % an empty environment to be redefined in TeX
+
+\usepackage{alltt}
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\begin{document}
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{library}\hldef{(npreg)}
+\end{alltt}
+
+
+{\ttfamily\noindent\itshape\color{messagecolor}{\#\# Package 'npreg' version 1.1.0\\\#\# Type 'citation("{}npreg"{})' to cite this package.}}\begin{alltt}
+\hlkwd{suppressMessages}\hldef{(}\hlkwd{library}\hldef{(tidyverse))}
+\end{alltt}
+
+
+{\ttfamily\noindent\color{warningcolor}{\#\# Warning: package 'lubridate' was built under R version 4.4.1}}\begin{alltt}
+\hlkwd{library}\hldef{(rstan)}
+\end{alltt}
+
+
+{\ttfamily\noindent\itshape\color{messagecolor}{\#\# Loading required package: StanHeaders}}
+
+{\ttfamily\noindent\itshape\color{messagecolor}{\#\# \\\#\# rstan version 2.32.6 (Stan version 2.32.2)}}
+
+{\ttfamily\noindent\itshape\color{messagecolor}{\#\# For execution on a local, multicore CPU with excess RAM we recommend calling\\\#\# options(mc.cores = parallel::detectCores()).\\\#\# To avoid recompilation of unchanged Stan programs, we recommend calling\\\#\# rstan\_options(auto\_write = TRUE)\\\#\# For within-chain threading using `reduce\_sum()` or `map\_rect()` Stan functions,\\\#\# change `threads\_per\_chain` option:\\\#\# rstan\_options(threads\_per\_chain = 1)}}
+
+{\ttfamily\noindent\itshape\color{messagecolor}{\#\# Do not specify '-march=native' in 'LOCAL\_CPPFLAGS' or a Makevars file}}
+
+{\ttfamily\noindent\itshape\color{messagecolor}{\#\# \\\#\# Attaching package: 'rstan'}}
+
+{\ttfamily\noindent\itshape\color{messagecolor}{\#\# The following object is masked from 'package:tidyr':\\\#\# \\\#\# \ \ \ \ extract}}\begin{alltt}
+\hlkwd{library}\hldef{(Pareto)}
+\hlkwd{library}\hldef{(MESS)}
+\hlkwd{library}\hldef{(scales)}
+\end{alltt}
+
+
+{\ttfamily\noindent\itshape\color{messagecolor}{\#\# \\\#\# Attaching package: 'scales'}}
+
+{\ttfamily\noindent\itshape\color{messagecolor}{\#\# The following object is masked from 'package:purrr':\\\#\# \\\#\# \ \ \ \ discard}}
+
+{\ttfamily\noindent\itshape\color{messagecolor}{\#\# The following object is masked from 'package:readr':\\\#\# \\\#\# \ \ \ \ col\_factor}}\begin{alltt}
+\hlkwd{library}\hldef{(readxl)}
+\hlkwd{library}\hldef{(gridExtra)}
+\end{alltt}
+
+
+{\ttfamily\noindent\itshape\color{messagecolor}{\#\# \\\#\# Attaching package: 'gridExtra'}}
+
+{\ttfamily\noindent\itshape\color{messagecolor}{\#\# The following object is masked from 'package:dplyr':\\\#\# \\\#\# \ \ \ \ combine}}\begin{alltt}
+\hlkwd{library}\hldef{(colorspace)}
+\hlkwd{library}\hldef{(corrplot)}
+\end{alltt}
+
+
+{\ttfamily\noindent\itshape\color{messagecolor}{\#\# corrplot 0.92 loaded}}\end{kframe}
+\end{knitrout}
+
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+data \{
+    int <lower=1> n; // Sample size
+    int <lower=1> p; // regression coefficient size
+    int <lower=1> psi; // splines coefficient size
+    real <lower=0> u; // large threshold value
+    matrix[n,p] bsLinear; // fwi dataset
+    matrix[n, (psi*p)] bsNonlinear; // thin plate splines basis
+    matrix[n,p] xholderLinear; // fwi dataset
+    matrix[n, (psi*p)] xholderNonlinear; // thin plate splines basis    
+    array[n] real <lower=1> y; // extreme response
+    real <lower=0> atau;
+    matrix[2, (2*p)] basisFL;
+    array[(p*2)] int indexFL;
+\}
+parameters \{
+    vector[(p+1)] theta; // linear predictor
+    array[p] vector[(psi-2)] gammaTemp; // constraint splines coefficient from 2 to psi-1
+    real <lower=0> lambda1; // lasso penalty
+    real <lower=0> lambda2; // group lasso penalty
+    array[p] real <lower=0> tau;
+\}
+
+transformed parameters \{
+    array[n] real <lower=0> alpha; // covariate-adjusted tail index
+    array[n] real <lower=0> newalpha; // new tail index
+    array[p] vector[psi] gamma; // splines coefficient
+    matrix[n, p] newgnl; // nonlinear component
+    matrix[n, p] newgl; // linear component
+    matrix[n, p] newgsmooth; // linear component
+    
+    \{
+      array[p] vector[2] gammaFL;
+      matrix[2, p] subgnl;
+      matrix[n, p] gnl; // nonlinear component
+      matrix[n, p] gl; // linear component
+      matrix[n, p] gsmooth; // linear component
+
+
+      \hlkwd{for}(j in 1:p)\{
+          gamma[j][2:(psi-1)] = gammaTemp[j][1:(psi-2)];
+          subgnl[,j] = bsNonlinear[indexFL[(((j-1)*2)+1):(((j-1)*2)+2)], (((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] * gammaTemp[j];
+          gammaFL[j] = basisFL[, (((j-1)*2)+1):(((j-1)*2)+2)] * subgnl[,j] * (-1);
+          gamma[j][1] = gammaFL[j][1];
+          gamma[j][psi] = gammaFL[j][2];  
+      \};
+      
+      \hlkwd{for} (j in 1:p)\{
+          gnl[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
+          newgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
+          gl[,j] = bsLinear[,j] * theta[j+1];
+          newgl[,j] = xholderLinear[,j] * theta[j+1];
+          gsmooth[,j] = gl[,j] + gnl[,j];
+          newgsmooth[,j] = newgl[,j] + newgnl[,j];
+      \};
+
+      \hlkwd{for} (i in 1:n)\{
+          alpha[i] = \hlkwd{exp}(theta[1] + \hlkwd{sum}(gsmooth[i,])); 
+          newalpha[i] = \hlkwd{exp}(theta[1] + \hlkwd{sum}(newgsmooth[i,]));
+      \};
+    \}
+\}
+
+model \{
+    // likelihood
+    \hlkwd{for} (i in 1:n)\{
+        target += \hlkwd{pareto_lpdf}(y[i] | u, alpha[i]);
+    \}
+    target += \hlkwd{normal_lpdf}(theta[1] | 0, 100);
+    target += \hlkwd{gamma_lpdf}(lambda1 | 1, 1e-3);
+    target += \hlkwd{gamma_lpdf}(lambda2 | 1, 1e-3);
+    target += (2*p*\hlkwd{log}(lambda2));
+    \hlkwd{for} (j in 1:p)\{
+        target += \hlkwd{double_exponential_lpdf}(theta[(j+1)] | 0, lambda1);
+        target += \hlkwd{gamma_lpdf}(tau[j] | atau, lambda2^2*0.5);
+        target += \hlkwd{multi_normal_lpdf}(gamma[j] | \hlkwd{rep_vector}(0, psi), \hlkwd{diag_matrix}(\hlkwd{rep_vector}(1, psi)) * (1/tau[j]));
+\}
+"
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error: <text>:1:6: unexpected '\{'\\\#\# 1: data \{\\\#\# \ \ \ \ \ \ \ \ \ \textasciicircum{}}}\end{kframe}
+\end{knitrout}
+
+\end{document}
