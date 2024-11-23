@@ -544,14 +544,4 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
               ylim = c(-3, 3))
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_qqplot_sc1-wi.pdf"), width=10, height = 7.78)
 
-# lambda.container <- data.frame("x" = seq(0, max(posterior$lambda2), length.out = 1000),
-#                                "GamDist" = dgamma(seq(0, max(posterior$lambda2), length.out = 1000), 1, 1e-3),
-#                                "lambda.post" = posterior$lambda2)
-
-
-# ggplot(data = lambda.container, aes(x = x)) + ylab("density") + xlab("lambdas") + labs(col = "") +
-#   geom_line(aes(x=x, y=GamDist), color = "red", linewidth = 0.7) +
-#   geom_density(aes(x=lambda.post), color = "steelblue", linewidth = 1) +
-#   theme_minimal(base_size = 30) +
-#   theme(legend.position = "none",
-#         axis.text = element_text(size = 35))
+# install.packages("../../GitHub/BRSTIR/qqboxplot.tgz", repos = NULL, type="source")
