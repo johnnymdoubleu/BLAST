@@ -7,7 +7,6 @@ library(qqboxplot)
 
 #Scenario 1
 set.seed(10)
-# set.seed(6)
 
 n <- 15000
 psi <- 10
@@ -20,8 +19,6 @@ simul.no <- 50
 C <- diag(p)
 xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
 x.origin <- pnorm(matrix(rnorm(n*p), ncol = p) %*% chol(C))
-
-# x.origin <- apply(x.origin, 2, sort, decreasing=F)
 end.holder <- basis.holder <- matrix(, nrow = 2, ncol =0)
 index.holder <- matrix(, nrow = 0, ncol = 2)
 for(i in 1:p){
@@ -84,8 +81,6 @@ for(i in 1:n){
 u <- quantile(y.origin, threshold)
 excess.index <- which(y.origin>u)
 x.origin <- as.matrix(x.origin[excess.index,])
-# bs.nonlinear <- bs.nonlinear[excess.index,]
-# bs.linear <- bs.linear[excess.index,]
 
 y.origin <- y.origin[y.origin > u]
 n <- length(y.origin)
@@ -101,11 +96,8 @@ for(i in 1:p){
                         matrix(c(which.min(x.origin[,i]),
                                  which.max(x.origin[,i])), ncol=2))
 }
-# # range01 <- function(x){(x-min(x))/(max(x)-min(x))}
-# # x.origin <- as.data.frame(sapply(as.data.frame(x.origin), FUN = range01))
+
 for(i in 1:p){
-  # xholder[,i] <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = n)  
-  # test.knot <- seq(min(xholder[,i]), max(xholder[,i]), length.out = psi)
   xholder[,i] <- seq(0, 1, length.out = n)  
   test.knot <- seq(0, 1, length.out = psi)
   splines <- basis.tps(xholder[,i], test.knot, m=2, rk=FALSE, intercept = FALSE)
@@ -122,7 +114,6 @@ for(i in 1:p){
   bs.linear <- cbind(bs.linear, tps[,1:no.theta])
   bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)]) 
 }
-
 
 f.nonlinear.new <- f.linear.new <- f.new <- f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 
@@ -251,21 +242,15 @@ system.time(fit1 <- stan(
 posterior <- extract(fit1)
 
 plot(fit1, plotfun = "trace", pars = c("theta"), nrow = 3)
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_theta_trace_sc1-wi.pdf"), width=10, height = 7.78)
-# plot(fit1, plotfun = "trace", pars = c("lambda1", "lambda2"), nrow = 2)
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_lambda_sc1-wi.pdf"), width=10, height = 7.78)
 
 tau.samples <- summary(fit1, par=c("tau"), probs = c(0.05,0.5, 0.95))$summary
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
 lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
-# alpha.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
-newgl.samples <- summary(fit1, par=c("newgl"), probs = c(0.05, 0.5, 0.95))$summary
-newgnl.samples <- summary(fit1, par=c("newgnl"), probs = c(0.05, 0.5, 0.95))$summary
-newgsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
-newalpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
-# subgnl.samples <- summary(fit1, par=c("subgnl"), probs = c(0.05,0.5, 0.95))$summary
-# gammafl.samples <- summary(fit1, par=c("gammaFL"), probs = c(0.05,0.5, 0.95))$summary
+newgl.samples <- summary(fit1, par=c("gridgl"), probs = c(0.05, 0.5, 0.95))$summary
+newgnl.samples <- summary(fit1, par=c("gridgnl"), probs = c(0.05, 0.5, 0.95))$summary
+newgsmooth.samples <- summary(fit1, par=c("gridgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
+newalpha.samples <- summary(fit1, par=c("gridalpha"), probs = c(0.05,0.5, 0.95))$summary
 
 gamma.post.mean <- gamma.samples[,1]
 gamma.q1 <- gamma.samples[,4]
@@ -276,12 +261,6 @@ theta.q1 <- theta.samples[,4]
 theta.q2 <- theta.samples[,5]
 theta.q3 <- theta.samples[,6]
 
-# array(gamma.q2, dim=c(psi,p))
-# sampled <- end.holder[,1:2] %*% gammafl.samples[1:2, 5]
-# trued <- as.matrix(c(bs.nonlinear[index.holder[1,1], 2:(psi-1)] %*% gamma.samples[2:(psi-1), 5], bs.nonlinear[index.holder[1,2], 2:(psi-1)] %*% gamma.samples[2:(psi-1), 5]), nrow = 2)
-# sampled - trued
-# sampled
-# trued
 df.theta <- data.frame("seq" = seq(1, (p+1)),
                        "true" = theta.origin,
                        "m" = theta.q2,
@@ -322,8 +301,7 @@ ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) +
   geom_errorbar(aes(ymin = l, ymax = u),alpha = 0.4, width = 4, linewidth = 1.2) +
   geom_point(aes(y=true), size =4, color ="red")+
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  geom_point(size = 4) + ylab("") + xlab("" ) + #ylim(-15,15) +
-  # geom_ribbon(aes(ymin = l, ymax = u)) +
+  geom_point(size = 4) + ylab("") + xlab("" ) + 
   scale_x_discrete(breaks=c(seq(0, (psi*p), psi)+7), 
                    label = c(expression(bold(gamma[1])), 
                              expression(bold(gamma[2])), 
@@ -374,20 +352,16 @@ data.smooth <- data.frame("x"=newx,
                           "replicate" = gl(p, n, (p*n), labels = c("x[1]", "x[2]", "x[3]", "x[4]", "x[5]")))
 
 ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) + 
-#   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   geom_line(aes(y=true, colour = "True"), linewidth=2, linetype=2) + 
   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1.8) + 
   ylab("") + xlab(expression(c)) + 
   facet_grid(covariates ~ ., scales = "free_x", switch = "y", 
-              labeller = label_parsed) +    
-#   facet_wrap(covariates ~ ., scales = "free_x", nrow = 5, labeller = label_parsed, strip.position = "left") + 
+              labeller = label_parsed) + 
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values=c("steelblue", "red")) + 
   guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) + ylim(-1.3, 1.3) +
-#   scale_y_continuous(breaks=c(-0.6,-0.3,-0,0.3)) + 
-  # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
+          fill = guide_legend(order = 1)) + ylim(-1.3, 1.3) + 
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 15),
         legend.position="none",
@@ -424,8 +398,7 @@ ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) +
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values=c("steelblue", "red")) + 
   guides(color = guide_legend(order = 2), 
-         fill = guide_legend(order = 1)) + ylim(-0.55, 0.5) +
-  # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
+         fill = guide_legend(order = 1)) + ylim(-0.55, 0.5) + 
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 15),
         legend.position="none",
@@ -463,8 +436,7 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values=c("steelblue", "red")) + 
   guides(color = guide_legend(order = 2), 
-         fill = guide_legend(order = 1)) + #ylim(-1, 1) +
-  # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) +
+         fill = guide_legend(order = 1)) + 
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 15),
         legend.position="none",
@@ -487,10 +459,6 @@ data.scenario <- data.frame("x" = newx,
                             "post.median" = (newalpha.samples[,5]),
                             "q1" = (newalpha.samples[,4]),
                             "q3" = (newalpha.samples[,6]))
-# "post.mean" = sort(alpha.smooth.new),
-# "post.median" = sort(newalpha.samples[,5]),
-# "q1" = sort(alpha.smooth.q1),
-# "q3" = sort(alpha.smooth.q3))
 
 ggplot(data.scenario, aes(x=x)) + 
   ylab(expression(alpha(c,...,c))) + xlab(expression(c)) + labs(col = "") +
@@ -505,12 +473,9 @@ ggplot(data.scenario, aes(x=x)) +
         axis.text = element_text(size = 18))
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_test_sc1-wi.pdf"), width=10, height = 7.78)
 
-# save(data.smooth, data.scenario, file = (paste0("./simulation/sweavedata.Rdata")))
-
 mcmc.alpha <- posterior$alpha
 len <- dim(mcmc.alpha)[1]
 r <- matrix(, nrow = n, ncol = 30)
-# beta <- as.matrix(mcmc[[1]])[, 1:7] 
 T <- 30
 for(i in 1:n){
   for(t in 1:T){
@@ -519,9 +484,6 @@ for(i in 1:n){
 }
 lgrid <- n
 grid <- qnorm(ppoints(lgrid))
-# qqnorm(r[, 1])
-# points(grid, quantile(r[, 1], ppoints(lgrid), type = 2), 
-#     xlim = c(-3, 3), col = "red")
 traj <- matrix(NA, nrow = T, ncol = lgrid)
 for (t in 1:T){
   traj[t, ] <- quantile(r[, t], ppoints(lgrid), type = 2)
@@ -543,15 +505,3 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
   coord_fixed(xlim = c(-3, 3),  
               ylim = c(-3, 3))
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_qqplot_sc1-wi.pdf"), width=10, height = 7.78)
-
-# lambda.container <- data.frame("x" = seq(0, max(posterior$lambda2), length.out = 1000),
-#                                "GamDist" = dgamma(seq(0, max(posterior$lambda2), length.out = 1000), 1, 1e-3),
-#                                "lambda.post" = posterior$lambda2)
-
-
-# ggplot(data = lambda.container, aes(x = x)) + ylab("density") + xlab("lambdas") + labs(col = "") +
-#   geom_line(aes(x=x, y=GamDist), color = "red", linewidth = 0.7) +
-#   geom_density(aes(x=lambda.post), color = "steelblue", linewidth = 1) +
-#   theme_minimal(base_size = 30) +
-#   theme(legend.position = "none",
-#         axis.text = element_text(size = 35))
