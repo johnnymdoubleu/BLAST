@@ -416,7 +416,7 @@ init.alpha <- list(list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c(p, (psi-2))
                         tau1 = rep(0.5, p),tau2 = rep(0.5, p),
                         lambda1 = 5, lambda2 = 5.5))
 
-# stanc("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/application/model1.stan")
+# stanc("C:/Users/Johnny Lee/Documents/GitHub/BLAST/application/model1.stan")
 fit1 <- stan(
     file = "model_BLAST_constraint.stan",  # Stan program
     data = data.stan,    # named list of data
@@ -429,7 +429,7 @@ fit1 <- stan(
     refresh = 500           # no progress shown
 )
 
-# saveRDS(fit1, file=paste0("./BRSTIR/application/",Sys.Date(),"_stanfit.rds"))
+# saveRDS(fit1, file=paste0("./BLAST/application/",Sys.Date(),"_stanfit.rds"))
 posterior <- extract(fit1)
 # str(posterior)
 
