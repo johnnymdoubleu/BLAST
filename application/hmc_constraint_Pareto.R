@@ -25,7 +25,7 @@ options(mc.cores = parallel::detectCores())
 
 
 setwd("C:/Users/Johnny Lee/Documents/GitHub")
-df <- read_excel("./BRSTIR/application/AADiarioAnual.xlsx", col_types = c("date", rep("numeric",40)))
+df <- read_excel("./BLAST/application/AADiarioAnual.xlsx", col_types = c("date", rep("numeric",40)))
 df.long <- gather(df, condition, measurement, "1980":"2019", factor_key=TRUE)
 df.long
 head(df.long)
@@ -61,7 +61,7 @@ multiplesheets <- function(fname) {
     return(data_frame)
 }
 setwd("C:/Users/Johnny Lee/Documents/GitHub")
-path <- "./BRSTIR/application/DadosDiariosPT_FWI.xlsx"
+path <- "./BLAST/application/DadosDiariosPT_FWI.xlsx"
 # importing fire weather index
 cov <- multiplesheets(path)
 
@@ -332,26 +332,27 @@ parameters {
 transformed parameters {
     array[n] real <lower=0> alpha; // covariate-adjusted tail index
     vector[psi] gamma[p]; // splines coefficient 
-    vector[2] gammaFL[p];
-    real <lower=0> lambda2o;
     matrix[n, p] gsmooth; // linear component
-
+    real <lower=0> lambda2o;
 
     lambda2o=lambda2*100;
-    for(j in 1:p){
-        gamma[j][2:(psi-1)] = gammaTemp[j][1:(psi-2)]*100;
-        gammaFL[j] = basisFL[, (((j-1)*2)+1):(((j-1)*2)+2)] * (bsNonlinear[indexFL[(((j-1)*2)+1):(((j-1)*2)+2)], (((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] * gammaTemp[j]*100) * (-1);
-        gamma[j][1] = gammaFL[j][1];
-        gamma[j][psi] = gammaFL[j][2];
-    };
-
+    {
+      vector[2] gammaFL[p];
+      
+      for(j in 1:p){
+          gamma[j][2:(psi-1)] = gammaTemp[j][1:(psi-2)]*100;
+          gammaFL[j] = basisFL[, (((j-1)*2)+1):(((j-1)*2)+2)] * (bsNonlinear[indexFL[(((j-1)*2)+1):(((j-1)*2)+2)], (((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] * gammaTemp[j]*100) * (-1);
+          gamma[j][1] = gammaFL[j][1];
+          gamma[j][psi] = gammaFL[j][2];
+      };
+    }
     for (j in 1:p){
         gsmooth[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j] + bsLinear[,j] * theta[j+1];
     };
 
     for (i in 1:n){
         alpha[i] = exp(theta[1] + sum(gsmooth[i,]));
-    };
+    };    
 }
 
 model {
@@ -373,10 +374,12 @@ model {
 generated quantities {
     // Used in Posterior predictive check    
     vector[n] log_lik;
-    vector[n] f;
     real yrep;
     array[n] real <lower=0> newalpha; // new tail index
-    matrix[n, p] newgsmooth; // linear component    
+    vector[n] f;
+    matrix[n, p] newgsmooth; // linear component
+
+    yrep = pareto_rng(u, alpha[1]); 
 
     for (j in 1:p){
         newgsmooth[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j] + xholderLinear[,j] * theta[j+1];
@@ -386,14 +389,13 @@ generated quantities {
         newalpha[i] = exp(theta[1] + sum(newgsmooth[i,]));
     };    
 
-    yrep = pareto_rng(u, alpha[1]); 
     for(i in 1:n){
       f[i] = pareto_rng(u, alpha[i]);
       log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
     }
 }
 "
-, "model_BRSTIR_constraint.stan")
+, "model_BLAST_constraint.stan")
 
 
 data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, 
@@ -416,13 +418,13 @@ init.alpha <- list(list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c(p, (psi-2))
 
 # stanc("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/application/model1.stan")
 fit1 <- stan(
-    file = "model_BRSTIR_constraint.stan",  # Stan program
+    file = "model_BLAST_constraint.stan",  # Stan program
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
     # init_r = 1,
     chains = 3,             # number of Markov chains
     # warmup = 1000,          # number of warmup iterations per chain
-    iter = 10000,            # total number of iterations per chain
+    iter = 40000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
     refresh = 500           # no progress shown
 )
@@ -449,78 +451,78 @@ f.samples <- summary(fit1, par=c("f"), probs = c(0.05,0.5, 0.95))$summary
 # summary(fit1, par=c("tau"), probs = c(0.05,0.5, 0.95))$summary
 # gammafl.samples <- summary(fit1, par=c("gammaFL"), probs = c(0.05,0.5, 0.95))$summary
 
-gamma.post.mean <- gamma.samples[,1]
-gamma.q1 <- gamma.samples[,4]
-gamma.q2 <- gamma.samples[,5]
-gamma.q3 <- gamma.samples[,6]
-theta.post.mean <- theta.samples[,1]
-theta.q1 <- theta.samples[,4]
-theta.q2 <- theta.samples[,5]
-theta.q3 <- theta.samples[,6]
+# gamma.post.mean <- gamma.samples[,1]
+# gamma.q1 <- gamma.samples[,4]
+# gamma.q2 <- gamma.samples[,5]
+# gamma.q3 <- gamma.samples[,6]
+# theta.post.mean <- theta.samples[,1]
+# theta.q1 <- theta.samples[,4]
+# theta.q2 <- theta.samples[,5]
+# theta.q3 <- theta.samples[,6]
 
 
-df.theta <- data.frame("seq" = seq(1, (p+1)),
-                        "m" = c(theta.q2),
-                        "l" = c(theta.q1),
-                        "u" = c(theta.q3))
-df.theta$covariate <- factor(c("\u03b8",names(fwi.scaled)), levels = c("\u03b8",colnames(fwi.scaled)))
-df.theta$labels <- factor(c("\u03b8",colnames(fwi.scaled)))
+# df.theta <- data.frame("seq" = seq(1, (p+1)),
+#                         "m" = c(theta.q2),
+#                         "l" = c(theta.q1),
+#                         "u" = c(theta.q3))
+# df.theta$covariate <- factor(c("\u03b8",names(fwi.scaled)), levels = c("\u03b8",colnames(fwi.scaled)))
+# df.theta$labels <- factor(c("\u03b8",colnames(fwi.scaled)))
 
-ggplot(df.theta, aes(x = covariate, y=m, color = covariate)) + ylab("") + xlab('') +
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  geom_point(size = 5) + 
-  geom_errorbar(aes(ymin = l, ymax = u), width = 0.3, linewidth =1.2) + 
-  scale_x_discrete(labels = c(expression(bold(theta[0])),
-                              expression(bold(theta[1])),
-                              expression(bold(theta[2])),
-                              expression(bold(theta[3])),
-                              expression(bold(theta[4])),
-                              expression(bold(theta[5])),
-                              expression(bold(theta[6])),
-                              expression(bold(theta[7])))) + 
-  scale_color_discrete(labels = c(expression(theta[0]),colnames(fwi.scaled))) + 
-  theme_minimal(base_size = 30) +
-  theme(plot.title = element_text(hjust = 0.5, size = 20),
-          legend.text.align = 0,
-          legend.title = element_blank(),
-          legend.text = element_text(size=25),
-          legend.margin=margin(0,0,0,-10),
-          legend.box.margin=margin(-10,0,-10,0),
-          plot.margin = margin(0,0,0,-20),
-          axis.text.x = element_text(hjust=0.35),
-          axis.text = element_text(size = 28))
+# ggplot(df.theta, aes(x = covariate, y=m, color = covariate)) + ylab("") + xlab('') +
+#   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+#   geom_point(size = 5) + 
+#   geom_errorbar(aes(ymin = l, ymax = u), width = 0.3, linewidth =1.2) + 
+#   scale_x_discrete(labels = c(expression(bold(theta[0])),
+#                               expression(bold(theta[1])),
+#                               expression(bold(theta[2])),
+#                               expression(bold(theta[3])),
+#                               expression(bold(theta[4])),
+#                               expression(bold(theta[5])),
+#                               expression(bold(theta[6])),
+#                               expression(bold(theta[7])))) + 
+#   scale_color_discrete(labels = c(expression(theta[0]),colnames(fwi.scaled))) + 
+#   theme_minimal(base_size = 30) +
+#   theme(plot.title = element_text(hjust = 0.5, size = 20),
+#           legend.text.align = 0,
+#           legend.title = element_blank(),
+#           legend.text = element_text(size=25),
+#           legend.margin=margin(0,0,0,-10),
+#           legend.box.margin=margin(-10,0,-10,0),
+#           plot.margin = margin(0,0,0,-20),
+#           axis.text.x = element_text(hjust=0.35),
+#           axis.text = element_text(size = 28))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_theta.pdf"), width=10, height = 7.78)
 
-df.gamma <- data.frame("seq" = seq(1, ((psi)*p)), 
-                  "m" = as.vector(gamma.q2),
-                  "l" = as.vector(gamma.q1),
-                  "u" = as.vector(gamma.q3))
-df.gamma$covariate <- factor(rep(names(fwi.scaled), each = (psi), length.out = nrow(df.gamma)), levels = colnames(fwi.scaled))
-df.gamma$labels <- factor(1:((psi)*p))
-ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) + 
-  geom_errorbar(aes(ymin = l, ymax = u), alpha = 0.4, width = 4, linewidth = 1.2) +
-  geom_point(size = 4) + ylab("") + xlab("" ) + #xlim(1,(psi*p)) +
-  # geom_ribbon(aes(ymin = l, ymax = u)) +
-  # geom_point(size = 4, color = "black") + 
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  scale_x_discrete(breaks=c(seq(0, (psi*p), psi)+10), 
-                    label = c(expression(bold(gamma[1])), 
-                              expression(bold(gamma[2])), 
-                              expression(bold(gamma[3])), 
-                              expression(bold(gamma[4])), 
-                              expression(bold(gamma[5])), 
-                              expression(bold(gamma[6])), 
-                              expression(bold(gamma[7]))),
-                    expand=c(0,10)) +
-  theme_minimal(base_size = 30) +
-  theme(plot.title = element_text(hjust = 0.5, size = 20),
-          legend.title = element_blank(),
-          legend.text = element_text(size=25),
-          legend.margin=margin(0,0,0,-10),
-          legend.box.margin=margin(-10,0,-10,0),
-          plot.margin = margin(0,0,0,-20),
-          axis.text.x = element_text(hjust=0.5),
-          axis.text = element_text(size = 28))
+# df.gamma <- data.frame("seq" = seq(1, ((psi)*p)), 
+#                   "m" = as.vector(gamma.q2),
+#                   "l" = as.vector(gamma.q1),
+#                   "u" = as.vector(gamma.q3))
+# df.gamma$covariate <- factor(rep(names(fwi.scaled), each = (psi), length.out = nrow(df.gamma)), levels = colnames(fwi.scaled))
+# df.gamma$labels <- factor(1:((psi)*p))
+# ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) + 
+#   geom_errorbar(aes(ymin = l, ymax = u), alpha = 0.4, width = 4, linewidth = 1.2) +
+#   geom_point(size = 4) + ylab("") + xlab("" ) + #xlim(1,(psi*p)) +
+#   # geom_ribbon(aes(ymin = l, ymax = u)) +
+#   # geom_point(size = 4, color = "black") + 
+#   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+#   scale_x_discrete(breaks=c(seq(0, (psi*p), psi)+10), 
+#                     label = c(expression(bold(gamma[1])), 
+#                               expression(bold(gamma[2])), 
+#                               expression(bold(gamma[3])), 
+#                               expression(bold(gamma[4])), 
+#                               expression(bold(gamma[5])), 
+#                               expression(bold(gamma[6])), 
+#                               expression(bold(gamma[7]))),
+#                     expand=c(0,10)) +
+#   theme_minimal(base_size = 30) +
+#   theme(plot.title = element_text(hjust = 0.5, size = 20),
+#           legend.title = element_blank(),
+#           legend.text = element_text(size=25),
+#           legend.margin=margin(0,0,0,-10),
+#           legend.box.margin=margin(-10,0,-10,0),
+#           plot.margin = margin(0,0,0,-20),
+#           axis.text.x = element_text(hjust=0.5),
+#           axis.text = element_text(size = 28))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_gamma.pdf"), width=10, height = 7.78)
 
 
@@ -528,10 +530,10 @@ ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) +
 # g.linear.q1 <- as.vector(matrix(gl.samples[,4], nrow = n, byrow=TRUE))
 # g.linear.q2 <- as.vector(matrix(gl.samples[,5], nrow = n, byrow=TRUE))
 # g.linear.q3 <- as.vector(matrix(gl.samples[,6], nrow = n, byrow=TRUE))
-g.nonlinear.mean <- as.vector(matrix(gnl.samples[,1], nrow = n, byrow=TRUE))
-g.nonlinear.q1 <- as.vector(matrix(gnl.samples[,4], nrow = n, byrow=TRUE))
-g.nonlinear.q2 <- as.vector(matrix(gnl.samples[,5], nrow = n, byrow=TRUE))
-g.nonlinear.q3 <- as.vector(matrix(gnl.samples[,6], nrow = n, byrow=TRUE))
+# g.nonlinear.mean <- as.vector(matrix(gnl.samples[,1], nrow = n, byrow=TRUE))
+# g.nonlinear.q1 <- as.vector(matrix(gnl.samples[,4], nrow = n, byrow=TRUE))
+# g.nonlinear.q2 <- as.vector(matrix(gnl.samples[,5], nrow = n, byrow=TRUE))
+# g.nonlinear.q3 <- as.vector(matrix(gnl.samples[,6], nrow = n, byrow=TRUE))
 g.smooth.mean <- as.vector(matrix(gsmooth.samples[,1], nrow = n, byrow=TRUE))
 g.smooth.q1 <- as.vector(matrix(gsmooth.samples[,4], nrow = n, byrow=TRUE))
 g.smooth.q2 <- as.vector(matrix(gsmooth.samples[,5], nrow = n, byrow=TRUE))
@@ -605,33 +607,33 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
 # # #ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_linear.pdf"), width=12.5, height = 15)
 
 
-data.nonlinear <- data.frame("x"=as.vector(xholder),
-                          "post.mean" = as.vector(g.nonlinear.mean),
-                          "q1" = as.vector(g.nonlinear.q1),
-                          "q2" = as.vector(g.nonlinear.q2),
-                          "q3" = as.vector(g.nonlinear.q3),
-                          "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)),
-                          "fakelab" = rep(1, (p*n)),
-                          "replicate" = gl(p, n, (p*n), labels = names(fwi.scaled)))
+# data.nonlinear <- data.frame("x"=as.vector(xholder),
+#                           "post.mean" = as.vector(g.nonlinear.mean),
+#                           "q1" = as.vector(g.nonlinear.q1),
+#                           "q2" = as.vector(g.nonlinear.q2),
+#                           "q3" = as.vector(g.nonlinear.q3),
+#                           "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)),
+#                           "fakelab" = rep(1, (p*n)),
+#                           "replicate" = gl(p, n, (p*n), labels = names(fwi.scaled)))
 
-ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) + 
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
-  # geom_line(aes(y=true, colour = "True"), linewidth=2) + 
-  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
-  ylab("") + xlab("") +
-  facet_grid(covariates ~ ., scales = "free", #switch = "y",
-              labeller = label_parsed) + 
-  scale_fill_manual(values=c("steelblue"), name = "") +
-  scale_color_manual(values=c("steelblue")) + 
-  guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) + #ylim(-0.65, 0.3) +
-  scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
-  theme_minimal(base_size = 30) +
-  theme(legend.position = "none",
-          plot.margin = margin(0,0,0,-20),
-          # strip.text = element_blank(),
-          axis.text = element_text(size = 20))
+# ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) + 
+#   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+#   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
+#   # geom_line(aes(y=true, colour = "True"), linewidth=2) + 
+#   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
+#   ylab("") + xlab("") +
+#   facet_grid(covariates ~ ., scales = "free", #switch = "y",
+#               labeller = label_parsed) + 
+#   scale_fill_manual(values=c("steelblue"), name = "") +
+#   scale_color_manual(values=c("steelblue")) + 
+#   guides(color = guide_legend(order = 2), 
+#           fill = guide_legend(order = 1)) + #ylim(-0.65, 0.3) +
+#   scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
+#   theme_minimal(base_size = 30) +
+#   theme(legend.position = "none",
+#           plot.margin = margin(0,0,0,-20),
+#           # strip.text = element_blank(),
+#           axis.text = element_text(size = 20))
 # #ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_nonlinear.pdf"), width=12.5, height = 15)
 
 data.scenario <- data.frame("x" = xholder[,1],
@@ -793,26 +795,26 @@ grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
 # grid.plts[[7]]
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=10, height = 7.78)
 
-#Predictive Distribution check
-y.container <- as.data.frame(matrix(, nrow = n, ncol = 0))  
-random.alpha.idx <- floor(runif(100, 1, ncol(t(posterior$f))))
-for(i in random.alpha.idx){
-  # y.container <- cbind(y.container, log(rPareto(n, u, t(posterior$alpha)[i])))
-  y.container <- cbind(y.container, log(t(posterior$f)[,i]))
-}
-colnames(y.container) <- paste("col", 1:100, sep="")
-y.container$x <- seq(1,n)
-y.container$logy <- log(y)
-plt <- ggplot(data = y.container, aes(x = logy)) + ylab("Density") + xlab("log(Burnt Area)") + labs(col = "")
+# #Predictive Distribution check
+# y.container <- as.data.frame(matrix(, nrow = n, ncol = 0))  
+# random.alpha.idx <- floor(runif(100, 1, ncol(t(posterior$f))))
+# for(i in random.alpha.idx){
+#   # y.container <- cbind(y.container, log(rPareto(n, u, t(posterior$alpha)[i])))
+#   y.container <- cbind(y.container, log(t(posterior$f)[,i]))
+# }
+# colnames(y.container) <- paste("col", 1:100, sep="")
+# y.container$x <- seq(1,n)
+# y.container$logy <- log(y)
+# plt <- ggplot(data = y.container, aes(x = logy)) + ylab("Density") + xlab("log(Burnt Area)") + labs(col = "")
 
-for(i in names(y.container)){
-  plt <- plt + geom_density(aes(x=.data[[i]]), color = "slategray1", alpha = 0.1, linewidht = 0.7)
-}
+# for(i in names(y.container)){
+#   plt <- plt + geom_density(aes(x=.data[[i]]), color = "slategray1", alpha = 0.1, linewidht = 0.7)
+# }
 
-print(plt + geom_density(aes(x=logy), color = "steelblue", linewidth = 2) +
-        theme_minimal(base_size = 30) + ylim(0, 1.25) + xlim(7.5,30) +
-        theme(legend.position = "none",
-                axis.text = element_text(size = 35)))
+# print(plt + geom_density(aes(x=logy), color = "steelblue", linewidth = 2) +
+#         theme_minimal(base_size = 30) + ylim(0, 1.25) + xlim(7.5,30) +
+#         theme(legend.position = "none",
+#                 axis.text = element_text(size = 35)))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRSTIR_predictive_distribution.pdf"), width=10, height = 7.78)
 
 
