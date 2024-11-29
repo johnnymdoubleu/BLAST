@@ -479,14 +479,14 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
 
 
 data.constraint <- data.frame("x"=newx,
-                             "true.smooth" = as.vector(f.new[,1]),
-                             "true.linear" = as.vector(f.linear.new[,1]),
-                             "true.nonlinear" = as.vector(f.nonlinear.new[,1]))
+                             "true.smooth" = as.vector(f.new[,2]),
+                             "true.linear" = as.vector(f.linear.new[,2]),
+                             "true.nonlinear" = as.vector(f.nonlinear.new[,2]))
 
 ggplot(data.constraint, aes(x=x)) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_line(aes(y=true.smooth), color = "steelblue", linewidth=2.5) + 
-  ylab("") + xlab("Smooth Function") + ylim(-0.8, 0.8) + 
+  ylab("") + xlab("") + ylim(-0.8, 0.8) + 
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 15),
         legend.position="none",
@@ -503,7 +503,7 @@ ggplot(data.constraint, aes(x=x)) +
 ggplot(data.constraint, aes(x=x)) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_line(aes(y=true.linear), color = "steelblue", linewidth=2.5) + 
-  ylab("") + xlab("Linear Component") + ylim(-0.8, 0.8) + 
+  ylab("") + xlab("") + ylim(-0.8, 0.8) + 
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 15),
         legend.position="none",
@@ -520,7 +520,7 @@ ggplot(data.constraint, aes(x=x)) +
 ggplot(data.constraint, aes(x=x)) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_line(aes(y=true.nonlinear), color = "steelblue", linewidth=2.5) + 
-  ylab("") + xlab("Nonlinear Component") + ylim(-0.8, 0.8) + 
+  ylab("") + xlab("") + ylim(-0.8, 0.8) + 
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 15),
         legend.position="none",
@@ -533,7 +533,7 @@ ggplot(data.constraint, aes(x=x)) +
         strip.placement = "outside",
         axis.title.x = element_text(size = 40),
         axis.text = element_text(size=18))
-# ggsave(paste0("./simulation/results/illust_nonlinear2.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/illust_nonlinear.pdf"), width=10, height = 7.78)
 
 data.scenario <- data.frame("x" = c(1:n),
                             "constant" = newx,
