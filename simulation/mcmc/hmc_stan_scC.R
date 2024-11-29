@@ -1,25 +1,25 @@
 library(npreg)
-library(tmvnsim)
-library(reshape2)
-library(splines2)
+# library(tmvnsim)
+# library(reshape2)
+# library(splines2)
 library(scales)
 library(MASS)
 library(npreg)
 library(Pareto)
 suppressMessages(library(tidyverse))
-library(JOPS)
+# library(JOPS)
 library(readxl)
 library(gridExtra)
 library(colorspace)
 library(corrplot)
 # library(ReIns)
-library(rmutil)
-library(evir)
+# library(rmutil)
+# library(evir)
 library(rstan)
-library(ggmcmc)
-library(MCMCvis)
-library(cmdstanr)
-library(ggh4x)
+# library(ggmcmc)
+# library(MCMCvis)
+# library(cmdstanr)
+# library(ggh4x)
 # library(simstudy)
 # library(ggplotify)
 
@@ -198,15 +198,15 @@ data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi,
 # here using the example model that comes with CmdStan
 # file <- file.path(cmdstan_path(), "model_simulation.stan")
 
-init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
+init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(p, psi)),
                         theta = rep(0, (p+1)), 
                         tau = rep(0.1, p), sigma = 0.1, 
                         lambda1 = 0.1, lambda2 = 0.1),
-                  list(gamma = array(rep(0.02, (psi*p)), dim=c(psi, p)),
+                  list(gamma = array(rep(0.02, (psi*p)), dim=c(p, psi)),
                         theta = rep(0.01, (p+1)), 
                         tau = rep(0.01, p), sigma = 0.001,
                         lambda1 = 0.01, lambda2 = 0.1),
-                  list(gamma = array(rep(0.01, (psi*p)), dim=c(psi, p)),
+                  list(gamma = array(rep(0.01, (psi*p)), dim=c(p, psi)),
                         theta = rep(0.05, (p+1)), 
                         tau = rep(0.01, p), sigma = 0.01,
                         lambda1 = 0.1, lambda2 = 0.01))
@@ -456,6 +456,8 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
         axis.text = element_text(size=18))
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_nonlinear_sc3-wi.pdf"), width=12.5, height = 15)
+
+
 
 data.scenario <- data.frame("x" = c(1:n),
                             "constant" = newx,
