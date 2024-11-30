@@ -452,62 +452,6 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_nonlinear_sc1-wi.pdf"), width=12.5, height = 15)
 
-data.constraint <- data.frame("x"=newx,
-                             "true.smooth" = as.vector(f.new[,3]),
-                             "true.linear" = as.vector(f.linear.new[,3]),
-                             "true.nonlinear" = as.vector(f.nonlinear.new[,3]))
-
-ggplot(data.constraint, aes(x=x)) + 
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  geom_line(aes(y=true.smooth), color = "steelblue", linewidth=2.5) + 
-  ylab("") + xlab("") + ylim(-0.8, 0.8) + 
-  theme_minimal(base_size = 30) +
-  theme(plot.title = element_text(hjust = 0.5, size = 15),
-        legend.position="none",
-        legend.title = element_blank(),
-        legend.text = element_text(size=20),
-        legend.margin=margin(t = 1, unit='cm'),
-        legend.box.margin=margin(-10,0,-10,0),
-        plot.margin = margin(0,0,0,-20),
-        strip.text.y = element_text(size = 25, colour = "black", angle = 0, face = "bold.italic"),
-        strip.placement = "outside",
-        axis.title.x = element_text(size = 40),
-        axis.text = element_text(size=18))
-# ggsave(paste0("./simulation/results/illust_smooth1.pdf"), width=10, height = 7.78)
-ggplot(data.constraint, aes(x=x)) + 
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  geom_line(aes(y=true.linear), color = "steelblue", linewidth=2.5) + 
-  ylab("") + xlab("") + ylim(-0.8, 0.8) + 
-  theme_minimal(base_size = 30) +
-  theme(plot.title = element_text(hjust = 0.5, size = 15),
-        legend.position="none",
-        legend.title = element_blank(),
-        legend.text = element_text(size=20),
-        legend.margin=margin(t = 1, unit='cm'),
-        legend.box.margin=margin(-10,0,-10,0),
-        plot.margin = margin(0,0,0,-20),
-        strip.text.y = element_text(size = 25, colour = "black", angle = 0, face = "bold.italic"),
-        strip.placement = "outside",
-        axis.title.x = element_text(size = 40),
-        axis.text = element_text(size=18))
-# ggsave(paste0("./simulation/results/illust_linear1.pdf"), width=10, height = 7.78)
-ggplot(data.constraint, aes(x=x)) + 
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  geom_line(aes(y=true.nonlinear), color = "steelblue", linewidth=2.5) + 
-  ylab("") + xlab("") + ylim(-0.8, 0.8) + 
-  theme_minimal(base_size = 30) +
-  theme(plot.title = element_text(hjust = 0.5, size = 15),
-        legend.position="none",
-        legend.title = element_blank(),
-        legend.text = element_text(size=20),
-        legend.margin=margin(t = 1, unit='cm'),
-        legend.box.margin=margin(-10,0,-10,0),
-        plot.margin = margin(0,0,0,-20),
-        strip.text.y = element_text(size = 25, colour = "black", angle = 0, face = "bold.italic"),
-        strip.placement = "outside",
-        axis.title.x = element_text(size = 40),
-        axis.text = element_text(size=18))
-# ggsave(paste0("./simulation/results/illust_nonlinear1.pdf"), width=10, height = 7.78)
 data.scenario <- data.frame("x" = newx,
                             "constant" = newx,
                             "true" = (alp.new),
