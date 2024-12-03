@@ -57,28 +57,28 @@ for(j in 1:p){
   }
 }
 
-for(j in 1:p){
-  for (ps in 1:psi){
-    if(j %in% c(1,4,5)){gamma.origin[ps,j] <- 0}
-    else if(j==2){
-      if(ps==1 || ps==psi){gamma.origin[ps,j] <- 0}
-      else{gamma.origin[ps,j] <- -25}
-    }
-    else{
-      if(ps==1){gamma.origin[ps,j] <- 0}
-      else if(ps==psi){gamma.origin[ps,j] <- -.5}
-      else if(ps>1 & ps<=(psi/2)){gamma.origin[ps,j] <- -1.5}
-      else if(ps<psi & ps>(psi/2)){gamma.origin[ps,j] <- 1.5}
-    }
-  }
-}
+# for(j in 1:p){
+#   for (ps in 1:psi){
+#     if(j %in% c(1,4,5)){gamma.origin[ps,j] <- 0}
+#     else if(j==2){
+#       if(ps==1 || ps==psi){gamma.origin[ps,j] <- 0}
+#       else{gamma.origin[ps,j] <- -25}
+#     }
+#     else{
+#       if(ps==1){gamma.origin[ps,j] <- 0}
+#       else if(ps==psi){gamma.origin[ps,j] <- -.5}
+#       else if(ps>1 & ps<=(psi/2)){gamma.origin[ps,j] <- -1.5}
+#       else if(ps<psi & ps>(psi/2)){gamma.origin[ps,j] <- 1.5}
+#     }
+#   }
+# }
 theta.origin <- c(-0.5, 0, -0.5, -0.5, 0, 0)
 
 
 f.sub.origin <- matrix(, nrow = 2, ncol = p)
 for(j in 1:p){
   f.sub.origin[,j] <- as.matrix(bs.nonlinear[index.holder[j,], (((j-1)*psi)+2):(((j-1)*psi)+(psi-1))], nrow = 2) %*% gamma.origin[(2:(psi-1)), j]
-  # gamma.origin[c(1,psi),j] <- -1 * basis.holder[,(((j-1)*2)+1):(((j-1)*2)+2)] %*% as.matrix(f.sub.origin[,j], nrow=2)
+  gamma.origin[c(1,psi),j] <- -1 * basis.holder[,(((j-1)*2)+1):(((j-1)*2)+2)] %*% as.matrix(f.sub.origin[,j], nrow=2)
 }
 
 f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
@@ -148,11 +148,12 @@ for(i in 1:n){
   alp.new[i] <- exp(theta.origin[1] + sum(f.new[i,]))
 }
 
-
+# as.vector(f.new[,3]*1.8) + (as.vector(f.linear.new[,3]))
 data.constraint <- data.frame("x"=newx,
                             "true.smooth" = as.vector(f.new[,3]),
-                            "true.linear" = as.vector(f.linear.new[,3]),
-                           "true.nonlinear" = as.vector(f.nonlinear.new[,3])-0.13)
+                            "true.linear" = -(as.vector(f.linear.new[,3])+0.4),
+                            "true.nonlinear" = as.vector(f.new[,3]) + (as.vector(f.linear.new[,3])+0.4))
+                            #as.vector(f.nonlinear.new[,3])-0.4)
                             # "true.nonlinear" = as.vector(f.nonlinear.new[,3]))
 
 ggplot(data.constraint, aes(x=x)) + 
@@ -188,7 +189,7 @@ ggplot(data.constraint, aes(x=x)) +
         strip.placement = "outside",
         axis.title.x = element_text(size = 40),
         axis.text = element_text(size=18))
-# ggsave(paste0("./simulation/results/illust_linear_nc.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/illust_linear_nc2.pdf"), width=10, height = 7.78)
 ggplot(data.constraint, aes(x=x)) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_line(aes(y=true.nonlinear), color = "steelblue", linewidth=2.5) + 
@@ -205,4 +206,4 @@ ggplot(data.constraint, aes(x=x)) +
         strip.placement = "outside",
         axis.title.x = element_text(size = 40),
         axis.text = element_text(size=18))
-# ggsave(paste0("./simulation/results/illust_nonlinear_nc.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/illust_nonlinear_nc2.pdf"), width=10, height = 7.78)
