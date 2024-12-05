@@ -150,9 +150,9 @@ for(i in 1:n){
 
 # as.vector(f.new[,3]*1.8) + (as.vector(f.linear.new[,3]))
 data.constraint <- data.frame("x"=newx,
-                            "true.smooth" = as.vector(f.new[,3]),
-                            "true.linear" = -(as.vector(f.linear.new[,3])+0.4),
-                            "true.nonlinear" = as.vector(f.new[,3]) + (as.vector(f.linear.new[,3])+0.4))
+                            "true.smooth" = as.vector(f.new[,2]),
+                            "true.linear" = as.vector(f.linear.new[,2]),
+                            "true.nonlinear" = as.vector(f.nonlinear.new[,2]))
                             #as.vector(f.nonlinear.new[,3])-0.4)
                             # "true.nonlinear" = as.vector(f.nonlinear.new[,3]))
 
@@ -171,7 +171,7 @@ ggplot(data.constraint, aes(x=x)) +
         strip.text.y = element_text(size = 25, colour = "black", angle = 0, face = "bold.italic"),
         strip.placement = "outside",
         axis.title.x = element_text(size = 40),
-        axis.text = element_text(size=18))
+        axis.text = element_text(size=35))
 # ggsave(paste0("./simulation/results/illust_smooth1.pdf"), width=10, height = 7.78)
 ggplot(data.constraint, aes(x=x)) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
@@ -187,9 +187,9 @@ ggplot(data.constraint, aes(x=x)) +
         plot.margin = margin(0,0,0,-20),
         strip.text.y = element_text(size = 25, colour = "black", angle = 0, face = "bold.italic"),
         strip.placement = "outside",
-        axis.title.x = element_text(size = 40),
-        axis.text = element_text(size=18))
-# ggsave(paste0("./simulation/results/illust_linear_nc2.pdf"), width=10, height = 7.78)
+        # axis.title.x = element_text(size = 40),
+        axis.text = element_text(size=35))
+ggsave(paste0("./simulation/results/illust_linear_c.pdf"), width=10, height = 7.78)
 ggplot(data.constraint, aes(x=x)) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_line(aes(y=true.nonlinear), color = "steelblue", linewidth=2.5) + 
@@ -205,5 +205,5 @@ ggplot(data.constraint, aes(x=x)) +
         strip.text.y = element_text(size = 25, colour = "black", angle = 0, face = "bold.italic"),
         strip.placement = "outside",
         axis.title.x = element_text(size = 40),
-        axis.text = element_text(size=18))
-# ggsave(paste0("./simulation/results/illust_nonlinear_nc2.pdf"), width=10, height = 7.78)
+        axis.text = element_text(size=35))
+ggsave(paste0("./simulation/results/illust_nonlinear_c.pdf"), width=10, height = 7.78)
