@@ -213,11 +213,11 @@ model {
   target += inv_gamma_lpdf(b1 | 0.5, 1); 
   target += inv_gamma_lpdf(t2 | 0.5, 1/b2);
   target += inv_gamma_lpdf(b2 | 0.5, 1);
-  target += normal_lpdf(sigma_lasso | 0, 1);
+  target += normal_lpdf(sigma_lasso | 0, 100);
   for (j in 1:p){
-    target += inv_gamma_lpdf(lambda1[i] | 0.5, 1/lt1[i]);
-    target += inv_gamma_lpdf(lt1[i] | 0.5, 1);
-    target += normal_lpdf(theta[(j+1)] | 0, lambda1[i]);
+    target += inv_gamma_lpdf(lambda1[j] | 0.5, 1/lt1[j]);
+    target += inv_gamma_lpdf(lt1[j] | 0.5, 1);
+    target += normal_lpdf(theta[(j+1)] | 0, lambda1[j]);
     target += inv_gamma_lpdf(lambda2[j] | 0.5, 1/lt2[j]);
     target += inv_gamma_lpdf(lt2[j] | 0.5, 1);
     target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector((lambda2[j]*sigma_lasso*t2), psi)));
@@ -241,14 +241,24 @@ data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi,
 #                         lambda1 = 5, lambda2 = 55))
 init.alpha <- list(list(gammaTemp = array(rep(1, ((psi-2)*p)), dim=c(p,(psi-2))),
                         theta = rep(0, (p+1)), sigma_lasso = 0.1,
-                        lambda1 = rep(0.1, p), lambda2 = rep(0.1, p), 
-                        t1 = 0.01, t2 = 0.1, b1 = 0, b2 = 0,
-                        lt1 = rep(0.1, p), lt2 = rep(0.1, p)))
+                        lambda1 = rep(0.1, p), lambda2 = rep(1, p), 
+                        t1 = 0.01, t2 = 0.1, b1 = 0.1, b2 = 0.1,
+                        lt1 = rep(0.1, p), lt2 = rep(0.1, p)),
+                    list(gammaTemp = array(rep(2, ((psi-2)*p)), dim=c(p,(psi-2))),
+                        theta = rep(0, (p+1)), sigma_lasso = 0.1,
+                        lambda1 = rep(10, p), lambda2 = rep(100, p), 
+                        t1 = 0.01, t2 = 0.01, b1 = 0.001, b2 = 0.001,
+                        lt1 = rep(0.1, p), lt2 = rep(0.1, p)),
+                    list(gammaTemp = array(rep(-0.5, ((psi-2)*p)), dim=c(p,(psi-2))),
+                        theta = rep(0.1, (p+1)), sigma_lasso = 0.1,
+                        lambda1 = rep(2, p), lambda2 = rep(5, p), 
+                        t1 = 0.1, t2 = 0.01, b1 = 0.01, b2 = 0.01,
+                        lt1 = rep(0.1, p), lt2 = rep(0.01, p)))
 system.time(fit1 <- stan(
   model_code = stan.code,  # Stan program
   data = data.stan,    # named list of data
   init = init.alpha,      # initial value
-  chains = 1,             # number of Markov chains
+  chains = 3,             # number of Markov chains
   # warmup = 1000,          # number of warmup iterations per chain
   iter = 2000,            # total number of iterations per chain
   cores = parallel::detectCores(), # number of cores (could use one per chain)
@@ -262,7 +272,6 @@ plot(fit1, plotfun = "trace", pars = c("theta"), nrow = 3)
 # plot(fit1, plotfun = "trace", pars = c("lambda1", "lambda2"), nrow = 2)
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_lambda_sc1-wi.pdf"), width=10, height = 7.78)
 
-tau.samples <- summary(fit1, par=c("tau"), probs = c(0.05,0.5, 0.95))$summary
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
 lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
