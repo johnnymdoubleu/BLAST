@@ -55,7 +55,7 @@ for(j in 1:p){
     if(j %in% c(1,4,5)){gamma.origin[ps,j] <- 0}
     else {
       if(ps==1 || ps==psi){gamma.origin[ps,j] <- 0}
-      else{gamma.origin[ps,j] <- -25}
+      else{gamma.origin[ps,j] <- -2}
     }
   }
 }
@@ -246,7 +246,7 @@ init.alpha <- list(list(gammaTemp = array(rep(1, ((psi-2)*p)), dim=c(p,(psi-2)))
                         lt1 = rep(0.1, p), lt2 = rep(0.1, p)),
                     list(gammaTemp = array(rep(2, ((psi-2)*p)), dim=c(p,(psi-2))),
                         theta = rep(0, (p+1)), sigma_lasso = 0.5,
-                        lambda1 = rep(0.5, p), lambda2 = rep(1, p), 
+                        lambda1 = rep(0.5, p), lambda2 = rep(0.001, p), 
                         t1 = 0.01, t2 = 0.01, b1 = 0.1, b2 = 0.01,
                         lt1 = rep(0.1, p), lt2 = rep(0.1, p)),
                     list(gammaTemp = array(rep(-0.5, ((psi-2)*p)), dim=c(p,(psi-2))),
