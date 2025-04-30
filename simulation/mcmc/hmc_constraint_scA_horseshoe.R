@@ -6,8 +6,8 @@ library(parallel)
 library(qqboxplot)
 
 #Scenario 1
-# set.seed(10)
-set.seed(6)
+set.seed(10)
+# set.seed(6)
 
 n <- 5000
 psi <- 10
@@ -260,8 +260,8 @@ system.time(fit1 <- stan(
   data = data.stan,    # named list of data
   init = init.alpha,      # initial value
   chains = 3,             # number of Markov chains
-  warmup = 5000,          # number of warmup iterations per chain
-  iter = 10000,            # total number of iterations per chain
+  # warmup = 1000,          # number of warmup iterations per chain
+  iter = 2000,            # total number of iterations per chain
   cores = parallel::detectCores(), # number of cores (could use one per chain)
   refresh = 1000             # no progress shown
 ))
