@@ -6,8 +6,8 @@ library(parallel)
 library(qqboxplot)
 
 #Scenario 1
-# set.seed(10)
-set.seed(6)
+set.seed(111)
+# set.seed(6)
 
 n <- 5000
 psi <- 10
@@ -231,15 +231,6 @@ data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi,
                   bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
                   xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear)
 
-# init.alpha <- list(list(gammaTemp = array(rep(2, ((psi-2)*p)), dim=c(p,(psi-2))),
-#                         theta = rep(0, (p+1)), tau = rep(0.1, p),
-#                         lambda1 = 0.1, lambda2 = 1),
-#                    list(gammaTemp = array(rep(-1, ((psi-2)*p)), dim=c(p,(psi-2))),
-#                         theta = rep(0, (p+1)), tau = rep(0.001, p),
-#                         lambda1 = 100, lambda2 = 100),
-#                    list(gammaTemp = array(rep(-3, ((psi-2)*p)), dim=c(p,(psi-2))),
-#                         theta = rep(0.1, (p+1)), tau = rep(0.5, p),
-#                         lambda1 = 5, lambda2 = 55))
 init.alpha <- list(list(gammaTemp = array(rep(1, ((psi-2)*p)), dim=c(p,(psi-2))),
                         theta = rep(0, (p+1)), sigma_lasso = 0.1,
                         lambda1 = rep(0.1, p), lambda2 = rep(1, p), 
@@ -247,7 +238,7 @@ init.alpha <- list(list(gammaTemp = array(rep(1, ((psi-2)*p)), dim=c(p,(psi-2)))
                         lt1 = rep(0.1, p), lt2 = rep(0.1, p)),
                     list(gammaTemp = array(rep(2, ((psi-2)*p)), dim=c(p,(psi-2))),
                         theta = rep(0, (p+1)), sigma_lasso = 0.5,
-                        lambda1 = rep(0.5, p), lambda2 = rep(0.001, p), 
+                        lambda1 = rep(0.5, p), lambda2 = rep(0.1, p), 
                         t1 = 0.01, t2 = 0.01, b1 = 0.1, b2 = 0.01,
                         lt1 = rep(0.1, p), lt2 = rep(0.1, p)),
                     list(gammaTemp = array(rep(-0.5, ((psi-2)*p)), dim=c(p,(psi-2))),
