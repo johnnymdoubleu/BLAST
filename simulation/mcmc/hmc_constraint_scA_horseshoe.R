@@ -308,7 +308,7 @@ ggplot(df.theta, aes(x = covariate, y=m, color = covariate)) + ylab("") + xlab('
         plot.margin = margin(0,0,0,-20),
         axis.text.x = element_text(hjust=0.35),
         axis.text = element_text(size = 28))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_theta_sc1-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/horseshoe/",Sys.Date(),"_",n,"_mcmc_theta_sc1-wi.pdf"), width=10, height = 7.78)
 
 df.gamma <- data.frame("seq" = seq(1, (psi*p)), 
                        "true" = as.vector(gamma.origin),
@@ -339,7 +339,7 @@ ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) +
         plot.margin = margin(0,0,0,-20),
         axis.text.x = element_text(hjust=0.5),
         axis.text = element_text(size = 28))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_gamma_sc1-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/horseshoe/",Sys.Date(),"_",n,"_mcmc_gamma_sc1-wi.pdf"), width=10, height = 7.78)
 
 g.linear.mean <- as.vector(matrix(newgl.samples[,1], nrow = n, byrow=TRUE))
 g.linear.q1 <- as.vector(matrix(newgl.samples[,4], nrow = n, byrow=TRUE))
@@ -395,8 +395,7 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
         strip.placement = "outside",
         axis.title.x = element_text(size = 35),
         axis.text = element_text(size=18))
-
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_smooth_sc1-wi.pdf"), width=12.5, height = 15)
+# ggsave(paste0("./simulation/results/horseshoe/",Sys.Date(),"_",n,"_mcmc_smooth_sc1-wi.pdf"), width=12.5, height = 15)
 
 data.linear <- data.frame("x"=newx,
                           "true" = as.vector(f.linear.new),
@@ -433,8 +432,7 @@ ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) +
         strip.placement = "outside",
         axis.title.x = element_text(size = 35),
         axis.text = element_text(size=18))
-
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_linear_sc1-wi.pdf"), width=12.5, height = 15)
+# ggsave(paste0("./simulation/results/horseshoe/",Sys.Date(),"_",n,"_mcmc_linear_sc1-wi.pdf"), width=12.5, height = 15)
 
 
 data.nonlinear <- data.frame("x"=newx,
@@ -472,8 +470,7 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
         strip.placement = "outside",
         axis.title.x = element_text(size = 35),
         axis.text = element_text(size=18))
-
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_nonlinear_sc1-wi.pdf"), width=12.5, height = 15)
+# ggsave(paste0("./simulation/results/horseshoe/",Sys.Date(),"_",n,"_mcmc_nonlinear_sc1-wi.pdf"), width=12.5, height = 15)
 
 data.scenario <- data.frame("x" = newx,
                             "constant" = newx,
@@ -494,7 +491,7 @@ ggplot(data.scenario, aes(x=x)) +
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 18))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_test_sc1-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/horseshoe/",Sys.Date(),"_",n,"_mcmc_alpha_test_sc1-wi.pdf"), width=10, height = 7.78)
 
 # save(data.smooth, data.scenario, file = (paste0("./simulation/sweavedata.Rdata")))
 
@@ -533,7 +530,7 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
   theme(text = element_text(size = 20)) + 
   coord_fixed(xlim = c(-3, 3),  
               ylim = c(-3, 3))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_qqplot_sc1-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/horseshoe/",Sys.Date(),"_",n,"_mcmc_qqplot_sc1-wi.pdf"), width=10, height = 7.78)
 
 # install.packages("../../GitHub/BRSTIR/qqboxplot.tgz", repos = NULL, type="source")
 # remotes::install_github("johnnymdoubleu/qqbxoplot")
