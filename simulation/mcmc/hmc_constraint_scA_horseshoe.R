@@ -213,7 +213,7 @@ model {
   target += inv_gamma_lpdf(b1 | 0.5, 1); 
   target += inv_gamma_lpdf(t2 | 0.5, 1/b2);
   target += inv_gamma_lpdf(b2 | 0.5, 1);
-  target += cauchy_lpdf(sigma_lasso | 0, 1);
+  target += normal_lpdf(sigma_lasso | 0, 1);
   for (j in 1:p){
     target += inv_gamma_lpdf(lambda1[j] | 0.5, 1/lt1[j]);
     target += inv_gamma_lpdf(lt1[j] | 0.5, 1);
