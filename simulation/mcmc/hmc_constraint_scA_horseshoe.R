@@ -55,7 +55,7 @@ for(j in 1:p){
     if(j %in% c(1,4,5)){gamma.origin[ps,j] <- 0}
     else {
       if(ps==1 || ps==psi){gamma.origin[ps,j] <- 0}
-      else{gamma.origin[ps,j] <- -2}
+      else{gamma.origin[ps,j] <- -25}
     }
   }
 }
@@ -213,13 +213,14 @@ model {
   target += inv_gamma_lpdf(b1 | 0.5, 1); 
   target += inv_gamma_lpdf(t2 | 0.5, 1/b2);
   target += inv_gamma_lpdf(b2 | 0.5, 1);
-  target += normal_lpdf(sigma_lasso | 0, 1);
+  target += normal_lpdf(sigma_lasso | 0, 10);
   for (j in 1:p){
     target += inv_gamma_lpdf(lambda1[j] | 0.5, 1/lt1[j]);
     target += inv_gamma_lpdf(lt1[j] | 0.5, 1);
     target += normal_lpdf(theta[(j+1)] | 0, sigma_lasso * t1 * lambda1[j]);
     target += inv_gamma_lpdf(lambda2[j] | 0.5, 1/lt2[j]);
     target += inv_gamma_lpdf(lt2[j] | 0.5, 1);
+    target += log(lambda2[j] * sigma_lasso * t2);
     target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector((lambda2[j] * sigma_lasso * t2), psi)));
   }
 }
@@ -259,8 +260,8 @@ system.time(fit1 <- stan(
   data = data.stan,    # named list of data
   init = init.alpha,      # initial value
   chains = 3,             # number of Markov chains
-  # warmup = 1000,          # number of warmup iterations per chain
-  iter = 2000,            # total number of iterations per chain
+  warmup = 5000,          # number of warmup iterations per chain
+  iter = 10000,            # total number of iterations per chain
   cores = parallel::detectCores(), # number of cores (could use one per chain)
   refresh = 1000             # no progress shown
 ))
