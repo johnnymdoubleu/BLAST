@@ -238,21 +238,21 @@ init.alpha <- list(list(gammaTemp = array(rep(1, ((psi-2)*p)), dim=c(p,(psi-2)))
                         lt1 = rep(0.1, p), lt2 = rep(0.1, p)),
                     list(gammaTemp = array(rep(2, ((psi-2)*p)), dim=c(p,(psi-2))),
                         theta = rep(0, (p+1)), sigma_lasso = 0.5,
-                        lambda1 = rep(0.5, p), lambda2 = rep(0.1, p), 
-                        t1 = 0.01, t2 = 0.01, b1 = 0.1, b2 = 0.01,
+                        lambda1 = rep(0.5, p), lambda2 = rep(5, p), 
+                        t1 = 1, t2 = 1, b1 = 0.1, b2 = 0.01,
                         lt1 = rep(0.1, p), lt2 = rep(0.1, p)),
                     list(gammaTemp = array(rep(-0.5, ((psi-2)*p)), dim=c(p,(psi-2))),
                         theta = rep(0.1, (p+1)), sigma_lasso = 0.01,
-                        lambda1 = rep(1, p), lambda2 = rep(0.2, p), 
-                        t1 = 0.1, t2 = 0.01, b1 = 0.01, b2 = 0.01,
-                        lt1 = rep(0.1, p), lt2 = rep(0.01, p)))
+                        lambda1 = rep(1, p), lambda2 = rep(2, p), 
+                        t1 = 1, t2 = 0.01, b1 = 0.01, b2 = 0.01,
+                        lt1 = rep(1, p), lt2 = rep(0.01, p)))
 system.time(fit1 <- stan(
   model_code = stan.code,  # Stan program
   data = data.stan,    # named list of data
   init = init.alpha,      # initial value
   chains = 3,             # number of Markov chains
   # warmup = 1000,          # number of warmup iterations per chain
-  iter = 2000,            # total number of iterations per chain
+  iter = 4000,            # total number of iterations per chain
   cores = parallel::detectCores(), # number of cores (could use one per chain)
   refresh = 1000             # no progress shown
 ))
