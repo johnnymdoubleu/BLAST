@@ -224,6 +224,14 @@ model {
     target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector((lambda2[j] * sigma_lasso * t2), psi)));
   }
 }
+
+generated quantities {
+    // Used in Posterior predictive check    
+    vector[n] log_lik;
+    for(i in 1:n){
+      log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
+    }
+}
 "
 
 data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, 
@@ -395,7 +403,7 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
         strip.placement = "outside",
         axis.title.x = element_text(size = 35),
         axis.text = element_text(size=18))
-# ggsave(paste0("./simulation/results/horseshoe/",Sys.Date(),"_",n,"_mcmc_smooth_sc1-wi.pdf"), width=12.5, height = 15)
+# ggsave(paste0("./simulation/results/horseshoe/",Sys.Date(),"_",n,"_mcmc_smooth_scA.pdf"), width=12.5, height = 15)
 
 data.linear <- data.frame("x"=newx,
                           "true" = as.vector(f.linear.new),
@@ -432,7 +440,7 @@ ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) +
         strip.placement = "outside",
         axis.title.x = element_text(size = 35),
         axis.text = element_text(size=18))
-# ggsave(paste0("./simulation/results/horseshoe/",Sys.Date(),"_",n,"_mcmc_linear_sc1-wi.pdf"), width=12.5, height = 15)
+# ggsave(paste0("./simulation/results/horseshoe/",Sys.Date(),"_",n,"_mcmc_linear_scA.pdf"), width=12.5, height = 15)
 
 
 data.nonlinear <- data.frame("x"=newx,
@@ -470,7 +478,7 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
         strip.placement = "outside",
         axis.title.x = element_text(size = 35),
         axis.text = element_text(size=18))
-# ggsave(paste0("./simulation/results/horseshoe/",Sys.Date(),"_",n,"_mcmc_nonlinear_sc1-wi.pdf"), width=12.5, height = 15)
+# ggsave(paste0("./simulation/results/horseshoe/",Sys.Date(),"_",n,"_mcmc_nonlinear_scA.pdf"), width=12.5, height = 15)
 
 data.scenario <- data.frame("x" = newx,
                             "constant" = newx,
@@ -491,7 +499,7 @@ ggplot(data.scenario, aes(x=x)) +
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 18))
-# ggsave(paste0("./simulation/results/horseshoe/",Sys.Date(),"_",n,"_mcmc_alpha_test_sc1-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/horseshoe/",Sys.Date(),"_",n,"_mcmc_alpha_test_scA.pdf"), width=10, height = 7.78)
 
 # save(data.smooth, data.scenario, file = (paste0("./simulation/sweavedata.Rdata")))
 
@@ -530,7 +538,10 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
   theme(text = element_text(size = 20)) + 
   coord_fixed(xlim = c(-3, 3),  
               ylim = c(-3, 3))
-# ggsave(paste0("./simulation/results/horseshoe/",Sys.Date(),"_",n,"_mcmc_qqplot_sc1-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/horseshoe/",Sys.Date(),"_",n,"_mcmc_qqplot_scA.pdf"), width=10, height = 7.78)
 
 # install.packages("../../GitHub/BRSTIR/qqboxplot.tgz", repos = NULL, type="source")
 # remotes::install_github("johnnymdoubleu/qqbxoplot")
+library(loo)
+fit.log.lik <- extract_log_lik(fit1)
+loo(fit.log.lik, is_method = "sis", cores = 2)
