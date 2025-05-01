@@ -242,7 +242,7 @@ init.alpha <- list(list(gammaTemp = array(rep(1, ((psi-2)*p)), dim=c(p,(psi-2)))
                         t1 = 1, t2 = 1, b1 = 0.1, b2 = 0.01,
                         lt1 = rep(0.1, p), lt2 = rep(0.1, p)),
                     list(gammaTemp = array(rep(-0.5, ((psi-2)*p)), dim=c(p,(psi-2))),
-                        theta = rep(0.1, (p+1)), sigma_lasso = 0.01,
+                        theta = rep(0.2, (p+1)), sigma_lasso = 1,
                         lambda1 = rep(1, p), lambda2 = rep(2, p), 
                         t1 = 1, t2 = 0.01, b1 = 0.01, b2 = 0.01,
                         lt1 = rep(1, p), lt2 = rep(0.01, p)))
