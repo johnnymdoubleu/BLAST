@@ -9,7 +9,7 @@ library(qqboxplot)
 set.seed(111)
 # set.seed(6)
 
-n <- 5000
+n <- 10000
 psi <- 10
 threshold <- 0.95
 p <- 5
@@ -252,7 +252,7 @@ system.time(fit1 <- stan(
   init = init.alpha,      # initial value
   chains = 3,             # number of Markov chains
   # warmup = 1000,          # number of warmup iterations per chain
-  iter = 3000,            # total number of iterations per chain
+  iter = 2000,            # total number of iterations per chain
   cores = parallel::detectCores(), # number of cores (could use one per chain)
   refresh = 1000             # no progress shown
 ))
