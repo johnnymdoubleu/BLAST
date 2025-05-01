@@ -9,7 +9,7 @@ library(qqboxplot)
 set.seed(111)
 # set.seed(6)
 
-n <- 10000
+n <- 15000
 psi <- 10
 threshold <- 0.95
 p <- 5
