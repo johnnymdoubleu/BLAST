@@ -6,8 +6,8 @@ library(parallel)
 library(qqboxplot)
 
 #Scenario 1
-set.seed(10)
-# set.seed(6)
+# set.seed(10)
+set.seed(111)
 
 n <- 15000
 psi <- 10
@@ -219,6 +219,14 @@ model {
         target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * (1/tau[j]));
     }
 }
+
+generated quantities {
+    // Used in Posterior predictive check    
+    vector[n] log_lik;
+    for(i in 1:n){
+      log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
+    }
+}
 "
 
 data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, 
@@ -243,7 +251,7 @@ system.time(fit1 <- stan(
   init = init.alpha,      # initial value
   chains = 3,             # number of Markov chains
   # warmup = 1000,          # number of warmup iterations per chain
-  iter = 2000,            # total number of iterations per chain
+  iter = 4000,            # total number of iterations per chain
   cores = parallel::detectCores(), # number of cores (could use one per chain)
   refresh = 500             # no progress shown
 ))
@@ -545,3 +553,7 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_qqplot_sc1-wi.pdf"), width=10, height = 7.78)
 
 # install.packages("../../GitHub/BRSTIR/qqboxplot.tgz", repos = NULL, type="source")
+
+library(loo)
+fit.log.lik <- extract_log_lik(fit1)
+loo(fit.log.lik, is_method = "sis", cores = 2)
