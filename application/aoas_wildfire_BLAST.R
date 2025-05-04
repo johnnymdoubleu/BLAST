@@ -13,7 +13,7 @@ library(ggdist)
 options(mc.cores = parallel::detectCores())
 
 # Structure of the FWI System
-#DSR : Dail Severity Rating
+#DSR : Daily Severity Rating
 #FWI : Fire Weather Index
 #BUI : Buildup Index
 #ISI : Initial Spread Index
