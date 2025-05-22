@@ -6,7 +6,7 @@ library(parallel)
 library(qqboxplot)
 
 #Scenario 1
-set.seed(111)
+set.seed(10)
 # set.seed(6)
 
 n <- 15000

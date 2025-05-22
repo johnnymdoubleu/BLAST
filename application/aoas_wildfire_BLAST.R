@@ -32,7 +32,7 @@ missing.values <- which(!is.na(df.long$measurement))
 #Thus, each year consist of 366 data with either 1 or 0 missing value.
 Y <- df.long$measurement[!is.na(df.long$measurement)]
 psi <- 30
-threshold <- 0.98
+threshold <- 0.99
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
 
