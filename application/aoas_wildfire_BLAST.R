@@ -279,7 +279,7 @@ fit1 <- stan(
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
     chains = 3,             # number of Markov chains
-    iter = 5000,            # total number of iterations per chain
+    iter = 20000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
     refresh = 500           # no progress shown
 )
@@ -290,7 +290,7 @@ posterior <- rstan::extract(fit1)
 
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
-lambda.samples <- summary(fit1, par=c("lambda1", "lambda2o"), probs = c(0.05,0.5, 0.95))$summary
+lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
 gsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
 alpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
 yrep <- summary(fit1, par=c("yrep"), probs = c(0.05,0.5, 0.95))$summary
