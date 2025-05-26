@@ -308,7 +308,7 @@ for(i in 1:p){
 }
 
 
-write("data {
+model.stan <- "data {
     int <lower=1> n; // Sample size
     int <lower=1> p; // regression coefficient size
     int <lower=1> psi; // splines coefficient size
@@ -396,7 +396,6 @@ generated quantities {
     }
 }
 "
-, "model_BLAST_constraint.stan")
 
 
 data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, 
@@ -419,7 +418,8 @@ init.alpha <- list(list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c(p, (psi-2))
 
 # stanc("C:/Users/Johnny Lee/Documents/GitHub/BLAST/application/model1.stan")
 fit1 <- stan(
-    file = "model_BLAST_constraint.stan",  # Stan program
+    # file = "model_BLAST_constraint.stan",  # Stan program
+    model_code = model.stan,
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
     # init_r = 1,
@@ -427,7 +427,7 @@ fit1 <- stan(
     # warmup = 1000,          # number of warmup iterations per chain
     iter = 40000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
-    refresh = 500           # no progress shown
+    refresh = 2000           # no progress shown
 )
 
 # saveRDS(fit1, file=paste0("./BLAST/application/",Sys.Date(),"_stanfit.rds"))

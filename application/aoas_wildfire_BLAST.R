@@ -32,7 +32,7 @@ missing.values <- which(!is.na(df.long$measurement))
 #Thus, each year consist of 366 data with either 1 or 0 missing value.
 Y <- df.long$measurement[!is.na(df.long$measurement)]
 psi <- 30
-threshold <- 0.99
+threshold <- 0.975
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
 
@@ -279,9 +279,9 @@ fit1 <- stan(
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
     chains = 3,             # number of Markov chains
-    iter = 20000,            # total number of iterations per chain
+    iter = 50000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
-    refresh = 500           # no progress shown
+    refresh = 2000           # no progress shown
 )
 
 # saveRDS(fit1, file=paste0("./BLAST/application/",Sys.Date(),"_stanfit.rds"))
@@ -412,6 +412,7 @@ cat("Finished Running")
 
 
 data.smooth <- data.frame("x" = as.vector(xholder),
+                          "true" = as.vector(as.matrix(fwi.scaled)),
                           "post.mean" = as.vector(g.smooth.mean),
                           "q1" = as.vector(g.smooth.q1),
                           "q2" = as.vector(g.smooth.q2),
@@ -421,12 +422,11 @@ data.smooth <- data.frame("x" = as.vector(xholder),
 
 grid.plts <- list()
 for(i in 1:p){
-  grid.plt <- ggplot(data = data.frame(data.smooth[((((i-1)*n)+1):(i*n)),])
-                  , aes(x=x)) + 
+  grid.plt <- ggplot(data = data.frame(data.smooth[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + 
                   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
                   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
                   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
-                  geom_rug(aes(x=x, y=q2), sides = "b") +
+                  geom_rug(aes(x=true, y=q2), sides = "b") +
                   ylab("") + xlab(names(fwi.scaled)[i]) +
                   scale_fill_manual(values=c("steelblue"), name = "") + 
                   scale_color_manual(values=c("steelblue")) +
