@@ -1,18 +1,18 @@
 library(npreg)
 library(Pareto)
 suppressMessages(library(tidyverse))
-library(JOPS)
+# library(JOPS)
 library(readxl)
 library(gridExtra)
 library(colorspace)
 library(corrplot)
-library(ReIns)
+# library(ReIns)
 library(rstan)
 library(loo)
-library(bayesplot)
-library(evir)
-library(mev)
-library(cmdstanr)
+# library(bayesplot)
+# library(evir)
+# library(mev)
+# library(cmdstanr)
 library(scales)
 
 # Structure of the FWI System
@@ -26,7 +26,7 @@ library(scales)
 
 
 setwd("C:/Users/Johnny Lee/Documents/GitHub")
-df <- read_excel("./BRSTIR/application/AADiarioAnual.xlsx", col_types = c("date", rep("numeric",40)))
+df <- read_excel("./BLAST/application/AADiarioAnual.xlsx", col_types = c("date", rep("numeric",40)))
 df.long <- gather(df, condition, measurement, "1980":"2019", factor_key=TRUE)
 df.long
 head(df.long)
@@ -61,7 +61,7 @@ multiplesheets <- function(fname) {
     return(data_frame)
 }
 setwd("C:/Users/Johnny Lee/Documents/GitHub")
-path <- "./BRSTIR/application/DadosDiariosPT_FWI.xlsx"
+path <- "./BLAST/application/DadosDiariosPT_FWI.xlsx"
 # importing fire weather index
 cov <- multiplesheets(path)
 
@@ -86,11 +86,11 @@ fwi.index$month <- factor(format(as.Date(substr(cov.long$...1[missing.values],1,
                             levels = c("Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"))
 fwi.index$date <- as.numeric(fwi.index$date)
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
-fwi.scaled <- fwi.scaled[which(Y>u),]
-# fwi.scaled <- as.data.frame(scale(fwi.scaled))
+fwi.origin <- fwi.scaled <-fwi.scaled[which(Y>u),]# fwi.scaled <- as.data.frame(scale(fwi.scaled))
 
-fwi.scaled <- as.data.frame(lapply(fwi.scaled, rescale, to=c(0,1)))
-
+# fwi.scaled <- as.data.frame(lapply(fwi.scaled, rescale, to=c(0,1)))
+range01 <- function(x){(x-min(x))/(max(x)-min(x))}
+fwi.scaled <- as.data.frame(sapply(fwi.origin, FUN = range01))
 
 
 # ---------------------------------------------------------------------------
@@ -164,8 +164,7 @@ for(i in 1:p){
 }
 
 
-write("// Stan model for simple linear regression
-data {
+model.stan <- "data {
     int <lower=1> n; // Sample size
     int <lower=1> p; // regression coefficient size
     int <lower=1> newp;
@@ -183,29 +182,32 @@ parameters {
 transformed parameters {
     array[n] real <lower=0> alpha; // tail index
     array[n] real <lower=0> newalpha; // new tail index
-    matrix[n, p] gl; // linear component
     matrix[n, p] newgl; // linear component
-    matrix[n, p] newgsmooth; // smooth function    
-    for (j in 1:p){
-        gl[,j] = bsLinear[,j] * theta[j+1];
-        newgl[,j] = xholderLinear[,j] * theta[j+1];
-    };
-    for (i in 1:n){
-        alpha[i] = exp(theta[1] + sum(gl[i,]));
-        newalpha[i] = exp(theta[1] + sum(newgl[i,]));        
-    };
+
+    {
+      matrix[n, p] gl; // linear component
+      for (j in 1:p){
+          gl[,j] = bsLinear[,j] * theta[j+1];
+          newgl[,j] = xholderLinear[,j] * theta[j+1];
+      };
+      for (i in 1:n){
+          alpha[i] = exp(theta[1] + sum(gl[i,]));
+          newalpha[i] = exp(theta[1] + sum(newgl[i,]));        
+      };    
+    }
 }
+
 
 model {
     // likelihood
-    for (i in 1:n){
-        target += pareto_lpdf(y[i] | u, alpha[i]);
-    }
+    target += pareto_lpdf(y | u, alpha);
+    target += gamma_lpdf(lambda1 | 1, 1e-5);
     target += normal_lpdf(theta[1] | 0, 100);
     for (j in 1:p){
-        target += normal_lpdf(theta[(j+1)] | 0, 100);
+        target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
     }
 }
+
 generated quantities {
     // Used in Posterior predictive check
     vector[n] log_lik;
@@ -214,18 +216,18 @@ generated quantities {
     }
 }
 "
-, "model_BTIR.stan")
 
 data.stan <- list(y = as.vector(y), u = u, p = p, n= n, newp = (p+1),
                     bsLinear = fwi.scaled, 
                     xholderLinear = xholder)
-init.alpha <- list(list(theta = rep(0, (p+1))),
-                  list(theta = rep(0.01, (p+1))),
-                  list(theta = rep(0.05, (p+1))))
+init.alpha <- list(list(theta = rep(0, (p+1)), lambda1 = 0.1),
+                  list(theta = rep(0.01, (p+1)), lambda1 = 0.1),
+                  list(theta = rep(0.02, (p+1)), lambda1 = 1))#,
 
 # stanc("C:/Users/Johnny Lee/Documents/GitHub/BRSTIR/application/model1.stan")
 fit1 <- stan(
-    file = "model_BTIR.stan",  # Stan program
+    model_code = model.stan,
+    model_name = "BLAST-linear",
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
     # init_r = 1,
@@ -233,7 +235,7 @@ fit1 <- stan(
     # warmup = 1000,          # number of warmup iterations per chain
     iter = 50000,            # total number of iterations per chain
     cores = parallel::detectCores(),              # number of cores (could use one per chain)
-    refresh = 500           # no progress shown
+    refresh = 2500           # no progress shown
 )
 
 # saveRDS(fit1, file=paste0("./BRSTIR/application/",Sys.Date(),"_stanfit.rds"))
@@ -287,7 +289,7 @@ posterior <- extract(fit1)
 # len <- dim(samples)[1]
 
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
-
+lambda.samples <- summary(fit1, par=c("lambda1"), probs = c(0.05,0.5, 0.95))$summary
 gl.samples <- summary(fit1, par=c("newgl"), probs = c(0.05, 0.5, 0.95))$summary
 alp.x.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
 alpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
@@ -412,38 +414,47 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
               ylim = c(-3, 3))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRTIR_mcmc_qqplot.pdf"), width=10, height = 7.78)
 
+data.linear <- data.frame("x" = as.vector(xholder),
+                          "true" = as.vector(as.matrix(fwi.scaled)),
+                          "post.mean" = as.vector(g.linear.mean),
+                          "q1" = as.vector(g.linear.q1),
+                          "q2" = as.vector(g.linear.q2),
+                          "q3" = as.vector(g.linear.q3),
+                          "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)))
+# saveRDS(data.linear, file="./BLAST/application/figures/comparison/linear_stanfit.rds")
+
 cat("Finished Running")
 
 fit.log.lik <- extract_log_lik(fit1)
-fwi.loo <- loo(fit.log.lik, cores = 2)
+loo(fit.log.lik, is_method = "sis", cores = 2)
 plot(fwi.loo, label_points = TRUE)
 
-loo(fit.log.lik, is_method = "sis", cores = 2)
+# loo(fit.log.lik, is_method = "sis", cores = 2)
 # loo(fit.log.lik)
-waic(fit.log.lik, cores = 2)
+# waic(fit.log.lik, cores = 2)
 
 
 #https://discourse.mc-stan.org/t/four-questions-about-information-criteria-cross-validation-and-hmc-in-relation-to-a-manuscript-review/13841
 
-#Predictive Distribution check
-y.container <- as.data.frame(matrix(, nrow = n, ncol = 0))
-# for(i in random.alpha.idx){
-for(i in 1:ncol(t(posterior$alpha))){
-  # y.container <- cbind(y.container, dPareto(y, u, t(posterior$alpha)[i]))
-  y.container <- cbind(y.container, log(rPareto(n, u, t(posterior$alpha)[i])))
-}
-colnames(y.container) <- paste("col", 1:ncol(t(posterior$alpha)), sep="")
-y.container$x <- seq(1,n)
-y.container$logy <- log(y)
-plt <- ggplot(data = y.container, aes(x = logy)) + ylab("density") + xlab("log(Burnt Area)") + labs(col = "")
-random.alpha.idx <- floor(runif(100, 1, ncol(t(posterior$alpha))))
-for(i in names(y.container)[random.alpha.idx]){
-  # plt <- plt + geom_line(aes(y = .data[[i]]), alpha = 0.2, linewidth = 0.7)
-  plt <- plt + geom_density(aes(x=.data[[i]]), color = "slategray1", alpha = 0.1, linewidht = 0.7)
-}
+# #Predictive Distribution check
+# y.container <- as.data.frame(matrix(, nrow = n, ncol = 0))
+# # for(i in random.alpha.idx){
+# for(i in 1:ncol(t(posterior$alpha))){
+#   # y.container <- cbind(y.container, dPareto(y, u, t(posterior$alpha)[i]))
+#   y.container <- cbind(y.container, log(rPareto(n, u, t(posterior$alpha)[i])))
+# }
+# colnames(y.container) <- paste("col", 1:ncol(t(posterior$alpha)), sep="")
+# y.container$x <- seq(1,n)
+# y.container$logy <- log(y)
+# plt <- ggplot(data = y.container, aes(x = logy)) + ylab("density") + xlab("log(Burnt Area)") + labs(col = "")
+# random.alpha.idx <- floor(runif(100, 1, ncol(t(posterior$alpha))))
+# for(i in names(y.container)[random.alpha.idx]){
+#   # plt <- plt + geom_line(aes(y = .data[[i]]), alpha = 0.2, linewidth = 0.7)
+#   plt <- plt + geom_density(aes(x=.data[[i]]), color = "slategray1", alpha = 0.1, linewidht = 0.7)
+# }
 
-print(plt + geom_density(aes(x=logy), color = "steelblue", linewidth = 2) +
-        theme_minimal(base_size = 30) + ylim(0, 2) + xlim(6.8,25) +
-        theme(legend.position = "none",
-                axis.text = element_text(size = 35)))
+# print(plt + geom_density(aes(x=logy), color = "steelblue", linewidth = 2) +
+#         theme_minimal(base_size = 30) + ylim(0, 2) + xlim(6.8,25) +
+#         theme(legend.position = "none",
+#                 axis.text = element_text(size = 35)))
 # ggsave(paste0("./BRSTIR/application/figures/",Sys.Date(),"_BRTIR_predictive_distribution.pdf"), width=10, height = 7.78)

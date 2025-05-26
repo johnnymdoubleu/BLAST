@@ -317,6 +317,7 @@ gsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95)
 alpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
 yrep <- summary(fit1, par=c("yrep"), probs = c(0.05,0.5, 0.95))$summary
 f.samples <- summary(fit1, par=c("f"), probs = c(0.05,0.5, 0.95))$summary
+lp.samples <- summary(fit1, par=c("lp__"), probs = c(0.05,0.5, 0.95))$summary
 
 g.smooth.mean <- as.vector(matrix(gsmooth.samples[,1], nrow = n, byrow=TRUE))
 g.smooth.q1 <- as.vector(matrix(gsmooth.samples[,4], nrow = n, byrow=TRUE))
@@ -462,6 +463,8 @@ for(i in 1:p){
   grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=-4.1, color = "red", size = 4)
 }
 
+# data.hs <- data.smooth
+saveRDS(data.smooth, file="./BLAST/application/figures/comparison/hs_stanfit.rds")
 grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
 # grid.plts[[1]]
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=10, height = 7.78)

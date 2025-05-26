@@ -279,7 +279,7 @@ fit1 <- stan(
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
     chains = 3,             # number of Markov chains
-    iter = 50000,            # total number of iterations per chain
+    iter = 10000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
     refresh = 2000           # no progress shown
 )
@@ -442,6 +442,8 @@ for(i in 1:p){
 grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
 # grid.plts[[1]]
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=10, height = 7.78)
+
+# saveRDS(data.smooth, file="./BLAST/application/figures/comparison/full_stanfit.rds")
 
 #Predictive Distribution check
 y.container <- as.data.frame(matrix(, nrow = n, ncol = 0))  
