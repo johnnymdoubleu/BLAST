@@ -432,7 +432,7 @@ fit1 <- stan(
 )
 
 # saveRDS(fit1, file=paste0("./BLAST/application/",Sys.Date(),"_stanfit.rds"))
-fit1 <- readRDS(file=paste0("./BLAST/application/2024-11-27","_stanfit.rds"))
+# fit1 <- readRDS(file=paste0("./BLAST/application/2024-11-27","_stanfit.rds"))
 posterior <- extract(fit1)
 # str(posterior)
 

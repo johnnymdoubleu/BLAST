@@ -116,17 +116,35 @@ for(i in 1:p){
                   geom_ribbon(aes(ymin = hs.q1, ymax = hs.q3, fill = "hs"), alpha = 0.2) +
                   geom_line(aes(y=hs.q2, colour = "hs"), linewidth=1, linetype = 2) + 
                   geom_ribbon(aes(ymin = full.q1, ymax = full.q3, fill = "full"), alpha = 0.2) +
-                  geom_line(aes(y=full.q2, colour = "full"), linewidth=1.4) + 
+                  geom_line(aes(y=full.mean, colour = "full"), linewidth=1.4) + 
                   ylab("") + xlab(names(fwi.scaled)[i]) +
                   scale_fill_manual(values=c("steelblue", "red", "darkgreen"), name = "") + 
                   scale_color_manual(values=c("steelblue", "red", "darkgreen")) +
                   ylim(-5.05, 2.6) +
-                  theme_minimal(base_size = 30) +
-                  theme(legend.position = "none",
-                          plot.margin = margin(0,0,0,-20),
-                          axis.text = element_text(size = 35),
-                          axis.title.x = element_text(size = 45))
+                  guides(color = guide_legend("Versions"),
+                            fill = guide_legend("Versions")) +
+                  theme_minimal(base_size = 30)
+                  if (i == 1 || i == 5) {
+                    grid.plt <- grid.plt + theme(plot.margin = margin(0,0,0,-20),
+                                  legend.position = "bottom",
+                                  legend.title = element_blank(),
+                                  axis.text = element_text(size = 28),
+                                  axis.title.x = element_text(size = 35))
+                  } else {
+                    grid.plt <- grid.plt + theme(plot.margin = margin(0,0,0,-20),
+                                  legend.position = "bottom",
+                                  legend.title = element_blank(),
+                                  axis.text.y = element_blank(),
+                                  axis.text.x = element_text(size = 28),
+                                  axis.title.x = element_text(size = 35))
+                  }
   grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=-5.05, color = "red", size = 4)
 }
-grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
+# grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
+
+
+library(patchwork)
+grid.plts[[1]] + grid.plts[[2]] + grid.plts[[3]] + grid.plts[[4]] +
+  grid.plts[[5]] + grid.plts[[6]] + grid.plts[[7]] + 
+  plot_layout(ncol=4, nrow=2, guides = "collect") & theme(legend.position = "bottom", legend.title = element_blank())
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=10, height = 7.78)
