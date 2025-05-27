@@ -333,11 +333,12 @@ parameters {
 transformed parameters {
     array[n] real <lower=0> alpha; // covariate-adjusted tail index
     vector[psi] gamma[p]; // splines coefficient 
-    matrix[n, p] gsmooth; // linear component
+    
     real <lower=0> lambda2o;
 
     lambda2o=lambda2*100;
     {
+      matrix[n, p] gsmooth; // linear component
       vector[2] gammaFL[p];
       
       for(j in 1:p){
@@ -346,14 +347,14 @@ transformed parameters {
           gamma[j][1] = gammaFL[j][1];
           gamma[j][psi] = gammaFL[j][2];
       };
-    }
-    for (j in 1:p){
-        gsmooth[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j] + bsLinear[,j] * theta[j+1];
-    };
+      for (j in 1:p){
+          gsmooth[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j] + bsLinear[,j] * theta[j+1];
+      };
 
-    for (i in 1:n){
-        alpha[i] = exp(theta[1] + sum(gsmooth[i,]));
-    };    
+      for (i in 1:n){
+          alpha[i] = exp(theta[1] + sum(gsmooth[i,]));
+      };
+    }
 }
 
 model {

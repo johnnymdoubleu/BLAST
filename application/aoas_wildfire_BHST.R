@@ -464,7 +464,7 @@ for(i in 1:p){
 }
 
 # data.hs <- data.smooth
-saveRDS(data.smooth, file="./BLAST/application/figures/comparison/hs_stanfit.rds")
+# saveRDS(data.smooth, file="./BLAST/application/figures/comparison/hs_stanfit.rds")
 grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
 # grid.plts[[1]]
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=10, height = 7.78)
