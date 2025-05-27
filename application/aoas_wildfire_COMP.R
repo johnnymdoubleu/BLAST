@@ -128,14 +128,23 @@ for(i in 1:p){
                     grid.plt <- grid.plt + theme(plot.margin = margin(0,0,0,-20),
                                   legend.position = "bottom",
                                   legend.title = element_blank(),
-                                  axis.text = element_text(size = 28),
+                                  axis.text = element_text(size = 22),
                                   axis.title.x = element_text(size = 35))
-                  } else {
+                  }
+                  else if(i == 4) {
+                    grid.plt <- grid.plt + theme(plot.margin = margin(0,25,0,-20),
+                                  legend.position = "bottom",
+                                  legend.title = element_blank(),
+                                  axis.text.y = element_blank(),
+                                  axis.text.x = element_text(size = 22),
+                                  axis.title.x = element_text(size = 35))
+                  }
+                  else {
                     grid.plt <- grid.plt + theme(plot.margin = margin(0,0,0,-20),
                                   legend.position = "bottom",
                                   legend.title = element_blank(),
                                   axis.text.y = element_blank(),
-                                  axis.text.x = element_text(size = 28),
+                                  axis.text.x = element_text(size = 22),
                                   axis.title.x = element_text(size = 35))
                   }
   grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=-5.05, color = "red", size = 4)
@@ -147,4 +156,4 @@ library(patchwork)
 grid.plts[[1]] + grid.plts[[2]] + grid.plts[[3]] + grid.plts[[4]] +
   grid.plts[[5]] + grid.plts[[6]] + grid.plts[[7]] + 
   plot_layout(ncol=4, nrow=2, guides = "collect") & theme(legend.position = "bottom", legend.title = element_blank())
-# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./BLAST/application/figures/comparison/pareto_mcmc_comparisons.pdf"), width=18, height = 10)
