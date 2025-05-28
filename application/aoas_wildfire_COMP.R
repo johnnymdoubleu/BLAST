@@ -110,13 +110,13 @@ for(i in 1:p){
   grid.plt <- ggplot(data = data.frame(data.smooth[((((i-1)*n)+1):(i*n)),])
                   , aes(x=x)) + 
                   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-                  geom_ribbon(aes(ymin = linear.q1, ymax = linear.q3, fill = "linear"), alpha = 0.2) +
-                  geom_line(aes(y=linear.q2, colour = "linear"), linewidth=1, linetype = 3) + 
+                  geom_ribbon(aes(ymin = linear.q1, ymax = linear.q3, fill = "Linear"), alpha = 0.2) +
+                  geom_line(aes(y=linear.q2, colour = "Linear"), linewidth=1, linetype = 3) + 
                   geom_rug(aes(x=true, y=full.q2), sides = "b") +
-                  geom_ribbon(aes(ymin = hs.q1, ymax = hs.q3, fill = "hs"), alpha = 0.2) +
-                  geom_line(aes(y=hs.q2, colour = "hs"), linewidth=1, linetype = 2) + 
-                  geom_ribbon(aes(ymin = full.q1, ymax = full.q3, fill = "full"), alpha = 0.2) +
-                  geom_line(aes(y=full.mean, colour = "full"), linewidth=1.4) + 
+                  geom_ribbon(aes(ymin = hs.q1, ymax = hs.q3, fill = "Horseshoe"), alpha = 0.2) +
+                  geom_line(aes(y=hs.q2, colour = "Horseshoe"), linewidth=1, linetype = 2) + 
+                  geom_ribbon(aes(ymin = full.q1, ymax = full.q3, fill = "Full"), alpha = 0.2) +
+                  geom_line(aes(y=full.mean, colour = "Full"), linewidth=1.4) + 
                   ylab("") + xlab(names(fwi.scaled)[i]) +
                   scale_fill_manual(values=c("steelblue", "red", "darkgreen"), name = "") + 
                   scale_color_manual(values=c("steelblue", "red", "darkgreen")) +
@@ -124,7 +124,7 @@ for(i in 1:p){
                   guides(color = guide_legend("Versions"),
                             fill = guide_legend("Versions")) +
                   theme_minimal(base_size = 30)
-                  if (i == 1 || i == 5) {
+                  if (i == 1) {
                     grid.plt <- grid.plt + theme(plot.margin = margin(0,0,0,-20),
                                   legend.position = "bottom",
                                   legend.title = element_blank(),
@@ -139,6 +139,21 @@ for(i in 1:p){
                                   axis.text.x = element_text(size = 22),
                                   axis.title.x = element_text(size = 35))
                   }
+                  else if(i == 5) {
+                    grid.plt <- grid.plt + theme(plot.margin = margin(0,0,0,-20),
+                                  legend.position = "none",
+                                  legend.title = element_blank(),
+                                  axis.text = element_text(size = 22),
+                                  axis.title.x = element_text(size = 35))
+                  }
+                  else if(i == 6 || i == 7){
+                     grid.plt <- grid.plt + theme(plot.margin = margin(0,0,0,-20),
+                                  legend.position = "none",
+                                  legend.title = element_blank(),
+                                  axis.text.y = element_blank(),
+                                  axis.text = element_text(size = 22),
+                                  axis.title.x = element_text(size = 35))                   
+                  }                  
                   else {
                     grid.plt <- grid.plt + theme(plot.margin = margin(0,0,0,-20),
                                   legend.position = "bottom",
@@ -153,7 +168,15 @@ for(i in 1:p){
 
 
 library(patchwork)
-grid.plts[[1]] + grid.plts[[2]] + grid.plts[[3]] + grid.plts[[4]] +
-  grid.plts[[5]] + grid.plts[[6]] + grid.plts[[7]] + 
-  plot_layout(ncol=4, nrow=2, guides = "collect") & theme(legend.position = "bottom", legend.title = element_blank())
+
+pw <- grid.plts[[1]] + grid.plts[[2]] + grid.plts[[3]] + grid.plts[[4]] + grid.plts[[5]] + grid.plts[[6]] + grid.plts[[7]] + guide_area()
+pw + plot_layout(ncol=4, guides = "collect") & theme(legend.position = "right", legend.title = element_blank())
+
+pw <- (grid.plts[[1]] | grid.plts[[2]] | grid.plts[[3]] | grid.plts[[4]]) / (grid.plts[[5]] | grid.plts[[6]] | grid.plts[[7]])
+pw <- (grid.plts[[1]] | grid.plts[[2]] | grid.plts[[3]] | grid.plts[[4]]) /
+      (wrap_elements(grid.plts[[5]]) | wrap_elements(grid.plts[[6]]) | wrap_elements(grid.plts[[7]]))
+pw + plot_layout(guides = "collect") & theme(legend.position = "bottom", legend.title = element_blank())
 # ggsave(paste0("./BLAST/application/figures/comparison/pareto_mcmc_comparisons.pdf"), width=18, height = 10)
+
+
+
