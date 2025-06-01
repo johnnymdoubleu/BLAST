@@ -10,6 +10,7 @@ library(qqboxplot)
 library(ggdensity)
 library(ggforce)
 library(ggdist)
+library(patchwork)
 options(mc.cores = parallel::detectCores())
 
 # Structure of the FWI System
@@ -166,8 +167,6 @@ for(i in 1:p){
 }
 # grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
 
-
-library(patchwork)
 
 pw <- grid.plts[[1]] + grid.plts[[2]] + grid.plts[[3]] + grid.plts[[4]] + grid.plts[[5]] + grid.plts[[6]] + grid.plts[[7]] + guide_area()
 pw + plot_layout(ncol=4, guides = "collect") & theme(legend.position = "right", legend.title = element_blank())
