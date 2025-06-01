@@ -441,7 +441,7 @@ for(i in 1:p){
 
 grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
 
-ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_FWI.pdf"), grid.plts[[2]], width=10, height = 7.78)
+# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_DC.pdf"), grid.plts[[7]], width=10, height = 7.78)
 
 # saveRDS(data.smooth, file="./BLAST/application/figures/comparison/full_stanfit.rds")
 
