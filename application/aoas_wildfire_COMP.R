@@ -70,7 +70,7 @@ fwi.index$month <- factor(format(as.Date(substr(cov.long$...1[missing.values],1,
                             levels = c("Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"))
 fwi.index$date <- as.numeric(fwi.index$date)
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
-save(fwi.scaled, Y, file = "./BLAST/application/fwi.RData")
+# save(fwi.index,fwi.scaled, Y, file = "./BLAST/application/fwi.RData")
 fwi.origin <- fwi.scaled <-fwi.scaled[which(Y>u),]
 
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
