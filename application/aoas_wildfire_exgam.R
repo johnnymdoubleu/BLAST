@@ -3,6 +3,7 @@ library(Pareto)
 suppressMessages(library(tidyverse))
 library(readxl)
 library(gridExtra)
+library(evgam)
 
 
 # Structure of the FWI System
