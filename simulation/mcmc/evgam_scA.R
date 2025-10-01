@@ -283,71 +283,6 @@ theta.q1 <- theta.samples[,4]
 theta.q2 <- theta.samples[,5]
 theta.q3 <- theta.samples[,6]
 
-# array(gamma.q2, dim=c(psi,p))
-# sampled <- end.holder[,1:2] %*% gammafl.samples[1:2, 5]
-# trued <- as.matrix(c(bs.nonlinear[index.holder[1,1], 2:(psi-1)] %*% gamma.samples[2:(psi-1), 5], bs.nonlinear[index.holder[1,2], 2:(psi-1)] %*% gamma.samples[2:(psi-1), 5]), nrow = 2)
-# sampled - trued
-# sampled
-# trued
-df.theta <- data.frame("seq" = seq(1, (p+1)),
-                       "true" = theta.origin,
-                       "m" = theta.q2,
-                       "l" = theta.q1,
-                       "u" = theta.q3)
-df.theta$covariate <- factor(0:p)
-df.theta$labels <- factor(0:p)
-ggplot(df.theta, aes(x = covariate, y=m, color = covariate)) + ylab("") + xlab('') +
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  geom_point(size = 5) + geom_point(aes(y = true), color="red", size = 4) +
-  geom_errorbar(aes(ymin = l, ymax = u), width = 0.3, linewidth =1.2) + 
-  scale_x_discrete(labels = c(expression(bold(theta[0])),
-                              expression(bold(theta[1])),
-                              expression(bold(theta[2])),
-                              expression(bold(theta[3])),
-                              expression(bold(theta[4])),
-                              expression(bold(theta[5])))) + 
-  theme_minimal(base_size = 30) +
-  theme(plot.title = element_text(hjust = 0.5, size = 20),
-        legend.text.align = 0,
-        legend.title = element_blank(),
-        legend.text = element_text(size=25),
-        legend.margin=margin(0,0,0,-10),
-        legend.box.margin=margin(-10,0,-10,0),
-        plot.margin = margin(0,0,0,-20),
-        axis.text.x = element_text(hjust=0.35),
-        axis.text = element_text(size = 28))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_theta_sc1-wi.pdf"), width=10, height = 7.78)
-
-df.gamma <- data.frame("seq" = seq(1, (psi*p)), 
-                       "true" = as.vector(gamma.origin),
-                       "m" = as.vector(gamma.q2),
-                       "l" = as.vector(gamma.q1),
-                       "u" = as.vector(gamma.q3))
-df.gamma$covariate <- factor(rep(seq(1, 1 + nrow(df.gamma) %/% psi), each = psi, length.out = nrow(df.gamma)))
-df.gamma$labels <- factor(1:(psi*p))
-ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) + 
-  geom_errorbar(aes(ymin = l, ymax = u),alpha = 0.4, width = 4, linewidth = 1.2) +
-  geom_point(aes(y=true), size =4, color ="red")+
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  geom_point(size = 4) + ylab("") + xlab("" ) + #ylim(-15,15) +
-  # geom_ribbon(aes(ymin = l, ymax = u)) +
-  scale_x_discrete(breaks=c(seq(0, (psi*p), psi)+7), 
-                   label = c(expression(bold(gamma[1])), 
-                             expression(bold(gamma[2])), 
-                             expression(bold(gamma[3])), 
-                             expression(bold(gamma[4])), 
-                             expression(bold(gamma[5]))),
-                   expand=c(0,3)) +
-  theme_minimal(base_size = 30) +
-  theme(plot.title = element_text(hjust = 0.5, size = 20),
-        legend.title = element_blank(),
-        legend.text = element_text(size=25),
-        legend.margin=margin(0,0,0,-10),
-        legend.box.margin=margin(-10,0,-10,0),
-        plot.margin = margin(0,0,0,-20),
-        axis.text.x = element_text(hjust=0.5),
-        axis.text = element_text(size = 28))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_gamma_sc1-wi.pdf"), width=10, height = 7.78)
 
 g.smooth.mean <- as.vector(matrix(newgsmooth.samples[,1], nrow = n, byrow=TRUE))
 g.smooth.q1 <- as.vector(matrix(newgsmooth.samples[,4], nrow = n, byrow=TRUE))
@@ -361,71 +296,6 @@ equal_breaks <- function(n = 3, s = 0.1,...){
     round(seq, -floor(log10(abs(seq[2]-seq[1]))))
   }
 }
-
-alpha.smooth <- data.frame("x"=newx,
-                          "true" = as.vector(f.new),
-                          "post.mean" = as.vector(g.smooth.mean),
-                          "q1" = as.vector(g.smooth.q1),
-                          "q2" = as.vector(g.smooth.q2),
-                          "q3" = as.vector(g.smooth.q3),
-                          "covariates" = gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]")),
-                          "fakelab" = rep(1, (p*n)),
-                          "replicate" = gl(p, n, (p*n), labels = c("x[1]", "x[2]", "x[3]", "x[4]", "x[5]")))
-
-ggplot(alpha.smooth, aes(x=x, group=interaction(covariates, replicate))) + 
-  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
-  geom_line(aes(y=true, colour = "True"), linewidth=2, linetype=2) + 
-  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1.8) + 
-  ylab("") + xlab(expression(c)) + 
-  facet_grid(covariates ~ ., scales = "free_x", switch = "y", 
-              labeller = label_parsed) + 
-  scale_fill_manual(values=c("steelblue"), name = "") +
-  scale_color_manual(values=c("steelblue", "red")) + 
-  guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) + ylim(-1.3, 1.3) +
-#   scale_y_continuous(breaks=c(-0.6,-0.3,-0,0.3)) + 
-  # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
-  theme_minimal(base_size = 30) +
-  theme(plot.title = element_text(hjust = 0.5, size = 15),
-        legend.position="none",
-        legend.title = element_blank(),
-        legend.text = element_text(size=20),
-        legend.margin=margin(t = 1, unit='cm'),
-        legend.box.margin=margin(-10,0,-10,0),
-        plot.margin = margin(0,0,0,-20),
-        strip.text.y = element_text(size = 25, colour = "black", angle = 0, face = "bold.italic"),
-        strip.placement = "outside",
-        axis.title.x = element_text(size = 35),
-        axis.text = element_text(size=18))
-
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_smooth_sc1-wi.pdf"), width=12.5, height = 15)
-
-alpha.scenario <- data.frame("x" = newx,
-                            "constant" = newx,
-                            "true" = (alp.new),
-                            "post.mean" = (newalpha.samples[,1]),
-                            "post.median" = (newalpha.samples[,5]),
-                            "evgam" = 1/xi.pred,
-                            "q1" = (newalpha.samples[,4]),
-                            "q3" = (newalpha.samples[,6]))
-# "post.mean" = sort(alpha.smooth.new),
-# "post.median" = sort(newalpha.samples[,5]),
-# "q1" = sort(alpha.smooth.q1),
-# "q3" = sort(alpha.smooth.q3))
-
-ggplot(alpha.scenario, aes(x=x)) + 
-  ylab(expression(alpha(c,...,c))) + xlab(expression(c)) + labs(col = "") +
-  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
-  geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2, linetype=2) + 
-  geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1.5) +
-  geom_line(aes(y=evgam, col = "evgam"), linewidth=1.5) +
-  scale_color_manual(values=c("purple", "steelblue", "red")) + 
-  scale_fill_manual(values=c("steelblue"), name = "") +
-  theme_minimal(base_size = 30) + ylim(0,6.1)+
-  theme(legend.position = "none",
-        strip.text = element_blank(),
-        axis.text = element_text(size = 18))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_test_sc1-wi.pdf"), width=10, height = 7.78)
 
 simul.data <- data.frame(y = y.origin, x.origin)
 gam.formula <- list(y ~ s(X1, bs = "tp", k = 10) + 
@@ -451,8 +321,110 @@ gamma.xi <- matrix(xi.coef, ncol = p)
 alpha.nonlinear.new <- xi.nonlinear.new <- matrix(, nrow = n, ncol = p)
 bs.nonlinear <- xholder.basis[,c(2:((psi-1)*p+1))]
 for(j in 1:p){
-  alpha.nonlinear.new[,j] <- 1/(bs.nonlinear[,(((j-1)*(psi-1))+1):(((j-1)*(psi-1))+(psi-1))] %*% gamma.xi[,j])
+  xi.nonlinear.new[,j] <- bs.nonlinear[,(((j-1)*(psi-1))+1):(((j-1)*(psi-1))+(psi-1))] %*% gamma.xi[,j]
+  alpha.nonlinear.new[,j] <- 1/xi.nonlinear.new[,j]
 }
+
+
+alpha.smooth <- data.frame("x"=newx,
+                          "true" = as.vector(f.new),
+                          "post.mean" = as.vector(g.smooth.mean),
+                          "q1" = as.vector(g.smooth.q1),
+                          "q2" = as.vector(g.smooth.q2),
+                          "q3" = as.vector(g.smooth.q3),
+                          "evgam" = as.vector(alpha.nonlinear.new),
+                          "covariates" = gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]")),
+                          "fakelab" = rep(1, (p*n)),
+                          "replicate" = gl(p, n, (p*n), labels = c("x[1]", "x[2]", "x[3]", "x[4]", "x[5]")))
+
+ggplot(alpha.smooth, aes(x=x, group=interaction(covariates, replicate))) + 
+  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
+  geom_line(aes(y=true, colour = "True"), linewidth=2, linetype=2) + 
+  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1.8) +
+  # geom_line(aes(y=evgam, colour = "EVGAM"), linewidth=1.8) + 
+  ylab(expression(alpha)) + xlab(expression(c)) + 
+  facet_grid(covariates ~ ., scales = "free_x", switch = "y", 
+              labeller = label_parsed) + 
+  scale_fill_manual(values=c("steelblue"), name = "") +
+  scale_color_manual(values=c("steelblue", "red")) + 
+  guides(color = guide_legend(order = 2), 
+          fill = guide_legend(order = 1)) + ylim(-1.3, 1.3) + 
+  theme_minimal(base_size = 30) +
+  theme(plot.title = element_text(hjust = 0.5, size = 15),
+        legend.position="none",
+        legend.title = element_blank(),
+        legend.text = element_text(size=20),
+        legend.margin=margin(t = 1, unit='cm'),
+        legend.box.margin=margin(-10,0,-10,0),
+        plot.margin = margin(0,0,0,0),
+        strip.text.y = element_text(size = 25, colour = "black", angle = 0, face = "bold.italic"),
+        strip.placement = "outside",
+        axis.title.x = element_text(size = 35),
+        axis.text = element_text(size=18))
+
+xi.smooth <- data.frame("x"=newx,
+                          "true" = as.vector(1/f.new),
+                          "post.mean" = as.vector(1/g.smooth.mean),
+                          "q1" = as.vector(1/g.smooth.q1),
+                          "q2" = as.vector(1/g.smooth.q2),
+                          "q3" = as.vector(1/g.smooth.q3),
+                          "evgam" = as.vector(xi.nonlinear.new),
+                          "covariates" = gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]")),
+                          "fakelab" = rep(1, (p*n)),
+                          "replicate" = gl(p, n, (p*n), labels = c("x[1]", "x[2]", "x[3]", "x[4]", "x[5]")))
+
+ggplot(xi.smooth, aes(x=x, group=interaction(covariates, replicate))) + 
+  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
+  geom_line(aes(y=true, colour = "True"), linewidth=2, linetype=2) + 
+  # geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1.8) + 
+  geom_line(aes(y=evgam, colour = "EVGAM"), linewidth=1.8) + 
+  ylab(expression(xi)) + xlab(expression(c)) + 
+  facet_grid(covariates ~ ., scales = "free_x", switch = "y", 
+              labeller = label_parsed) + 
+  scale_fill_manual(values=c("steelblue"), name = "") +
+  scale_color_manual(values=c("purple", "red")) + 
+  guides(color = guide_legend(order = 2), 
+          fill = guide_legend(order = 1)) + ylim(-1.3, 1.3) + 
+  theme_minimal(base_size = 30) +
+  theme(plot.title = element_text(hjust = 0.5, size = 15),
+        legend.position="none",
+        legend.title = element_blank(),
+        legend.text = element_text(size=20),
+        legend.margin=margin(t = 1, unit='cm'),
+        legend.box.margin=margin(-10,0,-10,0),
+        plot.margin = margin(0,0,0,0),
+        strip.text.y = element_text(size = 25, colour = "black", angle = 0, face = "bold.italic"),
+        strip.placement = "outside",
+        axis.title.x = element_text(size = 35),
+        axis.text = element_text(size=18))
+
+alpha.scenario <- data.frame("x" = newx,
+                            "constant" = newx,
+                            "true" = (alp.new),
+                            "post.mean" = (newalpha.samples[,1]),
+                            "post.median" = (newalpha.samples[,5]),
+                            "evgam" = log(1/xi.pred),
+                            "q1" = (newalpha.samples[,4]),
+                            "q3" = (newalpha.samples[,6]))
+# "post.mean" = sort(alpha.smooth.new),
+# "post.median" = sort(newalpha.samples[,5]),
+# "q1" = sort(alpha.smooth.q1),
+# "q3" = sort(alpha.smooth.q3))
+
+ggplot(alpha.scenario, aes(x=x)) + 
+  ylab(expression(alpha(c,...,c))) + xlab(expression(c)) + labs(col = "") +
+  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
+  geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2, linetype=2) + 
+  geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1.5) +
+  geom_line(aes(y=evgam, col = "evgam"), linewidth=1.5) +
+  scale_color_manual(values=c("purple", "steelblue", "red")) + 
+  scale_fill_manual(values=c("steelblue"), name = "") +
+  theme_minimal(base_size = 30) + ylim(0,6.1)+
+  theme(legend.position = "none",
+        strip.text = element_blank(),
+        axis.text = element_text(size = 18))
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_test_sc1-wi.pdf"), width=10, height = 7.78)
+
 xi.scenario <- data.frame("x" = newx,
                             "constant" = newx,
                             "true" = 1/(alp.new),
