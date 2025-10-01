@@ -123,7 +123,7 @@ xholder.basis <-predict(m.gpd, newdata = xholder, type = "lpmatrix")
 str(xholder.basis$shape)
 head(xholder.basis$shape, 5)[,2:5]
 xi.coef <- tail(m.gpd$coefficients, 204)
-gamma.xi <- matrix(xi.coef[2:204], ncol = p, byrow = TRUE)
+gamma.xi <- matrix(xi.coef[2:204], ncol = p)
 f.nonlinear.new <- matrix(, nrow = n, ncol = p)
 bs.nonlinear <- xholder.basis$shape[,c(2:204)]
 for(j in 1:p){

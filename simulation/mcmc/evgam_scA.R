@@ -2,8 +2,8 @@ library(npreg)
 suppressMessages(library(ggplot2))
 library(rstan)
 library(Pareto)
-library(parallel)
-library(qqboxplot)
+library(evgam)
+
 
 #Scenario 1
 # set.seed(10)
@@ -166,11 +166,7 @@ parameters {
 
 transformed parameters {
     array[n] real <lower=0> alpha; // covariate-adjusted tail index
-    array[n] real <lower=0> newalpha; // new tail index
     array[p] vector[psi] gamma; // splines coefficient
-    matrix[n, p] newgnl; // nonlinear component
-    matrix[n, p] newgl; // linear component
-    matrix[n, p] newgsmooth; // linear component
     
     {
       array[p] vector[2] gammaFL;
@@ -190,16 +186,12 @@ transformed parameters {
       
       for (j in 1:p){
           gnl[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
-          newgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
           gl[,j] = bsLinear[,j] * theta[j+1];
-          newgl[,j] = xholderLinear[,j] * theta[j+1];
           gsmooth[,j] = gl[,j] + gnl[,j];
-          newgsmooth[,j] = newgl[,j] + newgnl[,j];
       };
 
       for (i in 1:n){
           alpha[i] = exp(theta[1] + sum(gsmooth[i,])); 
-          newalpha[i] = exp(theta[1] + sum(newgsmooth[i,]));
       };
     }
 }
@@ -221,11 +213,20 @@ model {
 }
 
 generated quantities {
-    // Used in Posterior predictive check    
-    vector[n] log_lik;
-    for(i in 1:n){
-      log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
+    array[n] real <lower=0> newalpha; // new tail index
+    matrix[n, p] newgsmooth; // linear component
+    {
+      matrix[n, p] newgnl; // nonlinear component
+      matrix[n, p] newgl; // linear component
+      for (j in 1:p){
+            newgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
+            newgl[,j] = xholderLinear[,j] * theta[j+1];
+            newgsmooth[,j] = newgl[,j] + newgnl[,j];
+        };
     }
+    for (i in 1:n){ 
+      newalpha[i] = exp(theta[1] + sum(newgsmooth[i,]));
+    };
 }
 "
 
@@ -268,8 +269,6 @@ theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summar
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
 lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
 # alpha.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
-newgl.samples <- summary(fit1, par=c("newgl"), probs = c(0.05, 0.5, 0.95))$summary
-newgnl.samples <- summary(fit1, par=c("newgnl"), probs = c(0.05, 0.5, 0.95))$summary
 newgsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
 newalpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
 # subgnl.samples <- summary(fit1, par=c("subgnl"), probs = c(0.05,0.5, 0.95))$summary
@@ -350,14 +349,6 @@ ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) +
         axis.text = element_text(size = 28))
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_gamma_sc1-wi.pdf"), width=10, height = 7.78)
 
-g.linear.mean <- as.vector(matrix(newgl.samples[,1], nrow = n, byrow=TRUE))
-g.linear.q1 <- as.vector(matrix(newgl.samples[,4], nrow = n, byrow=TRUE))
-g.linear.q2 <- as.vector(matrix(newgl.samples[,5], nrow = n, byrow=TRUE))
-g.linear.q3 <- as.vector(matrix(newgl.samples[,6], nrow = n, byrow=TRUE))
-g.nonlinear.mean <- as.vector(matrix(newgnl.samples[,1], nrow = n, byrow=TRUE))
-g.nonlinear.q1 <- as.vector(matrix(newgnl.samples[,4], nrow = n, byrow=TRUE))
-g.nonlinear.q2 <- as.vector(matrix(newgnl.samples[,5], nrow = n, byrow=TRUE))
-g.nonlinear.q3 <- as.vector(matrix(newgnl.samples[,6], nrow = n, byrow=TRUE))
 g.smooth.mean <- as.vector(matrix(newgsmooth.samples[,1], nrow = n, byrow=TRUE))
 g.smooth.q1 <- as.vector(matrix(newgsmooth.samples[,4], nrow = n, byrow=TRUE))
 g.smooth.q2 <- as.vector(matrix(newgsmooth.samples[,5], nrow = n, byrow=TRUE))
@@ -371,7 +362,7 @@ equal_breaks <- function(n = 3, s = 0.1,...){
   }
 }
 
-data.smooth <- data.frame("x"=newx,
+alpha.smooth <- data.frame("x"=newx,
                           "true" = as.vector(f.new),
                           "post.mean" = as.vector(g.smooth.mean),
                           "q1" = as.vector(g.smooth.q1),
@@ -381,15 +372,13 @@ data.smooth <- data.frame("x"=newx,
                           "fakelab" = rep(1, (p*n)),
                           "replicate" = gl(p, n, (p*n), labels = c("x[1]", "x[2]", "x[3]", "x[4]", "x[5]")))
 
-ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) + 
-#   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+ggplot(alpha.smooth, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   geom_line(aes(y=true, colour = "True"), linewidth=2, linetype=2) + 
   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1.8) + 
   ylab("") + xlab(expression(c)) + 
   facet_grid(covariates ~ ., scales = "free_x", switch = "y", 
-              labeller = label_parsed) +    
-#   facet_wrap(covariates ~ ., scales = "free_x", nrow = 5, labeller = label_parsed, strip.position = "left") + 
+              labeller = label_parsed) + 
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values=c("steelblue", "red")) + 
   guides(color = guide_legend(order = 2), 
@@ -411,88 +400,12 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_smooth_sc1-wi.pdf"), width=12.5, height = 15)
 
-data.linear <- data.frame("x"=newx,
-                          "true" = as.vector(f.linear.new),
-                          "post.mean" = as.vector(g.linear.mean),
-                          "q1" = as.vector(g.linear.q1),
-                          "q2" = as.vector(g.linear.q2),
-                          "q3" = as.vector(g.linear.q3),
-                          "covariates" = gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]")),
-                          "fakelab" = rep(1, (p*n)),
-                          "replicate" = gl(p, n, (p*n), labels = c("x[1]", "x[2]", "x[3]", "x[4]", "x[5]")))
-
-ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) + 
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
-  geom_line(aes(y=true, colour = "True"), linewidth=2) + 
-  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
-  ylab("") + xlab(expression(c)) +
-  facet_wrap(covariates ~ ., scales = "free_x", nrow = 5,
-             labeller = label_parsed, strip.position = "left") + 
-  scale_fill_manual(values=c("steelblue"), name = "") +
-  scale_color_manual(values=c("steelblue", "red")) + 
-  guides(color = guide_legend(order = 2), 
-         fill = guide_legend(order = 1)) + ylim(-0.55, 0.5) +
-  # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) + 
-  theme_minimal(base_size = 30) +
-  theme(plot.title = element_text(hjust = 0.5, size = 15),
-        legend.position="none",
-        legend.title = element_blank(),
-        legend.text = element_text(size=20),
-        legend.margin=margin(t = 1, unit='cm'),
-        legend.box.margin=margin(-10,0,-10,0),
-        plot.margin = margin(0,0,0,-20),
-        strip.text.y = element_text(size = 25, colour = "black", angle = 0, face = "bold.italic"),
-        strip.placement = "outside",
-        axis.title.x = element_text(size = 35),
-        axis.text = element_text(size=18))
-
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_linear_sc1-wi.pdf"), width=12.5, height = 15)
-
-
-data.nonlinear <- data.frame("x"=newx,
-                             "true" = as.vector(f.nonlinear.new),
-                             "post.mean" = as.vector(g.nonlinear.mean),
-                             "q1" = as.vector(g.nonlinear.q1),
-                             "q2" = as.vector(g.nonlinear.q2),
-                             "q3" = as.vector(g.nonlinear.q3),
-                             "covariates" = gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]")),
-                             "fakelab" = rep(1, (p*n)),
-                             "replicate" = gl(p, n, (p*n), labels = c("x[1]", "x[2]", "x[3]", "x[4]", "x[5]")))
-
-ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) + 
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
-  geom_line(aes(y=true, colour = "True"), linewidth=2) + 
-  geom_line(aes(y=post.mean, colour = "Posterior Median"), linewidth=1) + 
-  ylab("") + xlab(expression(c)) +
-  facet_wrap(covariates ~ ., scales = "free_x", nrow = 5,
-             labeller = label_parsed, strip.position = "left") + 
-  scale_fill_manual(values=c("steelblue"), name = "") +
-  scale_color_manual(values=c("steelblue", "red")) + 
-  guides(color = guide_legend(order = 2), 
-         fill = guide_legend(order = 1)) + #ylim(-1, 1) +
-  # scale_y_continuous(breaks=equal_breaks(n=3, s=0.1)) +
-  theme_minimal(base_size = 30) +
-  theme(plot.title = element_text(hjust = 0.5, size = 15),
-        legend.position="none",
-        legend.title = element_blank(),
-        legend.text = element_text(size=20),
-        legend.margin=margin(t = 1, unit='cm'),
-        legend.box.margin=margin(-10,0,-10,0),
-        plot.margin = margin(0,0,0,-20),
-        strip.text.y = element_text(size = 25, colour = "black", angle = 0, face = "bold.italic"),
-        strip.placement = "outside",
-        axis.title.x = element_text(size = 35),
-        axis.text = element_text(size=18))
-
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_nonlinear_sc1-wi.pdf"), width=12.5, height = 15)
-
-data.scenario <- data.frame("x" = newx,
+alpha.scenario <- data.frame("x" = newx,
                             "constant" = newx,
                             "true" = (alp.new),
                             "post.mean" = (newalpha.samples[,1]),
                             "post.median" = (newalpha.samples[,5]),
+                            "evgam" = 1/xi.pred,
                             "q1" = (newalpha.samples[,4]),
                             "q3" = (newalpha.samples[,6]))
 # "post.mean" = sort(alpha.smooth.new),
@@ -500,11 +413,12 @@ data.scenario <- data.frame("x" = newx,
 # "q1" = sort(alpha.smooth.q1),
 # "q3" = sort(alpha.smooth.q3))
 
-ggplot(data.scenario, aes(x=x)) + 
+ggplot(alpha.scenario, aes(x=x)) + 
   ylab(expression(alpha(c,...,c))) + xlab(expression(c)) + labs(col = "") +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2, linetype=2) + 
   geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1.5) +
+  geom_line(aes(y=evgam, col = "evgam"), linewidth=1.5) +
   scale_color_manual(values=c("purple", "steelblue", "red")) + 
   scale_fill_manual(values=c("steelblue"), name = "") +
   theme_minimal(base_size = 30) + ylim(0,6.1)+
@@ -513,45 +427,50 @@ ggplot(data.scenario, aes(x=x)) +
         axis.text = element_text(size = 18))
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_test_sc1-wi.pdf"), width=10, height = 7.78)
 
-mcmc.alpha <- posterior$alpha
-len <- dim(mcmc.alpha)[1]
-r <- matrix(, nrow = n, ncol = 30)
-# beta <- as.matrix(mcmc[[1]])[, 1:7] 
-T <- 30
-for(i in 1:n){
-  for(t in 1:T){
-    r[i, t] <- qnorm(pPareto(y.origin[i], u, alpha = mcmc.alpha[round(runif(1,1,len)),i]))
-  }
+simul.data <- data.frame(y = y.origin, x.origin)
+gam.formula <- list(y ~ s(X1, bs = "tp", k = 10) + 
+                      s(X2, bs = "tp", k = 10) + 
+                      s(X3, bs = "tp", k = 10) + 
+                      s(X4, bs = "tp", k = 10) + 
+                      s(X5, bs = "tp", k = 10),
+                    ~ s(X1, bs = "tp", k = 10) + 
+                      s(X2, bs = "tp", k = 10) + 
+                      s(X3, bs = "tp", k = 10) + 
+                      s(X4, bs = "tp", k = 10) + 
+                      s(X5, bs = "tp", k = 10))
+evgam.fit <- evgam::evgam(gam.formula, data = simul.data, family = "gpd")
+
+plot.data <- as.data.frame(evgam.fit$plotdata)
+# xi.pred <-predict(evgam.fit, newdata = data.frame(xholder), type="response")$shape
+xi.pred <-predict(evgam.fit, newdata = data.frame(xholder))$shape
+alpha.pred <- 1/xi.pred
+
+xholder.basis <- predict(evgam.fit, newdata = data.frame(xholder), type= "lpmatrix")$shape
+xi.coef <- tail(evgam.fit$coefficients, (psi-1)*p)
+gamma.xi <- matrix(xi.coef, ncol = p)
+alpha.nonlinear.new <- xi.nonlinear.new <- matrix(, nrow = n, ncol = p)
+bs.nonlinear <- xholder.basis[,c(2:((psi-1)*p+1))]
+for(j in 1:p){
+  alpha.nonlinear.new[,j] <- 1/(bs.nonlinear[,(((j-1)*(psi-1))+1):(((j-1)*(psi-1))+(psi-1))] %*% gamma.xi[,j])
 }
-lgrid <- n
-grid <- qnorm(ppoints(lgrid))
-# qqnorm(r[, 1])
-# points(grid, quantile(r[, 1], ppoints(lgrid), type = 2), 
-#     xlim = c(-3, 3), col = "red")
-traj <- matrix(NA, nrow = T, ncol = lgrid)
-for (t in 1:T){
-  traj[t, ] <- quantile(r[, t], ppoints(lgrid), type = 2)
-}
-l.band <- apply(traj, 2, quantile, prob = 0.025)
-trajhat <- apply(traj, 2, quantile, prob = 0.5)
-u.band <- apply(traj, 2, quantile, prob = 0.975)
+xi.scenario <- data.frame("x" = newx,
+                            "constant" = newx,
+                            "true" = 1/(alp.new),
+                            "post.mean" = 1/(newalpha.samples[,1]),
+                            "post.median" = 1/(newalpha.samples[,5]),
+                            "evgam" = xi.pred,
+                            "q1" = 1/(newalpha.samples[,4]),
+                            "q3" = 1/(newalpha.samples[,6]))
 
-ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat, 
-                         u.band = u.band)) + 
-  geom_ribbon(aes(x = grid, ymin = l.band, ymax = u.band), 
-              fill = "steelblue",
-              alpha = 0.4, linetype = "dashed") + 
-  geom_line(aes(x = grid, y = trajhat), colour = "steelblue", linetype = "dashed", linewidth = 1.2) + 
-  geom_abline(intercept = 0, slope = 1, linewidth = 1.2) + 
-  labs(x = "Theoretical quantiles", y = "Sample quantiles") + 
-  theme_minimal(base_size = 20) +
-  theme(text = element_text(size = 20)) + 
-  coord_fixed(xlim = c(-3, 3),  
-              ylim = c(-3, 3))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_qqplot_sc1-wi.pdf"), width=10, height = 7.78)
-
-# install.packages("../../GitHub/BRSTIR/qqboxplot.tgz", repos = NULL, type="source")
-
-library(loo)
-fit.log.lik <- extract_log_lik(fit1)
-loo(fit.log.lik, is_method = "sis", cores = 2)
+ggplot(xi.scenario, aes(x=x)) + 
+  ylab(expression(xi(c,...,c))) + xlab(expression(c)) + labs(col = "") +
+  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
+  geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2, linetype=2) + 
+  geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1.5) +
+    geom_line(aes(y=evgam, col = "EVGAM"), linewidth=1.5) +
+  scale_color_manual(values=c("purple", "steelblue", "red")) + 
+  scale_fill_manual(values=c("steelblue"), name = "") +
+  theme_minimal(base_size = 30) + #ylim(0, 6.1)+
+  theme(legend.position = "none",
+        strip.text = element_blank(),
+        axis.text = element_text(size = 18))
