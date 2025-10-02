@@ -3,7 +3,7 @@ suppressMessages(library(ggplot2))
 library(rstan)
 library(Pareto)
 library(evgam)
-
+library(gridExtra)
 
 #Scenario 1
 # set.seed(10)
@@ -298,11 +298,12 @@ equal_breaks <- function(n = 3, s = 0.1,...){
 }
 
 simul.data <- data.frame(y = y.origin, x.origin)
-gam.formula <- list(y ~ s(X1, bs = "tp", k = 10) + 
-                      s(X2, bs = "tp", k = 10) + 
-                      s(X3, bs = "tp", k = 10) + 
-                      s(X4, bs = "tp", k = 10) + 
-                      s(X5, bs = "tp", k = 10),
+gam.formula <- list(y ~ 1, 
+                      # s(X1, bs = "tp", k = 10) + 
+                      # s(X2, bs = "tp", k = 10) + 
+                      # s(X3, bs = "tp", k = 10) + 
+                      # s(X4, bs = "tp", k = 10) + 
+                      # s(X5, bs = "tp", k = 10),
                     ~ s(X1, bs = "tp", k = 10) + 
                       s(X2, bs = "tp", k = 10) + 
                       s(X3, bs = "tp", k = 10) + 
@@ -322,52 +323,81 @@ alpha.nonlinear.new <- xi.nonlinear.new <- matrix(, nrow = n, ncol = p)
 bs.nonlinear <- xholder.basis[,c(2:((psi-1)*p+1))]
 for(j in 1:p){
   xi.nonlinear.new[,j] <- bs.nonlinear[,(((j-1)*(psi-1))+1):(((j-1)*(psi-1))+(psi-1))] %*% gamma.xi[,j]
-  alpha.nonlinear.new[,j] <- 1/xi.nonlinear.new[,j]
+  alpha.nonlinear.new[,j] <- 1/log(xi.nonlinear.new[,j])
 }
 
 
-alpha.smooth <- data.frame("x"=newx,
+
+alpha.smooth <- data.frame("x" = as.vector(xholder),
                           "true" = as.vector(f.new),
                           "post.mean" = as.vector(g.smooth.mean),
                           "q1" = as.vector(g.smooth.q1),
                           "q2" = as.vector(g.smooth.q2),
                           "q3" = as.vector(g.smooth.q3),
                           "evgam" = as.vector(alpha.nonlinear.new),
-                          "covariates" = gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]")),
-                          "fakelab" = rep(1, (p*n)),
-                          "replicate" = gl(p, n, (p*n), labels = c("x[1]", "x[2]", "x[3]", "x[4]", "x[5]")))
+                          "covariates" = gl(p, n, (p*n), labels = c("x[1]", "x[2]", "x[3]", "x[4]", "x[5]")))
 
-ggplot(alpha.smooth, aes(x=x, group=interaction(covariates, replicate))) + 
-  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
-  geom_line(aes(y=true, colour = "True"), linewidth=2, linetype=2) + 
-  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1.8) +
-  # geom_line(aes(y=evgam, colour = "EVGAM"), linewidth=1.8) + 
-  ylab(expression(alpha)) + xlab(expression(c)) + 
-  facet_grid(covariates ~ ., scales = "free_x", switch = "y", 
-              labeller = label_parsed) + 
-  scale_fill_manual(values=c("steelblue"), name = "") +
-  scale_color_manual(values=c("steelblue", "red")) + 
-  guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) + ylim(-1.3, 1.3) + 
-  theme_minimal(base_size = 30) +
-  theme(plot.title = element_text(hjust = 0.5, size = 15),
-        legend.position="none",
-        legend.title = element_blank(),
-        legend.text = element_text(size=20),
-        legend.margin=margin(t = 1, unit='cm'),
-        legend.box.margin=margin(-10,0,-10,0),
-        plot.margin = margin(0,0,0,0),
-        strip.text.y = element_text(size = 25, colour = "black", angle = 0, face = "bold.italic"),
-        strip.placement = "outside",
-        axis.title.x = element_text(size = 35),
-        axis.text = element_text(size=18))
+
+grid.plts <- list()
+for(i in 1:p){
+  grid.plt <- ggplot(data = data.frame(alpha.smooth[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + 
+                  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+                  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
+                  geom_line(aes(y=true, colour = "True"), linewidth=1, linetype=2) + 
+                  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
+                  geom_line(aes(y=evgam, colour = "EVGAM"), linewidth=1) + 
+                  ylab("") + xlab(paste0("X[",i,"]")) +
+                  scale_fill_manual(values=c("steelblue"), name = "") + 
+                  scale_color_manual(values=c("purple", "steelblue", "red")) +
+                  ylim(-1.3, 1.3) + xlim(0,1) +
+                  theme_minimal(base_size = 10) +
+                  theme(legend.position = "none",
+                          plot.margin = margin(0,0,0,-20),
+                          axis.text = element_text(size = 15),
+                          axis.title.x = element_text(size = 15))
+  grid.plts[[i]] <- grid.plt
+}
+
+grid.arrange(grobs = grid.plts, ncol = 3, nrow = 2)
+plot(evgam.fit)
+xi.smooth <- data.frame("x" = as.vector(xholder),
+                          "true" = as.vector(1/exp(f.new)),
+                          "post.mean" = as.vector(1/exp(g.smooth.mean)),
+                          "q1" = as.vector(1/exp(g.smooth.q1)),
+                          "q2" = as.vector(1/exp(g.smooth.q2)),
+                          "q3" = as.vector(1/exp(g.smooth.q3)),
+                          "evgam" = as.vector(xi.nonlinear.new),
+                          "covariates" = gl(p, n, (p*n), labels = c("x[1]", "x[2]", "x[3]", "x[4]", "x[5]")))
+
+
+grid.plts <- list()
+for(i in 1:p){
+  grid.plt <- ggplot(data = data.frame(xi.smooth[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + 
+                  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+                  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
+                  geom_line(aes(y=true, colour = "True"), linewidth=1, linetype = 2) + 
+                  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
+                  geom_line(aes(y=evgam, colour = "evgam"), linewidth=1) + 
+                  ylab("") + xlab(paste0("X[",i,"]")) +
+                  scale_fill_manual(values=c("steelblue"), name = "") + 
+                  scale_color_manual(values=c("purple", "steelblue", "red")) +
+                  ylim(-1.8, 1.8) + xlim(0,1) +
+                  theme_minimal(base_size = 10) +
+                  theme(legend.position = "none",
+                          plot.margin = margin(0,0,0,-20),
+                          axis.text = element_text(size = 15),
+                          axis.title.x = element_text(size = 15))
+  grid.plts[[i]] <- grid.plt
+}
+
+grid.arrange(grobs = grid.plts, ncol = 3, nrow = 2)
 
 xi.smooth <- data.frame("x"=newx,
-                          "true" = as.vector(1/f.new),
-                          "post.mean" = as.vector(1/g.smooth.mean),
-                          "q1" = as.vector(1/g.smooth.q1),
-                          "q2" = as.vector(1/g.smooth.q2),
-                          "q3" = as.vector(1/g.smooth.q3),
+                          "true" = as.vector(1/exp(f.new)),
+                          "post.mean" = as.vector(1/exp(g.smooth.mean)),
+                          "q1" = as.vector(1/exp(g.smooth.q1)),
+                          "q2" = as.vector(1/exp(g.smooth.q2)),
+                          "q3" = as.vector(1/exp(g.smooth.q3)),
                           "evgam" = as.vector(xi.nonlinear.new),
                           "covariates" = gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]")),
                           "fakelab" = rep(1, (p*n)),
@@ -376,15 +406,15 @@ xi.smooth <- data.frame("x"=newx,
 ggplot(xi.smooth, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   geom_line(aes(y=true, colour = "True"), linewidth=2, linetype=2) + 
-  # geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1.8) + 
+  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1.8) + 
   geom_line(aes(y=evgam, colour = "EVGAM"), linewidth=1.8) + 
   ylab(expression(xi)) + xlab(expression(c)) + 
   facet_grid(covariates ~ ., scales = "free_x", switch = "y", 
               labeller = label_parsed) + 
   scale_fill_manual(values=c("steelblue"), name = "") +
-  scale_color_manual(values=c("purple", "red")) + 
+  scale_color_manual(values=c("purple","steelblue", "red")) + 
   guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) + ylim(-1.3, 1.3) + 
+          fill = guide_legend(order = 1)) + ylim(-2.8, 2.8) + 
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 15),
         legend.position="none",
@@ -403,7 +433,7 @@ alpha.scenario <- data.frame("x" = newx,
                             "true" = (alp.new),
                             "post.mean" = (newalpha.samples[,1]),
                             "post.median" = (newalpha.samples[,5]),
-                            "evgam" = log(1/xi.pred),
+                            "evgam" = 1/xi.pred,
                             "q1" = (newalpha.samples[,4]),
                             "q3" = (newalpha.samples[,6]))
 # "post.mean" = sort(alpha.smooth.new),

@@ -22,8 +22,8 @@ options(mc.cores = parallel::detectCores())
 #DC : Drought Code
 
 
-# setwd("C:/Users/Johnny Lee/Documents/GitHub")
-setwd("A:/GitHub")
+setwd("C:/Users/Johnny Lee/Documents/GitHub")
+# setwd("A:/GitHub")
 df <- read_excel("./BLAST/application/AADiarioAnual.xlsx", col_types = c("date", rep("numeric",40)))
 df.long <- gather(df, condition, measurement, "1980":"2019", factor_key=TRUE)
 missing.values <- which(!is.na(df.long$measurement))
@@ -32,7 +32,7 @@ missing.values <- which(!is.na(df.long$measurement))
 #considering the case of leap year, the missing values are the 29th of Feb
 #Thus, each year consist of 366 data with either 1 or 0 missing value.
 Y <- df.long$measurement[!is.na(df.long$measurement)]
-psi <- 10
+psi <- 30
 threshold <- 0.975
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
@@ -220,60 +220,97 @@ gsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95)
 alpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
 
 # save(theta.samples, gamma.samples, gsmooth.samples, alpha.samples, file = "./BLAST/application/BT_results.RData")
-load(file = "./BLAST/application/BT_results.RData")
-
+load(file = "./BLAST/application/BT_results.Rdata")
+load("./BLAST/application/evgam_fit.Rdata")
 g.smooth.mean <- as.vector(matrix(gsmooth.samples[,1], nrow = n, byrow=TRUE))
 g.smooth.q1 <- as.vector(matrix(gsmooth.samples[,4], nrow = n, byrow=TRUE))
 g.smooth.q2 <- as.vector(matrix(gsmooth.samples[,5], nrow = n, byrow=TRUE))
 g.smooth.q3 <- as.vector(matrix(gsmooth.samples[,6], nrow = n, byrow=TRUE))
+xholder.df <- data.frame(xholder)
+names(xholder.df) <- names(fwi.scaled)
+xi.pred <-predict(m.gpd, newdata = xholder.df, type="link")$shape
+alpha.pred <- 1/xi.pred
 
-equal_breaks <- function(n = 3, s = 0.1,...){
-  function(x){
-    d <- s * diff(range(x)) / (1+2*s)
-    seq = seq(min(x)+d, max(x)-d, length=n)
-    round(seq, -floor(log10(abs(seq[2]-seq[1]))))
-  }
+xholder.basis <- predict(m.gpd, newdata = xholder.df, type= "lpmatrix")$shape
+xi.coef <- tail(m.gpd$coefficients, (psi-1)*p)
+gamma.xi <- matrix(xi.coef, ncol = p)
+alpha.nonlinear.new <- xi.nonlinear.new <- matrix(, nrow = n, ncol = p)
+bs.nonlinear <- xholder.basis[,c(2:((psi-1)*p+1))]
+for(j in 1:p){
+  # print((((j-1)*(psi-1))+1):(((j-1)*(psi-1))+(psi-1)))
+  xi.nonlinear.new[,j] <- bs.nonlinear[,(((j-1)*(psi-1))+1):(((j-1)*(psi-1))+(psi-1))] %*% gamma.xi[,j]
+  alpha.nonlinear.new[,j] <- 1/xi.nonlinear.new[,j]
 }
 
-data.smooth <- data.frame("x"= as.vector(xholder),
-                          "post.mean" = as.vector(g.smooth.mean),
-                          "q1" = as.vector(g.smooth.q1),
-                          "q2" = as.vector(g.smooth.q2),
-                          "q3" = as.vector(g.smooth.q3),
-                          "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)),
-                          "replicate" = gl(p, n, (p*n), labels = names(fwi.scaled)))
+xi.smooth <- data.frame("x" = as.vector(xholder),
+                          "true" = as.vector(as.matrix(fwi.scaled)),
+                          "post.mean" = as.vector(1/exp(g.smooth.mean)),
+                          "q1" = as.vector(1/exp(g.smooth.q1)),
+                          "q2" = as.vector(1/exp(g.smooth.q2)),
+                          "q3" = as.vector(1/exp(g.smooth.q3)),
+                          "evgam" = as.vector(xi.nonlinear.new),
+                          "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)))
 
-ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) + 
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
-  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
-  ylab("") + xlab("") +
-  facet_grid(covariates ~ ., scales = "free",
-              labeller = label_parsed) + 
+
+grid.plts <- list()
+for(i in 1:p){
+  grid.plt <- ggplot(data = data.frame(xi.smooth[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + 
+                  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+                  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
+                  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
+                  geom_line(aes(y=evgam, colour = "EVGAM"), linewidth=1) + 
+                  geom_rug(aes(x=true, y=q2), sides = "b") +
+                  ylab("") + xlab(names(fwi.scaled)[i]) +
+                  scale_fill_manual(values=c("steelblue"), name = "") + 
+                  scale_color_manual(values=c("purple", "steelblue")) +
+                  # ylim(-4.1, 4.1) +
+                  theme_minimal(base_size = 30) +
+                  theme(legend.position = "none",
+                          plot.margin = margin(0,0,0,-20),
+                          axis.text = element_text(size = 35),
+                          axis.title.x = element_text(size = 45))
+  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=-4.1, color = "red", size = 7)
+}
+
+grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
+
+
+xi.scenario <- data.frame("x" = xholder[,1],
+                            "post.mean" = (1/alpha.samples[,1]),
+                            "post.median" = (1/alpha.samples[,5]),
+                            "evgam" = xi.pred,
+                            "q1" = (1/alpha.samples[,4]),
+                            "q3" = (1/alpha.samples[,6]))
+
+ggplot(xi.scenario, aes(x=x)) + 
+  ylab(expression(xi(c,...,c))) + xlab(expression(c)) + labs(col = "") +
+  geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
+  geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
+  geom_line(aes(y=evgam), linewidth=1, color = "purple") +
   scale_fill_manual(values=c("steelblue"), name = "") +
-  scale_color_manual(values=c("steelblue")) + 
+  scale_color_manual(values = c("steelblue")) + 
   guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) + 
-          ylim(-2, 2) +
+          fill = guide_legend(order = 1)) +
   theme_minimal(base_size = 30) +
   theme(legend.position = "none",
-          plot.margin = margin(0,0,0,-20),
-          # strip.text = element_blank(),
-          axis.text = element_text(size = 20))
-# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=12.5, height = 15)
+        strip.text = element_blank(),
+        axis.text = element_text(size = 20))
 
-data.scenario <- data.frame("x" = xholder[,1],
+
+alpha.scenario <- data.frame("x" = xholder[,1],
                             "post.mean" = (alpha.samples[,1]),
                             "post.median" = (alpha.samples[,5]),
+                            "evgam" = alpha.pred,
                             "q1" = (alpha.samples[,4]),
                             "q3" = (alpha.samples[,6]))
 
-ggplot(data.scenario, aes(x=x)) + 
+ggplot(alpha.scenario, aes(x=x)) + 
   ylab(expression(alpha(c,...,c))) + xlab(expression(c)) + labs(col = "") +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
   geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
+  geom_line(aes(y=evgam), linewidth=1, color = "purple") +
   scale_fill_manual(values=c("steelblue"), name = "") +
-  scale_color_manual(values = c("steelblue")) + 
+  scale_color_manual(values = c("steelblue")) + ylim(0, 15) +
   guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) +
   theme_minimal(base_size = 30) +
@@ -336,36 +373,6 @@ cat("Finished Running")
 # relative_eff(exp(fit.log.lik))
 #https://discourse.mc-staqan.org/t/four-questions-about-information-criteria-cross-validation-and-hmc-in-relation-to-a-manuscript-review/13841/3
 
-
-data.smooth <- data.frame("x" = as.vector(xholder),
-                          "true" = as.vector(as.matrix(fwi.scaled)),
-                          "post.mean" = as.vector(g.smooth.mean),
-                          "q1" = as.vector(g.smooth.q1),
-                          "q2" = as.vector(g.smooth.q2),
-                          "q3" = as.vector(g.smooth.q3),
-                          "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)))
-
-
-grid.plts <- list()
-for(i in 1:p){
-  grid.plt <- ggplot(data = data.frame(data.smooth[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + 
-                  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-                  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
-                  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
-                  geom_rug(aes(x=true, y=q2), sides = "b") +
-                  ylab("") + xlab(names(fwi.scaled)[i]) +
-                  scale_fill_manual(values=c("steelblue"), name = "") + 
-                  scale_color_manual(values=c("steelblue")) +
-                  ylim(-4.1, 4.1) +
-                  theme_minimal(base_size = 30) +
-                  theme(legend.position = "none",
-                          plot.margin = margin(0,0,0,-20),
-                          axis.text = element_text(size = 35),
-                          axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=-4.1, color = "red", size = 7)
-}
-
-grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
 
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_DC.pdf"), grid.plts[[7]], width=10, height = 7.78)
 
@@ -463,9 +470,7 @@ print(plt + geom_area(data = subset(d, x>12.44009), aes(x=x,y=y), fill = "slateg
               y=0, yend=approx(x = d$x, y = d$y, xout = 12.4409)$y,
               colour="red", linewidth=1.2, linetype = "dotted"))
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_BLAST_generative.pdf"), width = 10, height = 7.78)
-
-library(ismev)
-gpd.fit(y, u)
+ismev::gpd.fit(y, u)
 
 fit.log.lik <- extract_log_lik(fit1)
 constraint.elpd.loo <- loo(fit.log.lik, is_method = "sis", cores = 2)
