@@ -298,22 +298,21 @@ equal_breaks <- function(n = 3, s = 0.1,...){
 }
 
 simul.data <- data.frame(y = y.origin, x.origin)
-gam.formula <- list(y ~ 1, 
-                      # s(X1, bs = "tp", k = 10) + 
-                      # s(X2, bs = "tp", k = 10) + 
-                      # s(X3, bs = "tp", k = 10) + 
-                      # s(X4, bs = "tp", k = 10) + 
-                      # s(X5, bs = "tp", k = 10),
+gam.formula <- list(y ~ s(X1, bs = "tp", k = 10) + 
+                      s(X2, bs = "tp", k = 10) + 
+                      s(X3, bs = "tp", k = 10) + 
+                      s(X4, bs = "tp", k = 10) + 
+                      s(X5, bs = "tp", k = 10),
                     ~ s(X1, bs = "tp", k = 10) + 
                       s(X2, bs = "tp", k = 10) + 
                       s(X3, bs = "tp", k = 10) + 
                       s(X4, bs = "tp", k = 10) + 
                       s(X5, bs = "tp", k = 10))
 evgam.fit <- evgam::evgam(gam.formula, data = simul.data, family = "gpd")
-
+plot(evgam.fit)
 plot.data <- as.data.frame(evgam.fit$plotdata)
-# xi.pred <-predict(evgam.fit, newdata = data.frame(xholder), type="response")$shape
-xi.pred <-predict(evgam.fit, newdata = data.frame(xholder))$shape
+xi.pred <-predict(evgam.fit, newdata = data.frame(xholder), type="response")$shape
+# xi.pred <-predict(evgam.fit, newdata = data.frame(xholder))$shape
 alpha.pred <- 1/xi.pred
 
 xholder.basis <- predict(evgam.fit, newdata = data.frame(xholder), type= "lpmatrix")$shape
