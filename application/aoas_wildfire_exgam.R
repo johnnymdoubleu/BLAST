@@ -20,8 +20,6 @@ setwd("C:/Users/Johnny Lee/Documents/GitHub")
 # setwd("A:/GitHub")
 load("./BLAST/application/wildfire_prep.Rdata") #loading covariate-dependent thresholds
 
-# max.fwi <- fwi.origin[which.max(y),]
-
 gpd.formula <- list(
   BA ~ 1,
       #  s(DSR, bs = "tp", k = 30) +
@@ -40,10 +38,8 @@ gpd.formula <- list(
        s(DC, bs = "tp", k = 30)
 )
 m.gpd <- evgam(gpd.formula, data = fwi.origin, family = "gpd")
-summary(m.gpd)
-str(m.gpd)
-
-
+save(m.gpd, file = "./BLAST/application/evgam_fit.Rdata")
+# load("./BLAST/application/evgam_fit_all.Rdata")
 
 no.theta <- 1 #represents the no. of linear predictors for each smooth functions
 xholder.linear <- xholder.nonlinear <- matrix(,nrow=n, ncol=0)
@@ -63,8 +59,7 @@ for (v in names(fwi.scaled)) {
   sc <- mgcv::smoothCon(mgcv::s(x, bs="tp", k=30), data = data.frame(x = xholder[[v]]))
   basis_list[[v]] <- sc[[1]]$X
 }
-# save(m.gpd, file = "./BLAST/application/evgam_fit.Rdata")
-# load("./BLAST/application/evgam_fit_all.Rdata")
+
 
 xholder.basis <-predict(m.gpd, newdata = xholder, type = "lpmatrix")
 
