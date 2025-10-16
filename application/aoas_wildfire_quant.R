@@ -240,7 +240,7 @@ fit1 <- stan(
     chains = 3,             # number of Markov chains
     iter = 40000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
-    refresh = 2000           # no progress shown
+    refresh = 5000           # no progress shown
 )
 
 posterior <- rstan::extract(fit1)
@@ -306,6 +306,6 @@ for(i in 1:p){
   grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=-1.2, color = "red", size = 7)
 }
 
-grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
+grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
 
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_DC.pdf"), grid.plts[[7]], width=10, height = 7.78)

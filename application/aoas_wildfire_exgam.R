@@ -238,3 +238,29 @@ ggplot(data.scenario, aes(x=x)) +
         axis.text = element_text(size = 20))
 
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_alpha.pdf"), width=10, height = 7.78)
+
+logLik1 <- logLik(m.gpd)
+# Extract number of parameters (degrees of freedom)
+df1 <- attr(logLik1, "df")
+
+# Calculate AIC for each model
+AIC1 <- -2 * as.numeric(logLik1) + 2 * df1
+# Calculate BIC for each model
+BIC1 <- -2 * as.numeric(logLik1) + log(n) * df1
+
+load("./BLAST/application/evgam_fit_all.Rdata")
+logLik2 <- logLik(m.gpd)
+df2 <- attr(logLik2, "df")
+AIC2 <- -2 * as.numeric(logLik2) + 2 * df2
+BIC2 <- -2 * as.numeric(logLik2) + log(n) * df2
+
+# Likelihood ratio test for nested models (model2 nested in model1)
+LR_stat <- 2 * (as.numeric(logLik2) - as.numeric(logLik1))
+df_diff <- df1 - df2
+p_value <- pchisq(LR_stat, df = df_diff, lower.tail = FALSE)
+
+# Print comparison
+cat("Model 1: AIC =", AIC1, "BIC =", BIC1, "\n")
+cat("Model 2: AIC =", AIC2, "BIC =", BIC2, "\n")
+cat("Likelihood Ratio Test Statistic:", LR_stat, "on", df_diff, "df\n")
+cat("p-value:", p_value, "\n")
