@@ -19,16 +19,18 @@ library(evgam)
 setwd("C:/Users/Johnny Lee/Documents/GitHub")
 # setwd("A:/GitHub")
 load("./BLAST/application/wildfire_prep.Rdata") #loading covariate-dependent thresholds
-
+# psi <- 30
+# n <- dim(fwi.scaled)[[1]]
+# p <- dim(fwi.scaled)[[2]]
 gpd.formula <- list(
-  BA ~ 1,
-      #  s(DSR, bs = "tp", k = 30) +
-      #  s(FWI, bs = "tp", k = 30) + 
-      #  s(BUI, bs = "tp", k = 30) + 
-      #  s(ISI, bs = "tp", k = 30) + 
-      #  s(FFMC, bs = "tp", k = 30) + 
-      #  s(DMC, bs = "tp", k = 30) + 
-      #  s(DC, bs = "tp", k = 30),
+  BA ~ #1,
+       s(DSR, bs = "tp", k = 30) +
+       s(FWI, bs = "tp", k = 30) + 
+       s(BUI, bs = "tp", k = 30) + 
+       s(ISI, bs = "tp", k = 30) + 
+       s(FFMC, bs = "tp", k = 30) + 
+       s(DMC, bs = "tp", k = 30) + 
+       s(DC, bs = "tp", k = 30),
      ~ s(DSR, bs = "tp", k = 30) +
        s(FWI, bs = "tp", k = 30) + 
        s(BUI, bs = "tp", k = 30) + 
@@ -37,8 +39,11 @@ gpd.formula <- list(
        s(DMC, bs = "tp", k = 30) + 
        s(DC, bs = "tp", k = 30)
 )
+
+
+fwi.origin <- data.frame(fwi.origin[which(Y>qu),], BA=y)
 m.gpd <- evgam(gpd.formula, data = fwi.origin, family = "gpd")
-save(m.gpd, file = "./BLAST/application/evgam_fit.Rdata")
+save(m.gpd, file = "./BLAST/application/evgam_fit_all.Rdata")
 # load("./BLAST/application/evgam_fit_all.Rdata")
 
 no.theta <- 1 #represents the no. of linear predictors for each smooth functions
@@ -74,6 +79,7 @@ for(j in 1:p){
 smooth.func <- as.data.frame(m.gpd$plotdata)
 smooth.func <- as.matrix(smooth.func)
 smooth.func <- as.vector(smooth.func)
+
 equal_breaks <- function(n = 3, s = 0.1,...){
   function(x){
     d <- s * diff(range(x)) / (1+2*s)
@@ -82,28 +88,89 @@ equal_breaks <- function(n = 3, s = 0.1,...){
   }
 }
 
-data.smooth <- data.frame("x"= as.vector(xholder.mat),
+xi.smooth <- data.frame("x"= as.vector(xholder.mat),
                           "fit" = smooth.func,
+                          "true" = as.vector(as.matrix(fwi.scaled)),
                           "smooth" = as.vector(f.nonlinear.new),
                           "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)),
                           "replicate" = gl(p, n, (p*n), labels = names(fwi.scaled)))
 
-ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) + 
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  # geom_line(aes(y=fit, colour = "fit"), linewidth=1) + 
-  geom_line(aes(y=smooth, colour = "smooth"), linewidth=1) + 
-  ylab("") + xlab("") +
-  facet_grid(covariates ~ ., scales = "free",
-              labeller = label_parsed) + 
-  scale_color_manual(values=c("steelblue")) + 
-  guides(color = guide_legend(order = 2)) + 
-          # ylim(-3.5, 3.5) +
+grid.plts <- list()
+for(i in 1:p){
+  grid.plt <- ggplot(data = data.frame(xi.smooth[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + 
+                  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+                  geom_line(aes(y=smooth, colour = "Posterior Median"), linewidth=1) + 
+                  ylab("") + xlab(names(fwi.scaled)[i]) +
+                  geom_rug(aes(x=true, y=smooth), sides = "b") + 
+                  scale_color_manual(values=c("purple")) +
+                  ylim(-1, max(xi.smooth$smooth)) +
+                  theme_minimal(base_size = 30) +
+                  theme(legend.position = "none",
+                          plot.margin = margin(0,0,0,-20),
+                          axis.text = element_text(size = 35),
+                          axis.title.x = element_text(size = 45))
+  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=-1, color = "red", size = 7)
+}
+grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
+
+xholder.df <- data.frame(xholder)
+names(xholder.df) <- names(fwi.scaled)
+xi.pred <-predict(m.gpd, newdata = xholder.df, type="link")$shape
+alpha.pred <- 1/xi.pred
+
+xholder.basis <- predict(m.gpd, newdata = xholder.df, type= "lpmatrix")$shape
+xi.coef <- tail(m.gpd$coefficients, (psi-1)*p)
+gamma.xi <- matrix(xi.coef, ncol = p)
+alpha.nonlinear.new <- xi.nonlinear.new <- matrix(, nrow = n, ncol = p)
+bs.nonlinear <- xholder.basis[,c(2:((psi-1)*p+1))]
+for(j in 1:p){
+  xi.nonlinear.new[,j] <- bs.nonlinear[,(((j-1)*(psi-1))+1):(((j-1)*(psi-1))+(psi-1))] %*% gamma.xi[,j]
+  alpha.nonlinear.new[,j] <- 1/xi.nonlinear.new[,j]
+}
+
+
+xi.scenario <- data.frame("x" = xholder[,1],
+                           "evgam" = xi.pred)#, 
+                            # "post.mean" = (1/alpha.samples[,1]),
+                            # "post.median" = (1/alpha.samples[,5]),
+                            # "q1" = (1/alpha.samples[,4]),
+                            # "q3" = (1/alpha.samples[,6]))
+
+ggplot(xi.scenario, aes(x=x)) + 
+  ylab(expression(xi(c,...,c))) + xlab(expression(c)) + labs(col = "") +  
+  # geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
+  # geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
+  geom_line(aes(y=evgam), linewidth=1, color = "purple") +
+  # scale_fill_manual(values=c("steelblue"), name = "") +
+  # scale_color_manual(values = c("steelblue")) + 
+  guides(color = guide_legend(order = 2), 
+          fill = guide_legend(order = 1)) +
   theme_minimal(base_size = 30) +
   theme(legend.position = "none",
-          plot.margin = margin(0,0,0,-20),
-          # strip.text = element_blank(),
-          axis.text = element_text(size = 20))
+        strip.text = element_blank(),
+        axis.text = element_text(size = 20))
 
+
+alpha.scenario <- data.frame("x" = xholder[,1],
+                              "evgam" = alpha.pred)#,
+                            # "post.mean" = (alpha.samples[,1]),
+                            # "post.median" = (alpha.samples[,5]),
+                            # "q1" = (alpha.samples[,4]),
+                            # "q3" = (alpha.samples[,6]))
+
+ggplot(alpha.scenario, aes(x=x)) + 
+  ylab(expression(alpha(c,...,c))) + xlab(expression(c)) + labs(col = "") +
+  # geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
+  # geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
+  geom_line(aes(y=evgam), linewidth=1, color = "purple") +
+  # scale_fill_manual(values=c("steelblue"), name = "") +
+  # scale_color_manual(values = c("steelblue")) + ylim(0, 15) +
+  guides(color = guide_legend(order = 2), 
+          fill = guide_legend(order = 1)) +
+  theme_minimal(base_size = 30) +
+  theme(legend.position = "none",
+        strip.text = element_blank(),
+        axis.text = element_text(size = 20))
 
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
@@ -143,19 +210,3 @@ ggplot(data.scenario, aes(x=x)) +
         axis.text = element_text(size = 20))
 
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_alpha.pdf"), width=10, height = 7.78)
-
-
-# for(i in seq_along(quantiles)) {
-#   quantile.models[[i]] <- evgam(
-#     ald.formula,  # Smooth functions of covariates
-#     data = fwi.origin,
-#     family = "ald",      # Asymmetric Laplace Distribution
-#     ald.args = list(tau = quantiles[i])
-#   )
-#   thresholds[[i]] <- predict(quantile.models[[i]], type = "response")
-# }
-
-# Summary of 97.5th quantile model
-# summary(quantile.models[[3]])
-
-

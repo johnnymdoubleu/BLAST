@@ -237,7 +237,6 @@ gamma.xi <- matrix(xi.coef, ncol = p)
 alpha.nonlinear.new <- xi.nonlinear.new <- matrix(, nrow = n, ncol = p)
 bs.nonlinear <- xholder.basis[,c(2:((psi-1)*p+1))]
 for(j in 1:p){
-  # print((((j-1)*(psi-1))+1):(((j-1)*(psi-1))+(psi-1)))
   xi.nonlinear.new[,j] <- bs.nonlinear[,(((j-1)*(psi-1))+1):(((j-1)*(psi-1))+(psi-1))] %*% gamma.xi[,j]
   alpha.nonlinear.new[,j] <- 1/xi.nonlinear.new[,j]
 }
