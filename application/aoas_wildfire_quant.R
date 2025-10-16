@@ -87,7 +87,7 @@ head(as.data.frame(lapply(fwi.scaled[which(Y>qu),], FUN = scale)))
 n <- dim(fwi.scaled)[[1]]
 p <- dim(fwi.scaled)[[2]]
 
-save(fwi.scaled, fwi.origin, qu, y, file = "./BLAST/application/wildfire_prep.Rdata")
+save(fwi.scaled, fwi.origin, qu, y, u, file = "./BLAST/application/wildfire_prep.Rdata")
 
 # qu975 <- qu[which(Y>u)]
 # qu975[which(qu975<u)] <- u
