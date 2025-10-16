@@ -42,9 +42,9 @@ gpd.formula <- list(
 
 
 fwi.origin <- data.frame(fwi.origin[which(Y>qu),], BA=y)
-m.gpd <- evgam(gpd.formula, data = fwi.origin, family = "gpd")
-save(m.gpd, file = "./BLAST/application/evgam_fit_all.Rdata")
-# load("./BLAST/application/evgam_fit_all.Rdata")
+# m.gpd <- evgam(gpd.formula, data = fwi.origin, family = "gpd")
+# save(m.gpd, file = "./BLAST/application/evgam_fit_all.Rdata")
+load("./BLAST/application/evgam_fit.Rdata")
 
 no.theta <- 1 #represents the no. of linear predictors for each smooth functions
 xholder.linear <- xholder.nonlinear <- matrix(,nrow=n, ncol=0)
@@ -88,30 +88,6 @@ equal_breaks <- function(n = 3, s = 0.1,...){
   }
 }
 
-xi.smooth <- data.frame("x"= as.vector(xholder.mat),
-                          "fit" = smooth.func,
-                          "true" = as.vector(as.matrix(fwi.scaled)),
-                          "smooth" = as.vector(f.nonlinear.new),
-                          "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)),
-                          "replicate" = gl(p, n, (p*n), labels = names(fwi.scaled)))
-
-grid.plts <- list()
-for(i in 1:p){
-  grid.plt <- ggplot(data = data.frame(xi.smooth[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + 
-                  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-                  geom_line(aes(y=smooth, colour = "Posterior Median"), linewidth=1) + 
-                  ylab("") + xlab(names(fwi.scaled)[i]) +
-                  geom_rug(aes(x=true, y=smooth), sides = "b") + 
-                  scale_color_manual(values=c("purple")) +
-                  ylim(-1, max(xi.smooth$smooth)) +
-                  theme_minimal(base_size = 30) +
-                  theme(legend.position = "none",
-                          plot.margin = margin(0,0,0,-20),
-                          axis.text = element_text(size = 35),
-                          axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=-1, color = "red", size = 7)
-}
-grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
 
 xholder.df <- data.frame(xholder)
 names(xholder.df) <- names(fwi.scaled)
@@ -127,6 +103,58 @@ for(j in 1:p){
   xi.nonlinear.new[,j] <- bs.nonlinear[,(((j-1)*(psi-1))+1):(((j-1)*(psi-1))+(psi-1))] %*% gamma.xi[,j]
   alpha.nonlinear.new[,j] <- 1/xi.nonlinear.new[,j]
 }
+
+xi.smooth <- data.frame("x"= as.vector(xholder.mat),
+                          "fit" = smooth.func,
+                          "true" = as.vector(as.matrix(fwi.scaled)),
+                          "evgam" = as.vector(xi.nonlinear.new),
+                          "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)),
+                          "replicate" = gl(p, n, (p*n), labels = names(fwi.scaled)))
+
+grid.plts <- list()
+for(i in 1:p){
+  grid.plt <- ggplot(data = data.frame(xi.smooth[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + 
+                  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+                  geom_line(aes(y=evgam, colour = "Posterior Median"), linewidth=1) + 
+                  ylab("") + xlab(names(fwi.scaled)[i]) +
+                  geom_rug(aes(x=true, y=evgam), sides = "b") + 
+                  scale_color_manual(values=c("purple")) +
+                  ylim(min(xi.smooth$evgam[((((i-1)*n)+1):(i*n))])-0.5, max(xi.smooth$evgam[((((i-1)*n)+1):(i*n))]) + 0.5) +
+                  theme_minimal(base_size = 30) +
+                  theme(legend.position = "none",
+                          plot.margin = margin(0,0,0,-20),
+                          axis.text = element_text(size = 35),
+                          axis.title.x = element_text(size = 45))
+  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=min(xi.smooth$evgam[((((i-1)*n)+1):(i*n))]-0.5), color = "red", size = 7)
+}
+grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
+
+
+
+alpha.smooth <- data.frame("x"= as.vector(xholder.mat),
+                          "fit" = smooth.func,
+                          "true" = as.vector(as.matrix(fwi.scaled)),
+                          "evgam" = as.vector(alpha.nonlinear.new),
+                          "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)),
+                          "replicate" = gl(p, n, (p*n), labels = names(fwi.scaled)))
+
+grid.plts <- list()
+for(i in 1:p){
+  grid.plt <- ggplot(data = data.frame(alpha.smooth[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + 
+                  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+                  geom_line(aes(y=evgam), colour = "purple", linewidth=1) + 
+                  ylab("") + xlab(names(fwi.scaled)[i]) +
+                  geom_rug(aes(x=true, y=evgam), sides = "b") + 
+                  # scale_color_manual(values=c("purple")) +
+                  ylim(min(alpha.smooth$evgam[((((i-1)*n)+1):(i*n))])-0.5, max(alpha.smooth$evgam[((((i-1)*n)+1):(i*n))]) + 0.5) +
+                  theme_minimal(base_size = 30) +
+                  theme(legend.position = "none",
+                          plot.margin = margin(0,0,0,-20),
+                          axis.text = element_text(size = 35),
+                          axis.title.x = element_text(size = 45))
+  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=min(alpha.smooth$evgam[((((i-1)*n)+1):(i*n))]-0.5), color = "red", size = 7)
+}
+grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
 
 
 xi.scenario <- data.frame("x" = xholder[,1],

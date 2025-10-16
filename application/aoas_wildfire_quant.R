@@ -86,7 +86,7 @@ fwi.scaled <- as.data.frame(sapply(fwi.scaled[which(Y>qu),], FUN = range01))
 n <- dim(fwi.scaled)[[1]]
 p <- dim(fwi.scaled)[[2]]
 
-save(fwi.scaled, fwi.origin, qu, y, Y, u, n, p, psi, file = "./BLAST/application/wildfire_prep.Rdata")
+# save(fwi.scaled, fwi.origin, qu, y, Y, u, n, p, psi, file = "./BLAST/application/wildfire_prep.Rdata")
 
 # qu975 <- qu[which(Y>u)]
 # qu975[which(qu975<u)] <- u
@@ -221,11 +221,11 @@ data.stan <- list(y = as.vector(y), u = as.vector(u), p = p, n= n, psi = psi,
 init.alpha <- list(list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c(p, (psi-2))),
                         theta = rep(0, (p+1)), 
                         tau1 = rep(0.1, p),tau2 = rep(0.1, p),
-                        lambda1 = 0.1, lambda2 = 0.01),
+                        lambda1 = 1, lambda2 = 2),
                    list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c(p, (psi-2))),
                         theta = rep(0, (p+1)), 
                         tau1 = rep(0.001, p),tau2 = rep(0.001, p),
-                        lambda1 = 100, lambda2 = 1),
+                        lambda1 = 10, lambda2 = 10),
                    list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c(p, (psi-2))),
                         theta = rep(0.1, (p+1)), 
                         tau1 = rep(0.5, p),tau2 = rep(0.5, p),
@@ -238,7 +238,7 @@ fit1 <- stan(
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
     chains = 3,             # number of Markov chains
-    iter = 10000,            # total number of iterations per chain
+    iter = 40000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
     refresh = 2000           # no progress shown
 )
