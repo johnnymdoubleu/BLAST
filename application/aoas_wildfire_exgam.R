@@ -16,8 +16,8 @@ library(evgam)
 #DC : Drought Code
 
 
-# setwd("C:/Users/Johnny Lee/Documents/GitHub")
-setwd("A:/GitHub")
+setwd("C:/Users/Johnny Lee/Documents/GitHub")
+# setwd("A:/GitHub")
 df <- read_excel("./BLAST/application/AADiarioAnual.xlsx", col_types = c("date", rep("numeric",40)))
 df.long <- gather(df, condition, measurement, "1980":"2019", factor_key=TRUE)
 missing.values <- which(!is.na(df.long$measurement))
@@ -64,26 +64,53 @@ fwi.index$month <- factor(format(as.Date(substr(cov.long$...1[missing.values],1,
                             levels = c("Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"))
 fwi.index$date <- as.numeric(fwi.index$date)
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
-fwi.origin <- fwi.scaled <-fwi.scaled[which(Y>u),]
+fwi.origin <- fwi.scaled
+fwi.scaled <-fwi.scaled[which(Y>u),]
 
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
-fwi.scaled <- as.data.frame(sapply(fwi.origin, FUN = range01))
+fwi.scaled <- as.data.frame(sapply(fwi.scaled, FUN = range01))
 
 n <- dim(fwi.scaled)[[1]]
 p <- dim(fwi.scaled)[[2]]
 
-fwi.origin <- data.frame(fwi.scaled, BA=y)
+fwi.origin <- data.frame(fwi.origin, BA=Y)
+ald.formula <- list(
+  BA ~ 1,
+     ~ s(DSR, bs = "tp", k=30) +
+       s(FWI, bs = "tp", k=30) + 
+       s(BUI, bs = "tp", k=30) + 
+       s(ISI, bs = "tp", k=30) + 
+       s(FFMC, bs = "tp", k=30) + 
+       s(DMC, bs = "tp", k=30) + 
+       s(DC, bs = "tp", k=30)
+)
+
+quantile.mod <- evgam(
+    ald.formula,  # Smooth functions of covariates
+    data = fwi.origin,
+    family = "ald",      # Asymmetric Laplace Distribution
+    ald.args = list(tau = 0.975)
+  )
+# save(quantile.mod, file = "./BLAST/application/qrresult.Rdata")
+thres <- predict(quantile.mod, type = "response")
+summary(quantile.mod)
+plot(quantile.mod)
+q.thres <- thres[which(Y>u),1]
+thres[which(Y>u), 1]
+
+fwi.origin <- data.frame(fwi.origin[which(y>u),], BA=y)
 # max.fwi <- fwi.origin[which.max(y),]
 
 
 gpd.formula <- list(
-  BA ~ s(DSR, bs = "tp", k = 30) +
-       s(FWI, bs = "tp", k = 30) + 
-       s(BUI, bs = "tp", k = 30) + 
-       s(ISI, bs = "tp", k = 30) + 
-       s(FFMC, bs = "tp", k = 30) + 
-       s(DMC, bs = "tp", k = 30) + 
-       s(DC, bs = "tp", k = 30),
+  BA ~ 1,
+      #  s(DSR, bs = "tp", k = 30) +
+      #  s(FWI, bs = "tp", k = 30) + 
+      #  s(BUI, bs = "tp", k = 30) + 
+      #  s(ISI, bs = "tp", k = 30) + 
+      #  s(FFMC, bs = "tp", k = 30) + 
+      #  s(DMC, bs = "tp", k = 30) + 
+      #  s(DC, bs = "tp", k = 30),
      ~ s(DSR, bs = "tp", k = 30) +
        s(FWI, bs = "tp", k = 30) + 
        s(BUI, bs = "tp", k = 30) + 
@@ -95,6 +122,8 @@ gpd.formula <- list(
 m.gpd <- evgam(gpd.formula, data = fwi.origin, family = "gpd")
 summary(m.gpd)
 str(m.gpd)
+
+
 
 no.theta <- 1 #represents the no. of linear predictors for each smooth functions
 xholder.linear <- xholder.nonlinear <- matrix(,nrow=n, ncol=0)
@@ -114,14 +143,11 @@ for (v in names(fwi.scaled)) {
   sc <- mgcv::smoothCon(mgcv::s(x, bs="tp", k=30), data = data.frame(x = xholder[[v]]))
   basis_list[[v]] <- sc[[1]]$X
 }
-str(basis_list)
-load("./BLAST/application/evgam_fit.Rdata")
-str(m.gpd$shape$X)
-head(m.gpd$shape$X, 5)[,2:5]
+# save(m.gpd, file = "./BLAST/application/evgam_fit.Rdata")
+# load("./BLAST/application/evgam_fit.Rdata")
 
 xholder.basis <-predict(m.gpd, newdata = xholder, type = "lpmatrix")
-str(xholder.basis$shape)
-head(xholder.basis$shape, 5)[,2:5]
+
 xi.coef <- tail(m.gpd$coefficients, 204)
 gamma.xi <- matrix(xi.coef[2:204], ncol = p)
 f.nonlinear.new <- matrix(, nrow = n, ncol = p)
@@ -164,30 +190,6 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
           axis.text = element_text(size = 20))
 
 
-
-
-# ald.formula <- list(
-#   BA ~ s(DSR, bs = "tp", k = 30) +
-#        s(FWI, bs = "tp", k = 30) + 
-#        s(BUI, bs = "tp", k = 30) + 
-#        s(ISI, bs = "tp", k = 30) + 
-#        s(FFMC, bs = "tp", k = 30) + 
-#        s(DMC, bs = "tp", k = 30) + 
-#        s(DC, bs = "tp", k = 30),
-#   ~ s(DSR, bs = "tp", k = 30) +
-#        s(FWI, bs = "tp", k = 30) + 
-#        s(BUI, bs = "tp", k = 30) + 
-#        s(ISI, bs = "tp", k = 30) + 
-#        s(FFMC, bs = "tp", k = 30) + 
-#        s(DMC, bs = "tp", k = 30) + 
-#        s(DC, bs = "tp", k = 30)
-# )
-# m.quant <- evgam(ald.formula, data = fwi.origin, family = "ald", ald.args = list(tau = 0.975))
-# summary(m.quant)
-# plot(m.quant)
-
-
-
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
 lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
@@ -226,4 +228,19 @@ ggplot(data.scenario, aes(x=x)) +
         axis.text = element_text(size = 20))
 
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_alpha.pdf"), width=10, height = 7.78)
+
+
+# for(i in seq_along(quantiles)) {
+#   quantile.models[[i]] <- evgam(
+#     ald.formula,  # Smooth functions of covariates
+#     data = fwi.origin,
+#     family = "ald",      # Asymmetric Laplace Distribution
+#     ald.args = list(tau = quantiles[i])
+#   )
+#   thresholds[[i]] <- predict(quantile.models[[i]], type = "response")
+# }
+
+# Summary of 97.5th quantile model
+# summary(quantile.models[[3]])
+
 
