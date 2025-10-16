@@ -31,6 +31,7 @@ missing.values <- which(!is.na(df.long$measurement))
 #considering the case of leap year, the missing values are the 29th of Feb
 #Thus, each year consist of 366 data with either 1 or 0 missing value.
 Y <- df.long$measurement[!is.na(df.long$measurement)]
+Y[Y==0] <- 1e-5
 psi <- 30
 
 multiplesheets <- function(fname) {
@@ -68,18 +69,25 @@ fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 fwi.origin <- fwi.scaled
 
 fwi.origin <- data.frame(fwi.origin, BA=Y)
-quant.fit <- quantreg::rq(BA~., tau=0.975, data = fwi.origin)
-qu <- predict(quant.fit)
+BA.shifted <- ifelse(fwi.origin$BA == 0, 1e-5, fwi.origin$BA)
+fwi.origin$log.BA <- log(BA.shifted)
+quant.fit <- quantreg::rq(log.BA ~ DSR + FWI + BUI + ISI + FFMC + DMC + DC, 
+                          tau=rep(0.975, length(Y)), data = fwi.origin)#,
+                          # method = "fnc", # feasible non-crossing
+                          # R = matrix(c(1, rep(0, p)), 1, p+1), # constraint matrix
+                          # r = 1) # constraint threshold)
+qu <- exp(predict(quant.fit))
 y <- Y[which(Y>qu)]
 u <- qu[which(Y>qu)]
-u[u < 0] <- 0
+# u[u < 0] <- 0.001
+
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 fwi.scaled <- as.data.frame(sapply(fwi.scaled[which(Y>qu),], FUN = range01))
-
+head(as.data.frame(lapply(fwi.scaled[which(Y>qu),], FUN = scale)))
 n <- dim(fwi.scaled)[[1]]
 p <- dim(fwi.scaled)[[2]]
 
-
+save(fwi.scaled, fwi.origin, qu, y, file = "./BLAST/application/wildfire_prep.Rdata")
 
 # qu975 <- qu[which(Y>u)]
 # qu975[which(qu975<u)] <- u
@@ -250,41 +258,6 @@ g.smooth.q1 <- as.vector(matrix(gsmooth.samples[,4], nrow = n, byrow=TRUE))
 g.smooth.q2 <- as.vector(matrix(gsmooth.samples[,5], nrow = n, byrow=TRUE))
 g.smooth.q3 <- as.vector(matrix(gsmooth.samples[,6], nrow = n, byrow=TRUE))
 
-equal_breaks <- function(n = 3, s = 0.1,...){
-  function(x){
-    d <- s * diff(range(x)) / (1+2*s)
-    seq = seq(min(x)+d, max(x)-d, length=n)
-    round(seq, -floor(log10(abs(seq[2]-seq[1]))))
-  }
-}
-
-data.smooth <- data.frame("x"= as.vector(xholder),
-                          "post.mean" = as.vector(g.smooth.mean),
-                          "q1" = as.vector(g.smooth.q1),
-                          "q2" = as.vector(g.smooth.q2),
-                          "q3" = as.vector(g.smooth.q3),
-                          "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)),
-                          "replicate" = gl(p, n, (p*n), labels = names(fwi.scaled)))
-
-ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) + 
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
-  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
-  ylab("") + xlab("") +
-  facet_grid(covariates ~ ., scales = "free",
-              labeller = label_parsed) + 
-  scale_fill_manual(values=c("steelblue"), name = "") +
-  scale_color_manual(values=c("steelblue")) + 
-  guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) + 
-          ylim(-3.5, 3.5) +
-  theme_minimal(base_size = 30) +
-  theme(legend.position = "none",
-          plot.margin = margin(0,0,0,-20),
-          # strip.text = element_blank(),
-          axis.text = element_text(size = 20))
-# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=12.5, height = 15)
-
 data.scenario <- data.frame("x" = xholder[,1],
                             "post.mean" = (alpha.samples[,1]),
                             "post.median" = (alpha.samples[,5]),
@@ -306,60 +279,6 @@ ggplot(data.scenario, aes(x=x)) +
 
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_alpha.pdf"), width=10, height = 7.78)
 
-len <- dim(posterior$alpha)[1]
-r <- matrix(, nrow = n, ncol = 100)
-
-T <- 100
-for(i in 1:n){
-  for(t in 1:T){
-    r[i, t] <- qnorm(pPareto(y[i], u, alpha = posterior$alpha[round(runif(1,1,len)),i]))
-  }
-}
-lgrid <- n
-grid <- qnorm(ppoints(lgrid))
-traj <- matrix(NA, nrow = T, ncol = lgrid)
-for (t in 1:T){
-  traj[t, ] <- quantile(r[, t], ppoints(lgrid), type = 2)
-}
-l.band <- apply(traj, 2, quantile, prob = 0.025)
-trajhat <- apply(traj, 2, quantile, prob = 0.5)
-u.band <- apply(traj, 2, quantile, prob = 0.975)
-
-ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat, 
-                         u.band = u.band)) + 
-  geom_ribbon(aes(x = grid, ymin = l.band, ymax = u.band), 
-              fill = "steelblue",
-              alpha = 0.4, linetype = "dashed") + 
-  geom_line(aes(x = grid, y = trajhat), colour = "steelblue", linetype = "dashed", linewidth = 1.2) + 
-  geom_abline(intercept = 0, slope = 1, linewidth = 1.2) + 
-  labs(x = "Theoretical quantiles", y = "Sample quantiles") + 
-  theme_minimal(base_size = 30) +
-  theme(axis.text = element_text(size = 20)) + 
-  coord_fixed(xlim = c(-3, 3),
-              ylim = c(-3, 3))
-# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_qqplot.pdf"), width=10, height = 7.78)
-rp <-c()
-for(i in 1:n){
-  # rp[i] <- rPareto(y[i], u, alpha = posterior$alpha[round(runif(1,1,len)),i])
-  rp[i] <- qnorm(pPareto(y[i], u, alpha = posterior$alpha[round(runif(1,1,len)),i]))
-}
-rp <- data.frame(rp, group = rep("residuals", n))
-
-ggplot(data = rp) + 
-  # geom_qqboxplot(aes(factor(group, levels=c("residuals")), y=rp), notch=FALSE, varwidth=TRUE, reference_dist="norm")+ 
-  geom_qqboxplot(aes(y=rp), notch=FALSE, varwidth=FALSE, reference_dist="norm", width = 0.15, qq.colour = "steelblue")+
-  labs(x = "", y = "Residuals") + ylim(-4,4) + xlim(-.2,.2)+
-  theme_minimal(base_size = 20) +
-  theme(axis.text = element_text(size = 25),
-        axis.title = element_text(size = 30))
-# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_qqboxplot.pdf"), width = 10, height = 7.78)
-             
-cat("Finished Running")
-
-# relative_eff(exp(fit.log.lik))
-#https://discourse.mc-staqan.org/t/four-questions-about-information-criteria-cross-validation-and-hmc-in-relation-to-a-manuscript-review/13841/3
-
-
 data.smooth <- data.frame("x" = as.vector(xholder),
                           "true" = as.vector(as.matrix(fwi.scaled)),
                           "post.mean" = as.vector(g.smooth.mean),
@@ -379,13 +298,13 @@ for(i in 1:p){
                   ylab("") + xlab(names(fwi.scaled)[i]) +
                   scale_fill_manual(values=c("steelblue"), name = "") + 
                   scale_color_manual(values=c("steelblue")) +
-                  # ylim(-4.1, 4.1) +
+                  ylim(-1.2, max(data.smooth$q3[((((i-1)*n)+1):(i*n))])) +
                   theme_minimal(base_size = 30) +
                   theme(legend.position = "none",
                           plot.margin = margin(0,0,0,-20),
                           axis.text = element_text(size = 35),
                           axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=-4.1, color = "red", size = 7)
+  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=-1.2, color = "red", size = 7)
 }
 
 grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
