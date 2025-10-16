@@ -144,11 +144,11 @@ parameters {
 transformed parameters {
     array[n] real <lower=0> alpha; // covariate-adjusted tail index
     vector[psi] gamma[p]; // splines coefficient 
-    matrix[n, p] gsmooth; // linear component
     real <lower=0> lambda2o;
-
+    
     lambda2o=lambda2*100;
     {
+      matrix[n, p] gsmooth; // linear component
       vector[2] gammaFL[p];
       
       for(j in 1:p){
@@ -157,14 +157,15 @@ transformed parameters {
           gamma[j][1] = gammaFL[j][1];
           gamma[j][psi] = gammaFL[j][2];
       };
-    }
-    for (j in 1:p){
-        gsmooth[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j] + bsLinear[,j] * theta[j] + intcpt[j];
-    };
 
-    for (i in 1:n){
-        alpha[i] = exp(sum(gsmooth[i,]));
-    };    
+      for (j in 1:p){
+          gsmooth[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j] + bsLinear[,j] * theta[j] + intcpt[j];
+      };
+
+      for (i in 1:n){
+          alpha[i] = exp(sum(gsmooth[i,]));
+      };    
+    }
 }
 
 model {
@@ -177,7 +178,7 @@ model {
     target += (2*p*log(lambda2o));
     for (j in 1:p){
         target += gamma_lpdf(tau1[j] | 1, lambda1^2*0.5);
-        target += normal_lpdf(intcpt[j] | 0, 10);
+        target += normal_lpdf(intcpt[j] | 0, 1);
         target += normal_lpdf(theta[j] | 0, sqrt(1/tau1[j]));
         target += gamma_lpdf(tau2[j] | atau, lambda2o^2*0.5);
         target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * (1/tau2[j]));
@@ -224,7 +225,7 @@ fit1 <- stan(
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
     chains = 3,             # number of Markov chains
-    iter = 10000,            # total number of iterations per chain
+    iter = 20000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
     refresh = 5000           # no progress shown
 )
@@ -239,8 +240,6 @@ intercept.samples <- summary(fit1, par=c("intcpt"), probs = c(0.05,0.5, 0.95))$s
 lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
 gsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
 alpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
-yrep <- summary(fit1, par=c("yrep"), probs = c(0.05,0.5, 0.95))$summary
-f.samples <- summary(fit1, par=c("f"), probs = c(0.05,0.5, 0.95))$summary
 
 g.smooth.mean <- as.vector(matrix(gsmooth.samples[,1], nrow = n, byrow=TRUE))
 g.smooth.q1 <- as.vector(matrix(gsmooth.samples[,4], nrow = n, byrow=TRUE))
@@ -248,6 +247,7 @@ g.smooth.q2 <- as.vector(matrix(gsmooth.samples[,5], nrow = n, byrow=TRUE))
 g.smooth.q3 <- as.vector(matrix(gsmooth.samples[,6], nrow = n, byrow=TRUE))
 
 save(theta.samples, gsmooth.samples, alpha.samples, gamma.samples, intercept.samples, file = "./BLAST/application/wildfire_intcpt.Rdata")
+# load("./BLAST/application/wildfire_intcpt.Rdata")
 equal_breaks <- function(n = 3, s = 0.1,...){
   function(x){
     d <- s * diff(range(x)) / (1+2*s)
@@ -283,80 +283,6 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
           axis.text = element_text(size = 20))
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=12.5, height = 15)
 
-data.scenario <- data.frame("x" = xholder[,1],
-                            "post.mean" = (alpha.samples[,1]),
-                            "post.median" = (alpha.samples[,5]),
-                            "q1" = (alpha.samples[,4]),
-                            "q3" = (alpha.samples[,6]))
-
-ggplot(data.scenario, aes(x=x)) + 
-  ylab(expression(alpha(c,...,c))) + xlab(expression(c)) + labs(col = "") +
-  geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
-  geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
-  scale_fill_manual(values=c("steelblue"), name = "") +
-  scale_color_manual(values = c("steelblue")) + 
-  guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) +
-  theme_minimal(base_size = 30) +
-  theme(legend.position = "none",
-        strip.text = element_blank(),
-        axis.text = element_text(size = 20))
-
-# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_alpha.pdf"), width=10, height = 7.78)
-
-len <- dim(posterior$alpha)[1]
-r <- matrix(, nrow = n, ncol = 100)
-
-T <- 100
-for(i in 1:n){
-  for(t in 1:T){
-    r[i, t] <- qnorm(pPareto(y[i], u, alpha = posterior$alpha[round(runif(1,1,len)),i]))
-  }
-}
-lgrid <- n
-grid <- qnorm(ppoints(lgrid))
-traj <- matrix(NA, nrow = T, ncol = lgrid)
-for (t in 1:T){
-  traj[t, ] <- quantile(r[, t], ppoints(lgrid), type = 2)
-}
-l.band <- apply(traj, 2, quantile, prob = 0.025)
-trajhat <- apply(traj, 2, quantile, prob = 0.5)
-u.band <- apply(traj, 2, quantile, prob = 0.975)
-
-ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat, 
-                         u.band = u.band)) + 
-  geom_ribbon(aes(x = grid, ymin = l.band, ymax = u.band), 
-              fill = "steelblue",
-              alpha = 0.4, linetype = "dashed") + 
-  geom_line(aes(x = grid, y = trajhat), colour = "steelblue", linetype = "dashed", linewidth = 1.2) + 
-  geom_abline(intercept = 0, slope = 1, linewidth = 1.2) + 
-  labs(x = "Theoretical quantiles", y = "Sample quantiles") + 
-  theme_minimal(base_size = 30) +
-  theme(axis.text = element_text(size = 20)) + 
-  coord_fixed(xlim = c(-3, 3),
-              ylim = c(-3, 3))
-# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_qqplot.pdf"), width=10, height = 7.78)
-rp <-c()
-for(i in 1:n){
-  # rp[i] <- rPareto(y[i], u, alpha = posterior$alpha[round(runif(1,1,len)),i])
-  rp[i] <- qnorm(pPareto(y[i], u, alpha = posterior$alpha[round(runif(1,1,len)),i]))
-}
-rp <- data.frame(rp, group = rep("residuals", n))
-
-ggplot(data = rp) + 
-  # geom_qqboxplot(aes(factor(group, levels=c("residuals")), y=rp), notch=FALSE, varwidth=TRUE, reference_dist="norm")+ 
-  geom_qqboxplot(aes(y=rp), notch=FALSE, varwidth=FALSE, reference_dist="norm", width = 0.15, qq.colour = "steelblue")+
-  labs(x = "", y = "Residuals") + ylim(-4,4) + xlim(-.2,.2)+
-  theme_minimal(base_size = 20) +
-  theme(axis.text = element_text(size = 25),
-        axis.title = element_text(size = 30))
-# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_qqboxplot.pdf"), width = 10, height = 7.78)
-             
-cat("Finished Running")
-
-# relative_eff(exp(fit.log.lik))
-#https://discourse.mc-staqan.org/t/four-questions-about-information-criteria-cross-validation-and-hmc-in-relation-to-a-manuscript-review/13841/3
-
 
 data.smooth <- data.frame("x" = as.vector(xholder),
                           "true" = as.vector(as.matrix(fwi.scaled)),
@@ -389,109 +315,3 @@ for(i in 1:p){
 grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
 
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_DC.pdf"), grid.plts[[7]], width=10, height = 7.78)
-
-# saveRDS(data.smooth, file="./BLAST/application/figures/comparison/full_stanfit.rds")
-
-#Predictive Distribution check
-y.container <- as.data.frame(matrix(, nrow = n, ncol = 0))  
-random.alpha.idx <- floor(runif(100, 1, ncol(t(posterior$f))))
-for(i in random.alpha.idx){
-  y.container <- cbind(y.container, log(t(posterior$f)[,i]))
-}
-colnames(y.container) <- paste("col", 1:100, sep="")
-y.container$x <- seq(1,n)
-y.container$logy <- log(y)
-plt <- ggplot(data = y.container, aes(x = logy)) + ylab("Density") + xlab("log(Burned Area)") + labs(col = "")
-
-for(i in names(y.container)){
-  plt <- plt + geom_density(aes(x=.data[[i]]), color = "slategray1", alpha = 0.1, linewidht = 0.7)
-}
-
-print(plt + geom_density(aes(x=logy), color = "steelblue", linewidth = 2) +
-        theme_minimal(base_size = 30) + ylim(0, 1.25) + xlim(7.5,30) +
-        theme(legend.position = "none",
-                axis.text = element_text(size = 35)))
-# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_BLAST_predictive_distribution.pdf"), width=10, height = 7.78)
-
-
-extreme.container <- as.data.frame(matrix(, nrow = n, ncol = 3000))
-for(i in 1:3000){
-  extreme.container[,i] <- density(log(posterior$f[i,]), n=n)$y
-}
-extreme.container <- cbind(extreme.container, t(apply(extreme.container[,1:3000], 1, quantile, c(0.05, .5, .95))))
-colnames(extreme.container)[(dim(extreme.container)[2]-2):(dim(extreme.container)[2])] <- c("q1","q2","q3")
-colnames(extreme.container)[1:3000] <- as.character(1:3000)
-extreme.container$mean <- rowMeans(extreme.container[,1:3000])
-extreme.container$y <- seq(0, 30, length.out = n)
-extreme.container <- as.data.frame(extreme.container)
-
-
-plt <- ggplot(data = extreme.container, aes(x = y)) + xlab("log(Burned Area)") + ylab("Density")+
-        geom_line(aes(y=mean), colour = "steelblue", linewidth = 1.5) +
-        geom_ribbon(aes(ymin = q1, ymax = q3), fill = "steelblue", alpha = 0.2) + 
-        theme_minimal(base_size = 30) + 
-        theme(legend.position = "none",
-              axis.title = element_text(size = 30))
-d <- ggplot_build(plt)$data[[1]]
-print(plt + 
-        geom_segment(x=12.44009, xend=12.44009, 
-              y=0, yend=approx(x = d$x, y = d$y, xout = 12.4409)$y,
-              colour="red", linewidth=1.2, linetype = "dotted"))
-# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_post_generative.pdf"), width = 10, height = 7.78)
-
-random.alpha.idx <- floor(runif(1000, 1, ncol(t(posterior$alpha))))
-ev.y1 <- ev.y2 <- as.data.frame(matrix(, nrow = 1, ncol = 0))
-ev.alpha.single <- c()  
-for(i in random.alpha.idx){
-  ev.y1 <- rbind(ev.y1, as.numeric(posterior$yrep[i]))
-}
-ev.y1 <- as.data.frame(log(ev.y1))
-ev.y1$logy <- max(log(y))
-colnames(ev.y1) <- c("yrep", "logy")
-ev.y1$group <- rep("15th Oct 2017",1000)
-# ggplot(data=ev.y, aes(x=yrep, y = group)) +
-#   ylab("") + 
-#   xlab("log(Burnt Area)") + labs(col = "") +  
-#   stat_slab(scale = 0.6, colour = "steelblue", fill=NA, slab_linewidth = 1.5, trim = FALSE, expand = TRUE, density = "unbounded", subguide="outside", justification = -0.01) +
-#   # stat_spike(aes(linetype = after_stat(at)), at = c("median"), scale=0.7)+
-#   stat_dotsinterval(subguide = 'integer', side = "bottom", scale = 0.6, slab_linewidth = NA, position = "dodge") +
-#   # geom_point(position = position_jitter(seed = 1, height = 0.05), alpha = 0.1) +  
-#   # geom_boxplot(width = 0.2, notch = TRUE, alpha = 0.25, outlier.color = NA) +
-#   geom_vline(xintercept = log(max(y)), linetype="dashed", color = "red",) +
-#   # geom_label(aes(log(max(y)), 1), label = "Target Length", show.legend = FALSE)+
-#   geom_vline(xintercept = log(y[133]), linetype="dashed", color = "black",) +
-#   # geom_label(aes(log(y[133]), 1), label = "Target Length", show.legend = FALSE)+
-#   theme_minimal(base_size = 30) +  
-#   theme(legend.position = "none",
-#         plot.margin = margin(0,0,0,25),
-#         axis.text.y = element_text(angle = 90, size = 15, vjust = 15, hjust = 0.5),
-#         axis.title = element_text(size = 30)) +
-#         annotate(x=(log(max(y))+2), y= 0.1, label = "15th Oct 2017", geom="label") +
-#         annotate(x=(log(y[133])-2), y= 0.1, label = "18th Jun 2017", geom="label")
-# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_BLAST_two_generative.pdf"), width = 10, height = 7.78)
-
-plt <- ggplot(data = ev.y1, aes(x = yrep)) + ylab("Density") + xlab("log(Burned Area)") + labs(col = "") +
-  geom_density(color = "steelblue", linewidth = 1.2) + 
-  geom_rug(alpha = 0.1) + 
-  xlim(5.5, 40) +
-  theme_minimal(base_size = 30) +  
-  theme(legend.position = "none",
-        axis.title = element_text(size = 30))
-
-d <- ggplot_build(plt)$data[[1]]
-print(plt + geom_area(data = subset(d, x>12.44009), aes(x=x,y=y), fill = "slategray1", alpha = 0.5) +
-        geom_segment(x=12.44009, xend=12.44009, 
-              y=0, yend=approx(x = d$x, y = d$y, xout = 12.4409)$y,
-              colour="red", linewidth=1.2, linetype = "dotted"))
-# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_BLAST_generative.pdf"), width = 10, height = 7.78)
-
-library(ismev)
-gpd.fit(y, u)
-
-fit.log.lik <- extract_log_lik(fit1)
-constraint.elpd.loo <- loo(fit.log.lik, is_method = "sis", cores = 2)
-# save(constraint.elpd.loo, constraint.waic, file = (paste0("./BLAST/application/BLAST_constraint_",Sys.Date(),"_",psi,"_",floor(threshold*100),"quantile_IC.Rdata")))
-
-
-
-
