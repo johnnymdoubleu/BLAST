@@ -18,11 +18,9 @@ library(evgam)
 
 setwd("C:/Users/Johnny Lee/Documents/GitHub")
 # setwd("A:/GitHub")
-load("./BLAST/application/wildfire_prep.Rdata")
+load("./BLAST/application/wildfire_prep.Rdata") #loading covariate-dependent thresholds
 
-fwi.origin <- data.frame(fwi.origin[which(Y>u),], BA=y)
 # max.fwi <- fwi.origin[which.max(y),]
-
 
 gpd.formula <- list(
   BA ~ 1,
@@ -66,7 +64,7 @@ for (v in names(fwi.scaled)) {
   basis_list[[v]] <- sc[[1]]$X
 }
 # save(m.gpd, file = "./BLAST/application/evgam_fit.Rdata")
-load("./BLAST/application/evgam_fit_all.Rdata")
+# load("./BLAST/application/evgam_fit_all.Rdata")
 
 xholder.basis <-predict(m.gpd, newdata = xholder, type = "lpmatrix")
 
