@@ -18,87 +18,9 @@ library(evgam)
 
 setwd("C:/Users/Johnny Lee/Documents/GitHub")
 # setwd("A:/GitHub")
-df <- read_excel("./BLAST/application/AADiarioAnual.xlsx", col_types = c("date", rep("numeric",40)))
-df.long <- gather(df, condition, measurement, "1980":"2019", factor_key=TRUE)
-missing.values <- which(!is.na(df.long$measurement))
+load("./BLAST/application/wildfire_prep.Rdata")
 
-#NAs on Feb 29 most years, and Feb 14, 1999
-#considering the case of leap year, the missing values are the 29th of Feb
-#Thus, each year consist of 366 data with either 1 or 0 missing value.
-Y <- df.long$measurement[!is.na(df.long$measurement)]
-psi <- 30
-threshold <- 0.975
-u <- quantile(Y, threshold)
-y <- Y[Y>u]
-
-multiplesheets <- function(fname) {
-    # setwd("C:/Users/Johnny Lee/Documents/GitHub")
-    # getting info about all excel sheets
-    sheets <- excel_sheets(fname)
-    tibble <- lapply(sheets, function(x) read_excel(fname, sheet = x, col_types = c("date", rep("numeric", 41))))
-    data_frame <- lapply(tibble, as.data.frame)
-    # assigning names to data frames
-    names(data_frame) <- sheets
-    return(data_frame)
-}
-# setwd("C:/Users/Johnny Lee/Documents/GitHub")
-path <- "./BLAST/application/DadosDiariosPT_FWI.xlsx"
-# importing fire weather index
-cov <- multiplesheets(path)
-fwi.scaled <- fwi.index <- data.frame(DSR = double(length(Y)),
-                                        FWI = double(length(Y)),
-                                        BUI = double(length(Y)),
-                                        ISI = double(length(Y)),
-                                        FFMC = double(length(Y)),
-                                        DMC = double(length(Y)),
-                                        DC = double(length(Y)),
-                                        stringsAsFactors = FALSE)
-for(i in 1:length(cov)){
-    cov.long <- gather(cov[[i]][,1:41], condition, measurement, "1980":"2019", factor_key=TRUE)
-    fwi.index[,i] <- cov.long$measurement[missing.values]
-    fwi.scaled[,i] <- cov.long$measurement[missing.values]
-}
-
-fwi.index$date <- substr(cov.long$...1[missing.values],9,10)
-fwi.index$month <- factor(format(as.Date(substr(cov.long$...1[missing.values],1,10), "%Y-%m-%d"),"%b"),
-                            levels = c("Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"))
-fwi.index$date <- as.numeric(fwi.index$date)
-fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
-fwi.origin <- fwi.scaled
-fwi.scaled <-fwi.scaled[which(Y>u),]
-
-range01 <- function(x){(x-min(x))/(max(x)-min(x))}
-fwi.scaled <- as.data.frame(sapply(fwi.scaled, FUN = range01))
-
-n <- dim(fwi.scaled)[[1]]
-p <- dim(fwi.scaled)[[2]]
-
-fwi.origin <- data.frame(fwi.origin, BA=Y)
-ald.formula <- list(
-  BA ~ 1,
-     ~ s(DSR, bs = "tp", k=30) +
-       s(FWI, bs = "tp", k=30) + 
-       s(BUI, bs = "tp", k=30) + 
-       s(ISI, bs = "tp", k=30) + 
-       s(FFMC, bs = "tp", k=30) + 
-       s(DMC, bs = "tp", k=30) + 
-       s(DC, bs = "tp", k=30)
-)
-
-quantile.mod <- evgam(
-    ald.formula,  # Smooth functions of covariates
-    data = fwi.origin,
-    family = "ald",      # Asymmetric Laplace Distribution
-    ald.args = list(tau = 0.975)
-  )
-# save(quantile.mod, file = "./BLAST/application/qrresult.Rdata")
-thres <- predict(quantile.mod, type = "response")
-summary(quantile.mod)
-plot(quantile.mod)
-q.thres <- thres[which(Y>u),1]
-thres[which(Y>u), 1]
-
-fwi.origin <- data.frame(fwi.origin[which(y>u),], BA=y)
+fwi.origin <- data.frame(fwi.origin[which(Y>u),], BA=y)
 # max.fwi <- fwi.origin[which.max(y),]
 
 
