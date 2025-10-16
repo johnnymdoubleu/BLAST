@@ -32,9 +32,6 @@ missing.values <- which(!is.na(df.long$measurement))
 #Thus, each year consist of 366 data with either 1 or 0 missing value.
 Y <- df.long$measurement[!is.na(df.long$measurement)]
 psi <- 30
-threshold <- 0.975
-u <- quantile(Y, threshold)
-y <- Y[Y>u]
 
 multiplesheets <- function(fname) {
     setwd("C:/Users/Johnny Lee/Documents/GitHub")
@@ -69,26 +66,27 @@ fwi.index$month <- factor(format(as.Date(substr(cov.long$...1[missing.values],1,
 fwi.index$date <- as.numeric(fwi.index$date)
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 fwi.origin <- fwi.scaled
-fwi.scaled <- fwi.scaled[which(Y>u),]
 
+fwi.origin <- data.frame(fwi.origin, BA=Y)
+quant.fit <- quantreg::rq(BA~., tau=0.975, data = fwi.origin)
+qu <- predict(quant.fit)
+y <- Y[which(Y>qu)]
+u <- qu[which(Y>qu)]
+u[u < 0] <- 0
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
-fwi.scaled <- as.data.frame(sapply(fwi.scaled, FUN = range01))
+fwi.scaled <- as.data.frame(sapply(fwi.scaled[which(Y>qu),], FUN = range01))
 
 n <- dim(fwi.scaled)[[1]]
 p <- dim(fwi.scaled)[[2]]
 
-fwi.origin <- data.frame(fwi.origin, BA=Y)
-# quant.fit <- quantreg::rq(BA~., tau=0.975, data = fwi.origin)
-# qu <- predict(quant.fit)
+
+
 # qu975 <- qu[which(Y>u)]
 # qu975[which(qu975<u)] <- u
-# str(quant.fit)
-# fwi.origin <- data.frame(fwi.index[which(Y>u),], BA=y)
-# max.fwi <- fwi.origin[which.max(y),]
+# load("./BLAST/application/qrresult.Rdata")
+# qu <- predict(quantile.mod)
+# qu975 <- qu[which(Y>u),1]
 
-load("./BLAST/application/qrresult.Rdata")
-qu <- predict(quantile.mod)
-qu975 <- qu[which(Y>u),1]
 no.theta <- 1 #represents the no. of linear predictors for each smooth functions
 newx <- seq(0, 1, length.out=n)
 xholder.linear <- xholder.nonlinear <- bs.linear <- bs.nonlinear <- matrix(,nrow=n, ncol=0)
@@ -152,12 +150,12 @@ parameters {
 transformed parameters {
     array[n] real <lower=0> alpha; // covariate-adjusted tail index
     vector[psi] gamma[p]; // splines coefficient 
-    matrix[n, p] gsmooth; // linear component
     real <lower=0> lambda2o;
 
     lambda2o=lambda2*100;
     {
       vector[2] gammaFL[p];
+      matrix[n, p] gsmooth; // linear component
       
       for(j in 1:p){
           gamma[j][2:(psi-1)] = gammaTemp[j][1:(psi-2)]*100;
@@ -165,14 +163,15 @@ transformed parameters {
           gamma[j][1] = gammaFL[j][1];
           gamma[j][psi] = gammaFL[j][2];
       };
-    }
-    for (j in 1:p){
-        gsmooth[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j] + bsLinear[,j] * theta[j+1];
-    };
+      for (j in 1:p){
+          gsmooth[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j] + bsLinear[,j] * theta[j+1];
+      };
 
-    for (i in 1:n){
-        alpha[i] = exp(theta[1] + sum(gsmooth[i,]));
-    };    
+      for (i in 1:n){
+          alpha[i] = exp(theta[1] + sum(gsmooth[i,]));
+      };
+    }
+
 }
 
 model {
@@ -207,7 +206,7 @@ generated quantities {
 "
 
 
-data.stan <- list(y = as.vector(y), u = as.vector(qu975), p = p, n= n, psi = psi, 
+data.stan <- list(y = as.vector(y), u = as.vector(u), p = p, n= n, psi = psi, 
                     atau = ((psi+1)/2), indexFL = as.vector(t(index.holder)),
                     bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
                     xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear, basisFL = basis.holder)
@@ -237,8 +236,6 @@ fit1 <- stan(
     refresh = 2000           # no progress shown
 )
 
-# saveRDS(fit1, file=paste0("./BLAST/application/",Sys.Date(),"_stanfit.rds"))
-# readRDS(file=paste0("./BLAST/application/2024-11-27","_stanfit.rds"))
 posterior <- rstan::extract(fit1)
 
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
@@ -246,7 +243,7 @@ gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summar
 lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
 gsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
 alpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
-intcpt.samples <- summary(fit1, par=c("intcpt"), probs = c(0.05, 0.5, 0.95))
+# intcpt.samples <- summary(fit1, par=c("intcpt"), probs = c(0.05, 0.5, 0.95))
 
 g.smooth.mean <- as.vector(matrix(gsmooth.samples[,1], nrow = n, byrow=TRUE))
 g.smooth.q1 <- as.vector(matrix(gsmooth.samples[,4], nrow = n, byrow=TRUE))

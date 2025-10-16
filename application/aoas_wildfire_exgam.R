@@ -73,30 +73,30 @@ fwi.scaled <- as.data.frame(sapply(fwi.scaled, FUN = range01))
 n <- dim(fwi.scaled)[[1]]
 p <- dim(fwi.scaled)[[2]]
 
-# fwi.origin <- data.frame(fwi.origin, BA=Y)
-# ald.formula <- list(
-#   BA ~ 1,
-#      ~ s(DSR, bs = "tp", k=30) +
-#        s(FWI, bs = "tp", k=30) + 
-#        s(BUI, bs = "tp", k=30) + 
-#        s(ISI, bs = "tp", k=30) + 
-#        s(FFMC, bs = "tp", k=30) + 
-#        s(DMC, bs = "tp", k=30) + 
-#        s(DC, bs = "tp", k=30)
-# )
+fwi.origin <- data.frame(fwi.origin, BA=Y)
+ald.formula <- list(
+  BA ~ 1,
+     ~ s(DSR, bs = "tp", k=30) +
+       s(FWI, bs = "tp", k=30) + 
+       s(BUI, bs = "tp", k=30) + 
+       s(ISI, bs = "tp", k=30) + 
+       s(FFMC, bs = "tp", k=30) + 
+       s(DMC, bs = "tp", k=30) + 
+       s(DC, bs = "tp", k=30)
+)
 
-# quantile.mod <- evgam(
-#     ald.formula,  # Smooth functions of covariates
-#     data = fwi.origin,
-#     family = "ald",      # Asymmetric Laplace Distribution
-#     ald.args = list(tau = 0.975)
-#   )
-# # save(quantile.mod, file = "./BLAST/application/qrresult.Rdata")
-# thres <- predict(quantile.mod, type = "response")
-# summary(quantile.mod)
-# plot(quantile.mod)
-# q.thres <- thres[which(Y>u),1]
-# thres[which(Y>u), 1]
+quantile.mod <- evgam(
+    ald.formula,  # Smooth functions of covariates
+    data = fwi.origin,
+    family = "ald",      # Asymmetric Laplace Distribution
+    ald.args = list(tau = 0.975)
+  )
+# save(quantile.mod, file = "./BLAST/application/qrresult.Rdata")
+thres <- predict(quantile.mod, type = "response")
+summary(quantile.mod)
+plot(quantile.mod)
+q.thres <- thres[which(Y>u),1]
+thres[which(Y>u), 1]
 
 fwi.origin <- data.frame(fwi.origin[which(y>u),], BA=y)
 # max.fwi <- fwi.origin[which.max(y),]
