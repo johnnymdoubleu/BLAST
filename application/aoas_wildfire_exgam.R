@@ -256,7 +256,7 @@ BIC2 <- -2 * as.numeric(logLik2) + log(n) * df2
 
 # Likelihood ratio test for nested models (model2 nested in model1)
 LR_stat <- 2 * (as.numeric(logLik2) - as.numeric(logLik1))
-df_diff <- df1 - df2
+df_diff <- df2 - df1
 p_value <- pchisq(LR_stat, df = df_diff, lower.tail = FALSE)
 
 # Print comparison

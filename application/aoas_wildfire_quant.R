@@ -186,7 +186,7 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u[i], alpha[i]);
     }
-    target += normal_lpdf(theta[1] | 0, 100);
+    target += normal_lpdf(theta[1] | 0, 1);
     target += gamma_lpdf(lambda1 | 1, 1e-3);
     target += gamma_lpdf(lambda2o | 1, 1e-3);
     target += (2*p*log(lambda2o));
@@ -225,11 +225,11 @@ init.alpha <- list(list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c(p, (psi-2))
                    list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c(p, (psi-2))),
                         theta = rep(0, (p+1)), 
                         tau1 = rep(0.001, p),tau2 = rep(0.001, p),
-                        lambda1 = 10, lambda2 = 10),
+                        lambda1 = 1, lambda2 = 1),
                    list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c(p, (psi-2))),
                         theta = rep(0.1, (p+1)), 
                         tau1 = rep(0.5, p),tau2 = rep(0.5, p),
-                        lambda1 = 5, lambda2 = 5.5))
+                        lambda1 = 0.5, lambda2 = 1.5))
 
 # stanc("C:/Users/Johnny Lee/Documents/GitHub/BLAST/application/model1.stan")
 fit1 <- stan(
