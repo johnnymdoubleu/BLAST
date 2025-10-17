@@ -220,15 +220,15 @@ data.stan <- list(y = as.vector(y), u = as.vector(u), p = p, n= n, psi = psi,
 
 init.alpha <- list(list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c(p, (psi-2))),
                         theta = rep(0, (p+1)), 
-                        tau1 = rep(0.1, p),tau2 = rep(0.1, p),
+                        tau1 = rep(0.01, p),tau2 = rep(0.01, p),
                         lambda1 = 1, lambda2 = 2),
                    list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c(p, (psi-2))),
                         theta = rep(0, (p+1)), 
-                        tau1 = rep(0.001, p),tau2 = rep(0.001, p),
+                        tau1 = rep(0.1, p),tau2 = rep(0.1, p),
                         lambda1 = 1, lambda2 = 1),
                    list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c(p, (psi-2))),
                         theta = rep(0.1, (p+1)), 
-                        tau1 = rep(0.5, p),tau2 = rep(0.5, p),
+                        tau1 = rep(0.05, p),tau2 = rep(0.05, p),
                         lambda1 = 0.5, lambda2 = 1.5))
 
 # stanc("C:/Users/Johnny Lee/Documents/GitHub/BLAST/application/model1.stan")
@@ -238,9 +238,9 @@ fit1 <- stan(
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
     chains = 3,             # number of Markov chains
-    iter = 40000,            # total number of iterations per chain
+    iter = 10000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
-    refresh = 5000           # no progress shown
+    refresh = 2500           # no progress shown
 )
 
 posterior <- rstan::extract(fit1)
@@ -297,13 +297,13 @@ for(i in 1:p){
                   ylab("") + xlab(names(fwi.scaled)[i]) +
                   scale_fill_manual(values=c("steelblue"), name = "") + 
                   scale_color_manual(values=c("steelblue")) +
-                  ylim(-1.2, max(data.smooth$q3[((((i-1)*n)+1):(i*n))])) +
+                  ylim(-1.5, max(data.smooth$q3[((((i-1)*n)+1):(i*n))])) +
                   theme_minimal(base_size = 30) +
                   theme(legend.position = "none",
                           plot.margin = margin(0,0,0,-20),
                           axis.text = element_text(size = 35),
                           axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=-1.2, color = "red", size = 7)
+  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=-1.5, color = "red", size = 7)
 }
 
 grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
