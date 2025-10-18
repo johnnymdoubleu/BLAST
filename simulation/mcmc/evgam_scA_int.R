@@ -339,6 +339,7 @@ for(j in 1:p){
 }
 
 
+
 alpha.smooth <- data.frame("x" = as.vector(xholder),
                           "true" = as.vector(f.new),
                           "post.mean" = as.vector(g.smooth.mean),
@@ -406,44 +407,6 @@ for(i in 1:p){
 
 grid.arrange(grobs = grid.plts, ncol = 3, nrow = 2)
 
-# xi.smooth <- data.frame("x"=newx,
-#                           "true" = as.vector(1/exp(f.new)),
-#                           "post.mean" = as.vector(1/exp(g.smooth.mean)),
-#                           "q1" = as.vector(1/exp(g.smooth.q1)),
-#                           "q2" = as.vector(1/exp(g.smooth.q2)),
-#                           "q3" = as.vector(1/exp(g.smooth.q3)),
-#                           "evgam.scale" = as.vector(xi.nonlinear.scale),
-#                           "evgam.1" = as.vector(xi.nonlinear.1),
-#                           "covariates" = gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]")),
-#                           "fakelab" = rep(1, (p*n)),
-#                           "replicate" = gl(p, n, (p*n), labels = c("x[1]", "x[2]", "x[3]", "x[4]", "x[5]")))
-
-# ggplot(xi.smooth, aes(x=x, group=interaction(covariates, replicate))) + 
-#   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
-#   geom_line(aes(y=true, colour = "True"), linewidth=2, linetype=2) + 
-#   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1.8) + 
-#   geom_line(aes(y=evgam.scale), colour = "purple", linewidth=1.8) + 
-#   geom_line(aes(y=evgam.1), colour = "orange", linewidth=1.8) + 
-#   ylab(expression(xi)) + xlab(expression(c)) + 
-#   facet_grid(covariates ~ ., scales = "free_x", switch = "y", 
-#               labeller = label_parsed) + 
-#   scale_fill_manual(values=c("steelblue"), name = "") +
-#   scale_color_manual(values=c("steelblue", "red")) + 
-#   guides(color = guide_legend(order = 2), 
-#           fill = guide_legend(order = 1)) + ylim(-2.8, 2.8) + 
-#   theme_minimal(base_size = 30) +
-#   theme(plot.title = element_text(hjust = 0.5, size = 15),
-#         legend.position="none",
-#         legend.title = element_blank(),
-#         legend.text = element_text(size=20),
-#         legend.margin=margin(t = 1, unit='cm'),
-#         legend.box.margin=margin(-10,0,-10,0),
-#         plot.margin = margin(0,0,0,0),
-#         strip.text.y = element_text(size = 25, colour = "black", angle = 0, face = "bold.italic"),
-#         strip.placement = "outside",
-#         axis.title.x = element_text(size = 35),
-#         axis.text = element_text(size=18))
-
 alpha.scenario <- data.frame("x" = newx,
                             "constant" = newx,
                             "true" = (alp.new),
@@ -453,10 +416,6 @@ alpha.scenario <- data.frame("x" = newx,
                             "evgam.1" = 1/xi.pred.1,
                             "q1" = (newalpha.samples[,4]),
                             "q3" = (newalpha.samples[,6]))
-# "post.mean" = sort(alpha.smooth.new),
-# "post.median" = sort(newalpha.samples[,5]),
-# "q1" = sort(alpha.smooth.q1),
-# "q3" = sort(alpha.smooth.q3))
 
 ggplot(alpha.scenario, aes(x=x)) + 
   ylab(expression(alpha(c,ldots,c))) + xlab(expression(c)) + labs(col = "") +
