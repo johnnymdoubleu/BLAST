@@ -309,6 +309,7 @@ for(iter in 1:total.iter){
 }
 
 alpha.container$x <- seq(0,1, length.out = n)
+evgam.1.container$x <- seq(0,1, length.out = n)
 alpha.container$true <- 1/alp.new
 alpha.container <- cbind(alpha.container, t(apply(alpha.container[,1:total.iter], 1, quantile, c(0.05, .5, .95))))
 colnames(alpha.container)[(dim(alpha.container)[2]-2):(dim(alpha.container)[2])] <- c("q1","q2","q3")
@@ -330,6 +331,7 @@ if(total.iter <= 50){
   for(i in 1:total.iter){
   # for(i in 50:100){
     plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.075, linewidth = 0.7)
+    plt <- plt + geom_line(data=evgam.1.container, aes(x=x, y = .data[[names(evgam.1.container)[i]]]), alpha = 0.075, linewidth = 0.7)
   }
 }
 print(plt +
@@ -347,6 +349,8 @@ print(plt +
                 axis.text = element_text(size = 18)))
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_evgam_scA_.pdf"), width=10, height = 7.78)
+
+save(newgsmooth.container, smooth.scale.container, smooth.1.container, alpha.container, evgam.1.container, evgam.scale.container, mise.container, mise.evgam.container, file="evgam_mc_scA.Rdata")
 
 # equal_breaks <- function(n = 3, s = 0.1,...){
 #   function(x){
