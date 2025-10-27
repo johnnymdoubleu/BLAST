@@ -182,9 +182,9 @@ for(iter in 1:total.iter){
     index.holder <- rbind(index.holder, 
                           matrix(c(which.min(x.origin[,i]),
                                     which.max(x.origin[,i])), ncol=2))
+    xholder[,i] <- seq(0, 1, length.out = n)
   }
   for(i in 1:p){
-    xholder[,i] <- seq(0, 1, length.out = n)  
     test.knot <- seq(0, 1, length.out = psi)
     splines <- basis.tps(xholder[,i], test.knot, m=2, rk=FALSE, intercept = FALSE)
     xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
@@ -334,6 +334,7 @@ if(total.iter <= 50){
     plt <- plt + geom_line(data=evgam.1.container, aes(x=x, y = .data[[names(evgam.1.container)[i]]]), alpha = 0.075, linewidth = 0.7)
   }
 }
+
 print(plt +
         geom_line(aes(y=true, col = "True"), linewidth = 2, linetype = 2) + 
         geom_line(aes(y=mean, col = "Mean"), linewidth = 1.8) +
@@ -350,7 +351,9 @@ print(plt +
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_evgam_scA_.pdf"), width=10, height = 7.78)
 
-save(newgsmooth.container, smooth.scale.container, smooth.1.container, alpha.container, evgam.1.container, evgam.scale.container, mise.container, mise.evgam.container, file="evgam_mc_scA.Rdata")
+# save(newgsmooth.container, smooth.scale.container, smooth.1.container, alpha.container, evgam.1.container, evgam.scale.container, mise.container, mise.evgam.container, file="./simulation/results/evgam_mc_scA.Rdata")
+
+# load("./simulation/results/evgam_mc_scA.Rdata")
 
 # equal_breaks <- function(n = 3, s = 0.1,...){
 #   function(x){
