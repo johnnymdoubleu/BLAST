@@ -177,8 +177,6 @@ generated quantities {
     array[n] real <lower=0> newalpha; // new tail index
     matrix[n, p] newgsmooth; // linear component
 
-    yrep = pareto_rng(u, alpha[1]); 
-
     for (j in 1:p){
         newgsmooth[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j] + xholderLinear[,j] * theta[j+1];
     };    
@@ -221,25 +219,42 @@ alpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$sum
 
 # save(theta.samples, gamma.samples, gsmooth.samples, alpha.samples, file = "./BLAST/application/BT_results.RData")
 load(file = "./BLAST/application/BT_results.Rdata")
-load("./BLAST/application/evgam_fit_all.Rdata")
-g.smooth.mean <- as.vector(matrix(gsmooth.samples[,1], nrow = n, byrow=TRUE))
-g.smooth.q1 <- as.vector(matrix(gsmooth.samples[,4], nrow = n, byrow=TRUE))
-g.smooth.q2 <- as.vector(matrix(gsmooth.samples[,5], nrow = n, byrow=TRUE))
-g.smooth.q3 <- as.vector(matrix(gsmooth.samples[,6], nrow = n, byrow=TRUE))
+load("./BLAST/application/evgam_fit.Rdata")
 xholder.df <- data.frame(xholder)
 names(xholder.df) <- names(fwi.scaled)
-xi.pred <-predict(m.gpd, newdata = xholder.df, type="link")$shape
-alpha.pred <- 1/xi.pred
+xi.pred.1 <-predict(m.gpd, newdata = xholder.df, type="link")$shape
+alpha.pred.1 <- 1/xi.pred.1
 
 xholder.basis <- predict(m.gpd, newdata = xholder.df, type= "lpmatrix")$shape
 xi.coef <- tail(m.gpd$coefficients, (psi-1)*p)
 gamma.xi <- matrix(xi.coef, ncol = p)
-alpha.nonlinear.new <- xi.nonlinear.new <- matrix(, nrow = n, ncol = p)
+alpha.nonlinear.1 <- xi.nonlinear.1 <- matrix(, nrow = n, ncol = p)
 bs.nonlinear <- xholder.basis[,c(2:((psi-1)*p+1))]
 for(j in 1:p){
-  xi.nonlinear.new[,j] <- bs.nonlinear[,(((j-1)*(psi-1))+1):(((j-1)*(psi-1))+(psi-1))] %*% gamma.xi[,j]
-  alpha.nonlinear.new[,j] <- 1/xi.nonlinear.new[,j]
+  xi.nonlinear.1[,j] <- bs.nonlinear[,(((j-1)*(psi-1))+1):(((j-1)*(psi-1))+(psi-1))] %*% gamma.xi[,j]
+  alpha.nonlinear.1[,j] <- 1/xi.nonlinear.1[,j]
 }
+load("./BLAST/application/evgam_fit_all.Rdata")
+xholder.df <- data.frame(xholder)
+names(xholder.df) <- names(fwi.scaled)
+xi.pred.scale <-predict(m.gpd, newdata = xholder.df, type="link")$shape
+alpha.pred.scale <- 1/xi.pred.scale
+
+xholder.basis <- predict(m.gpd, newdata = xholder.df, type= "lpmatrix")$shape
+xi.coef <- tail(m.gpd$coefficients, (psi-1)*p)
+gamma.xi <- matrix(xi.coef, ncol = p)
+alpha.nonlinear.scale <- xi.nonlinear.scale <- matrix(, nrow = n, ncol = p)
+bs.nonlinear <- xholder.basis[,c(2:((psi-1)*p+1))]
+for(j in 1:p){
+  xi.nonlinear.scale[,j] <- bs.nonlinear[,(((j-1)*(psi-1))+1):(((j-1)*(psi-1))+(psi-1))] %*% gamma.xi[,j]
+  alpha.nonlinear.scale[,j] <- 1/xi.nonlinear.scale[,j]
+}
+
+g.smooth.mean <- as.vector(matrix(gsmooth.samples[,1], nrow = n, byrow=TRUE))
+g.smooth.q1 <- as.vector(matrix(gsmooth.samples[,4], nrow = n, byrow=TRUE))
+g.smooth.q2 <- as.vector(matrix(gsmooth.samples[,5], nrow = n, byrow=TRUE))
+g.smooth.q3 <- as.vector(matrix(gsmooth.samples[,6], nrow = n, byrow=TRUE))
+
 
 xi.smooth <- data.frame("x" = as.vector(xholder),
                           "true" = as.vector(as.matrix(fwi.scaled)),
@@ -247,7 +262,8 @@ xi.smooth <- data.frame("x" = as.vector(xholder),
                           "q1" = as.vector(1/exp(g.smooth.q1)),
                           "q2" = as.vector(1/exp(g.smooth.q2)),
                           "q3" = as.vector(1/exp(g.smooth.q3)),
-                          "evgam" = as.vector(xi.nonlinear.new),
+                          "evgam.1" = as.vector(xi.nonlinear.1),
+                          "evgam.scale" = as.vector(xi.nonlinear.scale),
                           "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)))
 
 
@@ -257,16 +273,18 @@ for(i in 1:p){
                   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
                   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
                   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
-                  geom_line(aes(y=evgam, colour = "EVGAM"), linewidth=1) + 
+                  geom_line(aes(y=evgam.1), colour = "purple", linewidth=1) + 
+                  geom_line(aes(y=evgam.scale), colour = "orange", linewidth=1) + 
                   geom_rug(aes(x=true, y=q2), sides = "b") +
                   ylab("") + xlab(names(fwi.scaled)[i]) +
                   scale_fill_manual(values=c("steelblue"), name = "") + 
-                  scale_color_manual(values=c("purple", "steelblue")) +
+                  scale_color_manual(values=c("steelblue")) +
                   ylim(-4.1, 4.1) +
                   theme_minimal(base_size = 30) +
                   theme(legend.position = "none",
                           plot.margin = margin(0,0,0,-20),
-                          axis.text = element_text(size = 35),
+                          axis.text.y = element_text(size = 35),
+                          axis.text.x = element_text(size = 25),
                           axis.title.x = element_text(size = 45))
   grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=-4.1, color = "red", size = 7)
 }
@@ -277,7 +295,8 @@ grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
 xi.scenario <- data.frame("x" = xholder[,1],
                             "post.mean" = (1/alpha.samples[,1]),
                             "post.median" = (1/alpha.samples[,5]),
-                            "evgam" = xi.pred,
+                            "evgam.1" = xi.pred.1,
+                            "evgam.scale" = xi.pred.scale,
                             "q1" = (1/alpha.samples[,4]),
                             "q3" = (1/alpha.samples[,6]))
 
@@ -285,7 +304,8 @@ ggplot(xi.scenario, aes(x=x)) +
   ylab(expression(xi(c,...,c))) + xlab(expression(c)) + labs(col = "") +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
   geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
-  geom_line(aes(y=evgam), linewidth=1, color = "purple") +
+  geom_line(aes(y=evgam.1), linewidth=1, color = "purple") +
+  geom_line(aes(y=evgam.scale), linewidth=1, color = "orange") +
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values = c("steelblue")) + 
   guides(color = guide_legend(order = 2), 
@@ -299,7 +319,8 @@ ggplot(xi.scenario, aes(x=x)) +
 alpha.scenario <- data.frame("x" = xholder[,1],
                             "post.mean" = (alpha.samples[,1]),
                             "post.median" = (alpha.samples[,5]),
-                            "evgam" = alpha.pred,
+                            "evgam.1" = alpha.pred.1,
+                            "evgam.scale" = alpha.pred.scale,
                             "q1" = (alpha.samples[,4]),
                             "q3" = (alpha.samples[,6]))
 
@@ -307,7 +328,8 @@ ggplot(alpha.scenario, aes(x=x)) +
   ylab(expression(alpha(c,...,c))) + xlab(expression(c)) + labs(col = "") +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
   geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
-  geom_line(aes(y=evgam), linewidth=1, color = "purple") +
+  geom_line(aes(y=evgam.1), linewidth=1, color = "purple") +
+  geom_line(aes(y=evgam.scale), linewidth=1, color = "orange") +
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values = c("steelblue")) + ylim(0, 15) +
   guides(color = guide_legend(order = 2), 
@@ -320,4 +342,5 @@ ggplot(alpha.scenario, aes(x=x)) +
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_alpha.pdf"), width=10, height = 7.78)
 
 
+library(MESS)
 

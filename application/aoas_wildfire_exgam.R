@@ -213,11 +213,6 @@ g.smooth.q1 <- as.vector(matrix(gsmooth.samples[,4], nrow = n, byrow=TRUE))
 g.smooth.q2 <- as.vector(matrix(gsmooth.samples[,5], nrow = n, byrow=TRUE))
 g.smooth.q3 <- as.vector(matrix(gsmooth.samples[,6], nrow = n, byrow=TRUE))
 
-
-
-
-# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=12.5, height = 15)
-
 data.scenario <- data.frame("x" = xholder[,1],
                             "post.mean" = (alpha.samples[,1]),
                             "post.median" = (alpha.samples[,5]),

@@ -246,7 +246,7 @@ g.smooth.q1 <- as.vector(matrix(gsmooth.samples[,4], nrow = n, byrow=TRUE))
 g.smooth.q2 <- as.vector(matrix(gsmooth.samples[,5], nrow = n, byrow=TRUE))
 g.smooth.q3 <- as.vector(matrix(gsmooth.samples[,6], nrow = n, byrow=TRUE))
 
-save(theta.samples, gsmooth.samples, alpha.samples, gamma.samples, intercept.samples, file = "./BLAST/application/wildfire_intcpt.Rdata")
+# save(theta.samples, gsmooth.samples, alpha.samples, gamma.samples, intercept.samples, file = "./BLAST/application/wildfire_intcpt.Rdata")
 # load("./BLAST/application/wildfire_intcpt.Rdata")
 equal_breaks <- function(n = 3, s = 0.1,...){
   function(x){

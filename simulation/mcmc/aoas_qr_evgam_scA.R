@@ -1,13 +1,11 @@
 library(npreg)
 library(Pareto)
-suppressMessages(library(tidyverse))
+suppressMessages(library(ggplot2))
 library(rstan)
-library(MESS)
 library(evgam)
-# Scenario A
+# Scenario A with qunatile regression predicted quantiles
 
-total.iter <- 100
-
+total.iter <- 1
 n <- n.origin <- 15000
 psi <- 10
 threshold <- 0.95
@@ -34,7 +32,7 @@ data {
     int <lower=1> n; // Sample size
     int <lower=1> p; // regression coefficient size
     int <lower=1> psi; // splines coefficient size
-    real <lower=0> u; // large threshold value
+    array[n] real <lower=0> u; // large threshold value
     matrix[n,p] bsLinear; // fwi dataset
     matrix[n, (psi*p)] bsNonlinear; // thin plate splines basis
     matrix[n,p] xholderLinear; // fwi dataset
@@ -100,7 +98,7 @@ transformed parameters {
 model {
     // likelihood
     for (i in 1:n){
-        target += pareto_lpdf(y[i] | u, alpha[i]);
+        target += pareto_lpdf(y[i] | u[i], alpha[i]);
     }
     target += normal_lpdf(theta[1] | 0, 100);
     target += gamma_lpdf(lambda1 | 1, 1e-3);
@@ -114,15 +112,21 @@ model {
 }
 "
 
-newgsmooth.container <- as.data.frame(matrix(, nrow = (p*(n*(1-threshold))), ncol = total.iter))
-smooth.scale.container <- as.data.frame(matrix(, nrow = (p*(n*(1-threshold))), ncol = total.iter))
-smooth.1.container <- as.data.frame(matrix(, nrow = (p*(n*(1-threshold))), ncol = total.iter))
-alpha.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total.iter))
-evgam.1.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total.iter))
-evgam.scale.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total.iter))
-alpha.lower.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total.iter))
-alpha.upper.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total.iter))
-mise.scale.container <- mise.1.container <- mise.container <- c()
+# newgsmooth.container <- as.data.frame(matrix(, nrow = (p*(n*(1-threshold))), ncol = total.iter))
+# smooth.scale.container <- as.data.frame(matrix(, nrow = (p*(n*(1-threshold))), ncol = total.iter))
+# smooth.1.container <- as.data.frame(matrix(, nrow = (p*(n*(1-threshold))), ncol = total.iter))
+# alpha.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total.iter))
+# evgam.1.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total.iter))
+# evgam.scale.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total.iter))
+# alpha.lower.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total.iter))
+# alpha.upper.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total.iter))
+newgsmooth.container <- smooth.scale.container <- smooth.1.container <- alpha.container <- evgam.1.container <- evgam.scale.container <- alpha.lower.container <- alpha.upper.container <- vector(mode = "list", length = total.iter)
+
+# for (i in pages) { results[[i]] <- your_scrape_page_function(i) }
+
+# results_df <- results_list %>% map_df(bind_rows)
+# 
+mise.1.container <- mise.scale.container  <- mise.container <- c()
 
 for(iter in 1:total.iter){
   n <- n.origin
@@ -166,10 +170,14 @@ for(iter in 1:total.iter){
       alp.origin[i] <- exp(theta.origin[1] + sum(g.origin[i,]))
       y.origin[i] <- rPareto(1, 1, alpha = alp.origin[i])
   }
+  
+  data.origin <- data.frame(y=log(y.origin), x.origin)
 
-  u <- quantile(y.origin, threshold)
-  x.origin <- x.origin[which(y.origin>u),]
-  y.origin <- y.origin[y.origin > u]
+  quant.fit <- quantreg::rq(y ~ ., tau=rep(threshold, length(y.origin)), data = data.origin)
+  qu <- exp(predict(quant.fit))
+  u <- qu[which(y.origin>qu)]
+  x.origin <- x.origin[which(y.origin>qu),]
+  y.origin <- y.origin[which(y.origin>qu)]
   n <- length(y.origin)
 
   xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
@@ -216,7 +224,7 @@ for(iter in 1:total.iter){
     alp.new[i] <- exp(theta.origin[1] + sum(g.new[i,]))
   }
   
-  data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, 
+  data.stan <- list(y = as.vector(y.origin), u = as.vector(u), p = p, n= n, psi = psi, 
                     atau = ((psi+1)/2), basisFL = basis.holder,
                     indexFL = as.vector(t(index.holder)), trueAlpha = alp.new,
                     bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
@@ -294,35 +302,36 @@ for(iter in 1:total.iter){
   }
 
 
-  evgam.1.container[,iter] <- xi.pred.1
-  evgam.scale.container[,iter] <- xi.pred.scale
-  alpha.lower.container[,iter] <- 1/(newalpha.samples[,4])
-  alpha.container[,iter] <- 1/(newalpha.samples[,5])
-  alpha.upper.container[,iter] <- 1/(newalpha.samples[,6])
-  newgsmooth.container[,iter] <- as.vector(matrix(newgsmooth.samples[,5], nrow = n, byrow=TRUE))
-  smooth.1.container[,iter] <- as.vector(xi.nonlinear.1)
-  smooth.scale.container <- as.vector(xi.nonlinear.scale)
-  
-  mise.container[iter] <- auc(newx, se.samples[,5], type="spline")
-  mise.1.container[iter] <- auc(newx, ((1/alp.new)-xi.pred.1)  ,type="spline")
-  mise.scale.container[iter] <- auc(newx, ((1/alp.new)-xi.pred.scale)  ,type="spline")
+  evgam.1.container[[iter]] <- xi.pred.1
+  evgam.scale.container[[iter]] <- xi.pred.scale
+  alpha.lower.container[[iter]] <- 1/(newalpha.samples[,4])
+  alpha.container[[iter]] <- 1/(newalpha.samples[,5])
+  alpha.upper.container[[iter]] <- 1/(newalpha.samples[,6])
+  newgsmooth.container[[iter]] <- as.vector(matrix(newgsmooth.samples[,5], nrow = n, byrow=TRUE))
+  smooth.1.container[[iter]] <- as.vector(xi.nonlinear.1)
+  smooth.scale.container[[iter]] <- as.vector(xi.nonlinear.scale)
+  mise.container[[iter]] <- MESS::auc(newx, se.samples[,5], type="spline")
+  mise.1.container[[iter]] <- MESS::auc(newx, ((1/alp.new)-xi.pred.1)  ,type="spline")
+  mise.scale.container[[iter]] <- MESS::auc(newx, ((1/alp.new)-xi.pred.scale)  ,type="spline")
 }
 
-alpha.container$x <- seq(0,1, length.out = n)
+xi.container <- data.frame(mean = unname(alpha.container[[1]]))
+evgam.1.container <- as.data.frame(unname(evgam.1.container[[1]]))
+evgam.scale.container <- as.data.frame(unname(evgam.scale.container[[1]]))
+xi.container$x <- seq(0,1, length.out = n)
 evgam.1.container$x <- seq(0,1, length.out = n)
-alpha.container$true <- 1/alp.new
-alpha.container <- cbind(alpha.container, t(apply(alpha.container[,1:total.iter], 1, quantile, c(0.05, .5, .95))))
-colnames(alpha.container)[(dim(alpha.container)[2]-2):(dim(alpha.container)[2])] <- c("q1","q2","q3")
-alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
-alpha.container$q1 <- apply(alpha.lower.container[,1:total.iter], 1, quantile, c(.5))
-alpha.container$q3 <- apply(alpha.upper.container[,1:total.iter], 1, quantile, c(.5))
-alpha.container$evgam.1 <- rowMeans(evgam.1.container[,1:total.iter])
-alpha.container$evgam.scale <- rowMeans(evgam.scale.container[,1:total.iter])
-alpha.container <- as.data.frame(alpha.container)
+xi.container$true <- 1/alp.new
+# alpha.container <- cbind(alpha.container, t(apply(alpha.container[,1:total.iter], 1, quantile, c(0.05, .5, .95))))
+# colnames(alpha.container)[(dim(alpha.container)[2]-2):(dim(alpha.container)[2])] <- c("q1","q2","q3")
+# alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
+# alpha.container$mean <- as.data.frame(unname(alpha.container[[1]]))
+# alpha.container$q1 <- apply(alpha.lower.container[,1:total.iter], 1, quantile, c(.5))
+# alpha.container$q3 <- apply(alpha.upper.container[,1:total.iter], 1, quantile, c(.5))
+xi.container$evgam.1 <- unname(evgam.1.container[[1]])
+xi.container$evgam.scale <-unname(evgam.scale.container[[1]])
 
 
-
-plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab(expression(xi(c,ldots,c))) #+ ylab("")
+plt <- ggplot(data = xi.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab(expression(xi(c,ldots,c))) #+ ylab("")
 if(total.iter <= 50){
   for(i in 1:total.iter){
     plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.075, linewidth = 0.7)
@@ -331,7 +340,7 @@ if(total.iter <= 50){
   for(i in 1:total.iter){
   # for(i in 50:100){
     plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.075, linewidth = 0.7)
-    plt <- plt + geom_line(data=evgam.1.container, aes(x=x, y = .data[[names(evgam.1.container)[i]]]), alpha = 0.075, linewidth = 0.7)
+    # plt <- plt + geom_line(data=evgam.1.container, aes(x=x, y = .data[[names(evgam.1.container)[i]]]), alpha = 0.075, linewidth = 0.7)
   }
 }
 
