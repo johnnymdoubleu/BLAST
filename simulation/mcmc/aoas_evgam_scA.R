@@ -308,19 +308,21 @@ for(iter in 1:total.iter){
   mise.scale.container[iter] <- auc(newx, ((1/alp.new)-xi.pred.scale)  ,type="spline")
 }
 
+
+
 alpha.container$x <- seq(0,1, length.out = n)
 evgam.1.container$x <- seq(0,1, length.out = n)
 alpha.container$true <- 1/alp.new
 alpha.container <- cbind(alpha.container, t(apply(alpha.container[,1:total.iter], 1, quantile, c(0.05, .5, .95))))
 colnames(alpha.container)[(dim(alpha.container)[2]-2):(dim(alpha.container)[2])] <- c("q1","q2","q3")
 alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
-alpha.container$q1 <- apply(alpha.lower.container[,1:total.iter], 1, quantile, c(.5))
-alpha.container$q3 <- apply(alpha.upper.container[,1:total.iter], 1, quantile, c(.5))
+# alpha.container$q1 <- apply(alpha.lower.container[,1:total.iter], 1, quantile, c(.5))
+# alpha.container$q3 <- apply(alpha.upper.container[,1:total.iter], 1, quantile, c(.5))
 alpha.container$evgam.1 <- rowMeans(evgam.1.container[,1:total.iter])
 alpha.container$evgam.scale <- rowMeans(evgam.scale.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
-
+load("./simulation/results/evgam_mc_scA.Rdata")
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab(expression(xi(c,ldots,c))) #+ ylab("")
 if(total.iter <= 50){
@@ -353,7 +355,7 @@ print(plt +
 
 # save(newgsmooth.container, smooth.scale.container, smooth.1.container, alpha.container, evgam.1.container, evgam.scale.container, mise.container, mise.evgam.container, file="./simulation/results/evgam_mc_scA.Rdata")
 
-# load("./simulation/results/evgam_mc_scA.Rdata")
+
 
 # equal_breaks <- function(n = 3, s = 0.1,...){
 #   function(x){
@@ -401,3 +403,6 @@ print(plt +
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_scA_",n.origin,".pdf"), width=12.5, height = 15)
 
 
+print(mean(mise.container))
+print(mean(mise.1.container))
+print(mean(mise.scale.container))
