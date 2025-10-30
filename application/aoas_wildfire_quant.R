@@ -69,17 +69,18 @@ fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 fwi.origin <- fwi.scaled
 
 fwi.origin <- data.frame(fwi.origin, BA=Y)
-BA.shifted <- ifelse(fwi.origin$BA == 0, 1e-5, fwi.origin$BA)
-fwi.origin$log.BA <- log(BA.shifted)
-quant.fit <- quantreg::rq(log.BA ~ DSR + FWI + BUI + ISI + FFMC + DMC + DC, 
-                          tau=rep(0.975, length(Y)), data = fwi.origin)#,
-                          # method = "fnc", # feasible non-crossing
-                          # R = matrix(c(1, rep(0, p)), 1, p+1), # constraint matrix
-                          # r = 1) # constraint threshold)
-qu <- exp(predict(quant.fit))
+# BA.shifted <- ifelse(fwi.origin$BA == 0, 1e-5, fwi.origin$BA)
+# fwi.origin$log.BA <- log(BA.shifted)
+quant.fit <- quantreg::rq(BA ~ DSR + FWI + BUI + ISI + FFMC + DMC + DC, 
+                          tau=c(0.95, 0.975, 0.98, 0.99), data = fwi.origin)
+qu <- predict(quant.fit)
 y <- Y[which(Y>qu)]
 u <- qu[which(Y>qu)]
-# u[u < 0] <- 0.001
+hist(u)
+abline(v=quantile(Y, 0.975), col="red")
+
+qu.c <- predict(quant.fit, xholder)
+
 
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 fwi.scaled <- as.data.frame(sapply(fwi.scaled[which(Y>qu),], FUN = range01))
@@ -257,14 +258,33 @@ g.smooth.q1 <- as.vector(matrix(gsmooth.samples[,4], nrow = n, byrow=TRUE))
 g.smooth.q2 <- as.vector(matrix(gsmooth.samples[,5], nrow = n, byrow=TRUE))
 g.smooth.q3 <- as.vector(matrix(gsmooth.samples[,6], nrow = n, byrow=TRUE))
 
-data.scenario <- data.frame("x" = xholder[,1],
+alpha.smooth <- data.frame("x" = xholder[,1],
                             "post.mean" = (alpha.samples[,1]),
                             "post.median" = (alpha.samples[,5]),
                             "q1" = (alpha.samples[,4]),
                             "q3" = (alpha.samples[,6]))
 
-ggplot(data.scenario, aes(x=x)) + 
+ggplot(alpha.smooth, aes(x=x)) + 
   ylab(expression(alpha(c,ldots,c))) + xlab(expression(c)) + labs(col = "") +
+  geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
+  geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
+  scale_fill_manual(values=c("steelblue"), name = "") +
+  scale_color_manual(values = c("steelblue")) + 
+  guides(color = guide_legend(order = 2), 
+          fill = guide_legend(order = 1)) +
+  theme_minimal(base_size = 30) +
+  theme(legend.position = "none",
+        strip.text = element_blank(),
+        axis.text = element_text(size = 20))
+
+xi.smooth <- data.frame("x" = xholder[,1],
+                            "post.mean" = 1/(alpha.samples[,1]),
+                            "post.median" = 1/(alpha.samples[,5]),
+                            "q1" = 1/(alpha.samples[,4]),
+                            "q3" = 1/(alpha.samples[,6]))
+
+ggplot(xi.smooth, aes(x=x)) + 
+  ylab(expression(xi(c,ldots,c))) + xlab(expression(c)) + labs(col = "") +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
   geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
   scale_fill_manual(values=c("steelblue"), name = "") +

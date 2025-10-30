@@ -66,48 +66,64 @@ for (v in names(fwi.scaled)) {
 }
 
 
-xholder.basis <-predict(m.gpd, newdata = xholder, type = "lpmatrix")
+xholder.basis.1 <-predict(m.gpd, newdata = xholder, type = "lpmatrix")
 
-xi.coef <- tail(m.gpd$coefficients, 204)
-gamma.xi <- matrix(xi.coef[2:204], ncol = p)
-f.nonlinear.new <- matrix(, nrow = n, ncol = p)
-bs.nonlinear <- xholder.basis$shape[,c(2:204)]
+xi.coef.1 <- tail(m.gpd$coefficients, 204)
+gamma.xi.1 <- matrix(xi.coef.1[2:204], ncol = p)
+f.nonlinear.1 <- matrix(, nrow = n, ncol = p)
+bs.nonlinear.1 <- xholder.basis.1$shape[,c(2:204)]
 for(j in 1:p){
-  f.nonlinear.new[,j] <- bs.nonlinear[,(((j-1)*29)+1):(((j-1)*29)+29)] %*% gamma.xi[,j]
+  f.nonlinear.1[,j] <- bs.nonlinear.1[,(((j-1)*29)+1):(((j-1)*29)+29)] %*% gamma.xi.1[,j]
 }
 
-smooth.func <- as.data.frame(m.gpd$plotdata)
-smooth.func <- as.matrix(smooth.func)
-smooth.func <- as.vector(smooth.func)
-
-equal_breaks <- function(n = 3, s = 0.1,...){
-  function(x){
-    d <- s * diff(range(x)) / (1+2*s)
-    seq = seq(min(x)+d, max(x)-d, length=n)
-    round(seq, -floor(log10(abs(seq[2]-seq[1]))))
-  }
-}
+# smooth.func <- as.data.frame(m.gpd$plotdata)
+# smooth.func <- as.matrix(smooth.func)
+# smooth.func <- as.vector(smooth.func)
 
 
 xholder.df <- data.frame(xholder)
 names(xholder.df) <- names(fwi.scaled)
-xi.pred <-predict(m.gpd, newdata = xholder.df, type="link")$shape
-alpha.pred <- 1/xi.pred
+xi.pred.1 <-predict(m.gpd, newdata = xholder.df, type="link")$shape
+alpha.pred.1 <- 1/xi.pred.1
 
-xholder.basis <- predict(m.gpd, newdata = xholder.df, type= "lpmatrix")$shape
-xi.coef <- tail(m.gpd$coefficients, (psi-1)*p)
-gamma.xi <- matrix(xi.coef, ncol = p)
-alpha.nonlinear.new <- xi.nonlinear.new <- matrix(, nrow = n, ncol = p)
-bs.nonlinear <- xholder.basis[,c(2:((psi-1)*p+1))]
+xholder.basis.1 <- predict(m.gpd, newdata = xholder.df, type= "lpmatrix")$shape
+xi.coef.1 <- tail(m.gpd$coefficients, (psi-1)*p)
+gamma.xi.1 <- matrix(xi.coef.1, ncol = p)
+alpha.nonlinear.1 <- xi.nonlinear.1 <- matrix(, nrow = n, ncol = p)
+bs.nonlinear.1 <- xholder.basis.1[,c(2:((psi-1)*p+1))]
 for(j in 1:p){
-  xi.nonlinear.new[,j] <- bs.nonlinear[,(((j-1)*(psi-1))+1):(((j-1)*(psi-1))+(psi-1))] %*% gamma.xi[,j]
-  alpha.nonlinear.new[,j] <- 1/xi.nonlinear.new[,j]
+  xi.nonlinear.1[,j] <- bs.nonlinear.1[,(((j-1)*(psi-1))+1):(((j-1)*(psi-1))+(psi-1))] %*% gamma.xi.1[,j]
+  alpha.nonlinear.1[,j] <- 1/xi.nonlinear.1[,j]
+}
+
+load("./BLAST/application/evgam_fit_all.Rdata")
+xholder.basis.scale <-predict(m.gpd, newdata = xholder, type = "lpmatrix")
+
+xi.coef.scale <- tail(m.gpd$coefficients, 204)
+gamma.xi.scale <- matrix(xi.coef.1[2:204], ncol = p)
+f.nonlinear.scale <- matrix(, nrow = n, ncol = p)
+bs.nonlinear.scale <- xholder.basis.scale$shape[,c(2:204)]
+for(j in 1:p){
+  f.nonlinear.scale[,j] <- bs.nonlinear.scale[,(((j-1)*(psi-1))+1):(((j-1)*(psi-1))+(psi-1))] %*% gamma.xi.scale[,j]
+}
+
+xi.pred.scale <-predict(m.gpd, newdata = xholder.df, type="link")$shape
+alpha.pred.scale <- 1/xi.pred.scale
+
+xi.coef.scale <- tail(m.gpd$coefficients, (psi-1)*p)
+gamma.xi.scale <- matrix(xi.coef.scale, ncol = p)
+alpha.nonlinear.scale <- xi.nonlinear.scale <- matrix(, nrow = n, ncol = p)
+bs.nonlinear.scale <- xholder.basis.scale$shape[,c(2:((psi-1)*p+1))]
+for(j in 1:p){
+  xi.nonlinear.scale[,j] <- bs.nonlinear.scale[,(((j-1)*(psi-1))+1):(((j-1)*(psi-1))+(psi-1))] %*% gamma.xi.scale[,j]
+  alpha.nonlinear.scale[,j] <- 1/xi.nonlinear.scale[,j]
 }
 
 xi.smooth <- data.frame("x"= as.vector(xholder.mat),
-                          "fit" = smooth.func,
+                          # "fit" = smooth.func,
                           "true" = as.vector(as.matrix(fwi.scaled)),
-                          "evgam" = as.vector(xi.nonlinear.new),
+                          "evgam.1" = as.vector(xi.nonlinear.1),
+                          "evgam.scale" = as.vector(xi.nonlinear.scale),
                           "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)),
                           "replicate" = gl(p, n, (p*n), labels = names(fwi.scaled)))
 
@@ -115,26 +131,28 @@ grid.plts <- list()
 for(i in 1:p){
   grid.plt <- ggplot(data = data.frame(xi.smooth[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + 
                   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-                  geom_line(aes(y=evgam, colour = "Posterior Median"), linewidth=1) + 
+                  geom_line(aes(y=evgam.1), colour = "purple", linewidth=1) + 
+                  geom_line(aes(y=evgam.scale), colour = "orange", linewidth=1) + 
                   ylab("") + xlab(names(fwi.scaled)[i]) +
-                  geom_rug(aes(x=true, y=evgam), sides = "b") + 
-                  scale_color_manual(values=c("purple")) +
-                  ylim(min(xi.smooth$evgam[((((i-1)*n)+1):(i*n))])-0.5, max(xi.smooth$evgam[((((i-1)*n)+1):(i*n))]) + 0.5) +
+                  geom_rug(aes(x=true, y=evgam.1), sides = "b") + 
+                  # scale_color_manual(values=c("purple")) +
+                  ylim(min(xi.smooth$evgam.1[((((i-1)*n)+1):(i*n))])-0.5, max(xi.smooth$evgam.1[((((i-1)*n)+1):(i*n))]) + 0.5) +
                   theme_minimal(base_size = 30) +
                   theme(legend.position = "none",
                           plot.margin = margin(0,0,0,-20),
                           axis.text = element_text(size = 35),
                           axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=min(xi.smooth$evgam[((((i-1)*n)+1):(i*n))]-0.5), color = "red", size = 7)
+  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=min(xi.smooth$evgam.1[((((i-1)*n)+1):(i*n))]-0.5), color = "red", size = 7)
 }
 grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
 
 
 
 alpha.smooth <- data.frame("x"= as.vector(xholder.mat),
-                          "fit" = smooth.func,
+                          # "fit" = smooth.func,
                           "true" = as.vector(as.matrix(fwi.scaled)),
-                          "evgam" = as.vector(alpha.nonlinear.new),
+                          "evgam.1" = as.vector(alpha.nonlinear.1),
+                          "evgam.scale" = as.vector(alpha.nonlinear.scale),
                           "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)),
                           "replicate" = gl(p, n, (p*n), labels = names(fwi.scaled)))
 
@@ -142,33 +160,36 @@ grid.plts <- list()
 for(i in 1:p){
   grid.plt <- ggplot(data = data.frame(alpha.smooth[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + 
                   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-                  geom_line(aes(y=evgam), colour = "purple", linewidth=1) + 
+                  geom_line(aes(y=evgam.1), colour = "purple", linewidth=1) + 
+                  geom_line(aes(y=evgam.scale), colour = "orange", linewidth=1) +                   
                   ylab("") + xlab(names(fwi.scaled)[i]) +
-                  geom_rug(aes(x=true, y=evgam), sides = "b") + 
+                  geom_rug(aes(x=true, y=evgam.1), sides = "b") + 
                   # scale_color_manual(values=c("purple")) +
-                  ylim(min(alpha.smooth$evgam[((((i-1)*n)+1):(i*n))])-0.5, max(alpha.smooth$evgam[((((i-1)*n)+1):(i*n))]) + 0.5) +
+                  ylim(min(alpha.smooth$evgam.scale[((((i-1)*n)+1):(i*n))])-0.5, max(alpha.smooth$evgam.scale[((((i-1)*n)+1):(i*n))]) + 0.5) +
                   theme_minimal(base_size = 30) +
                   theme(legend.position = "none",
                           plot.margin = margin(0,0,0,-20),
                           axis.text = element_text(size = 35),
                           axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=min(alpha.smooth$evgam[((((i-1)*n)+1):(i*n))]-0.5), color = "red", size = 7)
+  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=min(alpha.smooth$evgam.1[((((i-1)*n)+1):(i*n))]-0.5), color = "red", size = 7)
 }
 grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
 
 
 xi.scenario <- data.frame("x" = xholder[,1],
-                           "evgam" = xi.pred)#, 
+                           "evgam.1" = xi.pred.1,
+                           "evgam.scale" = xi.pred.scale)#, 
                             # "post.mean" = (1/alpha.samples[,1]),
                             # "post.median" = (1/alpha.samples[,5]),
                             # "q1" = (1/alpha.samples[,4]),
                             # "q3" = (1/alpha.samples[,6]))
 
 ggplot(xi.scenario, aes(x=x)) + 
-  ylab(expression(xi(c,...,c))) + xlab(expression(c)) + labs(col = "") +  
+  ylab(expression(xi(c,ldots,c))) + xlab(expression(c)) + labs(col = "") +  
   # geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
   # geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
-  geom_line(aes(y=evgam), linewidth=1, color = "purple") +
+  geom_line(aes(y=evgam.1), linewidth=1, color = "purple") +
+  geom_line(aes(y=evgam.scale), linewidth=1, color = "orange") +
   # scale_fill_manual(values=c("steelblue"), name = "") +
   # scale_color_manual(values = c("steelblue")) + 
   guides(color = guide_legend(order = 2), 
@@ -180,7 +201,8 @@ ggplot(xi.scenario, aes(x=x)) +
 
 
 alpha.scenario <- data.frame("x" = xholder[,1],
-                              "evgam" = alpha.pred)#,
+                              "evgam.1" = alpha.pred.1,
+                              "evgam.scale" = alpha.pred.scale)#,
                             # "post.mean" = (alpha.samples[,1]),
                             # "post.median" = (alpha.samples[,5]),
                             # "q1" = (alpha.samples[,4]),
@@ -190,7 +212,8 @@ ggplot(alpha.scenario, aes(x=x)) +
   ylab(expression(alpha(c,...,c))) + xlab(expression(c)) + labs(col = "") +
   # geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
   # geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
-  geom_line(aes(y=evgam), linewidth=1, color = "purple") +
+  geom_line(aes(y=evgam.1), linewidth=1, color = "purple") +
+  geom_line(aes(y=evgam.scale), linewidth=1, color = "orange") +
   # scale_fill_manual(values=c("steelblue"), name = "") +
   # scale_color_manual(values = c("steelblue")) + ylim(0, 15) +
   guides(color = guide_legend(order = 2), 
@@ -199,6 +222,8 @@ ggplot(alpha.scenario, aes(x=x)) +
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 20))
+
+
 
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary

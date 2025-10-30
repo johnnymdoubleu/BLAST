@@ -178,7 +178,7 @@ model {
     target += (2*p*log(lambda2o));
     for (j in 1:p){
         target += gamma_lpdf(tau1[j] | 1, lambda1^2*0.5);
-        target += normal_lpdf(intcpt[j] | 0, 1);
+        target += normal_lpdf(intcpt[j] | 0, 10);
         target += normal_lpdf(theta[j] | 0, sqrt(1/tau1[j]));
         target += gamma_lpdf(tau2[j] | atau, lambda2o^2*0.5);
         target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * (1/tau2[j]));

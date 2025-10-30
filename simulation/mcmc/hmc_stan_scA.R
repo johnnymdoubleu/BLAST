@@ -57,6 +57,8 @@ for(j in 1:p){
 
 theta.origin <- c(0.1, 0, -0.2, -0.2, 0, 0)
 
+
+
 f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
     f.linear.origin[,j] <- bs.linear[, j] * theta.origin[j+1]
