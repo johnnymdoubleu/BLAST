@@ -79,7 +79,7 @@ alp.origin <- y.origin <- NULL
 for(i in 1:n){
   alp.origin[i] <- exp(theta.origin[1] + sum(f.origin[i,]))
   # y.origin[i] <- rPareto(1, 1, alpha = alp.origin[i])
-  y.origin[i] <- evd::rgpd(1, scale=0.1, loc=1, shape=(1/alp.origin[i]))
+  y.origin[i] <- evd::rgpd(1, scale=alp.origin[i], loc=1, shape=(1/alp.origin[i]))
 }
 
 u <- quantile(y.origin, threshold)
@@ -253,7 +253,7 @@ system.time(fit1 <- stan(
   init = init.alpha,      # initial value
   chains = 3,             # number of Markov chains
   # warmup = 1000,          # number of warmup iterations per chain
-  iter = 4000,            # total number of iterations per chain
+  iter = 2000,            # total number of iterations per chain
   cores = parallel::detectCores(), # number of cores (could use one per chain)
   refresh = 500             # no progress shown
 ))
