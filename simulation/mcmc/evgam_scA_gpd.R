@@ -75,11 +75,12 @@ for(j in 1:p){
   f.origin[, j] <- f.linear.origin[,j] + f.nonlinear.origin[,j]
 }
 
-alp.origin <- y.origin <- NULL
+xi.origin <- alp.origin <- y.origin <- NULL
 for(i in 1:n){
   alp.origin[i] <- exp(theta.origin[1] + sum(f.origin[i,]))
+  xi.origin[i] <- 1/alp.origin[i]
   # y.origin[i] <- rPareto(1, 1, alpha = alp.origin[i])
-  y.origin[i] <- evd::rgpd(1, scale=alp.origin[i], loc=1, shape=(1/alp.origin[i]))
+  y.origin[i] <- evd::rgpd(1, scale=alp.origin[i], loc=1, shape=xi.origin[i])
 }
 
 u <- quantile(y.origin, threshold)
