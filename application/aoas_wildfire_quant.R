@@ -79,8 +79,6 @@ u <- qu[which(Y>qu)]
 hist(u)
 abline(v=quantile(Y, 0.975), col="red")
 
-qu.c <- predict(quant.fit, xholder)
-
 
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 fwi.scaled <- as.data.frame(sapply(fwi.scaled[which(Y>qu),], FUN = range01))
