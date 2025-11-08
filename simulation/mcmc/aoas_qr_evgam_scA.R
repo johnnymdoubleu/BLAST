@@ -171,10 +171,11 @@ for(iter in 1:total.iter){
       y.origin[i] <- rPareto(1, 1, alpha = alp.origin[i])
   }
   
-  data.origin <- data.frame(y=y.origin, x.origin)
+  data.origin <- data.frame(y=log(y.origin), x.origin)
   quant.fit <- quantreg::rq(y ~ ., tau=rep(threshold, length(y.origin)), data = data.origin)
   qu <- exp(predict(quant.fit))
   u <- qu[which(y.origin>qu)]
+  
   x.origin <- x.origin[which(y.origin>qu),]
   y.origin <- y.origin[which(y.origin>qu)]
   n <- length(y.origin)

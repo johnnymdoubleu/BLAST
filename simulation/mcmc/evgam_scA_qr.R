@@ -84,9 +84,10 @@ for(i in 1:n){
 data.origin <- data.frame(y=y.origin, x.origin)
 library(quantreg)
 quant.fit <- rq(y ~ ., tau=threshold, data = data.origin)
-plot(quant.fit)
+# plot(quant.fit)
 qu <- predict(quant.fit)
 u <- qu[which(y.origin>qu)]
+u <- ifelse(u<0, 1e-5, u)
 x.thres <- x.origin[which(y.origin>qu),]
 y.thres <- y.origin[which(y.origin>qu)]
 n <- length(y.thres)
@@ -99,8 +100,8 @@ abline(v=quantile(y.origin, threshold), col="red")
 # bs.nonlinear <- bs.nonlinear[excess.index,]
 # bs.linear <- bs.linear[excess.index,]
 
-y.origin <- y.origin[y.origin > u]
-n <- length(y.origin)
+# y.origin <- y.origin[y.origin > u]
+# n <- length(y.origin)
 
 xholder.nonlinear <- xholder.linear <-  matrix(,nrow=n, ncol=0)
 bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
@@ -110,8 +111,8 @@ end.holder <- basis.holder <- matrix(, nrow = 2, ncol =0)
 index.holder <- matrix(, nrow = 0, ncol = 2)
 for(i in 1:p){
   index.holder <- rbind(index.holder, 
-                        matrix(c(which.min(x.origin[,i]),
-                                 which.max(x.origin[,i])), ncol=2))
+                        matrix(c(which.min(x.thres[,i]),
+                                 which.max(x.thres[,i])), ncol=2))
 }
 # # range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 # # x.origin <- as.data.frame(sapply(as.data.frame(x.origin), FUN = range01))
@@ -123,8 +124,8 @@ for(i in 1:p){
   splines <- basis.tps(xholder[,i], test.knot, m=2, rk=FALSE, intercept = FALSE)
   xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
   xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
-  knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)  
-  tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
+  knots <- seq(min(x.thres[,i]), max(x.thres[,i]), length.out = psi)  
+  tps <- basis.tps(x.thres[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
   basis.holder <- cbind(basis.holder, 
                         solve(t(matrix(c(tps[index.holder[i,1], no.theta+1],
                                          tps[index.holder[i,1], no.theta+psi],
@@ -158,7 +159,7 @@ data {
     int <lower=1> n; // Sample size
     int <lower=1> p; // regression coefficient size
     int <lower=1> psi; // splines coefficient size
-    array[n] <lower=0> u; // large threshold value
+    array[n] real <lower=0> u; // large threshold value
     matrix[n,p] bsLinear; // fwi dataset
     matrix[n, (psi*p)] bsNonlinear; // thin plate splines basis
     matrix[n,p] xholderLinear; // fwi dataset
@@ -242,7 +243,7 @@ generated quantities {
 }
 "
 
-data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, 
+data.stan <- list(y = as.vector(y.thres), u = as.vector(u), p = p, n= n, psi = psi, 
                   atau = ((psi+1)/2), basisFL = basis.holder,
                   indexFL = as.vector(t(index.holder)),
                   bsLinear = bs.linear, bsNonlinear = bs.nonlinear,

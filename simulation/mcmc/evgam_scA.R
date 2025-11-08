@@ -290,6 +290,10 @@ equal_breaks <- function(n = 3, s = 0.1,...){
 }
 
 simul.data <- data.frame(y = y.origin, x.origin)
+QRM::gamGPDfit(simul.data, threshold=u, 
+                etaFRhs=~s(X1, k=10) + s(X2, k=10) + s(X3, k=10) + s(X4, k=10) + s(X5, k=10) -1,
+                nuFrhs=~s(X1, k=10) + s(X2, k=10) + s(X3, k=10) + s(X4, k=10) + s(X5, k=10) -1)
+
 gam.scale <- list(y ~ s(X1, bs = "tp", k = 10) + 
                       s(X2, bs = "tp", k = 10) + 
                       s(X3, bs = "tp", k = 10) + 
