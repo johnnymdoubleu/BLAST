@@ -31,7 +31,7 @@ missing.values <- which(!is.na(df.long$measurement))
 #considering the case of leap year, the missing values are the 29th of Feb
 #Thus, each year consist of 366 data with either 1 or 0 missing value.
 Y <- df.long$measurement[!is.na(df.long$measurement)]
-Y[Y==0] <- 1e-5
+# Y[Y==0] <- 1e-5
 psi <- 30
 
 multiplesheets <- function(fname) {
@@ -70,12 +70,13 @@ fwi.origin <- fwi.scaled
 
 fwi.origin <- data.frame(fwi.origin, BA=Y)
 # BA.shifted <- ifelse(fwi.origin$BA == 0, 1e-5, fwi.origin$BA)
-# fwi.origin$log.BA <- log(BA.shifted)
-quant.fit <- quantreg::rq(BA ~ DSR + FWI + BUI + ISI + FFMC + DMC + DC, 
-                          tau=c(0.95, 0.975, 0.98, 0.99), data = fwi.origin)
-qu <- predict(quant.fit)
+fwi.origin$log.BA <- log(fwi.origin$BA+1)
+quant.fit <- quantreg::rq(log.BA ~ DSR + FWI + BUI + ISI + FFMC + DMC + DC, 
+                          tau=c(0.975), data = fwi.origin)
+qu <- exp(predict(quant.fit))-1
 y <- Y[which(Y>qu)]
 u <- qu[which(Y>qu)]
+u <- ifelse(u < 0, 1e-5, u)
 hist(u)
 abline(v=quantile(Y, 0.975), col="red")
 
@@ -217,16 +218,16 @@ data.stan <- list(y = as.vector(y), u = as.vector(u), p = p, n= n, psi = psi,
                     bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
                     xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear, basisFL = basis.holder)
 
-init.alpha <- list(list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c(p, (psi-2))),
-                        theta = rep(0, (p+1)), 
+init.alpha <- list(list(gammaTemp = array(rep(0.1, ((psi-2)*p)), dim=c(p, (psi-2))),
+                        theta = rep(0.1, (p+1)), 
                         tau1 = rep(0.01, p),tau2 = rep(0.01, p),
                         lambda1 = 1, lambda2 = 2),
-                   list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c(p, (psi-2))),
-                        theta = rep(0, (p+1)), 
+                   list(gammaTemp = array(rep(0.1, ((psi-2)*p)), dim=c(p, (psi-2))),
+                        theta = rep(0.2, (p+1)), 
                         tau1 = rep(0.1, p),tau2 = rep(0.1, p),
                         lambda1 = 1, lambda2 = 1),
-                   list(gammaTemp = array(rep(0, ((psi-2)*p)), dim=c(p, (psi-2))),
-                        theta = rep(0.1, (p+1)), 
+                   list(gammaTemp = array(rep(0.1, ((psi-2)*p)), dim=c(p, (psi-2))),
+                        theta = rep(0.5, (p+1)), 
                         tau1 = rep(0.05, p),tau2 = rep(0.05, p),
                         lambda1 = 0.5, lambda2 = 1.5))
 
