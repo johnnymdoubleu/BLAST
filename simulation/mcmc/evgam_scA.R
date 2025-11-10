@@ -266,6 +266,8 @@ lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5,
 newgsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
 newalpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
 
+# save(theta.samples, gamma.samples, lambda.samples, newgsmooth.samples, newalpha.samples, file = "./simulation/results/blast_scA.Rdata")
+
 gamma.post.mean <- gamma.samples[,1]
 gamma.q1 <- gamma.samples[,4]
 gamma.q2 <- gamma.samples[,1]
@@ -281,18 +283,54 @@ g.smooth.q1 <- as.vector(matrix(newgsmooth.samples[,4], nrow = n, byrow=TRUE))
 g.smooth.q2 <- as.vector(matrix(newgsmooth.samples[,5], nrow = n, byrow=TRUE))
 g.smooth.q3 <- as.vector(matrix(newgsmooth.samples[,6], nrow = n, byrow=TRUE))
 
-equal_breaks <- function(n = 3, s = 0.1,...){
-  function(x){
-    d <- s * diff(range(x)) / (1+2*s)
-    seq = seq(min(x)+d, max(x)-d, length=n)
-    round(seq, -floor(log10(abs(seq[2]-seq[1]))))
-  }
-}
+# equal_breaks <- function(n = 3, s = 0.1,...){
+#   function(x){
+#     d <- s * diff(range(x)) / (1+2*s)
+#     seq = seq(min(x)+d, max(x)-d, length=n)
+#     round(seq, -floor(log10(abs(seq[2]-seq[1]))))
+#   }
+# }
 
 simul.data <- data.frame(y = y.origin, x.origin)
-QRM::gamGPDfit(simul.data, threshold=u, 
-                etaFRhs=~s(X1, k=10) + s(X2, k=10) + s(X3, k=10) + s(X4, k=10) + s(X5, k=10) -1,
-                nuFrhs=~s(X1, k=10) + s(X2, k=10) + s(X3, k=10) + s(X4, k=10) + s(X5, k=10) -1)
+# QRM::gamGPDfit(simul.data, threshold=u, 
+#                 etaFRhs=~s(X1, k=10) + s(X2, k=10) + s(X3, k=10) + s(X4, k=10) + s(X5, k=10) -1,
+#                 nuFrhs=~s(X1, k=10) + s(X2, k=10) + s(X3, k=10) + s(X4, k=10) + s(X5, k=10) -1)
+
+vgam.fit.scale <- VGAM::vgam(y ~ s(X1, bs = "tp", k = 10) + s(X2, bs = "tp", k = 10) + s(X3, bs = "tp", k = 10) + s(X4, bs = "tp", k = 10) + s(X5, bs = "tp", k = 10),
+                        data = simul.data,
+                        family = gpd(threshold= 0,
+                                      # lscale="loglink", 
+                                      lshape="loglink",
+                                      zero = NULL,
+                                      imethod = 1),
+                        trace = TRUE,
+                        control = vgam.control(maxit = 200))
+par(mfrow = c(5, 2), mar=c(1.5,1.5,1.5,1.5))
+plot(vgam.fit, se = TRUE, shade = TRUE, shcol = "steelblue")
+par(mfrow = c(1, 1))
+fitted.linear <- predict(vgam.fit.scale,newdata = data.frame(xholder), type = "link")
+fitted.terms <- predict(vgam.fit.scale,newdata = data.frame(xholder), type = "terms")
+fitted.response <- predict(vgam.fit.scale,newdata = data.frame(xholder), type = "response")
+# summary(vgam.fit)
+vgam.xi.scale <- exp(rowSums(fitted.terms[,c(2, 4, 6, 8, 10)]))
+
+vgam.fit.1 <- VGAM::vgam(y ~ s(X1, bs = "tp", k = 10) + s(X2, bs = "tp", k = 10) + s(X3, bs = "tp", k = 10) + s(X4, bs = "tp", k = 10) + s(X5, bs = "tp", k = 10),
+                        data = simul.data,
+                        family = gpd(threshold= 0,
+                                      lscale="loglink", 
+                                      lshape="loglink",
+                                      zero = 1),
+                        trace = TRUE,
+                        control = vgam.control(maxit = 200))
+par(mfrow = c(2, 3), mar=c(4,4,4,4))
+plot(vgam.fit, se = TRUE, shade = TRUE, shcol = "steelblue")
+par(mfrow = c(1, 1))
+fitted.linear <- predict(vgam.fit.1, newdata = data.frame(xholder), type = "link")
+fitted.terms <- predict(vgam.fit.1, newdata = data.frame(xholder), type = "terms")
+fitted.response <- predict(vgam.fit.1, newdata = data.frame(xholder), type = "response")
+# summary(vgam.fit)
+vgam.xi.1 <- exp(rowSums(fitted.terms[,c(2, 4, 6, 8, 10)]))
+
 
 gam.scale <- list(y ~ s(X1, bs = "tp", k = 10) + 
                       s(X2, bs = "tp", k = 10) + 
@@ -304,7 +342,7 @@ gam.scale <- list(y ~ s(X1, bs = "tp", k = 10) +
                       s(X3, bs = "tp", k = 10) + 
                       s(X4, bs = "tp", k = 10) + 
                       s(X5, bs = "tp", k = 10))
-evgam.fit.scale <- evgam::evgam(gam.scale, data = simul.data, family = "gpd")
+evgam.fit.scale <- evgam::evgam(gam.scale, data = simul.data, family = "gpd", outer = "Newton")
 plot.data <- as.data.frame(evgam.fit.scale$plotdata)
 xi.pred.scale <-predict(evgam.fit.scale, newdata = data.frame(xholder), type="response")$shape
 # xi.pred <-predict(evgam.fit, newdata = data.frame(xholder))$shape
@@ -327,6 +365,8 @@ gam.1 <- list(y ~ 1,
                   s(X4, bs = "tp", k = 10) + 
                   s(X5, bs = "tp", k = 10))
 evgam.fit.1 <- evgam::evgam(gam.1, data = simul.data, family = "gpd")
+
+# save(evgam.fit.scale, evgam.fit.1, file= "./simulation/results/evgam_scA")
 
 plot.data <- as.data.frame(evgam.fit.1$plotdata)
 xi.pred.1 <-predict(evgam.fit.1, newdata = data.frame(xholder), type="response")$shape
@@ -410,44 +450,6 @@ for(i in 1:p){
 
 grid.arrange(grobs = grid.plts, ncol = 3, nrow = 2)
 
-# xi.smooth <- data.frame("x"=newx,
-#                           "true" = as.vector(1/exp(f.new)),
-#                           "post.mean" = as.vector(1/exp(g.smooth.mean)),
-#                           "q1" = as.vector(1/exp(g.smooth.q1)),
-#                           "q2" = as.vector(1/exp(g.smooth.q2)),
-#                           "q3" = as.vector(1/exp(g.smooth.q3)),
-#                           "evgam.scale" = as.vector(xi.nonlinear.scale),
-#                           "evgam.1" = as.vector(xi.nonlinear.1),
-#                           "covariates" = gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]")),
-#                           "fakelab" = rep(1, (p*n)),
-#                           "replicate" = gl(p, n, (p*n), labels = c("x[1]", "x[2]", "x[3]", "x[4]", "x[5]")))
-
-# ggplot(xi.smooth, aes(x=x, group=interaction(covariates, replicate))) + 
-#   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
-#   geom_line(aes(y=true, colour = "True"), linewidth=2, linetype=2) + 
-#   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1.8) + 
-#   geom_line(aes(y=evgam.scale), colour = "purple", linewidth=1.8) + 
-#   geom_line(aes(y=evgam.1), colour = "orange", linewidth=1.8) + 
-#   ylab(expression(xi)) + xlab(expression(c)) + 
-#   facet_grid(covariates ~ ., scales = "free_x", switch = "y", 
-#               labeller = label_parsed) + 
-#   scale_fill_manual(values=c("steelblue"), name = "") +
-#   scale_color_manual(values=c("steelblue", "red")) + 
-#   guides(color = guide_legend(order = 2), 
-#           fill = guide_legend(order = 1)) + ylim(-2.8, 2.8) + 
-#   theme_minimal(base_size = 30) +
-#   theme(plot.title = element_text(hjust = 0.5, size = 15),
-#         legend.position="none",
-#         legend.title = element_blank(),
-#         legend.text = element_text(size=20),
-#         legend.margin=margin(t = 1, unit='cm'),
-#         legend.box.margin=margin(-10,0,-10,0),
-#         plot.margin = margin(0,0,0,0),
-#         strip.text.y = element_text(size = 25, colour = "black", angle = 0, face = "bold.italic"),
-#         strip.placement = "outside",
-#         axis.title.x = element_text(size = 35),
-#         axis.text = element_text(size=18))
-
 alpha.scenario <- data.frame("x" = newx,
                             "constant" = newx,
                             "true" = (alp.new),
@@ -484,6 +486,8 @@ xi.scenario <- data.frame("x" = newx,
                             "post.median" = 1/(newalpha.samples[,5]),
                             "evgam.scale" = xi.pred.scale,
                             "evgam.1" = xi.pred.1,
+                            "vgam.scale" = as.vector(vgam.xi.scale),
+                            "vgam.1" = as.vector(vgam.xi.1),
                             "q1" = 1/(newalpha.samples[,4]),
                             "q3" = 1/(newalpha.samples[,6]))
 
@@ -492,8 +496,10 @@ ggplot(xi.scenario, aes(x=x)) +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   geom_line(aes(y = true, col = "True"), linewidth = 2, linetype=2) + 
   geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1.5) +
-  geom_line(aes(y=evgam.scale), colour = "purple", linewidth=1.5) +
-  geom_line(aes(y=evgam.1), colour = "orange", linewidth=1.5) +
+  # geom_line(aes(y=evgam.scale), colour = "purple", linewidth=1.5) +
+  # geom_line(aes(y=evgam.1), colour = "orange", linewidth=1.5) +
+  geom_line(aes(y=vgam.xi), colour = "purple", linewidth=1.5) +
+  geom_line(aes(y=vgam.1), colour = "orange", linewidth=1.5) +
   scale_color_manual(values=c("steelblue", "red")) + 
   scale_fill_manual(values=c("steelblue"), name = "") +
   theme_minimal(base_size = 30) + #ylim(0, 6.1)+
