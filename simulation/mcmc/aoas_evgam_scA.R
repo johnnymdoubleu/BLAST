@@ -4,9 +4,10 @@ suppressMessages(library(tidyverse))
 library(rstan)
 library(MESS)
 library(evgam)
+library(VGAM)
 # Scenario A
 
-total.iter <- 100
+total.iter <- 2
 
 n <- n.origin <- 15000
 psi <- 10
@@ -249,63 +250,83 @@ for(iter in 1:total.iter){
 
   
   simul.data <- data.frame(y = y.origin, x.origin)
-  gam.scale <- list(y ~ s(X1, bs = "tp", k = 10) + 
-                        s(X2, bs = "tp", k = 10) + 
-                        s(X3, bs = "tp", k = 10) + 
-                        s(X4, bs = "tp", k = 10) + 
-                        s(X5, bs = "tp", k = 10),
-                      ~ s(X1, bs = "tp", k = 10) + 
-                        s(X2, bs = "tp", k = 10) + 
-                        s(X3, bs = "tp", k = 10) + 
-                        s(X4, bs = "tp", k = 10) + 
-                        s(X5, bs = "tp", k = 10))
-  evgam.fit.scale <- evgam::evgam(gam.scale, data = simul.data, family = "gpd")
-  xi.pred.scale <-predict(evgam.fit.scale, newdata = data.frame(xholder), type="response")$shape
-  alpha.pred.scale <- 1/xi.pred.scale
+  vgam.fit.scale <- VGAM::vgam(y ~ s(X1, bs = "tp", k = 10) + s(X2, bs = "tp", k = 10) + s(X3, bs = "tp", k = 10) + s(X4, bs = "tp", k = 10) + s(X5, bs = "tp", k = 10),
+                        data = simul.data,
+                        family = gpd(threshold= 0,
+                                      # lscale="loglink", 
+                                      lshape="loglink",
+                                      zero = NULL),
+                        trace = TRUE,
+                        control = vgam.control(maxit = 200))
+  fitted.terms <- predict(vgam.fit.scale,newdata = data.frame(xholder), type = "terms")
+  vgam.xi.scale <- exp(rowSums(fitted.terms[,c(2, 4, 6, 8, 10)]))
+  vgam.fit.1 <- VGAM::vgam(y ~ s(X1, bs = "tp", k = 10) + s(X2, bs = "tp", k = 10) + s(X3, bs = "tp", k = 10) + s(X4, bs = "tp", k = 10) + s(X5, bs = "tp", k = 10),
+                        data = simul.data,
+                        family = gpd(threshold= 0,
+                                      lscale="loglink", 
+                                      lshape="loglink",
+                                      zero = 1),
+                        trace = TRUE,
+                        control = vgam.control(maxit = 200))
+  fitted.terms <- predict(vgam.fit.1, newdata = data.frame(xholder), type = "terms")
+  vgam.xi.1 <- exp(rowSums(fitted.terms[,c(2, 4, 6, 8, 10)]))  
+  # gam.scale <- list(y ~ s(X1, bs = "tp", k = 10) + 
+  #                       s(X2, bs = "tp", k = 10) + 
+  #                       s(X3, bs = "tp", k = 10) + 
+  #                       s(X4, bs = "tp", k = 10) + 
+  #                       s(X5, bs = "tp", k = 10),
+  #                     ~ s(X1, bs = "tp", k = 10) + 
+  #                       s(X2, bs = "tp", k = 10) + 
+  #                       s(X3, bs = "tp", k = 10) + 
+  #                       s(X4, bs = "tp", k = 10) + 
+  #                       s(X5, bs = "tp", k = 10))
+  # evgam.fit.scale <- evgam::evgam(gam.scale, data = simul.data, family = "gpd")
+  # xi.pred.scale <-predict(evgam.fit.scale, newdata = data.frame(xholder), type="response")$shape
+  # alpha.pred.scale <- 1/xi.pred.scale
 
-  xholder.basis.scale <- predict(evgam.fit.scale, newdata = data.frame(xholder), type= "lpmatrix")$shape
-  xi.coef.scale <- tail(evgam.fit.scale$coefficients, (psi-1)*p)
-  gamma.xi.scale <- matrix(xi.coef.scale, ncol = p)
-  alpha.nonlinear.scale <- xi.nonlinear.scale <- matrix(, nrow = n, ncol = p)
-  bs.nonlinear.scale <- xholder.basis.scale[,c(2:((psi-1)*p+1))]
-  for(j in 1:p){
-    xi.nonlinear.scale[,j] <- bs.nonlinear.scale[,(((j-1)*(psi-1))+1):(((j-1)*(psi-1))+(psi-1))] %*% gamma.xi.scale[,j]
-    alpha.nonlinear.scale[,j] <- 1/(xi.nonlinear.scale[,j])
-  }
+  # xholder.basis.scale <- predict(evgam.fit.scale, newdata = data.frame(xholder), type= "lpmatrix")$shape
+  # xi.coef.scale <- tail(evgam.fit.scale$coefficients, (psi-1)*p)
+  # gamma.xi.scale <- matrix(xi.coef.scale, ncol = p)
+  # alpha.nonlinear.scale <- xi.nonlinear.scale <- matrix(, nrow = n, ncol = p)
+  # bs.nonlinear.scale <- xholder.basis.scale[,c(2:((psi-1)*p+1))]
+  # for(j in 1:p){
+  #   xi.nonlinear.scale[,j] <- bs.nonlinear.scale[,(((j-1)*(psi-1))+1):(((j-1)*(psi-1))+(psi-1))] %*% gamma.xi.scale[,j]
+  #   alpha.nonlinear.scale[,j] <- 1/(xi.nonlinear.scale[,j])
+  # }
 
-  gam.1 <- list(y ~ 1,
-                  ~ s(X1, bs = "tp", k = 10) + 
-                    s(X2, bs = "tp", k = 10) + 
-                    s(X3, bs = "tp", k = 10) + 
-                    s(X4, bs = "tp", k = 10) + 
-                    s(X5, bs = "tp", k = 10))
-  evgam.fit.1 <- evgam::evgam(gam.1, data = simul.data, family = "gpd")
-  xi.pred.1 <-predict(evgam.fit.1, newdata = data.frame(xholder), type="response")$shape
-  alpha.pred.1 <- 1/xi.pred.1
+  # gam.1 <- list(y ~ 1,
+  #                 ~ s(X1, bs = "tp", k = 10) + 
+  #                   s(X2, bs = "tp", k = 10) + 
+  #                   s(X3, bs = "tp", k = 10) + 
+  #                   s(X4, bs = "tp", k = 10) + 
+  #                   s(X5, bs = "tp", k = 10))
+  # evgam.fit.1 <- evgam::evgam(gam.1, data = simul.data, family = "gpd")
+  # xi.pred.1 <-predict(evgam.fit.1, newdata = data.frame(xholder), type="response")$shape
+  # alpha.pred.1 <- 1/xi.pred.1
 
-  xholder.basis.1 <- predict(evgam.fit.1, newdata = data.frame(xholder), type= "lpmatrix")$shape
-  xi.coef.1 <- tail(evgam.fit.1$coefficients, (psi-1)*p)
-  gamma.xi.1 <- matrix(xi.coef.1, ncol = p)
-  alpha.nonlinear.1 <- xi.nonlinear.1 <- matrix(, nrow = n, ncol = p)
-  bs.nonlinear.1 <- xholder.basis.1[,c(2:((psi-1)*p+1))]
-  for(j in 1:p){
-    xi.nonlinear.1[,j] <- bs.nonlinear.1[,(((j-1)*(psi-1))+1):(((j-1)*(psi-1))+(psi-1))] %*% gamma.xi.1[,j]
-    alpha.nonlinear.1[,j] <- 1/(xi.nonlinear.1[,j])
-  }
+  # xholder.basis.1 <- predict(evgam.fit.1, newdata = data.frame(xholder), type= "lpmatrix")$shape
+  # xi.coef.1 <- tail(evgam.fit.1$coefficients, (psi-1)*p)
+  # gamma.xi.1 <- matrix(xi.coef.1, ncol = p)
+  # alpha.nonlinear.1 <- xi.nonlinear.1 <- matrix(, nrow = n, ncol = p)
+  # bs.nonlinear.1 <- xholder.basis.1[,c(2:((psi-1)*p+1))]
+  # for(j in 1:p){
+  #   xi.nonlinear.1[,j] <- bs.nonlinear.1[,(((j-1)*(psi-1))+1):(((j-1)*(psi-1))+(psi-1))] %*% gamma.xi.1[,j]
+  #   alpha.nonlinear.1[,j] <- 1/(xi.nonlinear.1[,j])
+  # }
 
 
-  evgam.1.container[,iter] <- xi.pred.1
-  evgam.scale.container[,iter] <- xi.pred.scale
+  evgam.1.container[,iter] <- vgam.xi.1
+  evgam.scale.container[,iter] <- vgam.xi.scale
   alpha.lower.container[,iter] <- 1/(newalpha.samples[,4])
   alpha.container[,iter] <- 1/(newalpha.samples[,5])
   alpha.upper.container[,iter] <- 1/(newalpha.samples[,6])
   newgsmooth.container[,iter] <- as.vector(matrix(newgsmooth.samples[,5], nrow = n, byrow=TRUE))
-  smooth.1.container[,iter] <- as.vector(xi.nonlinear.1)
-  smooth.scale.container <- as.vector(xi.nonlinear.scale)
+  # smooth.1.container[,iter] <- as.vector(xi.nonlinear.1)
+  # smooth.scale.container <- as.vector(xi.nonlinear.scale)
   
   mise.container[iter] <- auc(newx, se.samples[,5], type="spline")
-  mise.1.container[iter] <- auc(newx, ((1/alp.new)-xi.pred.1)  ,type="spline")
-  mise.scale.container[iter] <- auc(newx, ((1/alp.new)-xi.pred.scale)  ,type="spline")
+  mise.1.container[iter] <- auc(newx, ((1/alp.new)-vgam.xi.1)  ,type="spline")
+  mise.scale.container[iter] <- auc(newx, ((1/alp.new)-vgam.xi.scale)  ,type="spline")
 }
 
 
@@ -322,7 +343,8 @@ alpha.container$evgam.1 <- rowMeans(evgam.1.container[,1:total.iter])
 alpha.container$evgam.scale <- rowMeans(evgam.scale.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
-load("./simulation/results/evgam_mc_scA.Rdata")
+save(newgsmooth.container, alpha.container, evgam.1.container, evgam.scale.container, mise.container, mise.evgam.container, file="./simulation/results/vgam_mc_scA.Rdata")
+# load("./simulation/results/evgam_mc_scA.Rdata")
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab(expression(xi(c,ldots,c))) #+ ylab("")
 if(total.iter <= 50){
@@ -353,7 +375,7 @@ print(plt +
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_evgam_scA_.pdf"), width=10, height = 7.78)
 
-# save(newgsmooth.container, smooth.scale.container, smooth.1.container, alpha.container, evgam.1.container, evgam.scale.container, mise.container, mise.evgam.container, file="./simulation/results/evgam_mc_scA.Rdata")
+
 
 
 

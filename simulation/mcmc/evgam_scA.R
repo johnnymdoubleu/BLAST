@@ -506,3 +506,6 @@ ggplot(xi.scenario, aes(x=x)) +
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 18))
+
+AIC(vgam.fit.1)
+AIC(vgam.fit.scale)
