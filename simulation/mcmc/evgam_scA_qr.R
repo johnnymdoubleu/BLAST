@@ -302,7 +302,7 @@ equal_breaks <- function(n = 3, s = 0.1,...){
   }
 }
 
-simul.data <- data.frame(y = y.origin, x.origin)
+simul.data <- data.frame(y = y.thres, x.thres)
 
 gam.scale <- list(y ~ s(X1, bs = "tp", k = 10) + 
                       s(X2, bs = "tp", k = 10) + 
