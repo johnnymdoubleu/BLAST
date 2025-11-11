@@ -332,7 +332,7 @@ fitted.response <- predict(vgam.fit.1, newdata = data.frame(xholder), type = "re
 # summary(vgam.fit)
 vgam.xi.1 <- exp(fitted.linear[,2])#exp(rowSums(fitted.terms[,c(2, 4, 6, 8, 10)]))
 
-
+simul.evgam <- data.frame(y = y.origin-u, x.origin)
 gam.scale <- list(y ~ s(X1, bs = "tp", k = 10) + 
                       s(X2, bs = "tp", k = 10) + 
                       s(X3, bs = "tp", k = 10) + 
@@ -343,7 +343,7 @@ gam.scale <- list(y ~ s(X1, bs = "tp", k = 10) +
                       s(X3, bs = "tp", k = 10) + 
                       s(X4, bs = "tp", k = 10) + 
                       s(X5, bs = "tp", k = 10))
-evgam.fit.scale <- evgam::evgam(gam.scale, data = simul.data, family = "gpd", outer = "Newton")
+evgam.fit.scale <- evgam::evgam(gam.scale, data = simul.evgam, family = "gpd", outer = "Newton")
 plot.data <- as.data.frame(evgam.fit.scale$plotdata)
 xi.pred.scale <-predict(evgam.fit.scale, newdata = data.frame(xholder), type="response")$shape
 # xi.pred <-predict(evgam.fit, newdata = data.frame(xholder))$shape
@@ -365,7 +365,7 @@ gam.1 <- list(y ~ 1,
                   s(X3, bs = "tp", k = 10) + 
                   s(X4, bs = "tp", k = 10) + 
                   s(X5, bs = "tp", k = 10))
-evgam.fit.1 <- evgam::evgam(gam.1, data = simul.data, family = "gpd")
+evgam.fit.1 <- evgam::evgam(gam.1, data = simul.evgam, family = "gpd")
 
 # save(evgam.fit.scale, evgam.fit.1, file= "./simulation/results/evgam_scA")
 
@@ -472,13 +472,13 @@ ggplot(alpha.scenario, aes(x=x)) +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   geom_line(aes(y = true, col = "True"), linewidth = 2, linetype=2) + 
   geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1.5) +
-  # geom_line(aes(y=evgam.scale), colour = "purple", linewidth=1.5) +
-  # geom_line(aes(y=evgam.1), colour = "orange", linewidth=1.5) +
+  # geom_line(aes(y=evgam.scale), colour = "purple", linewidth=1.5, linetype=2) +
+  # geom_line(aes(y=evgam.1), colour = "orange", linewidth=1.5, linetype=2) +
   geom_line(aes(y=vgam.scale), colour = "purple", linewidth=1.5) +
   geom_line(aes(y=vgam.1), colour = "orange", linewidth=1.5) +  
   scale_color_manual(values=c("steelblue", "red")) + 
   scale_fill_manual(values=c("steelblue"), name = "") +
-  theme_minimal(base_size = 30) + ylim(0,2)+
+  theme_minimal(base_size = 30) + ylim(0,2.5)+
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 18))
@@ -489,8 +489,8 @@ xi.scenario <- data.frame("x" = newx,
                             "true" = 1/(alp.new),
                             "post.mean" = 1/(newalpha.samples[,1]),
                             "post.median" = 1/(newalpha.samples[,5]),
-                            # "evgam.scale" = xi.pred.scale,
-                            # "evgam.1" = xi.pred.1,
+                            "evgam.scale" = xi.pred.scale,
+                            "evgam.1" = xi.pred.1,
                             "vgam.scale" = as.vector(vgam.xi.scale),
                             "vgam.1" = as.vector(vgam.xi.1),
                             "q1" = 1/(newalpha.samples[,4]),
@@ -501,8 +501,8 @@ ggplot(xi.scenario, aes(x=x)) +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   geom_line(aes(y = true, col = "True"), linewidth = 2, linetype=2) + 
   geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1.5) +
-  # geom_line(aes(y=evgam.scale), colour = "purple", linewidth=1.5) +
-  # geom_line(aes(y=evgam.1), colour = "orange", linewidth=1.5) +
+  # geom_line(aes(y=evgam.scale), colour = "purple", linewidth=1.5, linetype=2) +
+  # geom_line(aes(y=evgam.1), colour = "orange", linewidth=1.5, linetype=2) +
   geom_line(aes(y=vgam.scale), colour = "purple", linewidth=1.5) +
   geom_line(aes(y=vgam.1), colour = "orange", linewidth=1.5) +
   scale_color_manual(values=c("steelblue", "red")) + 

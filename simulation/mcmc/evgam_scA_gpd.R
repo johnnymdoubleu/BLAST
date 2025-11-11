@@ -4,7 +4,7 @@ library(rstan)
 library(Pareto)
 library(evgam)
 library(gridExtra)
-
+library(VGAM)
 #Scenario 1
 # set.seed(10)
 set.seed(111)
@@ -503,7 +503,7 @@ ggplot(alpha.scenario, aes(x=x)) +
   geom_line(aes(y=vgam.1), colour = "orange", linewidth=1.5) +
   scale_color_manual(values=c("steelblue", "red")) + 
   scale_fill_manual(values=c("steelblue"), name = "") +
-  theme_minimal(base_size = 30) + ylim(0,6.1)+
+  theme_minimal(base_size = 30) + ylim(0,2.5)+
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 18))
