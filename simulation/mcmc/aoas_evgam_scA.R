@@ -7,7 +7,7 @@ library(evgam)
 library(VGAM)
 # Scenario A
 
-total.iter <- 2
+total.iter <- 100
 
 n <- n.origin <- 15000
 psi <- 10
@@ -343,8 +343,8 @@ alpha.container$evgam.1 <- rowMeans(evgam.1.container[,1:total.iter])
 alpha.container$evgam.scale <- rowMeans(evgam.scale.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
-save(newgsmooth.container, alpha.container, evgam.1.container, evgam.scale.container, mise.1.container, mise.scale.container, file="./simulation/results/vgam_mc_scA.Rdata")
-# load("./simulation/results/evgam_mc_scA.Rdata")
+# save(newgsmooth.container, alpha.container, evgam.1.container, evgam.scale.container, mise.1.container, mise.scale.container, file="./simulation/results/vgam_mc_scA.Rdata")
+load("./simulation/results/vgam_mc_scA.Rdata")
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab(expression(xi(c,ldots,c))) #+ ylab("")
 if(total.iter <= 50){
@@ -355,7 +355,7 @@ if(total.iter <= 50){
   for(i in 1:total.iter){
   # for(i in 50:100){
     plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.075, linewidth = 0.7)
-    plt <- plt + geom_line(data=evgam.1.container, aes(x=x, y = .data[[names(evgam.1.container)[i]]]), alpha = 0.075, linewidth = 0.7)
+    # plt <- plt + geom_line(data=evgam.1.container, aes(x=x, y = .data[[names(evgam.1.container)[i]]]), alpha = 0.075, linewidth = 0.7)
   }
 }
 
