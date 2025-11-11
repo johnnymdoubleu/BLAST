@@ -268,8 +268,9 @@ for(iter in 1:total.iter){
                                       zero = 1),
                         trace = TRUE,
                         control = vgam.control(maxit = 200))
+  int.terms <- predict(vgam.fit.1, newdata = data.frame(xholder), type = "link")
   fitted.terms <- predict(vgam.fit.1, newdata = data.frame(xholder), type = "terms")
-  vgam.xi.1 <- exp(rowSums(fitted.terms[,c(2, 4, 6, 8, 10)]))  
+  vgam.xi.1 <- int.terms[2] + exp(rowSums(fitted.terms[,c(2, 4, 6, 8, 10)]))  
   # gam.scale <- list(y ~ s(X1, bs = "tp", k = 10) + 
   #                       s(X2, bs = "tp", k = 10) + 
   #                       s(X3, bs = "tp", k = 10) + 
@@ -344,7 +345,7 @@ alpha.container$evgam.scale <- rowMeans(evgam.scale.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
 # save(newgsmooth.container, alpha.container, evgam.1.container, evgam.scale.container, mise.1.container, mise.scale.container, file="./simulation/results/vgam_mc_scA.Rdata")
-load("./simulation/results/vgam_mc_scA.Rdata")
+load("./simulation/results/vgam_mc_scA1.Rdata")
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab(expression(xi(c,ldots,c))) #+ ylab("")
 if(total.iter <= 50){
