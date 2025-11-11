@@ -292,6 +292,36 @@ equal_breaks <- function(n = 3, s = 0.1,...){
 }
 
 simul.data <- data.frame(y = y.origin, x.origin)
+vgam.fit.scale <- vgam(y ~ s(X1) + s(X2) + s(X3) + s(X4) + s(X5),
+                        data = simul.data,
+                        family = gpd(threshold = u,
+                                      lshape="loglink",
+                                      zero = NULL),
+                        trace = TRUE,
+                        control = vgam.control(maxit = 200))
+par(mfrow = c(5, 2), mar=c(1.5,1.5,1.5,1.5))
+plot(vgam.fit.scale, se = TRUE, shade = TRUE, shcol = "steelblue")
+par(mfrow = c(1, 1))
+fitted.linear <- predict(vgam.fit.scale, newdata = data.frame(xholder), type = "link")
+fitted.terms <- predict(vgam.fit.scale, newdata = data.frame(xholder), type = "terms")
+fitted.response <- predict(vgam.fit.scale,newdata = data.frame(xholder), type = "response")
+vgam.xi.scale <- exp(fitted.linear[,2])
+
+vgam.fit.1 <- vgam(y ~ s(X1) + s(X2) + s(X3) + s(X4) + s(X5),
+                    data = simul.data,
+                    family = gpd(threshold = u, 
+                                  lshape="loglink",
+                                  zero = 1),
+                    trace = TRUE,
+                    control = vgam.control(maxit = 200))
+par(mfrow = c(2, 3), mar=c(4,4,4,4))
+plot(vgam.fit.1, se = TRUE, shade = TRUE, shcol = "steelblue")
+par(mfrow = c(1, 1))
+fitted.linear <- predict(vgam.fit.1, newdata = data.frame(xholder), type = "link")
+fitted.terms <- predict(vgam.fit.1, newdata = data.frame(xholder), type = "terms")
+fitted.response <- predict(vgam.fit.1, newdata = data.frame(xholder), type = "response")
+vgam.xi.1 <- exp(fitted.linear[,2])
+
 
 
 gam.scale <- list(y ~ s(X1, bs = "tp", k = 10) + 
@@ -453,8 +483,10 @@ alpha.scenario <- data.frame("x" = newx,
                             "true" = (alp.new),
                             "post.mean" = (newalpha.samples[,1]),
                             "post.median" = (newalpha.samples[,5]),
-                            "evgam.scale" = 1/xi.pred.scale,
-                            "evgam.1" = 1/xi.pred.1,
+                            # "evgam.scale" = 1/xi.pred.scale,
+                            # "evgam.1" = 1/xi.pred.1,
+                            "vgam.scale" = 1/as.vector(vgam.xi.scale),
+                            "vgam.1" = 1/as.vector(vgam.xi.1),
                             "q1" = (newalpha.samples[,4]),
                             "q3" = (newalpha.samples[,6]))
 # "post.mean" = sort(alpha.smooth.new),
@@ -467,8 +499,8 @@ ggplot(alpha.scenario, aes(x=x)) +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   geom_line(aes(y = true, col = "True"), linewidth = 2, linetype=2) + 
   geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1.5) +
-  geom_line(aes(y=evgam.scale), colour = "purple", linewidth=1.5) +
-  geom_line(aes(y=evgam.1), colour = "orange", linewidth=1.5) +
+  geom_line(aes(y=vgam.scale), colour = "purple", linewidth=1.5) +
+  geom_line(aes(y=vgam.1), colour = "orange", linewidth=1.5) +
   scale_color_manual(values=c("steelblue", "red")) + 
   scale_fill_manual(values=c("steelblue"), name = "") +
   theme_minimal(base_size = 30) + ylim(0,6.1)+
@@ -482,8 +514,10 @@ xi.scenario <- data.frame("x" = newx,
                             "true" = 1/(alp.new),
                             "post.mean" = 1/(newalpha.samples[,1]),
                             "post.median" = 1/(newalpha.samples[,5]),
-                            "evgam.scale" = xi.pred.scale,
-                            "evgam.1" = xi.pred.1,
+                            # "evgam.scale" = xi.pred.scale,
+                            # "evgam.1" = xi.pred.1,
+                            "vgam.scale" = as.vector(vgam.xi.scale),
+                            "vgam.1" = as.vector(vgam.xi.1),                 
                             "q1" = 1/(newalpha.samples[,4]),
                             "q3" = 1/(newalpha.samples[,6]))
 
@@ -492,8 +526,8 @@ ggplot(xi.scenario, aes(x=x)) +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   geom_line(aes(y = true, col = "True"), linewidth = 2, linetype=2) + 
   geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1.5) +
-  geom_line(aes(y=evgam.scale), colour = "purple", linewidth=1.5) +
-  geom_line(aes(y=evgam.1), colour = "orange", linewidth=1.5) +
+  geom_line(aes(y=vgam.scale), colour = "purple", linewidth=1.5) +
+  geom_line(aes(y=vgam.1), colour = "orange", linewidth=1.5) +
   scale_color_manual(values=c("steelblue", "red")) + 
   scale_fill_manual(values=c("steelblue"), name = "") +
   theme_minimal(base_size = 30) + #ylim(0, 6.1)+

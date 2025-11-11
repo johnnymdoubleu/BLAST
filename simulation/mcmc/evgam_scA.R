@@ -297,10 +297,12 @@ simul.data <- data.frame(y = y.origin, x.origin)
 #                 etaFRhs=~s(X1, k=10) + s(X2, k=10) + s(X3, k=10) + s(X4, k=10) + s(X5, k=10) -1,
 #                 nuFrhs=~s(X1, k=10) + s(X2, k=10) + s(X3, k=10) + s(X4, k=10) + s(X5, k=10) -1)
 
-vgam.fit.scale <- VGAM::vgam(y ~ s(X1, bs = "tp") + s(X2, bs = "tp") + s(X3, bs = "tp") + s(X4, bs = "tp") + s(X5, bs = "tp"),
+psi <- 10
+vgam.fit.scale <- vgam(y ~ s(X1) + s(X2) + s(X3) + s(X4) + s(X5),
+# vgam.fit.scale <- vgam(y ~ sm.ps(X1) + sm.ps(X2) + sm.ps(X3) + sm.ps(X4) + sm.ps(X5),
+# vgam.fit.scale <- vgam(y ~ bs(X1, knots=knots) + bs(X2, knots=knots) + bs(X3, knots=knots) + bs(X4, knots=knots) + bs(X5, knots=knots),
                         data = simul.data,
-                        family = gpd(threshold= 0,
-                                      # lscale="loglink", 
+                        family = gpd(threshold = u,
                                       lshape="loglink",
                                       zero = NULL),
                         trace = TRUE,
@@ -313,15 +315,14 @@ fitted.terms <- predict(vgam.fit.scale, newdata = data.frame(xholder), type = "t
 fitted.response <- predict(vgam.fit.scale,newdata = data.frame(xholder), type = "response")
 # summary(vgam.fit)
 vgam.xi.scale <- exp(fitted.linear[,2])#exp(rowSums(fitted.terms[,c(2, 4, 6, 8, 10)]))
-
-vgam.fit.1 <- VGAM::vgam(y ~ s(X1, bs = "tp") + s(X2, bs = "tp") + s(X3, bs = "tp") + s(X4, bs = "tp") + s(X5, bs = "tp"),
-                        data = simul.data,
-                        family = gpd(threshold= 0,
-                                      lscale="loglink", 
-                                      lshape="loglink",
-                                      zero = 1),
-                        trace = TRUE,
-                        control = vgam.control(maxit = 200))
+vgam.fit.1 <- vgam(y ~ s(X1) + s(X2) + s(X3) + s(X4) + s(X5),
+# vgam.fit.1 <- vgam(y ~ sm.ps(X1) + sm.ps(X2) + sm.ps(X3) + sm.ps(X4) + sm.ps(X5),
+                    data = simul.data,
+                    family = gpd(threshold = u, 
+                                  lshape="loglink",
+                                  zero = 1),
+                    trace = TRUE,
+                    control = vgam.control(maxit = 200))
 par(mfrow = c(2, 3), mar=c(4,4,4,4))
 plot(vgam.fit.1, se = TRUE, shade = TRUE, shcol = "steelblue")
 par(mfrow = c(1, 1))
@@ -477,7 +478,7 @@ ggplot(alpha.scenario, aes(x=x)) +
   geom_line(aes(y=vgam.1), colour = "orange", linewidth=1.5) +  
   scale_color_manual(values=c("steelblue", "red")) + 
   scale_fill_manual(values=c("steelblue"), name = "") +
-  theme_minimal(base_size = 30) + ylim(0,6.1)+
+  theme_minimal(base_size = 30) + ylim(0,2)+
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 18))
