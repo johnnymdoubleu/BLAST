@@ -7,7 +7,7 @@ library(evgam)
 library(VGAM)
 # Scenario A
 
-total.iter <- 100
+total.iter <- 2
 
 n <- n.origin <- 15000
 psi <- 10
@@ -92,7 +92,7 @@ transformed parameters {
       for (i in 1:n){
           alpha[i] = exp(theta[1] + sum(gsmooth[i,])); 
           gridalpha[i] = exp(theta[1] + sum(gridgsmooth[i,]));
-          se[i] = pow((gridalpha[i]-trueAlpha[i]), 2);
+          se[i] = pow(((1/gridalpha[i])-(1/trueAlpha[i])), 2);
       };
       mse = mean(se);
     }
@@ -162,9 +162,10 @@ for(iter in 1:total.iter){
       g.origin[, j] <- g.linear.origin[,j] + g.nonlinear.origin[,j]
   }
 
-  alp.origin <- y.origin <- NULL
+  alp.origin <- y.origin <- xi.origin <- NULL
   for(i in 1:n){
       alp.origin[i] <- exp(theta.origin[1] + sum(g.origin[i,]))
+      xi.origin[i] <- 1/alp.origin[i]
       y.origin[i] <- evd::rgpd(1, scale=alp.origin[i], loc=1, shape=xi.origin[i])
   }
 
@@ -281,9 +282,9 @@ for(iter in 1:total.iter){
   # smooth.1.container[,iter] <- as.vector(xi.nonlinear.1)
   # smooth.scale.container <- as.vector(xi.nonlinear.scale)
   
-  mise.container[iter] <- auc(newx, se.samples[,5], type="spline")
-  mise.1.container[iter] <- auc(newx, ((1/alp.new)-vgam.xi.1), type="spline")
-  mise.scale.container[iter] <- auc(newx, ((1/alp.new)-vgam.xi.scale), type="spline")
+  mise.container[iter] <- auc(newx, se.samples[,5])
+  mise.1.container[iter] <- auc(newx, ((1/alp.new)-vgam.xi.1)^2)
+  mise.scale.container[iter] <- auc(newx, ((1/alp.new)-vgam.xi.scale)^2)
 }
 
 
@@ -300,8 +301,8 @@ alpha.container$evgam.1 <- rowMeans(evgam.1.container[,1:total.iter])
 alpha.container$evgam.scale <- rowMeans(evgam.scale.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
-# save(newgsmooth.container, alpha.container, evgam.1.container, evgam.scale.container, mise.1.container, mise.scale.container, file="./simulation/results/vgam_mc_scA_gpd.Rdata")
-load("./simulation/results/vgam_mc_scA_gpd.Rdata")
+# save(newgsmooth.container, alpha.container, evgam.1.container, evgam.scale.container, mise.container, mise.1.container, mise.scale.container, file="./simulation/results/vgam_mc_scA_gpd.Rdata")
+# load("./simulation/results/vgam_mc_scA_gpd.Rdata")
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab(expression(xi(c,ldots,c))) #+ ylab("")
 if(total.iter <= 50){
@@ -311,8 +312,8 @@ if(total.iter <= 50){
 } else{
   for(i in 1:total.iter){
   # for(i in 50:100){
-    plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.075, linewidth = 0.7)
-    # plt <- plt + geom_line(data=evgam.1.container, aes(x=x, y = .data[[names(evgam.1.container)[i]]]), alpha = 0.075, linewidth = 0.7)
+    # plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.075, linewidth = 0.7)
+    plt <- plt + geom_line(data=evgam.1.container, aes(x=x, y = .data[[names(evgam.1.container)[i]]]), alpha = 0.075, linewidth = 0.7)
   }
 }
 
