@@ -3,7 +3,7 @@ library(Pareto)
 suppressMessages(library(tidyverse))
 library(readxl)
 library(gridExtra)
-library(evgam)
+library(VGAM)
 
 
 # Structure of the FWI System
@@ -19,32 +19,33 @@ library(evgam)
 setwd("C:/Users/Johnny Lee/Documents/GitHub")
 # setwd("A:/GitHub")
 load("./BLAST/application/wildfire_prep.Rdata") #loading covariate-dependent thresholds
-# psi <- 30
-# n <- dim(fwi.scaled)[[1]]
-# p <- dim(fwi.scaled)[[2]]
-gpd.formula <- list(
-  BA ~ #1,
-       s(DSR, bs = "tp", k = 30) +
-       s(FWI, bs = "tp", k = 30) + 
-       s(BUI, bs = "tp", k = 30) + 
-       s(ISI, bs = "tp", k = 30) + 
-       s(FFMC, bs = "tp", k = 30) + 
-       s(DMC, bs = "tp", k = 30) + 
-       s(DC, bs = "tp", k = 30),
-     ~ s(DSR, bs = "tp", k = 30) +
-       s(FWI, bs = "tp", k = 30) + 
-       s(BUI, bs = "tp", k = 30) + 
-       s(ISI, bs = "tp", k = 30) + 
-       s(FFMC, bs = "tp", k = 30) + 
-       s(DMC, bs = "tp", k = 30) + 
-       s(DC, bs = "tp", k = 30)
-)
+psi <- 30
+u <- quantile(Y, 0.975)
+y <- Y[which(Y>u)]
+fwi.scaled <- fwi.origin[which(Y>u),c(1:7)]
+range01 <- function(x){(x-min(x))/(max(x)-min(x))}
+fwi.scaled <- as.data.frame(sapply(fwi.scaled, FUN = range01))
+n <- dim(fwi.scaled)[[1]]
+p <- dim(fwi.scaled)[[2]]
+fwi.df <- data.frame(fwi.scaled, BA=y)
 
+vgam.fit.scale <- vgam(BA ~ s(DSR) + s(FWI) + s(BUI) + s(ISI) + s(FFMC) + s(DMC) + s(DC),
+                        data = fwi.df,
+                        family = gpd(threshold = u,
+                                      lshape="loglink",
+                                      zero = NULL),
+                        trace = TRUE,
+                        control = vgam.control(maxit = 200))
+par(mfrow = c(5, 2), mar=c(1.5,1.5,1.5,1.5))
+plot(vgam.fit.scale, se = TRUE, shade = TRUE, shcol = "steelblue")
+par(mfrow = c(1, 1))
+fitted.linear <- predict(vgam.fit.scale, newdata = data.frame(xholder), type = "link")
+fitted.terms <- predict(vgam.fit.scale, newdata = data.frame(xholder), type = "terms")
+fitted.response <- predict(vgam.fit.scale,newdata = data.frame(xholder), type = "response")
+vgam.xi.scale <- exp(fitted.linear[,2])
 
-fwi.origin <- data.frame(fwi.origin[which(Y>qu),], BA=y)
-# m.gpd <- evgam(gpd.formula, data = fwi.origin, family = "gpd")
-# save(m.gpd, file = "./BLAST/application/evgam_fit_all.Rdata")
-load("./BLAST/application/evgam_fit.Rdata")
+# save(m.gpd, file = "./BLAST/application/vgam_fit_all.Rdata")
+# load("./BLAST/application/evgam_fit.Rdata")
 
 no.theta <- 1 #represents the no. of linear predictors for each smooth functions
 xholder.linear <- xholder.nonlinear <- matrix(,nrow=n, ncol=0)

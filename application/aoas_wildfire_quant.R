@@ -70,16 +70,10 @@ fwi.origin <- fwi.scaled
 
 fwi.origin <- data.frame(fwi.origin, BA=Y)
 # BA.shifted <- ifelse(fwi.origin$BA == 0, 1e-5, fwi.origin$BA)
-fwi.origin$log.BA <- log(fwi.origin$BA+1)
-quant.fit <- quantreg::rq(log.BA ~ DSR + FWI + BUI + ISI + FFMC + DMC + DC, 
+# fwi.origin$log.BA <- log(fwi.origin$BA+1)
+# quant.fit <- quantreg::rq(log.BA ~ DSR + FWI + BUI + ISI + FFMC + DMC + DC, 
                           tau=c(0.975), data = fwi.origin)
-qu <- exp(predict(quant.fit))-1
-y <- Y[which(Y>qu)]
-u <- qu[which(Y>qu)]
-u <- ifelse(u < 0, 1e-5, u)
-hist(u)
-abline(v=quantile(Y, 0.975), col="red")
-
+# qu <- exp(predict(quant.fit))-1
 
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 fwi.scaled <- as.data.frame(sapply(fwi.scaled[which(Y>qu),], FUN = range01))
