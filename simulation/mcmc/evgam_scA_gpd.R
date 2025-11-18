@@ -60,7 +60,7 @@ for(j in 1:p){
   }
 }
 theta.origin <- c(-0.5, 0, -0.5, -0.5, 0, 0)
-
+theta.scale <- c(0.2, 0, -0.1, -0.1, 0, 0)
 
 f.sub.origin <- matrix(, nrow = 2, ncol = p)
 for(j in 1:p){
@@ -68,19 +68,22 @@ for(j in 1:p){
   gamma.origin[c(1,psi),j] <- -1 * basis.holder[,(((j-1)*2)+1):(((j-1)*2)+2)] %*% as.matrix(f.sub.origin[,j], nrow=2)
 }
 
-f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
+f.scale <- f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
+  f.scale[,j] <- bs.linear[,j] * theta.scale[j+1]
   f.linear.origin[,j] <- bs.linear[, j] * theta.origin[j+1]
   f.nonlinear.origin[,j] <- bs.nonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
   f.origin[, j] <- f.linear.origin[,j] + f.nonlinear.origin[,j]
 }
 
-xi.origin <- alp.origin <- y.origin <- NULL
+scale.origin <- xi.origin <- alp.origin <- y.origin <- NULL
 for(i in 1:n){
+  scale.origin[i] <- exp(theta.scale[1] + sum(f.scale[i,]))  
   alp.origin[i] <- exp(theta.origin[1] + sum(f.origin[i,]))
   xi.origin[i] <- 1/alp.origin[i]
   # y.origin[i] <- rPareto(1, 1, alpha = alp.origin[i])
-  y.origin[i] <- evd::rgpd(1, scale=alp.origin[i], loc=1, shape=xi.origin[i])
+  # y.origin[i] <- evd::rgpd(1, scale=alp.origin[i], loc=1, shape=xi.origin[i])
+  y.origin[i] <- evd::rgpd(1, scale=scale.origin[i], loc=0, shape=xi.origin[i])
 }
 
 u <- quantile(y.origin, threshold)
@@ -323,7 +326,7 @@ fitted.response <- predict(vgam.fit.1, newdata = data.frame(xholder), type = "re
 vgam.xi.1 <- exp(fitted.linear[,2])
 
 
-
+simul.data <- data.frame(y = y.origin-u, x.origin)
 gam.scale <- list(y ~ s(X1, bs = "tp", k = 10) + 
                       s(X2, bs = "tp", k = 10) + 
                       s(X3, bs = "tp", k = 10) + 

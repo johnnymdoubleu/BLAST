@@ -45,6 +45,12 @@ fwi.scaled <- as.data.frame(sapply(fwi.scaled, FUN = range01))
 n <- dim(fwi.scaled)[[1]]
 p <- dim(fwi.scaled)[[2]]
 fwi.df <- data.frame(fwi.scaled, BA=y)
+evgam.df <- data.frame(fwi.scaled, BA=y-u)
+xholder <- data.frame(matrix(nrow=n, ncol=p))
+for(i in 1:p){
+  xholder[,i] <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n)
+}
+colnames(xholder) <- colnames(fwi.scaled)
 ```
 
 ```{r, vgam.scale}
@@ -55,9 +61,14 @@ vgam.fit.scale <- vgam(BA ~ s(DSR) + s(FWI) + s(BUI) + s(ISI) + s(FFMC) + s(DMC)
                                       zero = NULL),
                         trace = TRUE,
                         control = vgam.control(maxit = 200))
-par(mfrow = c(2, 4), mar=c(1.75,1.75,1.75,1.75))
-plot(vgam.fit.scale, se = TRUE, shade = TRUE, shcol = "steelblue")
-par(mfrow = c(1, 1))
+# par(mfrow = c(2, 4), mar=c(1.75,1.75,1.75,1.75))
+# plot(vgam.fit.scale, se = TRUE, shade = TRUE, shcol = "steelblue")
+# par(mfrow = c(1, 1))
+
+fitted.linear <- predict(vgam.fit.scale, newdata = data.frame(xholder), type = "link")
+fitted.terms <- predict(vgam.fit.scale, newdata = data.frame(xholder), type = "terms")
+fitted.response <- predict(vgam.fit.scale,newdata = data.frame(xholder), type = "response")
+vgam.xi.scale <- exp(fitted.linear[,2])
 ```
 
 ```{r, vgam.1}
@@ -71,8 +82,116 @@ vgam.fit.1 <- vgam(BA ~ s(DSR) + s(FWI) + s(BUI) + s(ISI) + s(FFMC) + s(DMC) + s
 par(mfrow = c(2, 4), mar=c(1.75,1.75,1.75,1.75))
 plot(vgam.fit.1, se = TRUE, shade = TRUE, shcol = "steelblue")
 par(mfrow = c(1, 1))
+fitted.linear <- predict(vgam.fit.1, newdata = data.frame(xholder), type = "link")
+fitted.terms <- predict(vgam.fit.1, newdata = data.frame(xholder), type = "terms")
+fitted.response <- predict(vgam.fit.1, newdata = data.frame(xholder), type = "response")
+
+vgam.xi.1 <- exp(fitted.linear[,2])
 ```
 
-```{r}
+```{r, evgam.scale}
+gam.scale <- list(BA ~ s(DSR,  bs = "tp", k = 30) + 
+                       s(FWI,  bs = "tp", k = 30) + 
+                       s(BUI,  bs = "tp", k = 30) +
+                       s(ISI,  bs = "tp", k = 30) + 
+                       s(FFMC, bs = "tp", k = 30) + 
+                       s(DMC,  bs = "tp", k = 30) +
+                       s(DC,   bs = "tp", k = 30),
+                     ~ s(DSR,  bs = "tp", k = 30) + 
+                       s(FWI,  bs = "tp", k = 30) + 
+                       s(BUI,  bs = "tp", k = 30) +
+                       s(ISI,  bs = "tp", k = 30) + 
+                       s(FFMC, bs = "tp", k = 30) + 
+                       s(DMC,  bs = "tp", k = 30) +
+                       s(DC,   bs = "tp", k = 30))
+evgam.fit.scale <- evgam::evgam(gam.scale, dat = evgam.df, family = "gpd")
+evgam.xi.scale <- predict(evgam.fit.scale, newdata = data.frame(xholder), type="response")$shape
+evgam.alpha.scale <- 1/evgam.xi.scale
 
+xholder.basis.scale <- predict(evgam.fit.scale, newdata = data.frame(xholder), type= "lpmatrix")$shape
+xi.coef.scale <- tail(evgam.fit.scale$coefficients, (psi-1)*p)
+gamma.xi.scale <- matrix(xi.coef.scale, ncol = p)
+alpha.nonlinear.scale <- xi.nonlinear.scale <- matrix(, nrow = n, ncol = p)
+bs.nonlinear.scale <- xholder.basis.scale[,c(2:((psi-1)*p+1))]
+for(j in 1:p){
+  xi.nonlinear.scale[,j] <- bs.nonlinear.scale[,(((j-1)*(psi-1))+1):(((j-1)*(psi-1))+(psi-1))] %*% gamma.xi.scale[,j]
+  alpha.nonlinear.scale[,j] <- 1/(xi.nonlinear.scale[,j])
+}
+```
+
+```{r, evgam.1}
+gam.1 <- list(BA ~ 1,
+                 ~ s(DSR,  bs = "tp", k = 30) + 
+                   s(FWI,  bs = "tp", k = 30) + 
+                   s(BUI,  bs = "tp", k = 30) +
+                   s(ISI,  bs = "tp", k = 30) + 
+                   s(FFMC, bs = "tp", k = 30) + 
+                   s(DMC,  bs = "tp", k = 30) +
+                   s(DC,   bs = "tp", k = 30))
+evgam.fit.1 <- evgam::evgam(gam.1, data = evgam.df, family = "gpd")
+evgam.xi.1 <-predict(evgam.fit.1, newdata = data.frame(xholder), type="response")$shape
+evgam.alpha.1 <- 1/evgam.xi.1
+
+xholder.basis.1 <- predict(evgam.fit.1, newdata = data.frame(xholder), type= "lpmatrix")$shape
+xi.coef.1 <- tail(evgam.fit.1$coefficients, (psi-1)*p)
+gamma.xi.1 <- matrix(xi.coef.1, ncol = p)
+alpha.nonlinear.1 <- xi.nonlinear.1 <- matrix(, nrow = n, ncol = p)
+bs.nonlinear.1 <- xholder.basis.1[,c(2:((psi-1)*p+1))]
+for(j in 1:p){
+  xi.nonlinear.1[,j] <- bs.nonlinear.1[,(((j-1)*(psi-1))+1):(((j-1)*(psi-1))+(psi-1))] %*% gamma.xi.1[,j]
+  alpha.nonlinear.1[,j] <- 1/(xi.nonlinear.1[,j])
+}
+```
+
+
+```{r}
+xi.scenario <- data.frame("x" = xholder[,1],
+                          "vgam.1" = as.vector(vgam.xi.1),
+                          "vgam.scale" = as.vector(vgam.xi.scale),
+                          "evgam.1" = as.vector(evgam.xi.1),
+                          "evgam.scale" = as.vector(evgam.xi.scale)
+                          )
+ggplot(xi.scenario, aes(x=x)) + 
+  ylab(expression(xi(c,ldots,c))) + xlab(expression(c)) + labs(col = "") +  
+  # geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
+  # geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
+  geom_line(aes(y=vgam.1), linewidth=1, color = "orange") +
+  geom_line(aes(y=vgam.scale), linewidth=1, color = "purple") +
+  geom_line(aes(y=evgam.1), linewidth=1, color = "orange", linetype=3) +
+  geom_line(aes(y=evgam.scale), linewidth=1, color = "purple", linetype=3) +  
+  # scale_fill_manual(values=c("steelblue"), name = "") +
+  # scale_color_manual(values = c("steelblue")) + 
+  guides(color = guide_legend(order = 2), 
+          fill = guide_legend(order = 1)) +
+  theme_minimal(base_size = 30) +
+  theme(legend.position = "none",
+        strip.text = element_blank(),
+        axis.text = element_text(size = 20))
+```
+
+
+```{r}
+alpha.scenario <- data.frame("x" = xholder[,1],
+                             "vgam.1" = 1/as.vector(vgam.xi.1),
+                             "vgam.scale" = 1/as.vector(vgam.xi.scale),
+                             "evgam.1" = 1/as.vector(evgam.xi.1),
+                             "evgam.scale" = 1/as.vector(evgam.xi.scale)
+                            )#,
+                            # "post.mean" = (alpha.samples[,1]),
+                            # "post.median" = (alpha.samples[,5]),
+                            # "q1" = (alpha.samples[,4]),
+                            # "q3" = (alpha.samples[,6]))
+
+ggplot(alpha.scenario, aes(x=x)) + 
+  ylab(expression(alpha(c,...,c))) + xlab(expression(c)) + labs(col = "") + ylim(0,10)+
+  geom_line(aes(y=vgam.1), linewidth=1, color = "orange") +
+  geom_line(aes(y=vgam.scale), linewidth=1, color = "purple") +
+  geom_line(aes(y=evgam.1), linewidth=1, color = "orange", linetype=3) +
+  geom_line(aes(y=evgam.scale), linewidth=1, color = "purple", linetype=3) +
+  guides(color = guide_legend(order = 2), 
+          fill = guide_legend(order = 1)) +
+  theme_minimal(base_size = 30) +
+  theme(legend.position = "none",
+        strip.text = element_blank(),
+        axis.text = element_text(size = 20))
 ```
