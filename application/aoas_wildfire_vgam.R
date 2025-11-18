@@ -36,7 +36,7 @@ vgam.fit.scale <- vgam(BA ~ s(DSR) + s(FWI) + s(BUI) + s(ISI) + s(FFMC) + s(DMC)
                                       zero = NULL),
                         trace = TRUE,
                         control = vgam.control(maxit = 200))
-par(mfrow = c(5, 2), mar=c(1.5,1.5,1.5,1.5))
+par(mfrow = c(2, 4), mar=c(1.75,1.75,1.75,1.75))
 plot(vgam.fit.scale, se = TRUE, shade = TRUE, shcol = "steelblue")
 par(mfrow = c(1, 1))
 
@@ -47,7 +47,9 @@ vgam.fit.1 <- vgam(BA ~ s(DSR) + s(FWI) + s(BUI) + s(ISI) + s(FFMC) + s(DMC) + s
                                   zero = 1),
                     trace = TRUE,
                     control = vgam.control(maxit = 200))
-
+par(mfrow = c(2,4), mar=c(4,3,3,4))
+plot(vgam.fit.1, se = TRUE, shade = TRUE, shcol = "steelblue")
+par(mfrow = c(1, 1))
 
 # save(vgam.fit.scale, vgam.fit.1, file = "./BLAST/application/vgam_fit_all.Rdata")
 # load("./BLAST/application/evgam_fit.Rdata")
@@ -143,7 +145,7 @@ ggplot(xi.scenario, aes(x=x)) +
   ylab(expression(xi(c,ldots,c))) + xlab(expression(c)) + labs(col = "") +  
   # geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
   # geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
-  geom_line(aes(y=vgam.1), linewidth=1, color = "orange") +
+  geom_line(aes(y=vgam.1), linewidth=1, color = "orange") + ylim(0,3)+
   geom_line(aes(y=vgam.scale), linewidth=1, color = "purple") +
   # scale_fill_manual(values=c("steelblue"), name = "") +
   # scale_color_manual(values = c("steelblue")) + 
@@ -164,11 +166,11 @@ alpha.scenario <- data.frame("x" = xholder[,1],
                             # "q3" = (alpha.samples[,6]))
 
 ggplot(alpha.scenario, aes(x=x)) + 
-  ylab(expression(alpha(c,...,c))) + xlab(expression(c)) + labs(col = "") +
+  ylab(expression(alpha(c,...,c))) + xlab(expression(c)) + labs(col = "") + ylim(0,3)+
   # geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
   # geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
   geom_line(aes(y=vgam.1), linewidth=1, color = "orange") +
-  # geom_line(aes(y=vgam.scale), linewidth=1, color = "purple") +
+  geom_line(aes(y=vgam.scale), linewidth=1, color = "purple") +
   # scale_fill_manual(values=c("steelblue"), name = "") +
   # scale_color_manual(values = c("steelblue")) + ylim(0, 15) +
   guides(color = guide_legend(order = 2), 
@@ -177,6 +179,11 @@ ggplot(alpha.scenario, aes(x=x)) +
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 20))
+
+# histogram of the alpha on the real value
+# Check if we can output the hessian for VGAM package
+# Model checking using QQplot
+# 
 
 
 

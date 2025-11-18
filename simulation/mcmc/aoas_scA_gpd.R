@@ -29,6 +29,8 @@ for(j in 1:p){
   }
 }
 theta.origin <- c(-0.5, 0, -0.5, -0.5, 0, 0)
+theta.scale <- c(0.2, 0, -0.1, -0.1, 0, 0)
+
 
 model.stan <- "// Stan model for BRSTIR Pareto Uncorrelated Samples
 data {
@@ -155,18 +157,21 @@ for(iter in 1:total.iter){
     gamma.origin[c(1,psi),j] <- -1 * basis.holder[,(((j-1)*2)+1):(((j-1)*2)+2)] %*% as.matrix(g.sub.origin[,j], nrow=2)
   }
   
-  g.nonlinear.origin <- g.linear.origin <- g.origin <- matrix(, nrow = n, ncol = p)
+  scale.origin <- g.nonlinear.origin <- g.linear.origin <- g.origin <- matrix(, nrow = n, ncol = p)
   for(j in 1:p){
-      g.linear.origin[,j] <- bs.linear[, j] * theta.origin[j+1]
-      g.nonlinear.origin[,j] <- bs.nonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
-      g.origin[, j] <- g.linear.origin[,j] + g.nonlinear.origin[,j]
+    scale.origin[,j] <- bs.linear[,j] * theta.scale[j+1]
+    g.linear.origin[,j] <- bs.linear[, j] * theta.origin[j+1]
+    g.nonlinear.origin[,j] <- bs.nonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] %*% gamma.origin[,j]
+    g.origin[, j] <- g.linear.origin[,j] + g.nonlinear.origin[,j]
   }
 
   alp.origin <- y.origin <- xi.origin <- NULL
   for(i in 1:n){
-      alp.origin[i] <- exp(theta.origin[1] + sum(g.origin[i,]))
-      xi.origin[i] <- 1/alp.origin[i]
-      y.origin[i] <- evd::rgpd(1, scale=alp.origin[i], loc=1, shape=xi.origin[i])
+    scale.origin[i] <- exp(theta.scale[1] + sum(scale.origin[i,]))
+    alp.origin[i] <- exp(theta.origin[1] + sum(g.origin[i,]))
+    xi.origin[i] <- 1/alp.origin[i]
+    # y.origin[i] <- evd::rgpd(1, scale=alp.origin[i], loc=1, shape=xi.origin[i])
+    y.origin[i] <- evd::rgpd(1, scale=scale.origin[i], loc=0, shape=xi.origin[i])
   }
 
   u <- quantile(y.origin, threshold)

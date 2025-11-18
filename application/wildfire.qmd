@@ -1,0 +1,78 @@
+---
+title: "Assignment 2"
+subtitle: "Biomedical Data Science (MATH11174), 22/23, Semester 2"
+author: ""
+date: "2023-04-06"
+date-format: "long"
+format: 
+  pdf:
+    code-line-numbers: true
+editor : visual
+highlight-style: atom-one
+---
+
+```{r}
+library(npreg)
+library(Pareto)
+suppressMessages(library(tidyverse))
+library(readxl)
+library(gridExtra)
+library(VGAM)
+library(evgam)
+```
+
+```{r}
+# Structure of the FWI System
+#DSR : Daily Severity Rating
+#FWI : Fire Weather Index
+#BUI : Buildup Index
+#ISI : Initial Spread Index
+#FFMC : Fine FUel Moisture Code
+#DMC : Duff Moisture Code
+#DC : Drought Code
+setwd("C:/Users/Johnny Lee/Documents/GitHub")
+# setwd("A:/GitHub")
+load("./BLAST/application/wildfire_prep.Rdata") #loading covariate-dependent thresholds
+```
+
+```{r, setup}
+psi <- 30
+u <- quantile(Y, 0.975)
+y <- Y[which(Y>u)]
+fwi.scaled <- fwi.origin[which(Y>u),c(1:7)]
+range01 <- function(x){(x-min(x))/(max(x)-min(x))}
+fwi.scaled <- as.data.frame(sapply(fwi.scaled, FUN = range01))
+n <- dim(fwi.scaled)[[1]]
+p <- dim(fwi.scaled)[[2]]
+fwi.df <- data.frame(fwi.scaled, BA=y)
+```
+
+```{r, vgam.scale}
+vgam.fit.scale <- vgam(BA ~ s(DSR) + s(FWI) + s(BUI) + s(ISI) + s(FFMC) + s(DMC) + s(DC),
+                        data = fwi.df,
+                        family = gpd(threshold = u,
+                                      lshape="loglink",
+                                      zero = NULL),
+                        trace = TRUE,
+                        control = vgam.control(maxit = 200))
+par(mfrow = c(2, 4), mar=c(1.75,1.75,1.75,1.75))
+plot(vgam.fit.scale, se = TRUE, shade = TRUE, shcol = "steelblue")
+par(mfrow = c(1, 1))
+```
+
+```{r, vgam.1}
+vgam.fit.1 <- vgam(BA ~ s(DSR) + s(FWI) + s(BUI) + s(ISI) + s(FFMC) + s(DMC) + s(DC),
+                    data = fwi.df,
+                    family = gpd(threshold = u, 
+                                  lshape="loglink",
+                                  zero = 1),
+                    trace = TRUE,
+                    control = vgam.control(maxit = 200))
+par(mfrow = c(2, 4), mar=c(1.75,1.75,1.75,1.75))
+plot(vgam.fit.1, se = TRUE, shade = TRUE, shcol = "steelblue")
+par(mfrow = c(1, 1))
+```
+
+```{r}
+
+```
