@@ -89,6 +89,38 @@ fitted.response <- predict(vgam.fit.1, newdata = data.frame(xholder), type = "re
 vgam.xi.1 <- exp(fitted.linear[,2])
 ```
 
+```{r, vgam.xi}
+vgam.fit.xi <- vgam(BA ~ s(DSR) + s(FWI) + s(BUI) + s(ISI) + s(FFMC) + s(DMC) + s(DC),
+                    data = fwi.df,
+                    family = gpd(threshold = u, 
+                                  lshape="loglink",
+                                  zero = 2),
+                    trace = TRUE,
+                    control = vgam.control(maxit = 200))
+par(mfrow = c(2, 4), mar=c(1.75,1.75,1.75,1.75))
+plot(vgam.fit.xi, se = TRUE, shade = TRUE, shcol = "steelblue")
+par(mfrow = c(1, 1))
+fitted.linear <- predict(vgam.fit.xi, newdata = data.frame(xholder), type = "link")
+fitted.terms <- predict(vgam.fit.xi, newdata = data.frame(xholder), type = "terms")
+fitted.response <- predict(vgam.fit.xi, newdata = data.frame(xholder), type = "response")
+```
+
+```{r}
+vgam.fit.linear <- vgam(BA ~ .,
+                    data = fwi.df,
+                    family = gpd(threshold = u, 
+                                  lshape="loglink",
+                                  zero = NULL),
+                    trace = TRUE,
+                    control = vgam.control(maxit = 200))
+par(mfrow = c(2, 4), mar=c(4,3,3,4))
+plot(vgam.fit.linear, se = TRUE, shade = TRUE, shcol = "steelblue")
+par(mfrow = c(1, 1))
+fitted.linear <- predict(vgam.fit.linear, newdata = data.frame(xholder), type = "link")
+fitted.terms <- predict(vgam.fit.linear, newdata = data.frame(xholder), type = "terms")
+fitted.response <- predict(vgam.fit.linear, newdata = data.frame(xholder), type = "response")
+```
+
 ```{r, evgam.scale}
 gam.scale <- list(BA ~ s(DSR,  bs = "tp", k = 30) + 
                        s(FWI,  bs = "tp", k = 30) + 
@@ -143,6 +175,9 @@ for(j in 1:p){
 }
 ```
 
+```{r}
+load("./BLAST/application/blast.Rdata")
+```
 
 ```{r}
 xi.scenario <- data.frame("x" = xholder[,1],
@@ -150,20 +185,20 @@ xi.scenario <- data.frame("x" = xholder[,1],
                           "vgam.scale" = as.vector(vgam.xi.scale),
                           "evgam.1" = as.vector(evgam.xi.1),
                           "evgam.scale" = as.vector(evgam.xi.scale),
-                          "post.mean" = (alpha.samples[,1]),
-                          "post.median" = (alpha.samples[,5]),
-                          "q1" = (alpha.samples[,4]),
-                          "q3" = (alpha.samples[,6]))
+                          "post.mean" = 1/data.scenario$post.mean,
+                          "post.median" = 1/data.scenario$post.median,
+                          "q1" = 1/data.scenario$q1,
+                          "q3" = 1/data.scenario$q3)
 ggplot(xi.scenario, aes(x=x)) + 
   ylab(expression(xi(c,ldots,c))) + xlab(expression(c)) + labs(col = "") +  
-  # geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
-  # geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
+  geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
+  geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
   geom_line(aes(y=vgam.1), linewidth=1, color = "orange") +
   geom_line(aes(y=vgam.scale), linewidth=1, color = "purple") +
   geom_line(aes(y=evgam.1), linewidth=1, color = "orange", linetype=3) +
   geom_line(aes(y=evgam.scale), linewidth=1, color = "purple", linetype=3) +  
-  # scale_fill_manual(values=c("steelblue"), name = "") +
-  # scale_color_manual(values = c("steelblue")) + 
+  scale_fill_manual(values=c("steelblue"), name = "") +
+  scale_color_manual(values = c("steelblue")) + 
   guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) +
   theme_minimal(base_size = 30) +
@@ -178,19 +213,22 @@ alpha.scenario <- data.frame("x" = xholder[,1],
                              "vgam.1" = 1/as.vector(vgam.xi.1),
                              "vgam.scale" = 1/as.vector(vgam.xi.scale),
                              "evgam.1" = 1/as.vector(evgam.xi.1),
-                             "evgam.scale" = 1/as.vector(evgam.xi.scale)
-                            )#,
-                            # "post.mean" = (alpha.samples[,1]),
-                            # "post.median" = (alpha.samples[,5]),
-                            # "q1" = (alpha.samples[,4]),
-                            # "q3" = (alpha.samples[,6]))
+                             "evgam.scale" = 1/as.vector(evgam.xi.scale),
+                             "post.mean" = data.scenario$post.mean,
+                             "post.median" = data.scenario$post.median,
+                             "q1" = data.scenario$q1,
+                             "q3" = data.scenario$q3)
 
 ggplot(alpha.scenario, aes(x=x)) + 
-  ylab(expression(alpha(c,...,c))) + xlab(expression(c)) + labs(col = "") + ylim(0,10)+
+  ylab(expression(alpha(c,ldots,c))) + xlab(expression(c)) + labs(col = "") + ylim(0,10)+
+  geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
+  geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +  
   geom_line(aes(y=vgam.1), linewidth=1, color = "orange") +
   geom_line(aes(y=vgam.scale), linewidth=1, color = "purple") +
   geom_line(aes(y=evgam.1), linewidth=1, color = "orange", linetype=3) +
   geom_line(aes(y=evgam.scale), linewidth=1, color = "purple", linetype=3) +
+  scale_fill_manual(values=c("steelblue"), name = "") +
+  scale_color_manual(values = c("steelblue")) +   
   guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) +
   theme_minimal(base_size = 30) +

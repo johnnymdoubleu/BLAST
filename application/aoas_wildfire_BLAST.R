@@ -357,21 +357,25 @@ ggplot(data.scenario, aes(x=x)) +
 
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_alpha.pdf"), width=10, height = 7.78)
 
-len <- dim(posterior$alpha)[1]
-r <- matrix(, nrow = n, ncol = 100)
+save(data.smooth, data.scenario, file="./BLAST/application/blast.Rdata")
 
 T <- 100
+len <- dim(posterior$alpha)[1]
+
+r <- matrix(, nrow = n, ncol = T)
 for(i in 1:n){
   for(t in 1:T){
     r[i, t] <- qnorm(pPareto(y[i], u, alpha = posterior$alpha[round(runif(1,1,len)),i]))
   }
 }
 lgrid <- n
-grid <- qnorm(ppoints(lgrid))
+quantile.prob <- ppoints(lgrid)
+grid <- qnorm(quantile.prob)
 traj <- matrix(NA, nrow = T, ncol = lgrid)
 for (t in 1:T){
-  traj[t, ] <- quantile(r[, t], ppoints(lgrid), type = 2)
+  traj[t, ] <- quantile(r[, t], quantile.prob, type = 2)
 }
+
 l.band <- apply(traj, 2, quantile, prob = 0.025)
 trajhat <- apply(traj, 2, quantile, prob = 0.5)
 u.band <- apply(traj, 2, quantile, prob = 0.975)
