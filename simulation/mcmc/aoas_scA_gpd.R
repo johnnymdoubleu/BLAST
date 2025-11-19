@@ -315,7 +315,7 @@ alpha.container <- as.data.frame(alpha.container)
 # save(newgsmooth.container, alpha.container, evgam.1.container, evgam.scale.container, mise.container, mise.1.container, mise.scale.container, file="./simulation/results/vgam_mc_scA_gpd.Rdata")
 load("./simulation/results/vgam_mc_scA_gpd.Rdata")
 
-plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab(expression(xi(c,ldots,c))) #+ ylab("")
+plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab(expression(xi(c,ldots,c))) + ylim(0,6)
 if(total.iter <= 50){
   for(i in 1:total.iter){
     plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.075, linewidth = 0.7)
