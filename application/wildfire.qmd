@@ -67,7 +67,7 @@ vgam.fit.scale <- vgam(BA ~ s(DSR) + s(FWI) + s(BUI) + s(ISI) + s(FFMC) + s(DMC)
 
 fitted.linear <- predict(vgam.fit.scale, newdata = data.frame(xholder), type = "link")
 fitted.terms <- predict(vgam.fit.scale, newdata = data.frame(xholder), type = "terms")
-fitted.response <- predict(vgam.fit.scale,newdata = data.frame(xholder), type = "response")
+vgam.scale.response <- predict(vgam.fit.scale, type = "link")
 vgam.xi.scale <- exp(fitted.linear[,2])
 ```
 
@@ -84,7 +84,7 @@ plot(vgam.fit.1, se = TRUE, shade = TRUE, shcol = "steelblue")
 par(mfrow = c(1, 1))
 fitted.linear <- predict(vgam.fit.1, newdata = data.frame(xholder), type = "link")
 fitted.terms <- predict(vgam.fit.1, newdata = data.frame(xholder), type = "terms")
-fitted.response <- predict(vgam.fit.1, newdata = data.frame(xholder), type = "response")
+vgam.1.response <- predict(vgam.fit.1,type="link")
 
 vgam.xi.1 <- exp(fitted.linear[,2])
 ```
@@ -103,6 +103,7 @@ par(mfrow = c(1, 1))
 fitted.linear <- predict(vgam.fit.xi, newdata = data.frame(xholder), type = "link")
 fitted.terms <- predict(vgam.fit.xi, newdata = data.frame(xholder), type = "terms")
 fitted.response <- predict(vgam.fit.xi, newdata = data.frame(xholder), type = "response")
+
 ```
 
 ```{r}
@@ -138,7 +139,7 @@ gam.scale <- list(BA ~ s(DSR,  bs = "tp", k = 30) +
                        s(DC,   bs = "tp", k = 30))
 evgam.fit.scale <- evgam::evgam(gam.scale, dat = evgam.df, family = "gpd")
 evgam.xi.scale <- predict(evgam.fit.scale, newdata = data.frame(xholder), type="response")$shape
-evgam.alpha.scale <- 1/evgam.xi.scale
+evgam.scale.response <- predict(evgam.fit.scale, type = "response")
 
 xholder.basis.scale <- predict(evgam.fit.scale, newdata = data.frame(xholder), type= "lpmatrix")$shape
 xi.coef.scale <- tail(evgam.fit.scale$coefficients, (psi-1)*p)
@@ -163,6 +164,7 @@ gam.1 <- list(BA ~ 1,
 evgam.fit.1 <- evgam::evgam(gam.1, data = evgam.df, family = "gpd")
 evgam.xi.1 <-predict(evgam.fit.1, newdata = data.frame(xholder), type="response")$shape
 evgam.alpha.1 <- 1/evgam.xi.1
+evgam.1.response <- predict(evgam.fit.1, type = "response")
 
 xholder.basis.1 <- predict(evgam.fit.1, newdata = data.frame(xholder), type= "lpmatrix")$shape
 xi.coef.1 <- tail(evgam.fit.1$coefficients, (psi-1)*p)
@@ -220,7 +222,7 @@ alpha.scenario <- data.frame("x" = xholder[,1],
                              "q3" = data.scenario$q3)
 
 ggplot(alpha.scenario, aes(x=x)) + 
-  ylab(expression(alpha(c,ldots,c))) + xlab(expression(c)) + labs(col = "") + ylim(0,10)+
+  ylab(expression(alpha(c,ldots,c))) + xlab(expression(c)) + labs(col = "") + ylim(0,14.5)+
   geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
   geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +  
   geom_line(aes(y=vgam.1), linewidth=1, color = "orange") +
@@ -235,4 +237,39 @@ ggplot(alpha.scenario, aes(x=x)) +
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 20))
+```
+
+
+```{r}
+r.vgam.1 <- r.vgam.scale <- r.evgam.1 <- r.evgam.scale <- c()
+for(i in 1:n){
+    r.vgam.1[i] <- qnorm(evd::pgpd(y[i], scale = exp(vgam.1.response[i,1]), loc = u, shape = exp(vgam.1.response[i,2])))
+    r.vgam.scale[i] <- qnorm(evd::pgpd(y[i], scale = exp(vgam.scale.response[i,1]), loc = u, shape = exp(vgam.scale.response[i,2])))
+    r.evgam.1[i] <- qnorm(evd::pgpd(y[i], scale = exp(evgam.1.response$scale[i]), loc = u, shape = evgam.1.response$shape[i]))
+    r.evgam.scale[i] <- qnorm(evd::pgpd(y[i], scale = evgam.scale.response$scale[i], loc = u, shape = evgam.scale.response$shape[i]))
+}
+lgrid <- n
+quantile.prob <- ppoints(lgrid)
+grid <- qnorm(quantile.prob)
+# traj.vgam.1 <- traj.vgam.scale <- traj.evgam.1 <- traj.evgam.scale <- c()
+qqplot.df$traj.vgam.1 <- quantile(r.vgam.1, quantile.prob, type = 2)
+qqplot.df$traj.vgam.scale <- quantile(r.vgam.scale, quantile.prob, type = 2)
+qqplot.df$traj.evgam.1 <- quantile(r.evgam.1, quantile.prob, type = 2)
+qqplot.df$traj.evgam.scale <- quantile(r.evgam.scale, quantile.prob, type = 2)
+
+ggplot(data = qqplot.df, aes(x=grid)) + 
+  geom_ribbon(aes(ymin = l.band, ymax = u.band), 
+              fill = "steelblue",
+              alpha = 0.4, linetype = "dashed") + 
+  geom_line(aes(y = trajhat), colour = "steelblue", linetype = "dashed", linewidth = 1.2) + 
+  geom_line(aes(y = traj.vgam.1), colour = "orange", linewidth=1.1) +
+  geom_line(aes(y = traj.vgam.scale), colour = "purple", linewidth=1.1) +
+  geom_line(aes(y = traj.evgam.1), colour = "orange", linetype = 3, linewidth=1.1) +
+  geom_line(aes(y = traj.evgam.scale), colour = "purple", linetype = 3, linewidth=1.1) +
+  geom_abline(intercept = 0, slope = 1, linewidth = 1.2) + 
+  labs(x = "Theoretical quantiles", y = "Sample quantiles") + 
+  theme_minimal(base_size = 30) +
+  theme(axis.text = element_text(size = 20)) + 
+  coord_fixed(xlim = c(-3, 3),
+              ylim = c(-3, 3))
 ```

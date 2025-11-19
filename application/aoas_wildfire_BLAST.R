@@ -357,31 +357,38 @@ ggplot(data.scenario, aes(x=x)) +
 
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_alpha.pdf"), width=10, height = 7.78)
 
-save(data.smooth, data.scenario, file="./BLAST/application/blast.Rdata")
+
 
 T <- 100
 len <- dim(posterior$alpha)[1]
-
-r <- matrix(, nrow = n, ncol = T)
-for(i in 1:n){
-  for(t in 1:T){
-    r[i, t] <- qnorm(pPareto(y[i], u, alpha = posterior$alpha[round(runif(1,1,len)),i]))
-  }
-}
-lgrid <- n
-quantile.prob <- ppoints(lgrid)
+posterior_idx <- sample(1:len, T, replace = TRUE)
+r <- sapply(1:T, function(t) {
+  alpha_t <- posterior$alpha[posterior_idx[t], ]  # Extract vector of length n
+  qnorm(pPareto(y, u, alpha = alpha_t))           # Vectorized across all y
+})
+quantile.prob <- ppoints(n)
 grid <- qnorm(quantile.prob)
-traj <- matrix(NA, nrow = T, ncol = lgrid)
-for (t in 1:T){
-  traj[t, ] <- quantile(r[, t], quantile.prob, type = 2)
-}
+traj <- t(apply(r, 2, quantile, probs = quantile.prob, type = 2))
+# r <- matrix(, nrow = n, ncol = T)
+# for(i in 1:n){
+#   for(t in 1:T){
+#     r[i, t] <- qnorm(pPareto(y[i], u, alpha = posterior$alpha[round(runif(1,1,len)),i]))
+#   }
+# }
+
+# traj <- matrix(NA, nrow = T, ncol = lgrid)
+# for (t in 1:T){
+#   traj[t, ] <- quantile(r[, t], quantile.prob, type = 2)
+# }
 
 l.band <- apply(traj, 2, quantile, prob = 0.025)
 trajhat <- apply(traj, 2, quantile, prob = 0.5)
 u.band <- apply(traj, 2, quantile, prob = 0.975)
-
-ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat, 
-                         u.band = u.band)) + 
+qqplot.df <- data.frame(grid = grid, 
+                        l.band = l.band, 
+                        trajhat = trajhat, 
+                        u.band = u.band)
+ggplot(data = ) + 
   geom_ribbon(aes(x = grid, ymin = l.band, ymax = u.band), 
               fill = "steelblue",
               alpha = 0.4, linetype = "dashed") + 
@@ -392,7 +399,10 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
   theme(axis.text = element_text(size = 20)) + 
   coord_fixed(xlim = c(-3, 3),
               ylim = c(-3, 3))
+
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_qqplot.pdf"), width=10, height = 7.78)
+# save(data.smooth, data.scenario, qqplot.df, file="./BLAST/application/blast.Rdata")
+
 rp <-c()
 for(i in 1:n){
   # rp[i] <- rPareto(y[i], u, alpha = posterior$alpha[round(runif(1,1,len)),i])

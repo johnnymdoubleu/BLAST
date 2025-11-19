@@ -278,8 +278,10 @@ for(iter in 1:total.iter){
   vgam.xi.1 <- exp(int.terms[,2])
 
 
-  evgam.1.container[,iter] <- vgam.xi.1
-  evgam.scale.container[,iter] <- vgam.xi.scale
+  vgam.1.container[,iter] <- vgam.xi.1
+  vgam.scale.container[,iter] <- vgam.xi.scale
+  evgam.1.container[,iter] <- evgam.xi.1
+  evgam.scale.container[,iter] <- evgam.xi.scale
   alpha.lower.container[,iter] <- 1/(newalpha.samples[,4])
   alpha.container[,iter] <- 1/(newalpha.samples[,5])
   alpha.upper.container[,iter] <- 1/(newalpha.samples[,6])
@@ -288,8 +290,10 @@ for(iter in 1:total.iter){
   # smooth.scale.container <- as.vector(xi.nonlinear.scale)
   
   mise.container[iter] <- auc(newx, se.samples[,5])
-  mise.1.container[iter] <- auc(newx, ((1/alp.new)-vgam.xi.1)^2)
-  mise.scale.container[iter] <- auc(newx, ((1/alp.new)-vgam.xi.scale)^2)
+  mise.vgam.1.container[iter] <- auc(newx, ((1/alp.new)-vgam.xi.1)^2)
+  mise.vgam.scale.container[iter] <- auc(newx, ((1/alp.new)-vgam.xi.scale)^2)
+  mise.evgam.1.container[iter] <- auc(newx, ((1/alp.new)-evgam.xi.1)^2)
+  mise.evgam.scale.container[iter] <- auc(newx, ((1/alp.new)-evgam.xi.scale)^2)  
 }
 
 
@@ -304,6 +308,8 @@ alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
 # alpha.container$q3 <- apply(alpha.upper.container[,1:total.iter], 1, quantile, c(.5))
 alpha.container$evgam.1 <- rowMeans(evgam.1.container[,1:total.iter])
 alpha.container$evgam.scale <- rowMeans(evgam.scale.container[,1:total.iter])
+alpha.container$vgam.1 <- rowMeans(vgam.1.container[,1:total.iter])
+alpha.container$vgam.scale <- rowMeans(vgam.scale.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
 # save(newgsmooth.container, alpha.container, evgam.1.container, evgam.scale.container, mise.container, mise.1.container, mise.scale.container, file="./simulation/results/vgam_mc_scA_gpd.Rdata")
@@ -325,8 +331,10 @@ if(total.iter <= 50){
 print(plt +
         geom_line(aes(y=true, col = "True"), linewidth = 2, linetype = 2) + 
         geom_line(aes(y=mean, col = "Mean"), linewidth = 1.8) +
-        geom_line(aes(y=evgam.1), colour="purple", linewidth = 1.8) +
-        geom_line(aes(y=evgam.scale), colour="orange", linewidth = 1.8) +
+        geom_line(aes(y=vgam.1), colour="purple", linewidth = 1.2) +
+        geom_line(aes(y=vgam.scale), colour="orange", linewidth = 1.2) +
+        geom_line(aes(y=evgam.1), colour="purple", linewidth = 1.2, linetype=3) +
+        geom_line(aes(y=evgam.scale), colour="orange", linewidth = 1.2, linetype=3) +
         scale_fill_manual(values=c("steelblue"), name = "") +
         scale_color_manual(values = c("steelblue", "red"))+
         guides(color = guide_legend(order = 2), 
@@ -389,5 +397,7 @@ print(plt +
 
 
 print(mean(mise.container))
-print(mean(mise.1.container))
-print(mean(mise.scale.container))
+print(mean(mise.evgam.1.container))
+print(mean(mise.evgam.scale.container))
+print(mean(mise.vgam.1.container))
+print(mean(mise.vgam.scale.container))
