@@ -76,6 +76,39 @@ seq_list <- lapply(vars, function(var) seq(min(fwi.origin[[var]]), max(fwi.origi
 grid.df <- as.data.frame(setNames(seq_list, vars))
 
 
+# 1. Get predictions at tau = 0.5 and tau = 0.95
+fit.50 <- quantreg::rq(BA ~ DSR + FWI + BUI + ISI + FFMC + DMC + DC,
+             tau = 0.5, data = fwi.origin)
+
+fit.95 <- quantreg::rq(BA ~ DSR + FWI + BUI + ISI + FFMC + DMC + DC,
+             tau = 0.95, data = fwi.origin)
+
+# Get predictions (these are F^{-1}(tau | x_i))
+pred.50 <- predict(fit.50, newdata = fwi.origin)
+pred.95 <- predict(fit.95, newdata = fwi.origin)
+max_val_50 <- max(c(pred.50, fwi.origin$BA), na.rm = TRUE)
+min_val_50 <- min(c(pred.50, fwi.origin$BA), na.rm = TRUE)
+max_val_95 <- max(c(pred.95, fwi.origin$BA), na.rm = TRUE)
+min_val_95 <- min(c(pred.95, fwi.origin$BA), na.rm = TRUE)
+
+par(mfrow = c(1, 2))
+plot(pred.50, fwi.origin$BA,
+     main = "Predicted 50th Percentile vs Actual BA",
+     xlab = expression(hat(F)^(-1)),
+     ylab = expression(y[i]),
+     xlim = c(min_val_50, max_val_50),  # Equal x and y range
+     ylim = c(min_val_50, max_val_50))
+abline(0, 1, col = "red", lty = 2, lwd = 2)
+plot(pred.95, fwi.origin$BA,
+     main = "Predicted 95th Percentile vs Actual BA",
+     xlab = expression(hat(F)^(-1)),
+     ylab = expression(y),
+     xlim = c(min_val_95, max_val_95),  # Equal x and y range
+     ylim = c(min_val_95, max_val_95))
+abline(0, 1, col = "red", lty = 2, lwd = 2)
+par(mfrow = c(1, 1))
+
+
 quant.fit <- quantreg::rq(BA ~ DSR + FWI + BUI + ISI + FFMC + DMC + DC, 
                           tau=c(0.975), data = fwi.origin)
 
