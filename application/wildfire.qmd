@@ -204,10 +204,10 @@ ggplot(xi.scenario, aes(x=x)) +
   scale_color_manual(values = c("steelblue")) + 
   guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) +
-  theme_minimal(base_size = 10) +
+  theme_minimal(base_size = 30) +
   theme(legend.position = "none",
         strip.text = element_blank(),
-        axis.text = element_text(size = 10))
+        axis.text = element_text(size = 20))
 ```
 
 ```{r}
@@ -244,7 +244,7 @@ r.vgam.1 <- r.vgam.scale <- r.evgam.1 <- r.evgam.scale <- c()
 for(i in 1:n){
     r.vgam.1[i] <- qnorm(evd::pgpd(y[i], scale = exp(vgam.1.response[i,1]), loc = u, shape = exp(vgam.1.response[i,2])))
     r.vgam.scale[i] <- qnorm(evd::pgpd(y[i], scale = exp(vgam.scale.response[i,1]), loc = u, shape = exp(vgam.scale.response[i,2])))
-    r.evgam.1[i] <- qnorm(evd::pgpd(y[i], scale = exp(evgam.1.response$scale[i]), loc = u, shape = evgam.1.response$shape[i]))
+    r.evgam.1[i] <- qnorm(evd::pgpd(y[i], scale = evgam.1.response$scale[i], loc = u, shape = evgam.1.response$shape[i]))
     r.evgam.scale[i] <- qnorm(evd::pgpd(y[i], scale = evgam.scale.response$scale[i], loc = u, shape = evgam.scale.response$shape[i]))
 }
 lgrid <- n

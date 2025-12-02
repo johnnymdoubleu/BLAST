@@ -518,7 +518,7 @@ AIC(vgam.fit.scale)
 orderred <- sort(y.pre, decreasing = TRUE)[1:(n+1)]
 n.hill <- length(orderred)
 k <- 1:n.hill
-loggs <- log(orderred/u)
+loggs <- logb(orderred/u)
 avesumlog <- cumsum(loggs)/k
 xihat <- c(NA, (avesumlog)[2:n.hill])
 ses.xi <- xihat * sqrt(k)
@@ -551,8 +551,12 @@ data.hill.alpha <- data.frame("k" = c(1:n),
                         "blast.q1" = sort(alpha.samples[,4]),
                         "blast.q3" = sort(alpha.samples[,6]),
                         "gamma.mean" = sort(gamma.alpha),
-                        "gamma.q1" = sort(gamma.q1.alpha), 
-                        "gamma.q3" = sort(gamma.q3.alpha))
+                        "gamma.q1" = sort(gamma.q1.alpha),
+                        "gamma.q3" = sort(gamma.q3.alpha),
+                        "evgam.1" = sort(1/predict(evgam.fit.1, type="response")$shape),
+                        "evgam.scale" = sort(1/predict(evgam.fit.scale, type="response")$shape),
+                        "vgam.1" = sort(1/exp(predict(vgam.fit.1, type = "link")[,2])),
+                        "vgam.scale" = sort(1/exp(predict(vgam.fit.scale, type = "link")[,2])))
 ggplot(data = data.hill.alpha) + 
   geom_ribbon(aes(x = order, ymin = l, ymax = u),
               alpha = 0.2, linetype = "dashed", fill = "black") + 
@@ -563,6 +567,10 @@ ggplot(data = data.hill.alpha) +
   geom_line(aes(x=order, y= gamma.mean), linewidth = 1.2, colour = "brown") + 
   geom_ribbon(aes(x = order, ymin = gamma.q1, ymax = gamma.q3),
               alpha = 0.2, linetype = "dashed", fill = "brown") + 
+  geom_line(aes(x=order, y= vgam.scale), linewidth = 1.2, colour = "purple") +
+  geom_line(aes(x=order, y= vgam.1), linewidth = 1.2, colour = "orange") + 
+  geom_line(aes(x=order, y= evgam.1), linewidth = 1.2, linetype=3, colour = "orange") +
+  geom_line(aes(x=order, y= evgam.scale), linewidth = 1.2, linetype=3, colour = "purple") +               
   labs(x = "Order Statistics", y = expression(alpha)) +
   theme_minimal(base_size = 30) +
   theme(text = element_text(size = 30), 
@@ -576,6 +584,8 @@ data.hill.xi <- data.frame("k" = c(1:n),
                         "order" = xx,
                         "evgam.1" = sort(predict(evgam.fit.1, type="response")$shape),
                         "evgam.scale" = sort(predict(evgam.fit.scale, type="response")$shape),
+                        "vgam.1" = sort(exp(predict(vgam.fit.1, type = "link")[,2])),
+                        "vgam.scale" = sort(exp(predict(vgam.fit.scale, type = "link")[,2])),
                         "blast.mean" = sort(1/alpha.samples[,1]),
                         "blast.q1" = sort(1/alpha.samples[,4]),
                         "blast.q3" = sort(1/alpha.samples[,6]),
@@ -589,7 +599,10 @@ ggplot(data = data.hill.xi) +
   geom_line(aes(x = order, y = blast.mean), linewidth = 1.2, colour = "steelblue") + 
   geom_ribbon(aes(x = order, ymin = blast.q1, ymax = blast.q3),
               alpha = 0.2, linetype = "dashed", fill = "steelblue") + 
-  geom_line(aes(x=order, y= evgam.1), linewidth = 1.2, linetype=3, colour = "purple") + 
+  geom_line(aes(x=order, y= vgam.scale), linewidth = 1.2, colour = "purple") +
+  geom_line(aes(x=order, y= vgam.1), linewidth = 1.2, colour = "orange") + 
+  geom_line(aes(x=order, y= evgam.1), linewidth = 1.2, linetype=3, colour = "orange") +
+  geom_line(aes(x=order, y= evgam.scale), linewidth = 1.2, linetype=3, colour = "purple") + 
   geom_line(aes(x=order, y= gamma.mean), linewidth = 1.2, colour = "brown") + 
   geom_ribbon(aes(x = order, ymin = gamma.q1, ymax = gamma.q3),
               alpha = 0.2, linetype = "dashed", fill = "brown") + 
