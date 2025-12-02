@@ -87,7 +87,7 @@ excess.index <- which(y.origin>u)
 x.origin <- as.matrix(x.origin[excess.index,])
 # bs.nonlinear <- bs.nonlinear[excess.index,]
 # bs.linear <- bs.linear[excess.index,]
-
+y.pre <- y.origin
 y.origin <- y.origin[y.origin > u]
 n <- length(y.origin)
 
@@ -265,6 +265,7 @@ theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summar
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
 lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
 newgsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
+alpha.samples <- summary(fit1, par=c("alpha"), probs = c(0.05, 0.5, 0.95))$summary
 newalpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
 
 # save(theta.samples, gamma.samples, lambda.samples, newgsmooth.samples, newalpha.samples, file = "./simulation/results/blast_scA.Rdata")
@@ -293,9 +294,6 @@ g.smooth.q3 <- as.vector(matrix(newgsmooth.samples[,6], nrow = n, byrow=TRUE))
 # }
 
 simul.data <- data.frame(y = y.origin, x.origin)
-# QRM::gamGPDfit(simul.data, threshold=u, 
-#                 etaFRhs=~s(X1, k=10) + s(X2, k=10) + s(X3, k=10) + s(X4, k=10) + s(X5, k=10) -1,
-#                 nuFrhs=~s(X1, k=10) + s(X2, k=10) + s(X3, k=10) + s(X4, k=10) + s(X5, k=10) -1)
 
 psi <- 10
 vgam.fit.scale <- vgam(y ~ s(X1) + s(X2) + s(X3) + s(X4) + s(X5),
@@ -514,3 +512,114 @@ ggplot(xi.scenario, aes(x=x)) +
 
 AIC(vgam.fit.1)
 AIC(vgam.fit.scale)
+
+
+# orderred <- rev(sort(y.pre)[14325:length(y.pre)])
+orderred <- sort(y.pre, decreasing = TRUE)[1:(n+1)]
+n.hill <- length(orderred)
+k <- 1:n.hill
+loggs <- log(orderred/u)
+avesumlog <- cumsum(loggs)/k
+xihat <- c(NA, (avesumlog)[2:n.hill])
+ses.xi <- xihat * sqrt(k)
+xx <- seq(from = n.hill, to = 2)
+y.xi <- xihat[xx]
+qq <- qnorm(1-(1-threshold)/2)
+uu.xi <- y.xi + ses.xi[xx] * qq
+ll.xi <- y.xi - ses.xi[xx] * qq
+
+alphahat <- 1/xihat
+ses.alpha <- alphahat / sqrt(k)
+y.alpha <- alphahat[xx]
+uu.alpha <- y.alpha + ses.alpha[xx] * qq
+ll.alpha <- y.alpha - ses.alpha[xx] * qq
+
+
+gamma.alpha <- (xx * y.alpha) / (xx - 1)
+gamma.q1.alpha <- 1 / qgamma(0.975, shape = xx, rate = xx * y.alpha)
+gamma.q3.alpha <- 1 / qgamma(0.025, shape = xx, rate = xx * y.alpha)
+gamma.xi <- (xx * y.xi) / (xx - 1)
+gamma.q1.xi <- 1 / qgamma(0.975, shape = xx, rate = xx * y.xi)
+gamma.q3.xi <- 1 / qgamma(0.025, shape = xx, rate = xx * y.xi)
+
+data.hill.alpha <- data.frame("k" = c(1:n),
+                        "u" = sort(uu.alpha),
+                        "l" = sort(ll.alpha),
+                        "alpha" = sort(y.alpha),
+                        "order" = xx,
+                        "blast.mean" = sort(alpha.samples[,1]),
+                        "blast.q1" = sort(alpha.samples[,4]),
+                        "blast.q3" = sort(alpha.samples[,6]),
+                        "gamma.mean" = sort(gamma.alpha),
+                        "gamma.q1" = sort(gamma.q1.alpha), 
+                        "gamma.q3" = sort(gamma.q3.alpha))
+ggplot(data = data.hill.alpha) + 
+  geom_ribbon(aes(x = order, ymin = l, ymax = u),
+              alpha = 0.2, linetype = "dashed", fill = "black") + 
+  geom_line(aes(x = order, y = alpha), linewidth = 1.2, colour = "black") +
+  geom_line(aes(x = order, y = blast.mean), linewidth = 1.2, colour = "steelblue") + 
+  geom_ribbon(aes(x = order, ymin = blast.q1, ymax = blast.q3),
+              alpha = 0.2, linetype = "dashed", fill = "steelblue") + 
+  geom_line(aes(x=order, y= gamma.mean), linewidth = 1.2, colour = "brown") + 
+  geom_ribbon(aes(x = order, ymin = gamma.q1, ymax = gamma.q3),
+              alpha = 0.2, linetype = "dashed", fill = "brown") + 
+  labs(x = "Order Statistics", y = expression(alpha)) +
+  theme_minimal(base_size = 30) +
+  theme(text = element_text(size = 30), 
+        axis.text.x = element_text(angle = 0, hjust = 0.5),
+        legend.position = "none")
+
+data.hill.xi <- data.frame("k" = c(1:n),
+                        "u" = sort(uu.xi),
+                        "l" = sort(ll.xi),
+                        "alpha" = sort(y.xi),
+                        "order" = xx,
+                        "evgam.1" = sort(predict(evgam.fit.1, type="response")$shape),
+                        "evgam.scale" = sort(predict(evgam.fit.scale, type="response")$shape),
+                        "blast.mean" = sort(1/alpha.samples[,1]),
+                        "blast.q1" = sort(1/alpha.samples[,4]),
+                        "blast.q3" = sort(1/alpha.samples[,6]),
+                        "gamma.mean" = sort(gamma.xi),
+                        "gamma.q1" = sort(gamma.q1.xi), 
+                        "gamma.q3" = sort(gamma.q3.xi))
+ggplot(data = data.hill.xi) + 
+  geom_ribbon(aes(x = order, ymin = l, ymax = u),
+              alpha = 0.2, linetype = "dashed", fill = "black") + 
+  geom_line(aes(x = order, y = alpha), linewidth = 1.2, colour = "black") +
+  geom_line(aes(x = order, y = blast.mean), linewidth = 1.2, colour = "steelblue") + 
+  geom_ribbon(aes(x = order, ymin = blast.q1, ymax = blast.q3),
+              alpha = 0.2, linetype = "dashed", fill = "steelblue") + 
+  geom_line(aes(x=order, y= evgam.1), linewidth = 1.2, linetype=3, colour = "purple") + 
+  geom_line(aes(x=order, y= gamma.mean), linewidth = 1.2, colour = "brown") + 
+  geom_ribbon(aes(x = order, ymin = gamma.q1, ymax = gamma.q3),
+              alpha = 0.2, linetype = "dashed", fill = "brown") + 
+  labs(x = "Order Statistics", y = expression(xi)) + ylim(0, 32) +
+  theme_minimal(base_size = 30) +
+  theme(text = element_text(size = 30), 
+        axis.text.x = element_text(angle = 0, hjust = 0.5),
+        legend.position = "none")
+
+
+
+
+hill.est <- function(data, k) {
+  n <- length(data)
+  if (k <= 0 | k >= n) stop("k must be between 1 and n-1")
+  sorted.data <- sort(data, decreasing = TRUE)
+  
+  X.k <- sorted.data[k]
+  X.top.k <- sorted.data[1:k]
+  H.k <- (1/k) * sum(log(X.top.k) - log(X.k))
+  
+  return(H.k)
+}
+
+
+bayes.hill.est <- function(y, k) {
+  # Inverse gamma = 1 / Gamma, so sample from Gamma and invert
+  # 1 / rgamma(length(y), shape = k, rate = k * hill.est(y, k))
+  k * hill.est(y,k) / (k-1)
+}
+
+bayes.hill.est(y.origin, 100)
+

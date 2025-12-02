@@ -222,8 +222,8 @@ model {
     target += gamma_lpdf(lambda2o | 1, 1e-3);
     target += (2*p*log(lambda2o));
     for (j in 1:p){
-        target += gamma_lpdf(tau1[j] | 1, lambda1^2*0.5);
-        target += normal_lpdf(theta[(j+1)] | 0, sqrt(1/tau1[j]));
+        target += exponential_lpdf(tau1[j] | 0.5 * lambda1^2); // target += gamma_lpdf(tau1[j] | 1, lambda1^2*0.5)
+        target += normal_lpdf(theta[(j+1)] | 0, tau1[j]); // target += normal_lpdf(theta[(j+1)] | 0, sqrt(1/tau1[j])) // target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1)
         target += gamma_lpdf(tau2[j] | atau, lambda2o^2*0.5);
         target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * (1/tau2[j]));
     }
@@ -292,6 +292,7 @@ theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summar
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
 lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
 gsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
+origin.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
 alpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
 yrep <- summary(fit1, par=c("yrep"), probs = c(0.05,0.5, 0.95))$summary
 f.samples <- summary(fit1, par=c("f"), probs = c(0.05,0.5, 0.95))$summary
@@ -340,7 +341,11 @@ data.scenario <- data.frame("x" = xholder[,1],
                             "post.mean" = (alpha.samples[,1]),
                             "post.median" = (alpha.samples[,5]),
                             "q1" = (alpha.samples[,4]),
-                            "q3" = (alpha.samples[,6]))
+                            "q3" = (alpha.samples[,6]),
+                            "post.mean.org" = (origin.samples[,1]),
+                            "post.median.org" = (origin.samples[,5]),
+                            "q1.org" = (origin.samples[,4]),
+                            "q3.org" = (origin.samples[,6]))
 
 ggplot(data.scenario, aes(x=x)) + 
   ylab(expression(alpha(c,...,c))) + xlab(expression(c)) + labs(col = "") +
@@ -401,7 +406,7 @@ ggplot(data = ) +
               ylim = c(-3, 3))
 
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_qqplot.pdf"), width=10, height = 7.78)
-# save(data.smooth, data.scenario, qqplot.df, file="./BLAST/application/blast.Rdata")
+save(data.smooth, data.scenario, qqplot.df, file="./BLAST/application/blast_laplace.Rdata")
 
 rp <-c()
 for(i in 1:n){
@@ -553,7 +558,7 @@ print(plt + geom_area(data = subset(d, x>12.44009), aes(x=x,y=y), fill = "slateg
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_BLAST_generative.pdf"), width = 10, height = 7.78)
 
 library(ismev)
-gpd.fit(y, u)
+gpd.fit(y-u, u)
 
 fit.log.lik <- extract_log_lik(fit1)
 constraint.elpd.loo <- loo(fit.log.lik, is_method = "sis", cores = 2)
