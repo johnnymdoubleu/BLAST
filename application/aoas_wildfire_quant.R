@@ -71,9 +71,128 @@ fwi.origin <- fwi.scaled
 fwi.origin <- data.frame(fwi.origin, BA=Y)
 # BA.shifted <- ifelse(fwi.origin$BA == 0, 1e-5, fwi.origin$BA)
 # fwi.origin$log.BA <- log(fwi.origin$BA+1)
-# quant.fit <- quantreg::rq(log.BA ~ DSR + FWI + BUI + ISI + FFMC + DMC + DC, 
+vars <- colnames(fwi.origin)[1:7]
+seq_list <- lapply(vars, function(var) seq(min(fwi.origin[[var]]), max(fwi.origin[[var]]), length.out = length(Y)))
+grid.df <- as.data.frame(setNames(seq_list, vars))
+
+
+quant.fit <- quantreg::rq(BA ~ DSR + FWI + BUI + ISI + FFMC + DMC + DC, 
                           tau=c(0.975), data = fwi.origin)
+
+
 # qu <- exp(predict(quant.fit))-1
+summary(quant.fit)
+residuals_qr <- residuals(quant.fit)
+fitted_vals <- fitted(quant.fit)
+
+par(mfrow=c(1,2))
+
+# Residuals vs. Fitted
+plot(fitted_vals, residuals_qr, main="Residuals vs Fitted", 
+			xlab="Fitted values", ylab="Residuals")
+abline(h=0, col="red", lty=2)
+qqnorm(residuals_qr, main = "Q-Q plot of residuals")
+qqline(residuals_qr, col="red", lty=2)
+par(mfrow=c(1,1))
+predictions <- predict(quant.fit, newdata = fwi.origin)
+pred.grid <- predict(quant.fit, newdata = grid.df)
+coverage <- mean(fwi.origin$BA <= predictions)
+cat("Target coverage level:", 0.975, "\n")
+cat("Empirical coverage:", coverage, "\n")
+
+
+# For multiple quantiles
+taus <- c(0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.975, 0.98, 0.99)
+fits <- quantreg::rq(BA ~ DSR + FWI + BUI + ISI + FFMC + DMC + DC,
+                        tau = taus, data = fwi.origin)
+plot(summary(fits), parm=2:8)
+
+colors <- rainbow(length(taus))
+par(mfrow = c(3,3))
+main_vars <- colnames(fwi.origin)[1:7]
+for (j in 1:7) {
+  plot(fwi.origin[,j], fwi.origin$BA,
+       main = paste(main_vars[j]), xlab="",ylab="")
+  
+  # Add quantile lines
+  for (i in seq_along(taus)) {
+    fit_tau <- quantreg::rq(BA ~ DSR + FWI + BUI + ISI + FFMC + DMC + DC,
+                  tau = c(taus)[i], data = fwi.origin)
+    pred_tau <- predict(fit_tau, newdata = grid.df)
+    lines(grid.df[,j], pred_tau, col = colors[i], lwd = 1)
+  }
+}
+
+par(mfrow = c(3, 3))
+# taus <- seq(0.9, 1, 0.01)[-c(1, 11)]
+taus <- c(0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.975, 0.98, 0.99)
+for (i in seq_along(taus)) {
+    tau_i <- taus[i]
+
+    fit_tau <- quantreg::rq(BA ~ DSR + FWI + BUI + ISI + FFMC + DMC + DC,
+                    tau = tau_i, data = fwi.origin)
+    pred_tau <- predict(fit_tau, newdata = fwi.origin)
+
+    # Bin predictions
+    nbins <- 100
+    bins <- cut(pred_tau, 
+                breaks = quantile(pred_tau, probs = seq(0, 1, by = 1/nbins)),
+                include.lowest = TRUE)
+
+    # Calculate empirical coverage per bin
+    coverage_by_bin <- tapply((fwi.origin$BA <= pred_tau), bins, mean)
+    mean_pred_bin <- tapply(pred_tau, bins, mean)
+
+    # Plot calibration curve
+    plot(mean_pred_bin, coverage_by_bin, 
+            main = paste("tau =", tau_i),
+            xlab = "Mean Predicted Quantile in Bin",
+            ylab = "Empirical Coverage",
+            ylim = c(0, 1),
+            xlim = c(min(pred_tau), max(pred_tau)))
+
+    # Perfect calibration line
+    abline(0, 1, lty = 2, col = "red", lwd = 2)
+    # Target line
+    abline(h = tau_i, lty = 3, col = "black", lwd = 1)
+}
+
+
+
+results <- data.frame(
+    tau = numeric(),
+    target_coverage = numeric(),
+    empirical_coverage = numeric(),
+    coverage_error = numeric(),
+    n_u = numeric()
+)
+
+for (i in seq_along(taus)) {
+    tau_i <- taus[i]
+
+    # Fit model at this quantile
+    fit_tau <- quantreg::rq(BA ~ DSR + FWI + BUI + ISI + FFMC + DMC + DC,
+                    tau = tau_i, data = fwi.origin)
+
+    # Get predictions
+    pred_tau <- predict(fit_tau, newdata = fwi.origin)
+    hist(pred_tau, main = paste("tau =", tau_i))
+    # Calculate empirical coverage: proportion of actual values <= predicted
+    empirical_cov <- mean(fwi.origin$BA <= pred_tau, na.rm = TRUE)
+
+    # How many observations fall below predicted quantile
+    n_below <- sum(fwi.origin$BA <= pred_tau, na.rm = TRUE)
+
+    results <- rbind(results, data.frame(
+        tau = tau_i,
+        target_coverage = tau_i,
+        empirical_coverage = empirical_cov,
+        coverage_error = abs(empirical_cov - tau_i),
+        n_u = length(Y) - n_below
+    ))
+}
+results
+par(mfrow = c(1, 1))
 
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 fwi.scaled <- as.data.frame(sapply(fwi.scaled[which(Y>qu),], FUN = range01))
@@ -321,4 +440,4 @@ for(i in 1:p){
 
 grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
 
-# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_DC.pdf"), grid.plts[[7]], width=10, height = 7.78)
+    # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_DC.pdf"), grid.plts[[7]], width=10, height = 7.78)
