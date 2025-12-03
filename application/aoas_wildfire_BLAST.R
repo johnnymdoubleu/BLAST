@@ -33,7 +33,7 @@ missing.values <- which(!is.na(df.long$measurement))
 Y <- df.long$measurement[!is.na(df.long$measurement)]
 psi <- 30
 threshold <- 0.975
-u <- quantile(Y, threshold)
+u <- quantile(Y[Y>1], threshold)
 y <- Y[Y>u]
 
 multiplesheets <- function(fname) {
@@ -567,3 +567,25 @@ constraint.elpd.loo <- loo(fit.log.lik, is_method = "sis", cores = 2)
 
 
 
+library(qrmtools)
+library(Dowd)
+library(ReIns)
+hill_qrm <- Hill_estimator(Y, k = c(10, 1000))
+Hill_plot(Y, k = c(10, 1000), conf.level = 0.95)
+
+tail_size <- length(Y) / 4 - 5 # The tail.size must be < n/4
+pickands_result <- PickandsEstimator(Y, tail.size = tail_size)
+print(paste("Pickands Estimator:", pickands_result))
+moment_result <- Moment(Y[Y>0], plot = TRUE)
+moment_k <- moment_result$k
+moment_gamma <- moment_result$gamma
+stable_estimate <- median(moment_result$gamma[moment_result$k > 50])
+print(paste("DEdH Tail Index Estimate:", stable_estimate))
+
+H <- Hill(Y[Y>0], plot=FALSE)
+M <- Moment(Y[Y>0])
+gH <- genHill(Y[Y>0], gamma=H$gamma)
+# Plot estimates
+plot(H$k[5:500], M$gamma[5:5000], xlab="k", ylab=expression(gamma), type="l")
+lines(H$k[5:5000], gH$gamma[5:500], lty=2)
+legend("topright", c("Moment", "Generalised Hill"), lty=1:2)

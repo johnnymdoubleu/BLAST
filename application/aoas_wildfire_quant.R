@@ -10,6 +10,9 @@ library(qqboxplot)
 library(ggdensity)
 library(ggforce)
 library(ggdist)
+library(splines)
+library(quantreg)
+library(qgam)
 options(mc.cores = parallel::detectCores())
 
 # Structure of the FWI System
@@ -68,7 +71,7 @@ fwi.index$date <- as.numeric(fwi.index$date)
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 fwi.origin <- fwi.scaled
 
-fwi.origin <- data.frame(fwi.origin, BA=Y)
+fwi.origin <- data.frame(fwi.origin, BA=Y, log.BA = log(Y+1))
 # BA.shifted <- ifelse(fwi.origin$BA == 0, 1e-5, fwi.origin$BA)
 # fwi.origin$log.BA <- log(fwi.origin$BA+1)
 vars <- colnames(fwi.origin)[1:7]
@@ -77,11 +80,9 @@ grid.df <- as.data.frame(setNames(seq_list, vars))
 
 
 # 1. Get predictions at tau = 0.5 and tau = 0.95
-fit.50 <- quantreg::rq(BA ~ DSR + FWI + BUI + ISI + FFMC + DMC + DC,
-             tau = 0.5, data = fwi.origin)
+fit.50 <- quantreg::rq(BA ~ bs(DSR) + bs(FWI) + bs(BUI) + bs(ISI) + bs(FFMC) + bs(DMC) + bs(DC), tau = 0.5, data = fwi.origin)
 
-fit.95 <- quantreg::rq(BA ~ DSR + FWI + BUI + ISI + FFMC + DMC + DC,
-             tau = 0.95, data = fwi.origin)
+fit.95 <- quantreg::rq(BA ~ bs(DSR) + bs(FWI) + bs(BUI) + bs(ISI) + bs(FFMC) + bs(DMC) + bs(DC), tau = 0.95, data = fwi.origin)
 
 # Get predictions (these are F^{-1}(tau | x_i))
 pred.50 <- predict(fit.50, newdata = fwi.origin)
@@ -95,22 +96,18 @@ par(mfrow = c(1, 2))
 plot(pred.50, fwi.origin$BA,
      main = "Predicted 50th Percentile vs Actual BA",
      xlab = expression(hat(F)^(-1)),
-     ylab = expression(y[i]),
-     xlim = c(min_val_50, max_val_50),  # Equal x and y range
-     ylim = c(min_val_50, max_val_50))
+     ylab = expression(y[i]))
+    #  xlim = c(min_val_50, max_val_50),  # Equal x and y range
+    #  ylim = c(min_val_50, max_val_50))
 abline(0, 1, col = "red", lty = 2, lwd = 2)
 plot(pred.95, fwi.origin$BA,
      main = "Predicted 95th Percentile vs Actual BA",
      xlab = expression(hat(F)^(-1)),
-     ylab = expression(y),
-     xlim = c(min_val_95, max_val_95),  # Equal x and y range
-     ylim = c(min_val_95, max_val_95))
+     ylab = expression(y))
+    #  xlim = c(min_val_95, max_val_95),  # Equal x and y range
+    #  ylim = c(min_val_95, max_val_95))
 abline(0, 1, col = "red", lty = 2, lwd = 2)
 par(mfrow = c(1, 1))
-
-
-quant.fit <- quantreg::rq(BA ~ DSR + FWI + BUI + ISI + FFMC + DMC + DC, 
-                          tau=c(0.975), data = fwi.origin)
 
 
 # qu <- exp(predict(quant.fit))-1
@@ -136,9 +133,8 @@ cat("Empirical coverage:", coverage, "\n")
 
 # For multiple quantiles
 taus <- c(0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.975, 0.98, 0.99)
-fits <- quantreg::rq(BA ~ DSR + FWI + BUI + ISI + FFMC + DMC + DC,
-                        tau = taus, data = fwi.origin)
-plot(summary(fits), parm=2:8)
+fits <- quantreg::rq(BA ~ bs(DSR) + bs(FWI) + bs(BUI) + bs(ISI) + bs(FFMC) + bs(DMC) + bs(DC), tau = taus, data = fwi.origin)
+plot(summary(fits))
 
 colors <- rainbow(length(taus))
 par(mfrow = c(3,3))
@@ -149,8 +145,7 @@ for (j in 1:7) {
   
   # Add quantile lines
   for (i in seq_along(taus)) {
-    fit_tau <- quantreg::rq(BA ~ DSR + FWI + BUI + ISI + FFMC + DMC + DC,
-                  tau = c(taus)[i], data = fwi.origin)
+    fit_tau <- quantreg::rq(BA ~ bs(DSR) + bs(FWI) + bs(BUI) + bs(ISI) + bs(FFMC) + bs(DMC) + bs(DC), tau = c(taus)[i], data = fwi.origin)
     pred_tau <- predict(fit_tau, newdata = grid.df)
     lines(grid.df[,j], pred_tau, col = colors[i], lwd = 1)
   }
@@ -162,8 +157,7 @@ taus <- c(0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.975, 0.98, 0.99)
 for (i in seq_along(taus)) {
     tau_i <- taus[i]
 
-    fit_tau <- quantreg::rq(BA ~ DSR + FWI + BUI + ISI + FFMC + DMC + DC,
-                    tau = tau_i, data = fwi.origin)
+    fit_tau <- quantreg::rq(BA ~ bs(DSR) + bs(FWI) + bs(BUI) + bs(ISI) + bs(FFMC) + bs(DMC) + bs(DC), tau = tau_i, data = fwi.origin)
     pred_tau <- predict(fit_tau, newdata = fwi.origin)
 
     # Bin predictions
@@ -204,8 +198,7 @@ for (i in seq_along(taus)) {
     tau_i <- taus[i]
 
     # Fit model at this quantile
-    fit_tau <- quantreg::rq(BA ~ DSR + FWI + BUI + ISI + FFMC + DMC + DC,
-                    tau = tau_i, data = fwi.origin)
+    fit_tau <- quantreg::rq(BA ~ bs(DSR) + bs(FWI) + bs(BUI) + bs(ISI) + bs(FFMC) + bs(DMC) + bs(DC), tau = tau_i, data = fwi.origin)
 
     # Get predictions
     pred_tau <- predict(fit_tau, newdata = fwi.origin)
@@ -228,17 +221,16 @@ results
 par(mfrow = c(1, 1))
 
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
-fwi.scaled <- as.data.frame(sapply(fwi.scaled[which(Y>qu),], FUN = range01))
+quant.fit <- qgam(BA ~ s(DSR) + s(FWI) + s(BUI) + s(ISI) + s(FFMC) + s(DMC) + s(DC), qu=0.975, data = fwi.origin)
+quant.u <- predict(quant.fit, newdata = fwi.origin)
+y <- Y[Y>quant.u]
+u <- quant.u[which(Y>quant.u)]
+fwi.scaled <- as.data.frame(sapply(fwi.scaled[which(Y>quant.u),], FUN = range01))
 n <- dim(fwi.scaled)[[1]]
 p <- dim(fwi.scaled)[[2]]
-
+# save(quant.fit, quant.u, fwi.scaled, y, n,p, u, file="./BLAST/application/wildfire_quant.Rdata")
 # save(fwi.scaled, fwi.origin, qu, y, Y, u, n, p, psi, file = "./BLAST/application/wildfire_prep.Rdata")
-
-# qu975 <- qu[which(Y>u)]
-# qu975[which(qu975<u)] <- u
-# load("./BLAST/application/qrresult.Rdata")
-# qu <- predict(quantile.mod)
-# qu975 <- qu[which(Y>u),1]
+load("./BLAST/application/wildfire_quant.Rdata")
 
 no.theta <- 1 #represents the no. of linear predictors for each smooth functions
 newx <- seq(0, 1, length.out=n)
@@ -384,7 +376,7 @@ fit1 <- stan(
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
     chains = 3,             # number of Markov chains
-    iter = 10000,            # total number of iterations per chain
+    iter = 40000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
     refresh = 2500           # no progress shown
 )
@@ -395,6 +387,7 @@ theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summar
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
 lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
 gsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
+origin.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary 
 alpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
 # intcpt.samples <- summary(fit1, par=c("intcpt"), probs = c(0.05, 0.5, 0.95))
 
@@ -407,7 +400,11 @@ alpha.smooth <- data.frame("x" = xholder[,1],
                             "post.mean" = (alpha.samples[,1]),
                             "post.median" = (alpha.samples[,5]),
                             "q1" = (alpha.samples[,4]),
-                            "q3" = (alpha.samples[,6]))
+                            "q3" = (alpha.samples[,6]),
+                            "origin.post.mean" = (origin.samples[,1]),
+                            "origin.post.median" = (origin.samples[,5]),
+                            "origin.q1" = (origin.samples[,4]),
+                            "origin.q3" = (origin.samples[,6]))
 
 ggplot(alpha.smooth, aes(x=x)) + 
   ylab(expression(alpha(c,ldots,c))) + xlab(expression(c)) + labs(col = "") +
@@ -462,7 +459,7 @@ for(i in 1:p){
                   ylab("") + xlab(names(fwi.scaled)[i]) +
                   scale_fill_manual(values=c("steelblue"), name = "") + 
                   scale_color_manual(values=c("steelblue")) +
-                  ylim(-2.2, 2.2) + #max(data.smooth$q3[((((i-1)*n)+1):(i*n))])) +
+                  ylim(-1.2, 1.5) + #max(data.smooth$q3[((((i-1)*n)+1):(i*n))])) +
                   theme_minimal(base_size = 30) +
                   theme(legend.position = "none",
                           plot.margin = margin(0,0,0,-20),
