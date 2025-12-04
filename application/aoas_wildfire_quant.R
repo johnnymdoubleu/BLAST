@@ -232,6 +232,9 @@ p <- dim(fwi.scaled)[[2]]
 # save(fwi.scaled, fwi.origin, qu, y, Y, u, n, p, psi, file = "./BLAST/application/wildfire_prep.Rdata")
 load("./BLAST/application/wildfire_quant.Rdata")
 
+# m.gam <- mqgam(BA ~ s(DSR) + s(FWI) + s(BUI) + s(ISI) + s(FFMC) + s(DMC) + s(DC), data = fwi.origin, qu = taus)
+# save(m.gam, file ="./BLAST/application/wildfire_mgam.Rdata")
+load("./BLAST/application/wildfire_mgam.Rdata")
 no.theta <- 1 #represents the no. of linear predictors for each smooth functions
 newx <- seq(0, 1, length.out=n)
 xholder.linear <- xholder.nonlinear <- bs.linear <- bs.nonlinear <- matrix(,nrow=n, ncol=0)
@@ -376,7 +379,7 @@ fit1 <- stan(
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
     chains = 3,             # number of Markov chains
-    iter = 40000,            # total number of iterations per chain
+    iter = 20000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
     refresh = 2500           # no progress shown
 )

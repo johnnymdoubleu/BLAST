@@ -279,7 +279,7 @@ fit1 <- stan(
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
     chains = 3,             # number of Markov chains
-    iter = 40000,            # total number of iterations per chain
+    iter = 20000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
     refresh = 2000           # no progress shown
 )
@@ -406,7 +406,7 @@ ggplot(data = ) +
               ylim = c(-3, 3))
 
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_qqplot.pdf"), width=10, height = 7.78)
-save(data.smooth, data.scenario, qqplot.df, file="./BLAST/application/blast_laplace.Rdata")
+# save(data.smooth, data.scenario, qqplot.df, file="./BLAST/application/blast_laplace.Rdata")
 
 rp <-c()
 for(i in 1:n){
@@ -449,7 +449,7 @@ for(i in 1:p){
                   ylab("") + xlab(names(fwi.scaled)[i]) +
                   scale_fill_manual(values=c("steelblue"), name = "") + 
                   scale_color_manual(values=c("steelblue")) +
-                  ylim(-4.1, 4.1) +
+                  ylim(-2.5, 2.5) +
                   theme_minimal(base_size = 30) +
                   theme(legend.position = "none",
                           plot.margin = margin(0,0,0,-20),
@@ -570,11 +570,12 @@ constraint.elpd.loo <- loo(fit.log.lik, is_method = "sis", cores = 2)
 library(qrmtools)
 library(Dowd)
 library(ReIns)
-hill_qrm <- Hill_estimator(Y, k = c(10, 1000))
-Hill_plot(Y, k = c(10, 1000), conf.level = 0.95)
+hill_qrm <- Hill_estimator(Y, k = c(5, 1000))
+Hill_plot(Y, k = c(5, 1000), conf.level = 0.95)
 
 tail_size <- length(Y) / 4 - 5 # The tail.size must be < n/4
 pickands_result <- PickandsEstimator(Y, tail.size = tail_size)
+PickandsPlot(pickands_result)
 print(paste("Pickands Estimator:", pickands_result))
 moment_result <- Moment(Y[Y>0], plot = TRUE)
 moment_k <- moment_result$k
@@ -586,6 +587,8 @@ H <- Hill(Y[Y>0], plot=FALSE)
 M <- Moment(Y[Y>0])
 gH <- genHill(Y[Y>0], gamma=H$gamma)
 # Plot estimates
-plot(H$k[5:500], M$gamma[5:5000], xlab="k", ylab=expression(gamma), type="l")
-lines(H$k[5:5000], gH$gamma[5:500], lty=2)
-legend("topright", c("Moment", "Generalised Hill"), lty=1:2)
+plot(H$k[5:500], M$gamma[5:500], xlab="k", ylab=expression(gamma), type="l")
+lines(H$k[5:500], gH$gamma[5:500], lty=2)
+legend("bottomright", c("Moment", "Generalised Hill"), lty=1:2)
+
+ParetoTest()
