@@ -235,15 +235,12 @@ load("./BLAST/application/wildfire_quant.Rdata")
 
 # m.gam <- mqgam(BA ~ s(DSR) + s(FWI) + s(BUI) + s(ISI) + s(FFMC) + s(DMC) + s(DC), data = fwi.origin, qu = taus)
 m.gam <- mqgamV(BA ~ s(DSR) + s(FWI) + s(BUI) + s(ISI) + s(FFMC) + s(DMC) + s(DC), data = fwi.origin, qu = taus)
-# save(m.gam, file ="./BLAST/application/wildfire_mgam.Rdata")
+# save(m.gam, file ="./BLAST/application/wildfire_mgam2.Rdata")
 # load("./BLAST/application/wildfire_mgam.Rdata")
 
-plot(grid.df$DSR, fwi.origin$BA, col = "grey", )
-for(iq in taus){ 
-#  lines(x, qnorm(iq, f, sigma), col = 2)
- lines(grid.df$DSR, qdo(m.gam, iq, predict))
-}
-plot(m.gam$fit)
+print(plot(m.gam, allTerms = TRUE), pages = 1)
+summary(m.gam[[7]])
+
 no.theta <- 1 #represents the no. of linear predictors for each smooth functions
 newx <- seq(0, 1, length.out=n)
 xholder.linear <- xholder.nonlinear <- bs.linear <- bs.nonlinear <- matrix(,nrow=n, ncol=0)

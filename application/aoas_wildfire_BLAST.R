@@ -34,6 +34,7 @@ Y <- df.long$measurement[!is.na(df.long$measurement)]
 psi <- 30
 threshold <- 0.975
 u <- quantile(Y[Y>1], threshold)
+# u <- quantile(Y, threshold)
 y <- Y[Y>u]
 
 multiplesheets <- function(fname) {
@@ -222,8 +223,8 @@ model {
     target += gamma_lpdf(lambda2o | 1, 1e-3);
     target += (2*p*log(lambda2o));
     for (j in 1:p){
-        target += exponential_lpdf(tau1[j] | 0.5 * lambda1^2); // target += gamma_lpdf(tau1[j] | 1, lambda1^2*0.5)
-        target += normal_lpdf(theta[(j+1)] | 0, tau1[j]); // target += normal_lpdf(theta[(j+1)] | 0, sqrt(1/tau1[j])) // target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1)
+        target += gamma_lpdf(tau1[j] | 1, lambda1^2*0.5); // target += exponential_lpdf(tau1[j] | 0.5 * lambda1^2)
+        target += normal_lpdf(theta[(j+1)] | 0, sqrt(1/tau1[j])); // target += normal_lpdf(theta[(j+1)] | 0, tau1[j]) target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1)
         target += gamma_lpdf(tau2[j] | atau, lambda2o^2*0.5);
         target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * (1/tau2[j]));
     }
