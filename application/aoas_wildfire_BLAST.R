@@ -297,7 +297,7 @@ origin.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summa
 alpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
 yrep <- summary(fit1, par=c("yrep"), probs = c(0.05,0.5, 0.95))$summary
 f.samples <- summary(fit1, par=c("f"), probs = c(0.05,0.5, 0.95))$summary
-
+loglik.samples <- summary(fit1, par=c("log_lik"), probs = c(0.05,0.5, 0.95))$summary
 g.smooth.mean <- as.vector(matrix(gsmooth.samples[,1], nrow = n, byrow=TRUE))
 g.smooth.q1 <- as.vector(matrix(gsmooth.samples[,4], nrow = n, byrow=TRUE))
 g.smooth.q2 <- as.vector(matrix(gsmooth.samples[,5], nrow = n, byrow=TRUE))
@@ -591,5 +591,3 @@ gH <- genHill(Y[Y>0], gamma=H$gamma)
 plot(H$k[5:500], M$gamma[5:500], xlab="k", ylab=expression(gamma), type="l")
 lines(H$k[5:500], gH$gamma[5:500], lty=2)
 legend("bottomright", c("Moment", "Generalised Hill"), lty=1:2)
-
-ParetoTest()
