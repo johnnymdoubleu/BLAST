@@ -14,13 +14,14 @@ library(VGAM)
 #FFMC : Fine FUel Moisture Code
 #DMC : Duff Moisture Code
 #DC : Drought Code
-
+evgam.fit.1$plotdata
 
 setwd("C:/Users/Johnny Lee/Documents/GitHub")
 # setwd("A:/GitHub")
 load("./BLAST/application/wildfire_prep.Rdata") #loading covariate-dependent thresholds
 psi <- 30
-u <- quantile(Y, 0.975)
+u <- quantile(Y[Y>1], 0.975)
+# u <- quantile(Y, 0.975)
 y <- Y[which(Y>u)]
 fwi.scaled <- fwi.origin[which(Y>u),c(1:7)]
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
@@ -76,32 +77,37 @@ fitted.response <- predict(vgam.fit.1, newdata = data.frame(xholder), type = "re
 # summary(vgam.fit)
 vgam.xi.1 <- exp(fitted.linear[,2])#exp(rowSums(fitted.terms[,c(2, 4, 6, 8, 10)]))
 
-# xi.smooth <- data.frame("x"= as.vector(xholder.mat),
-#                           # "fit" = smooth.func,
-#                           "true" = as.vector(as.matrix(fwi.scaled)),
-#                           "vgam.1" = as.vector(xi.nonlinear.1),
-#                           "vgam.scale" = as.vector(xi.nonlinear.scale),
-#                           "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)),
-#                           "replicate" = gl(p, n, (p*n), labels = names(fwi.scaled)))
+grid.val.1 <- plotvgam(vgam.fit.1, se = TRUE, plot.arg=FALSE)@preplot
+grid.val.scale <- plotvgam(vgam.fit.scale, se = TRUE, plot.arg=FALSE)@preplot
+vgam.smooth.1 <- do.call(cbind, lapply(grid.val.1[1:p], function(g) g$x))
+vgam.smooth.scale <- do.call(cbind, lapply(grid.val.scale[1:p], function(g) g$x))
 
-# grid.plts <- list()
-# for(i in 1:p){
-#   grid.plt <- ggplot(data = data.frame(xi.smooth[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + 
-#                   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-#                   geom_line(aes(y=evgam.1), colour = "purple", linewidth=1) + 
-#                   geom_line(aes(y=evgam.scale), colour = "orange", linewidth=1) + 
-#                   ylab("") + xlab(names(fwi.scaled)[i]) +
-#                   geom_rug(aes(x=true, y=evgam.1), sides = "b") + 
-#                   # scale_color_manual(values=c("purple")) +
-#                   ylim(min(xi.smooth$evgam.1[((((i-1)*n)+1):(i*n))])-0.5, max(xi.smooth$evgam.1[((((i-1)*n)+1):(i*n))]) + 0.5) +
-#                   theme_minimal(base_size = 30) +
-#                   theme(legend.position = "none",
-#                           plot.margin = margin(0,0,0,-20),
-#                           axis.text = element_text(size = 35),
-#                           axis.title.x = element_text(size = 45))
-#   grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=min(xi.smooth$evgam.1[((((i-1)*n)+1):(i*n))]-0.5), color = "red", size = 7)
-# }
-# grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
+xi.smooth <- data.frame("x"= as.vector(xholder.mat),
+                          # "fit" = smooth.func,
+                          "true" = as.vector(as.matrix(fwi.scaled)),
+                          "vgam.1" = as.vector(vgam.smooth.1),
+                          "vgam.scale" = as.vector(vgam.smooth.scale),
+                          "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)),
+                          "replicate" = gl(p, n, (p*n), labels = names(fwi.scaled)))
+
+grid.plts <- list()
+for(i in 1:p){
+  grid.plt <- ggplot(data = data.frame(xi.smooth[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + 
+                  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+                  geom_line(aes(y=vgam.1), colour = "purple", linewidth=1) + 
+                  geom_line(aes(y=vgam.scale), colour = "orange", linewidth=1) + 
+                  ylab("") + xlab(names(fwi.scaled)[i]) +
+                  geom_rug(aes(x=true, y=vgam.1), sides = "b") + 
+                  # scale_color_manual(values=c("purple")) +
+                  ylim(min(xi.smooth$evgam.1[((((i-1)*n)+1):(i*n))])-0.5, max(xi.smooth$evgam.1[((((i-1)*n)+1):(i*n))]) + 0.5) +
+                  theme_minimal(base_size = 30) +
+                  theme(legend.position = "none",
+                          plot.margin = margin(0,0,0,-20),
+                          axis.text = element_text(size = 35),
+                          axis.title.x = element_text(size = 45))
+  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=min(xi.smooth$evgam.1[((((i-1)*n)+1):(i*n))]-0.5), color = "red", size = 7)
+}
+grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
 
 
 
@@ -166,11 +172,12 @@ alpha.scenario <- data.frame("x" = xholder[,1],
                             # "q3" = (alpha.samples[,6]))
 
 ggplot(alpha.scenario, aes(x=x)) + 
-  ylab(expression(alpha(c,...,c))) + xlab(expression(c)) + labs(col = "") + ylim(0,3)+
+  ylab(expression(alpha(c,...,c))) + xlab(expression(c)) + labs(col = "") + 
+#   ylim(0,5)+
   # geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
   # geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
   geom_line(aes(y=vgam.1), linewidth=1, color = "orange") +
-  geom_line(aes(y=vgam.scale), linewidth=1, color = "purple") +
+#   geom_line(aes(y=vgam.scale), linewidth=1, color = "purple") +
   # scale_fill_manual(values=c("steelblue"), name = "") +
   # scale_color_manual(values = c("steelblue")) + ylim(0, 15) +
   guides(color = guide_legend(order = 2), 

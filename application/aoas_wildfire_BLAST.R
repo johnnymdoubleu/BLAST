@@ -22,6 +22,7 @@ options(mc.cores = parallel::detectCores())
 #DC : Drought Code
 
 
+
 setwd("C:/Users/Johnny Lee/Documents/GitHub")
 df <- read_excel("./BLAST/application/AADiarioAnual.xlsx", col_types = c("date", rep("numeric",40)))
 df.long <- gather(df, condition, measurement, "1980":"2019", factor_key=TRUE)
@@ -33,8 +34,8 @@ missing.values <- which(!is.na(df.long$measurement))
 Y <- df.long$measurement[!is.na(df.long$measurement)]
 psi <- 30
 threshold <- 0.975
-u <- quantile(Y[Y>1], threshold)
-# u <- quantile(Y, threshold)
+# u <- quantile(Y[Y>1], threshold)
+u <- quantile(Y, threshold)
 y <- Y[Y>u]
 
 multiplesheets <- function(fname) {
@@ -209,14 +210,14 @@ transformed parameters {
     };
 
     for (i in 1:n){
-        alpha[i] = exp(theta[1] + sum(gsmooth[i,]));
+        alpha[i] = 1/exp(theta[1] + sum(gsmooth[i,]));
     };    
 }
 
 model {
     // likelihood
     for (i in 1:n){
-        target += pareto_lpdf(y[i] | u, alpha[i]);
+        target += pareto_lpdf(y[i] | u, 1/alpha[i]);
     }
     target += normal_lpdf(theta[1] | 0, 100);
     target += gamma_lpdf(lambda1 | 1, 1e-3);
@@ -237,19 +238,19 @@ generated quantities {
     vector[n] f;
     matrix[n, p] newgsmooth; // linear component
 
-    yrep = pareto_rng(u, alpha[1]); 
+    yrep = pareto_rng(u, 1/alpha[1]); 
 
     for (j in 1:p){
         newgsmooth[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j] + xholderLinear[,j] * theta[j+1];
     };    
 
     for (i in 1:n){ 
-        newalpha[i] = exp(theta[1] + sum(newgsmooth[i,]));
+        newalpha[i] = 1/exp(theta[1] + sum(newgsmooth[i,]));
     };    
 
     for(i in 1:n){
-      f[i] = pareto_rng(u, alpha[i]);
-      log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
+      f[i] = pareto_rng(u, 1/alpha[i]);
+      log_lik[i] = pareto_lpdf(y[i] | u, 1/alpha[i]);
     }
 }
 "
@@ -278,9 +279,9 @@ fit1 <- stan(
     model_code = model.stan,
     model_name = "BLAST",
     data = data.stan,    # named list of data
-    init = init.alpha,      # initial value
+    init = init.alpha,      # initial value 
     chains = 3,             # number of Markov chains
-    iter = 20000,            # total number of iterations per chain
+    iter = 30000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
     refresh = 2000           # no progress shown
 )
@@ -407,7 +408,7 @@ ggplot(data = ) +
               ylim = c(-3, 3))
 
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_qqplot.pdf"), width=10, height = 7.78)
-# save(data.smooth, data.scenario, qqplot.df, file="./BLAST/application/blast_laplace.Rdata")
+# save(loglik.samples, data.smooth, data.scenario, qqplot.df, file="./BLAST/application/blast_1.Rdata")
 
 rp <-c()
 for(i in 1:n){
@@ -456,7 +457,7 @@ for(i in 1:p){
                           plot.margin = margin(0,0,0,-20),
                           axis.text = element_text(size = 35),
                           axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=-4.1, color = "red", size = 7)
+  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=-2.5, color = "red", size = 7)
 }
 
 grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
