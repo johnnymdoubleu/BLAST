@@ -153,7 +153,7 @@ alpha.nonlinear.scale <- evgam.smooth.scale <- matrix(, nrow = n, ncol = p)
 bs.nonlinear.scale <- xholder.basis.scale[,c(2:((psi-1)*p+1))]
 for(j in 1:p){
   evgam.smooth.scale[,j] <- bs.nonlinear.scale[,(((j-1)*(psi-1))+1):(((j-1)*(psi-1))+(psi-1))] %*% gamma.xi.scale[,j]
-  alpha.nonlinear.scale[,j] <- 1/(xi.nonlinear.scale[,j])
+  alpha.nonlinear.scale[,j] <- 1/(evgam.smooth.scale[,j])
 }
 ```
 
@@ -178,7 +178,7 @@ alpha.nonlinear.1 <- evgam.smooth.1 <- matrix(, nrow = n, ncol = p)
 bs.nonlinear.1 <- xholder.basis.1[,c(2:((psi-1)*p+1))]
 for(j in 1:p){
   evgam.smooth.1[,j] <- bs.nonlinear.1[,(((j-1)*(psi-1))+1):(((j-1)*(psi-1))+(psi-1))] %*% gamma.xi.1[,j]
-  alpha.nonlinear.1[,j] <- 1/(xi.nonlinear.1[,j])
+  alpha.nonlinear.1[,j] <- 1/(evgam.smooth.1[,j])
 }
 ```
 
@@ -323,8 +323,10 @@ vgam.se.1 <- sum(diag(vgam.vcov.1))
 vgam.det.1 <- det(vgam.hess.1)
 vgam.kappa.1 <- kappa(vgam.hess.1)
 
-evgam.vcov.1 <- vcov(evgam.fit.1)
+evgam.vcov.1 <- evgam.fit.1$Vp
 evgam.hess.1 <- solve(evgam.vcov.1)
 evgam.se.1 <- sqrt(diag(evgam.vcov.1))
-
+evgam.vcov.scale <- evgam.fit.scale$Vp
+evgam.hess.scale <- solve(evgam.vcov.scale)
+evgam.se.scale <- sqrt(diag(evgam.vcov.scale))
 ```
