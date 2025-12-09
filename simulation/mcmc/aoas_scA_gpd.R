@@ -293,7 +293,7 @@ for(iter in 1:total.iter){
   mise.vgam.1.container[iter] <- auc(newx, ((1/alp.new)-vgam.xi.1)^2)
   mise.vgam.scale.container[iter] <- auc(newx, ((1/alp.new)-vgam.xi.scale)^2)
   mise.evgam.1.container[iter] <- auc(newx, ((1/alp.new)-evgam.xi.1)^2)
-  mise.evgam.scale.container[iter] <- auc(newx, ((1/alp.new)-evgam.xi.scale)^2)  
+  mise.evgam.scale.container[iter] <- auc(newx, ((1/alp.new)-evgam.xi.scale)^2)
 }
 
 

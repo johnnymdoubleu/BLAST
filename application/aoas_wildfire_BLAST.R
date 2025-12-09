@@ -35,8 +35,6 @@ Y <- df.long$measurement[!is.na(df.long$measurement)]
 psi <- 30
 threshold <- 0.975
 # u <- quantile(Y[Y>1], threshold)
-u <- quantile(Y, threshold)
-y <- Y[Y>u]
 
 multiplesheets <- function(fname) {
     setwd("C:/Users/Johnny Lee/Documents/GitHub")
@@ -71,13 +69,18 @@ fwi.index$month <- factor(format(as.Date(substr(cov.long$...1[missing.values],1,
                             levels = c("Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"))
 fwi.index$date <- as.numeric(fwi.index$date)
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
-fwi.origin <- fwi.scaled <-fwi.scaled[which(Y>u),]
 
+fwi.index <- fwi.index[which(Y>1),]
+fwi.origin <- fwi.scaled <-fwi.scaled[which(Y>1),]
+Y <- Y[Y>1]
+u <- quantile(Y, threshold)
+y <- Y[Y>u]
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
-fwi.scaled <- as.data.frame(sapply(fwi.origin, FUN = range01))
+fwi.scaled <- as.data.frame(sapply(fwi.origin[which(Y>u), c(1:7)], FUN = range01))
 
 n <- dim(fwi.scaled)[[1]]
 p <- dim(fwi.scaled)[[2]]
+
 
 fwi.origin <- data.frame(fwi.index[which(Y>u),], BA=y)
 max.fwi <- fwi.origin[which.max(y),]
@@ -241,11 +244,11 @@ generated quantities {
     yrep = pareto_rng(u, 1/alpha[1]); 
 
     for (j in 1:p){
-        newgsmooth[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j] + xholderLinear[,j] * theta[j+1];
+      newgsmooth[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j] + xholderLinear[,j] * theta[j+1];
     };    
 
     for (i in 1:n){ 
-        newalpha[i] = 1/exp(theta[1] + sum(newgsmooth[i,]));
+      newalpha[i] = exp(theta[1] + sum(newgsmooth[i,]));
     };    
 
     for(i in 1:n){
@@ -281,7 +284,7 @@ fit1 <- stan(
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value 
     chains = 3,             # number of Markov chains
-    iter = 15000,            # total number of iterations per chain
+    iter = 30000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
     refresh = 2000           # no progress shown
 )
