@@ -219,7 +219,7 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, 1/alpha[i]);
     }
-    target += normal_lpdf(theta[1] | 0, 100);
+    target += normal_lpdf(theta[1] | 0, 10);
     target += gamma_lpdf(lambda1 | 1, 1e-3);
     target += gamma_lpdf(lambda2o | 1, 1e-3);
     target += (2*p*log(lambda2o));
@@ -281,7 +281,7 @@ fit1 <- stan(
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value 
     chains = 3,             # number of Markov chains
-    iter = 30000,            # total number of iterations per chain
+    iter = 15000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
     refresh = 2000           # no progress shown
 )
@@ -299,18 +299,16 @@ alpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$sum
 yrep <- summary(fit1, par=c("yrep"), probs = c(0.05,0.5, 0.95))$summary
 f.samples <- summary(fit1, par=c("f"), probs = c(0.05,0.5, 0.95))$summary
 loglik.samples <- summary(fit1, par=c("log_lik"), probs = c(0.05,0.5, 0.95))$summary
+
+MCMCvis::MCMCplot(fit1, params = 'theta')
+MCMCvis::MCMCsummary(fit1, params = "gamma")
+posterior::neff_tail(fit1, params = "gamma")
+
 g.smooth.mean <- as.vector(matrix(gsmooth.samples[,1], nrow = n, byrow=TRUE))
 g.smooth.q1 <- as.vector(matrix(gsmooth.samples[,4], nrow = n, byrow=TRUE))
 g.smooth.q2 <- as.vector(matrix(gsmooth.samples[,5], nrow = n, byrow=TRUE))
 g.smooth.q3 <- as.vector(matrix(gsmooth.samples[,6], nrow = n, byrow=TRUE))
 
-equal_breaks <- function(n = 3, s = 0.1,...){
-  function(x){
-    d <- s * diff(range(x)) / (1+2*s)
-    seq = seq(min(x)+d, max(x)-d, length=n)
-    round(seq, -floor(log10(abs(seq[2]-seq[1]))))
-  }
-}
 
 data.smooth <- data.frame("x"= as.vector(xholder),
                           "post.mean" = as.vector(g.smooth.mean),
@@ -340,14 +338,14 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=12.5, height = 15)
 
 data.scenario <- data.frame("x" = xholder[,1],
-                            "post.mean" = (alpha.samples[,1]),
-                            "post.median" = (alpha.samples[,5]),
-                            "q1" = (alpha.samples[,4]),
-                            "q3" = (alpha.samples[,6]),
-                            "post.mean.org" = (origin.samples[,1]),
-                            "post.median.org" = (origin.samples[,5]),
-                            "q1.org" = (origin.samples[,4]),
-                            "q3.org" = (origin.samples[,6]))
+                            "post.mean" = (1/alpha.samples[,1]),
+                            "post.median" = (1/alpha.samples[,5]),
+                            "q1" = (1/alpha.samples[,4]),
+                            "q3" = (1/alpha.samples[,6]),
+                            "post.mean.org" = (1/origin.samples[,1]),
+                            "post.median.org" = (1/origin.samples[,5]),
+                            "q1.org" = (1/origin.samples[,4]),
+                            "q3.org" = (1/origin.samples[,6]))
 
 ggplot(data.scenario, aes(x=x)) + 
   ylab(expression(alpha(c,...,c))) + xlab(expression(c)) + labs(col = "") +
@@ -451,16 +449,16 @@ for(i in 1:p){
                   ylab("") + xlab(names(fwi.scaled)[i]) +
                   scale_fill_manual(values=c("steelblue"), name = "") + 
                   scale_color_manual(values=c("steelblue")) +
-                  ylim(-2.5, 2.5) +
+                  ylim(-6, 5) +
                   theme_minimal(base_size = 30) +
                   theme(legend.position = "none",
                           plot.margin = margin(0,0,0,-20),
                           axis.text = element_text(size = 35),
                           axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=-2.5, color = "red", size = 7)
+  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=-6, color = "red", size = 7)
 }
 
-grid.arrange(grobs = grid.plts, ncol = 2, nrow = 4)
+grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
 
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_DC.pdf"), grid.plts[[7]], width=10, height = 7.78)
 
@@ -570,25 +568,26 @@ constraint.elpd.loo <- loo(fit.log.lik, is_method = "sis", cores = 2)
 
 
 library(qrmtools)
-library(Dowd)
+# library(Dowd)
 library(ReIns)
-hill_qrm <- Hill_estimator(Y, k = c(5, 1000))
-Hill_plot(Y, k = c(5, 1000), conf.level = 0.95)
+hill_qrm <- Hill_estimator(Y[Y>1], k = c(5, 1000))
+Hill_plot(Y[Y>1], k = c(5, 1000), conf.level = 0.95, log="")
 
 tail_size <- length(Y) / 4 - 5 # The tail.size must be < n/4
-pickands_result <- PickandsEstimator(Y, tail.size = tail_size)
-PickandsPlot(pickands_result)
-print(paste("Pickands Estimator:", pickands_result))
-moment_result <- Moment(Y[Y>0], plot = TRUE)
+# pickands_result <- PickandsEstimator(Y, tail.size = tail_size)
+# PickandsPlot(pickands_result)
+# print(paste("Pickands Estimator:", pickands_result))
+moment_result <- Moment(Y[Y>1], plot = TRUE)
 moment_k <- moment_result$k
 moment_gamma <- moment_result$gamma
 stable_estimate <- median(moment_result$gamma[moment_result$k > 50])
 print(paste("DEdH Tail Index Estimate:", stable_estimate))
 
-H <- Hill(Y[Y>0], plot=FALSE)
-M <- Moment(Y[Y>0])
-gH <- genHill(Y[Y>0], gamma=H$gamma)
+H <- Hill(Y[Y>1], plot=FALSE)
+M <- Moment(Y[Y>1])
+gH <- genHill(Y[Y>1], gamma=H$gamma)
 # Plot estimates
 plot(H$k[5:500], M$gamma[5:500], xlab="k", ylab=expression(gamma), type="l")
-lines(H$k[5:500], gH$gamma[5:500], lty=2)
+# lines(H$k[5:500], gH$gamma[5:500], lty=2)
+lines(H$k[5:500], gH$gamma[5:500], lty=3)
 legend("bottomright", c("Moment", "Generalised Hill"), lty=1:2)

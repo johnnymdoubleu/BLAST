@@ -55,12 +55,12 @@ colnames(xholder) <- colnames(fwi.scaled)
 ```
 
 ```{r, vgam.scale}
-vgam.fit.scale <- vgam(BA ~ s(DSR) + s(FWI) + s(BUI) + s(ISI) + s(FFMC) + s(DMC) + s(DC),
+vgam.fit.scale <- vgam(BA ~ sm.ps(DSR) + sm.ps(FWI) + sm.ps(BUI) + sm.ps(ISI) + sm.ps(FFMC) + sm.ps(DMC) + sm.ps(DC),
                         data = fwi.df,
                         family = gpd(threshold = u,
                                       lshape="loglink",
                                       zero = NULL),
-                        trace = TRUE,
+                        # trace = TRUE,
                         control = vgam.control(maxit = 200))
 par(mfrow = c(2, 4), mar=c(1.75,1.75,1.75,1.75))
 plot(vgam.fit.scale, se = TRUE, shade = TRUE, shcol = "steelblue")
@@ -75,12 +75,12 @@ vgam.smooth.scale <- do.call(cbind, lapply(grid.val.scale[1:p], function(g) g$y)
 ```
 
 ```{r, vgam.1}
-vgam.fit.1 <- vgam(BA ~ s(DSR) + s(FWI) + s(BUI) + s(ISI) + s(FFMC) + s(DMC) + s(DC),
+vgam.fit.1 <- vgam(BA ~ sm.ps(DSR) + sm.ps(FWI) + sm.ps(BUI) + sm.ps(ISI) + sm.ps(FFMC) + sm.ps(DMC) + sm.ps(DC),
                     data = fwi.df,
                     family = gpd(threshold = u, 
                                   lshape="loglink",
                                   zero = 1),
-                    trace = TRUE,
+                    # trace = TRUE,
                     control = vgam.control(maxit = 200))
 par(mfrow = c(2, 4), mar=c(1.75,1.75,1.75,1.75))
 plot(vgam.fit.1, se = TRUE, shade = TRUE, shcol = "steelblue")
@@ -282,8 +282,11 @@ ggplot(data = qqplot.df, aes(x=grid)) +
 ```{r}
 
 xi.smooth <- data.frame("x"= as.vector(as.matrix(xholder)),
-                          # "fit" = smooth.func,
                           "true" = as.vector(as.matrix(fwi.scaled)),
+                          "mean" = data.smooth$post.mean,
+                          "q1" = data.smooth$q1,
+                          "q2" = data.smooth$q2,
+                          "q3" = data.smooth$q3,
                           "vgam.1" = as.vector(vgam.smooth.1),
                           "vgam.scale" = as.vector(vgam.smooth.scale),
                           "evgam.1" = as.vector(evgam.smooth.1),
@@ -293,27 +296,53 @@ xi.smooth <- data.frame("x"= as.vector(as.matrix(xholder)),
 
 grid.plts <- list()
 for(i in 1:p){
-  grid.plt <- ggplot(data = data.frame(xi.smooth[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + ylim(-15, 17) +
+  grid.plt <- ggplot(data = data.frame(xi.smooth[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + ylim(-6, 5) +
                   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-                  geom_line(aes(y=vgam.1), colour = "orange", linewidth=1) + 
-                  geom_line(aes(y=vgam.scale), colour = "purple", linewidth=1) + 
-                  geom_line(aes(y=evgam.1), colour = "orange", linewidth=1, linetype=3) + 
-                  geom_line(aes(y=evgam.scale), colour = "purple", linewidth=1, linetype=3) + 
+                  geom_ribbon(aes(ymin = q1, ymax = q3), fill="steelblue", alpha = 0.2) +
+                  geom_line(aes(y=q2, color = "BLAST", linetype="BLAST"), linewidth=1) + 
+                  geom_line(aes(y=vgam.1, color = "VGAM (fixed scale)", linetype="VGAM (fixed scale)"), linewidth = 1) + 
+                  geom_line(aes(y=vgam.scale, color = "VGAM",  linetype="VGAM"), linewidth=1,) + 
+                  geom_line(aes(y=evgam.1, color = "EVGAM (fixed scale)", linetype="EVGAM (fixed scale)"), linewidth=1) + 
+                  geom_line(aes(y=evgam.scale, color = "EVGAM", linetype="EVGAM"), linewidth=1) + 
                   ylab("") + xlab(names(fwi.scaled)[i]) +
-                  geom_rug(aes(x=true, y=vgam.1), sides = "b") + 
-                  # scale_color_manual(values=c("purple")) +
-                  # ylim(min(xi.smooth$vgam.1[((((i-1)*n)+1):(i*n))])-0.5, max(xi.smooth$vgam.1[((((i-1)*n)+1):(i*n))]) + 0.5) +
+                  geom_rug(aes(x=true, y=mean), sides = "b") + 
+                  scale_color_manual(
+                    name = "Method",
+                    values = c("BLAST" = "steelblue",
+                              "VGAM (fixed scale)" = "orange",
+                              "VGAM" = "purple",
+                              "EVGAM (fixed scale)" = "orange",
+                              "EVGAM" = "purple")
+                  ) +
+                  scale_linetype_manual(
+                    name = "Method",
+                    values = c("BLAST" = "solid",
+                              "VGAM (fixed scale)" = "solid",
+                              "VGAM" = "solid",
+                              "EVGAM (fixed scale)" = "dotted",
+                              "EVGAM" = "dotted")
+                  ) +
                   theme_minimal(base_size = 30) +
-                  theme(legend.position = "none",
+                  theme(legend.position = "right",
+                          legend.text = element_text(size = 13),
+                          legend.title = element_text(size = 13, face="bold"),
+                          # legend.key.width = unit(0.2, "cm"),
+                          # legend.key.height = unit(0.8, "cm"),
                           plot.margin = margin(0,0,0,-20),
                           axis.text = element_text(size = 25),
                           axis.title.x = element_text(size = 25))
   grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i],  
-                                          y=-14.95,
+                                          y=-5.95,
                                           # y=min(xi.smooth$vgam.1[((((i-1)*n)+1):(i*n))]-0.5), 
                                           color = "red", size = 7)
 }
-grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
+
+library(patchwork)
+des <- "
+1234
+5678
+"
+grid.plts[[1]] + grid.plts[[2]] + grid.plts[[3]] + grid.plts[[4]] + grid.plts[[5]] + grid.plts[[6]] + grid.plts[[7]] + guide_area() + plot_layout(design = des, guides = "collect")
 ```
 
 ```{r}
@@ -322,6 +351,12 @@ vgam.hess.1 <- solve(vgam.vcov.1)
 vgam.se.1 <- sum(diag(vgam.vcov.1))
 vgam.det.1 <- det(vgam.hess.1)
 vgam.kappa.1 <- kappa(vgam.hess.1)
+
+vgam.vcov.scale <- vcov(vgam.fit.scale)
+vgam.hess.scale <- solve(vgam.vcov.scale)
+vgam.se.scale <- sum(diag(vgam.vcov.scale))
+vgam.det.scale <- det(vgam.hess.scale)
+vgam.kappa.scale <- kappa(vgam.hess.scale)
 
 evgam.vcov.1 <- evgam.fit.1$Vp
 evgam.hess.1 <- solve(evgam.vcov.1)
