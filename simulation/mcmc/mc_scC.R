@@ -178,9 +178,9 @@ for(iter in 1:total.iter){
       index.holder <- rbind(index.holder, 
                             matrix(c(which.min(x.origin[,i]),
                                       which.max(x.origin[,i])), ncol=2))
+      xholder[,i] <- seq(0, 1, length.out = n)
     }
     for(i in 1:p){
-      xholder[,i] <- seq(0, 1, length.out = n)  
       test.knot <- seq(0, 1, length.out = psi)
       splines <- basis.tps(xholder[,i], test.knot, m=2, rk=FALSE, intercept = FALSE)
       xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])

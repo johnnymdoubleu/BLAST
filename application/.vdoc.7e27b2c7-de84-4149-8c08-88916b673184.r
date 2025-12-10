@@ -1,17 +1,17 @@
----
-title: "Assignment 2"
-subtitle: "Biomedical Data Science (MATH11174), 22/23, Semester 2"
-author: ""
-date: "2023-04-06"
-date-format: "long"
-format: 
-  pdf:
-    code-line-numbers: true
-editor : visual
-highlight-style: atom-one
----
-
-```{r}
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
 library(npreg)
 library(Pareto)
 suppressMessages(library(tidyverse))
@@ -20,9 +20,9 @@ library(gridExtra)
 # library(VGAM)
 library(evgam)
 library(qgam)
-```
-
-```{r}
+#
+#
+#
 # Structure of the FWI System
 #DSR : Daily Severity Rating
 #FWI : Fire Weather Index
@@ -35,9 +35,9 @@ setwd("C:/Users/Johnny Lee/Documents/GitHub")
 # setwd("A:/GitHub")
 load("./BLAST/application/wildfire_prep.Rdata") #loading covariate-dependent thresholds
 # load("./BLAST/application/quant975_prep.Rdata")
-```
-
-```{r, setup}
+#
+#
+#
 psi <- 30
 u <- quantile(Y, 0.975)
 y <- Y[which(Y>u)]
@@ -54,9 +54,9 @@ evgam.df <- data.frame(fwi.scaled, BA=y-u)
 # }
 xholder <- data.frame(sapply(1:p, function(i) seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n)))
 colnames(xholder) <- colnames(fwi.scaled)
-```
-
-```{r, evgam.scale}
+#
+#
+#
 gam.scale <- list(BA ~ s(DSR,  bs = "tp", k = 30) + 
                        s(FWI,  bs = "tp", k = 30) + 
                        s(BUI,  bs = "tp", k = 30) +
@@ -84,9 +84,9 @@ for(j in 1:p){
   evgam.smooth.scale[,j] <- bs.nonlinear.scale[,(((j-1)*(psi-1))+1):(((j-1)*(psi-1))+(psi-1))] %*% gamma.xi.scale[,j]
   alpha.nonlinear.scale[,j] <- 1/(evgam.smooth.scale[,j])
 }
-```
-
-```{r, evgam.1}
+#
+#
+#
 gam.1 <- list(BA ~ 1,
                  ~ s(DSR,  bs = "tp", k = 30) + 
                    s(FWI,  bs = "tp", k = 30) + 
@@ -109,14 +109,14 @@ for(j in 1:p){
   evgam.smooth.1[,j] <- bs.nonlinear.1[,(((j-1)*(psi-1))+1):(((j-1)*(psi-1))+(psi-1))] %*% gamma.xi.1[,j]
   alpha.nonlinear.1[,j] <- 1/(evgam.smooth.1[,j])
 }
-```
-
-```{r}
+#
+#
+#
 setwd("~/GitHub/BLAST/application")
 load("blast.Rdata")
-```
-
-```{r}
+#
+#
+#
 xi.scenario <- data.frame("x" = xholder[,1],
                           # "vgam.1" = as.vector(vgam.xi.1),
                           # "vgam.scale" = as.vector(vgam.xi.scale),
@@ -142,9 +142,9 @@ ggplot(xi.scenario, aes(x=x)) +
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 20))
-```
-
-```{r}
+#
+#
+#
 alpha.scenario <- data.frame("x" = xholder[,1],
                             #  "vgam.1" = 1/as.vector(vgam.xi.1),
                             #  "vgam.scale" = 1/as.vector(vgam.xi.scale),
@@ -171,9 +171,9 @@ ggplot(alpha.scenario, aes(x=x)) +
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 20))
-```
-
-```{r}
+#
+#
+#
 r.vgam.1 <- r.vgam.scale <- r.evgam.1 <- r.evgam.scale <- c()
 for(i in 1:n){
     # r.vgam.1[i] <- qnorm(evd::pgpd(y[i], scale = exp(vgam.1.response[i,1]), loc = u, shape = exp(vgam.1.response[i,2])))
@@ -205,10 +205,10 @@ ggplot(data = qqplot.df, aes(x=grid)) +
   theme(axis.text = element_text(size = 10)) + 
   coord_fixed(xlim = c(-3, 3),
               ylim = c(-3, 3))
-```
-
-
-```{r}
+#
+#
+#
+#
 
 xi.smooth <- data.frame("x"= as.vector(as.matrix(xholder)),
                           "true" = as.vector(as.matrix(fwi.scaled)),
@@ -272,21 +272,21 @@ des <- "
 5678
 "
 grid.plts[[1]] + grid.plts[[2]] + grid.plts[[3]] + grid.plts[[4]] + grid.plts[[5]] + grid.plts[[6]] + grid.plts[[7]] + guide_area() + plot_layout(design = des, guides = "collect")
-```
-
-
-
-```{r}
+#
+#
+#
+#
+#
 load("quant975_prep.Rdata")
 load("quant95_prep.Rdata")
 qgam::check.qgam(quant.fit)
 fwi.df <- data.frame(fwi.scaled, BA=y)
 evgam.df <- data.frame(fwi.scaled, BA=y-u)
-```
-
-
-
-```{r, vgam.scale}
+#
+#
+#
+#
+#
 vgam.fit.scale <- vgam(BA ~ sm.ps(DSR) + sm.ps(FWI) + sm.ps(BUI) + sm.ps(ISI) + sm.ps(FFMC) + sm.ps(DMC) + sm.ps(DC),
                         data = fwi.df,
                         family = gpd(threshold = u,
@@ -304,9 +304,9 @@ vgam.scale.response <- predict(vgam.fit.scale, type = "link")
 vgam.xi.scale <- exp(fitted.linear[,2])
 grid.val.scale <- plotvgam(vgam.fit.scale,  newdata=xholder, plot.arg=FALSE)@preplot
 vgam.smooth.scale <- do.call(cbind, lapply(grid.val.scale[1:p], function(g) g$y))
-```
-
-```{r, vgam.1}
+#
+#
+#
 vgam.fit.1 <- vgam(BA ~ sm.ps(DSR) + sm.ps(FWI) + sm.ps(BUI) + sm.ps(ISI) + sm.ps(FFMC) + sm.ps(DMC) + sm.ps(DC),
                     data = fwi.df,
                     family = gpd(threshold = u, 
@@ -324,9 +324,9 @@ vgam.1.response <- predict(vgam.fit.1,type="link")
 vgam.xi.1 <- exp(fitted.linear[,2])
 grid.val.1 <- plotvgam(vgam.fit.1, newdata=xholder, plot.arg=FALSE)@preplot
 vgam.smooth.1 <- do.call(cbind, lapply(grid.val.1[1:p], function(g) g$y))
-```
-
-```{r, vgam.xi}
+#
+#
+#
 vgam.fit.xi <- vgam(BA ~ s(DSR) + s(FWI) + s(BUI) + s(ISI) + s(FFMC) + s(DMC) + s(DC),
                     data = fwi.df,
                     family = gpd(threshold = u, 
@@ -341,9 +341,9 @@ fitted.linear <- predict(vgam.fit.xi, newdata = data.frame(xholder), type = "lin
 fitted.terms <- predict(vgam.fit.xi, newdata = data.frame(xholder), type = "terms")
 fitted.response <- predict(vgam.fit.xi, newdata = data.frame(xholder), type = "response")
 
-```
-
-```{r}
+#
+#
+#
 vgam.fit.linear <- vgam(BA ~ .,
                     data = fwi.df,
                     family = gpd(threshold = u, 
@@ -357,13 +357,15 @@ par(mfrow = c(1, 1))
 fitted.linear <- predict(vgam.fit.linear, newdata = data.frame(xholder), type = "link")
 fitted.terms <- predict(vgam.fit.linear, newdata = data.frame(xholder), type = "terms")
 fitted.response <- predict(vgam.fit.linear, newdata = data.frame(xholder), type = "response")
-```
-
-
-```{r}
+#
+#
+#
+#
 setwd("C:/Users/Johnny Lee/Documents/GitHub")
 load("./BLAST/application/wildfire_prep.Rdata")
 fwi.df <- fwi.origin[which(fwi.origin$BA>1),c(1:8)]
 taus <- c(0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.975, 0.98, 0.99)
 m.gam <- qgam::mqgam(BA ~ s(DSR, k=30) + s(FWI, k=30) + s(BUI, k=30) + s(ISI, k=30) + s(FFMC, k=30) + s(DMC, k=30) + s(DC, k=30), data = fwi.df, qu = taus)
-```
+#
+#
+#
