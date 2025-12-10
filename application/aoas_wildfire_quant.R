@@ -85,13 +85,9 @@ grid.df <- as.data.frame(setNames(seq_list, vars))
 
 # fit.95 <- quantreg::rq(BA ~ bs(DSR) + bs(FWI) + bs(BUI) + bs(ISI) + bs(FFMC) + bs(DMC) + bs(DC), tau = 0.95, data = fwi.origin)
 
-# # Get predictions (these are F^{-1}(tau | x_i))
+
 # pred.50 <- predict(fit.50, newdata = fwi.origin)
 # pred.95 <- predict(fit.95, newdata = fwi.origin)
-# max_val_50 <- max(c(pred.50, fwi.origin$BA), na.rm = TRUE)
-# min_val_50 <- min(c(pred.50, fwi.origin$BA), na.rm = TRUE)
-# max_val_95 <- max(c(pred.95, fwi.origin$BA), na.rm = TRUE)
-# min_val_95 <- min(c(pred.95, fwi.origin$BA), na.rm = TRUE)
 
 # par(mfrow = c(1, 2))
 # plot(pred.50, fwi.origin$BA,
@@ -105,8 +101,8 @@ grid.df <- as.data.frame(setNames(seq_list, vars))
 #      main = "Predicted 95th Percentile vs Actual BA",
 #      xlab = expression(hat(F)^(-1)),
 #      ylab = expression(y))
-#     #  xlim = c(min_val_95, max_val_95),  # Equal x and y range
-#     #  ylim = c(min_val_95, max_val_95))
+# #     #  xlim = c(min_val_95, max_val_95),  # Equal x and y range
+# #     #  ylim = c(min_val_95, max_val_95))
 # abline(0, 1, col = "red", lty = 2, lwd = 2)
 # par(mfrow = c(1, 1))
 
@@ -222,8 +218,9 @@ grid.df <- as.data.frame(setNames(seq_list, vars))
 # par(mfrow = c(1, 1))
 
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
-quant.fit <- qgam(BA ~ s(DSR) + s(FWI) + s(BUI) + s(ISI) + s(FFMC) + s(DMC) + s(DC), qu=0.975, data = fwi.origin)
+quant.fit <- qgam(BA ~ s(DSR, k = 30) + s(FWI, k = 30) + s(BUI, k = 30) + s(ISI, k = 30) + s(FFMC, k = 30) + s(DMC, k = 30) + s(DC, k = 30), qu=0.975, data = fwi.origin)
 quant.u <- predict(quant.fit, newdata = fwi.origin)
+# plot(quant.fit)
 # fwi.scaled <- fwi.origin[,c(1:7)]
 Y <- Y[Y>1]
 y <- Y[Y>quant.u]
@@ -387,7 +384,7 @@ fit1 <- stan(
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value
     chains = 3,             # number of Markov chains
-    iter = 30000,            # total number of iterations per chain
+    iter = 15000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
     refresh = 2500           # no progress shown
 )
@@ -453,10 +450,10 @@ ggplot(xi.smooth, aes(x=x)) +
 
 data.smooth <- data.frame("x" = as.vector(xholder),
                           "true" = as.vector(as.matrix(fwi.scaled)),
-                          "post.mean" = -as.vector(g.smooth.mean),
-                          "q1" = -as.vector(g.smooth.q1),
-                          "q2" = -as.vector(g.smooth.q2),
-                          "q3" = -as.vector(g.smooth.q3),
+                          "post.mean" = as.vector(g.smooth.mean),
+                          "q1" = as.vector(g.smooth.q1),
+                          "q2" = as.vector(g.smooth.q2),
+                          "q3" = as.vector(g.smooth.q3),
                           "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)))
 
 
