@@ -311,7 +311,7 @@ for(iter in 1:total.iter){
   # smooth.1.container[,iter] <- as.vector(xi.nonlinear.1)
   # smooth.scale.container <- as.vector(xi.nonlinear.scale)
   
-  mise.container[iter] <- auc(newx, se.samples[,5])
+  mise.container[iter] <- auc(newx, se.samples[,5], type="spline")
   mise.vgam.1.container[iter] <- auc(newx, ((1/alp.new)-vgam.xi.1)^2, type = "spline")
   mise.vgam.scale.container[iter] <- auc(newx, ((1/alp.new)-vgam.xi.scale)^2, type = "spline")
   mise.evgam.1.container[iter] <- auc(newx, ((1/alp.new)-evgam.xi.1)^2, type = "spline")

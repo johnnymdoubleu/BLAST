@@ -5,7 +5,7 @@ library(rstan)
 library(MESS)
 library(evgam)
 library(VGAM)
-# Scenario A
+# Scenario D
 
 total.iter <- 100
 
@@ -327,7 +327,7 @@ for(iter in 1:total.iter){
   # smooth.1.container[,iter] <- as.vector(xi.nonlinear.1)
   # smooth.scale.container <- as.vector(xi.nonlinear.scale)
   
-  mise.container[iter] <- auc(newx, se.samples[,5])
+  mise.container[iter] <- auc(newx, se.samples[,5], type="spline")
   mise.vgam.1.container[iter] <- auc(newx, ((1/alp.new)-vgam.xi.1)^2, type = "spline")
   mise.vgam.scale.container[iter] <- auc(newx, ((1/alp.new)-vgam.xi.scale)^2, type = "spline")
   mise.evgam.1.container[iter] <- auc(newx, ((1/alp.new)-evgam.xi.1)^2, type = "spline")
@@ -348,7 +348,7 @@ alpha.container$vgam.1 <- rowMeans(vgam.1.container[,1:total.iter])
 alpha.container$vgam.scale <- rowMeans(vgam.scale.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
-save(newgsmooth.container, alpha.container, evgam.1.container, evgam.scale.container, mise.container, mise.1.container, mise.scale.container, file="evgam_mc_scC.Rdata")
+save(newgsmooth.container, alpha.container, evgam.1.container, evgam.scale.container, mise.container, mise.vgam.1.container, mise.vgam.scale.container, mise.evgam.1.container, mise.evgam.scale.container, file="evgam_mc_scC.Rdata")
 # load("./simulation/results/evgam_mc_scA.Rdata")
 
 print(mean(mise.container))
