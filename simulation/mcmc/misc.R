@@ -151,59 +151,41 @@ for(i in 1:n){
 # as.vector(f.new[,3]*1.8) + (as.vector(f.linear.new[,3]))
 data.constraint <- data.frame("x"=newx,
                             "true.smooth" = as.vector(f.new[,2]),
-                            "true.linear" = as.vector(f.linear.new[,2]),
-                            "true.nonlinear" = as.vector(f.nonlinear.new[,2]))
-                            #as.vector(f.nonlinear.new[,3])-0.4)
+                            # "true.linear" = as.vector(f.linear.new[,2]),
+                            # "true.nonlinear" = as.vector(f.nonlinear.new[,2]))
+                            # "true.linear" =  as.vector(f.linear.new[,3])*0.1,
                             # "true.nonlinear" = as.vector(f.nonlinear.new[,3]))
+                            "true.linear" = as.vector(f.linear.new[,3] * -1) - 0.3,
+                            "true.nonlinear" = as.vector(f.new[,3]*1.5) + (as.vector(f.linear.new[,3])) + 0.27)
 
 ggplot(data.constraint, aes(x=x)) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_line(aes(y=true.smooth), color = "steelblue", linewidth=2.5) + 
-  ylab("") + xlab("") + ylim(-0.8, 0.8) + 
+  ylab("g(x)") + xlab("x") + ylim(-0.8, 0.8) + 
   theme_minimal(base_size = 30) +
-  theme(plot.title = element_text(hjust = 0.5, size = 15),
-        legend.position="none",
-        legend.title = element_blank(),
-        legend.text = element_text(size=20),
-        legend.margin=margin(t = 1, unit='cm'),
-        legend.box.margin=margin(-10,0,-10,0),
-        plot.margin = margin(0,0,0,-20),
-        strip.text.y = element_text(size = 25, colour = "black", angle = 0, face = "bold.italic"),
-        strip.placement = "outside",
-        axis.title.x = element_text(size = 40),
-        axis.text = element_text(size=35))
-# ggsave(paste0("./simulation/results/illust_smooth1.pdf"), width=10, height = 7.78)
+  theme(legend.position="none",
+        axis.title = element_text(size = 45),
+        axis.text = element_text(size=40))
+ggsave(paste0("./simulation/results/illust_smooth1_new.pdf"), width=11.5, height = 8)
+
 ggplot(data.constraint, aes(x=x)) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_line(aes(y=true.linear), color = "steelblue", linewidth=2.5) + 
-  ylab("") + xlab("") + ylim(-0.8, 0.8) + 
+  ylab("") + xlab("x") + ylim(-0.8, 0.8) + 
   theme_minimal(base_size = 30) +
-  theme(plot.title = element_text(hjust = 0.5, size = 15),
-        legend.position="none",
-        legend.title = element_blank(),
-        legend.text = element_text(size=20),
-        legend.margin=margin(t = 1, unit='cm'),
-        legend.box.margin=margin(-10,0,-10,0),
+  theme(legend.position="none",
         plot.margin = margin(0,0,0,-20),
-        strip.text.y = element_text(size = 25, colour = "black", angle = 0, face = "bold.italic"),
-        strip.placement = "outside",
-        # axis.title.x = element_text(size = 40),
-        axis.text = element_text(size=35))
-ggsave(paste0("./simulation/results/illust_linear_c.pdf"), width=10, height = 7.78)
+        axis.title.x = element_text(size = 45),
+        axis.text = element_text(size=40))
+ggsave(paste0("./simulation/results/illust_linear_nc2_new.pdf"), width=10, height = 7.78)
+
 ggplot(data.constraint, aes(x=x)) + 
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_line(aes(y=true.nonlinear), color = "steelblue", linewidth=2.5) + 
-  ylab("") + xlab("") + ylim(-0.8, 0.8) + 
+  ylab("") + xlab("x") + ylim(-0.8, 0.8) + 
   theme_minimal(base_size = 30) +
-  theme(plot.title = element_text(hjust = 0.5, size = 15),
-        legend.position="none",
-        legend.title = element_blank(),
-        legend.text = element_text(size=20),
-        legend.margin=margin(t = 1, unit='cm'),
-        legend.box.margin=margin(-10,0,-10,0),
+  theme(legend.position="none",
         plot.margin = margin(0,0,0,-20),
-        strip.text.y = element_text(size = 25, colour = "black", angle = 0, face = "bold.italic"),
-        strip.placement = "outside",
-        axis.title.x = element_text(size = 40),
-        axis.text = element_text(size=35))
-ggsave(paste0("./simulation/results/illust_nonlinear_c.pdf"), width=10, height = 7.78)
+        axis.title.x = element_text(size = 45),
+        axis.text = element_text(size=40))
+ggsave(paste0("./simulation/results/illust_nonlinear_nc2_new.pdf"), width=10, height = 7.78)

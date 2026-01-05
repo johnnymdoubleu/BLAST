@@ -410,9 +410,9 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
         legend.box.margin=margin(-10,0,-10,0),
         plot.margin = margin(0,0,0,-20),
         strip.text = element_blank(),
-        axis.title.x = element_text(size = 40),
+        axis.title.x = element_text(size = 45),
         axis.text.y = element_blank(),
-        axis.text.x = element_text(size=25))
+        axis.text.x = element_text(size=30))
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_smooth_sc3-wi.pdf"), width=11, height = 15)
 
@@ -569,11 +569,11 @@ ggplot(data.scenario, aes(x=newx)) + #ylab(expression(alpha(c*bold("1")))) +
   geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1.5) +
   scale_color_manual(values=c("steelblue", "red")) + 
   scale_fill_manual(values=c("steelblue"), name = "") +
-  theme_minimal(base_size = 30) + ylim(0, 2.4) +
+  theme_minimal(base_size = 40) + ylim(0, 2.4) +
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text.y = element_blank(),
-        axis.text.x = element_text(size = 18))
+        axis.text.x = element_text(size = 30))
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_test_sc3-wi.pdf"), width=9.5, height = 7.78)
 
