@@ -280,7 +280,7 @@ bayesplot::mcmc_trace(fit1, pars="lp__") + ylab("Scenario C") +
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 18))
-ggsave(paste0("./simulation/results/appendix_",n,"_traceplot_scD.pdf"), width=22, height = 3)
+# ggsave(paste0("./simulation/results/appendix_",n,"_traceplot_scD.pdf"), width=22, height = 3)
 
 tau.samples <- summary(fit1, par=c("tau"), probs = c(0.05,0.5, 0.95))$summary
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
@@ -420,9 +420,9 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
         legend.box.margin=margin(-10,0,-10,0),
         plot.margin = margin(0,0,0,-20),
         strip.text = element_blank(),
-        axis.title.x = element_text(size = 35),
+        axis.title.x = element_text(size = 40),
         axis.text.y = element_blank(),
-        axis.text.x = element_text(size=18))
+        axis.text.x = element_text(size=25))
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_smooth_sc4-wi.pdf"), width=11, height = 15)
 
