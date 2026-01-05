@@ -1,7 +1,7 @@
 library(npreg)
-library(Pareto)
 suppressMessages(library(ggplot2))
 library(rstan)
+library(rmutil)
 library(MESS)
 library(evgam)
 library(VGAM)
@@ -185,7 +185,7 @@ for(iter in 1:total.iter){
   alp.origin <- y.origin <- NULL
   for(i in 1:n){
       alp.origin[i] <- exp(theta.origin[1] + sum(g.origin[i,]))
-      y.origin[i] <- rt(1, df = alp.origin[i])
+      y.origin[i] <- rmutil::rburr(1, m=1, s=alp.origin[i], f=1)
   }
 
   u <- quantile(y.origin, threshold)

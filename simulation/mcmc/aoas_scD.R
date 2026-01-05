@@ -4,6 +4,7 @@ library(evir)
 library(rstan)
 library(rmutil)
 library(MESS)
+library(Pareto)
 
 #Scenario 4
 set.seed(11)
@@ -273,7 +274,13 @@ system.time(fit1 <- stan(
 
 posterior <- extract(fit1)
 
-plot(fit1, plotfun = "trace", pars = c("theta"), nrow = 3)
+# plot(fit1, plotfun = "trace", pars = c("theta"), nrow = 3)
+bayesplot::mcmc_trace(fit1, pars="lp__") + ylab("Scenario C") +
+  theme_minimal(base_size = 30) +
+  theme(legend.position = "none",
+        strip.text = element_blank(),
+        axis.text = element_text(size = 18))
+ggsave(paste0("./simulation/results/appendix_",n,"_traceplot_scD.pdf"), width=22, height = 3)
 
 tau.samples <- summary(fit1, par=c("tau"), probs = c(0.05,0.5, 0.95))$summary
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary

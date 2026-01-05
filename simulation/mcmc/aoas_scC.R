@@ -224,6 +224,14 @@ model {
         target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * (1/tau[j]));
     }
 }
+
+generated quantities {
+    // Used in Posterior predictive check    
+    vector[n] log_lik;
+    for(i in 1:n){
+      log_lik[i] = student_t_lpdf(y[i] | alpha[i], 0, 1);
+    }
+}
 "
 
 data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, 
@@ -255,7 +263,14 @@ system.time(fit1 <- stan(
 
 posterior <- extract(fit1)
 
-plot(fit1, plotfun = "trace", pars = c("theta"), nrow = 3)
+# plot(fit1, plotfun = "trace", pars = c("theta"), nrow = 3)
+bayesplot::mcmc_trace(fit1, pars="lp__") + ylab("Scenario B") +
+  theme_minimal(base_size = 30) +
+  theme(legend.position = "none",
+        strip.text = element_blank(),
+        axis.text = element_text(size = 18))
+ggsave(paste0("./simulation/results/appendix_",n,"_traceplot_scC.pdf"), width=22, height = 3)
+
 
 tau.samples <- summary(fit1, par=c("tau"), probs = c(0.05,0.5, 0.95))$summary
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
