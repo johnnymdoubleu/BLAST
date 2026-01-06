@@ -414,13 +414,13 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 15),
         legend.position="none",
-        legend.title = element_blank(),
-        legend.text = element_text(size=20),
-        legend.margin=margin(t = 1, unit='cm'),
-        legend.box.margin=margin(-10,0,-10,0),
+        # legend.title = element_blank(),
+        # legend.text = element_text(size=20),
+        # legend.margin=margin(t = 1, unit='cm'),
+        # legend.box.margin=margin(-10,0,-10,0),
         plot.margin = margin(0,0,0,-20),
         strip.text = element_blank(),
-        axis.title.x = element_text(size = 45),
+        # axis.title.x = element_text(size = 45),
         axis.text.y = element_blank(),
         axis.text.x = element_text(size=30))
 

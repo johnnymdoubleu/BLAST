@@ -345,7 +345,7 @@ alpha.container$evgam.scale <- rowMeans(evgam.scale.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
 # save(newgsmooth.container, alpha.container, evgam.1.container, evgam.scale.container, mise.1.container, mise.scale.container, file="./simulation/results/vgam_mc_scA.Rdata")
-load("./simulation/results/vgam_mc_scA.Rdata")
+load("./simulation/results/evgam_mc_scA_750.Rdata")
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab(expression(xi(c,ldots,c))) #+ ylab("")
 if(total.iter <= 50){
@@ -369,12 +369,12 @@ print(plt +
         scale_color_manual(values = c("steelblue", "red"))+
         guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) +
-        theme_minimal(base_size = 30) + #ylim(-1, 2.4) +
+        theme_minimal(base_size = 40) + ylim(0, 7) +
         theme(legend.position = "none",
                 strip.text = element_blank(),
-                axis.text = element_text(size = 18)))
+                axis.text = element_text(size = 30)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_evgam_scA_.pdf"), width=10, height = 7.78)
+ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_evgam_scA_.pdf"), width=10, height = 7.78)
 
 
 
@@ -396,32 +396,32 @@ print(plt +
 # newgsmooth.container$covariate <- gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]"))
 # newgsmooth.container <- as.data.frame(newgsmooth.container)
 
-# plt <- ggplot(data = newgsmooth.container, aes(x = x, group = covariate)) + ylab("") + xlab(expression(c))
-# if(total.iter <= 50){
-#   for(i in 1:total.iter){
-#     plt <- plt + geom_line(aes(y = .data[[names(newgsmooth.container)[i]]]), alpha = 0.075, linewidth = 0.7)
-#   }
-# } else{
-#   for(i in 1:total.iter){
-#     plt <- plt + geom_line(aes(y = .data[[names(newgsmooth.container)[i]]]), alpha = 0.075, linewidth = 0.7)
-#   }
-# }
-# print(plt + 
-#         geom_line(aes(y=true, col = "True"), linewidth = 2, linetype = 2) + 
-#         geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5) + 
-#         ylim(-1, 1) +
-#         facet_grid(covariate ~ ., scales = "free_x", switch = "y",
-#                     labeller = label_parsed) +        
-#         scale_color_manual(values = c("steelblue", "red"))+
-#         guides(color = guide_legend(order = 2), 
-#           fill = guide_legend(order = 1)) +
-#         theme_minimal(base_size = 30) +
-#         theme(legend.position = "none",
-#                 plot.margin = margin(0,0,0,-20),
-#                 strip.text.y = element_text(size = 25, colour = "black", angle = 0, face = "bold.italic"),
-#                 strip.placement = "outside",
-#                 axis.title.x = element_text(size = 35),                
-#                 axis.text = element_text(size = 18)))
+plt <- ggplot(data = newgsmooth.container, aes(x = x, group = covariate)) + ylab("") + xlab(expression(c))
+if(total.iter <= 50){
+  for(i in 1:total.iter){
+    plt <- plt + geom_line(aes(y = .data[[names(newgsmooth.container)[i]]]), alpha = 0.075, linewidth = 0.7)
+  }
+} else{
+  for(i in 1:total.iter){
+    plt <- plt + geom_line(aes(y = .data[[names(newgsmooth.container)[i]]]), alpha = 0.075, linewidth = 0.7)
+  }
+}
+print(plt + 
+        geom_line(aes(y=true, col = "True"), linewidth = 2, linetype = 2) + 
+        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5) + 
+        ylim(-1, 1) +
+        facet_grid(covariate ~ ., scales = "free_x", switch = "y",
+                    labeller = label_parsed) +        
+        scale_color_manual(values = c("steelblue", "red"))+
+        guides(color = guide_legend(order = 2), 
+          fill = guide_legend(order = 1)) +
+        theme_minimal(base_size = 30) +
+        theme(legend.position = "none",
+                plot.margin = margin(0,0,0,-20),
+                strip.text.y = element_text(size = 25, colour = "black", angle = 0, face = "bold.italic"),
+                strip.placement = "outside",
+                axis.title.x = element_text(size = 35),                
+                axis.text = element_text(size = 18)))
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_scA_",n.origin,".pdf"), width=12.5, height = 15)
 

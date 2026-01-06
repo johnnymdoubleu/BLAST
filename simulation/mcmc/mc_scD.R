@@ -8,7 +8,7 @@ library(MESS)
 
 total.iter <- 250
 
-n <- n.origin <- 5000
+n <- n.origin <- 20000
 psi <- 10
 threshold <- 0.95
 p <- 5
@@ -294,6 +294,8 @@ alpha.container$q1 <- apply(alpha.lower.container[,1:total.iter], 1, quantile, c
 alpha.container$q3 <- apply(alpha.upper.container[,1:total.iter], 1, quantile, c(.5))
 alpha.container <- as.data.frame(alpha.container)
 
+load(paste0("./simulation/results/MC-Scenario_D/2024-05-01_",total.iter,"_MC_scD_",n.origin,".Rdata"))
+
 plt <- ggplot(data = alpha.container, aes(x = x)) + ylab("") + xlab(expression(c)) + labs(col = "") #+ ylab(expression(alpha(bold("c"),"...",bold("c"))))
 if(total.iter <= 50){
   for(i in 1:total.iter){
@@ -314,11 +316,11 @@ print(plt +
         scale_color_manual(values = c("steelblue", "red"))+
         guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) +
-        theme_minimal(base_size = 30) + ylim(0, 2.4) +
+        theme_minimal(base_size = 40) + ylim(0, 2.4) +
         theme(legend.position = "none",
                 strip.text = element_blank(),
                 axis.text.y = element_blank(),
-                axis.text.x = element_text(size = 18)))
+                axis.text.x = element_text(size = 30)))
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_scD_",n.origin,".pdf"), width=9.5, height = 7.78)
 
@@ -440,11 +442,12 @@ print(plt +
         theme_minimal(base_size = 30) +
         theme(legend.position = "none",
                 plot.margin = margin(0,0,0,-20),
-                strip.text = element_blank(),      
+                strip.text = element_blank(), 
+                axis.title.x = element_text(size = 45),     
                 axis.text.y = element_blank(),
-                axis.text = element_text(size = 18)))
+                axis.text.x = element_text(size = 30)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_scD_",n.origin,".pdf"), width=11, height = 15)
+ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_scD_",n.origin,".pdf"), width=11, height = 15)
 
 # newgl.container$x <- seq(0,1, length.out = n)
 # newgl.container$true <- as.vector(f.linear.new)
@@ -540,7 +543,7 @@ print(plt +
 
 # save(alpha.container, newgsmooth.container, mise.container, qqplot.container, file = (paste0("./simulation/results/MC-Scenario_D/",Sys.Date(),"_",total.iter,"_MC_scD_",n.origin,".Rdata")))
 # total.iter <- 250
-load(paste0("./simulation/results/MC-Scenario_D/2024-05-01_",total.iter,"_MC_scD_",n.origin,".Rdata"))
+
 
 # alpha.container.comb <- alpha.container[,1:total.iter]
 # newgsmooth.container.comb <- newgsmooth.container[,1:total.iter]

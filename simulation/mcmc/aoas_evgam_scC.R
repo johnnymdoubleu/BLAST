@@ -105,18 +105,35 @@ model {
         target += student_t_lpdf(y[i] | alpha[i], 0, 1);
         target += -1*log(1-student_t_cdf(u, alpha[i], 0, 1));
     }
-    target += gamma_lpdf(lambda1 | 0.1, 0.1);
-    target += gamma_lpdf(lambda2 | 0.1, 0.1);
     target += normal_lpdf(theta[1] | 0, 100);
-    target += inv_gamma_lpdf(sigma | 0.01, 0.01); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
-    target += (p * log(lambda1) + (p * psi * log(lambda2)));
+    target += gamma_lpdf(lambda1 | 1, 1e-3);
+    target += gamma_lpdf(lambda2 | 1, 1e-3);
+    target += (2*p*log(lambda2));
     for (j in 1:p){
         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
-        target += gamma_lpdf(tau[j] | atau, lambda2/sqrt(2));
-        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * sqrt(tau[j]) * sqrt(sigma));
+        target += gamma_lpdf(tau[j] | atau, lambda2^2*0.5);
+        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * (1/tau[j]));
     }
 }
 "
+
+# model {
+#     // likelihood
+#     for (i in 1:n){
+#         target += student_t_lpdf(y[i] | alpha[i], 0, 1);
+#         target += -1*log(1-student_t_cdf(u, alpha[i], 0, 1));
+#     }
+#     target += gamma_lpdf(lambda1 | 1, 10);
+#     target += gamma_lpdf(lambda2 | 0.1, 10);
+#     target += normal_lpdf(theta[1] | 0, 100);
+#     target += inv_gamma_lpdf(sigma | 0.01, 0.01); // target += double_exponential_lpdf(theta[1] | 0, lambda1)
+#     target += (p * log(lambda1) + (p * psi * log(lambda2)));
+#     for (j in 1:p){
+#         target += double_exponential_lpdf(theta[(j+1)] | 0, lambda1);
+#         target += gamma_lpdf(tau[j] | atau, lambda2/sqrt(2));
+#         target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * sqrt(tau[j]) * sqrt(sigma));
+#     }
+# }
 
 newgsmooth.container <- as.data.frame(matrix(, nrow = (p*(n*(1-threshold))), ncol = total.iter))
 smooth.scale.container <- as.data.frame(matrix(, nrow = (p*(n*(1-threshold))), ncol = total.iter))
@@ -332,7 +349,7 @@ alpha.container$vgam.1 <- rowMeans(vgam.1.container[,1:total.iter])
 alpha.container$vgam.scale <- rowMeans(vgam.scale.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
-save(newgsmooth.container, alpha.container, evgam.1.container, evgam.scale.container, mise.container, mise.1.container, mise.scale.container, file="evgam_mc_scC.Rdata")
+# save(newgsmooth.container, alpha.container, evgam.1.container, evgam.scale.container, mise.container, mise.evgam.1.container, mise.evgam.scale.container, mise.vgam.1.container, mise.vgam.scale.container, file="evgam_mc_scC.Rdata")
 # load("./simulation/results/evgam_mc_scA.Rdata")
 
 print(mean(mise.container))
@@ -340,3 +357,34 @@ print(mean(mise.evgam.1.container))
 print(mean(mise.evgam.scale.container))
 print(mean(mise.vgam.1.container))
 print(mean(mise.vgam.scale.container))
+
+# load("./simulation/results/evgam_mc_scC_750.Rdata")
+
+plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab(expression(xi(c,ldots,c))) #+ ylab("")
+if(total.iter <= 50){
+  for(i in 1:total.iter){
+    plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.075, linewidth = 0.7)
+  }
+} else{
+  for(i in 1:total.iter){
+  # for(i in 50:100){
+    plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.075, linewidth = 0.7)
+    # plt <- plt + geom_line(data=evgam.1.container, aes(x=x, y = .data[[names(evgam.1.container)[i]]]), alpha = 0.075, linewidth = 0.7)
+  }
+}
+
+print(plt +
+        geom_line(aes(y=true, col = "True"), linewidth = 2, linetype = 2) + 
+        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.8) +
+        geom_line(aes(y=evgam.1), colour="purple", linewidth = 1.8) +
+        geom_line(aes(y=evgam.scale), colour="orange", linewidth = 1.8) +
+        scale_fill_manual(values=c("steelblue"), name = "") +
+        scale_color_manual(values = c("steelblue", "red"))+
+        guides(color = guide_legend(order = 2), 
+          fill = guide_legend(order = 1)) +
+        theme_minimal(base_size = 40) + #ylim(-1, 2.4) +
+        theme(legend.position = "none",
+                strip.text = element_blank(),
+                axis.text = element_text(size = 30)))
+
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_evgam_scC_.pdf"), width=10, height = 7.78)
