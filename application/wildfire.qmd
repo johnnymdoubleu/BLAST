@@ -19,6 +19,7 @@ library(gridExtra)
 # library(VGAM)
 library(evgam)
 library(qgam)
+library(mgcViz)
 ```
 
 ```{r}
@@ -364,28 +365,151 @@ setwd("C:/Users/Johnny Lee/Documents/GitHub")
 load("./BLAST/application/wildfire_prep.Rdata")
 load("./BLAST/application/mqgam_result.Rdata")
 fwi.df <- fwi.origin[which(fwi.origin$BA>1),c(1:8)]
-taus <- c(0.5, 0.75, 0.8, 0.85, 0.9, 0.95, 0.975, 0.99)
+# taus <- c(0.5, 0.75, 0.8, 0.85, 0.9, 0.95, 0.975, 0.99)
+taus <- c(0.5,0.6, 0.7, 0.8, 0.9, 0.95, 0.975, 0.98, 0.99)
 # m.gam <- qgam::mqgam(BA ~ s(DSR, k=30) + s(FWI, k=30) + s(BUI, k=30) + s(ISI, k=30) + s(FFMC, k=30) + s(DMC, k=30) + s(DC, k=30), data = fwi.df, qu = taus)
 xholder <- data.frame(sapply(1:p, function(i) seq(min(fwi.df[,i]), max(fwi.df[,i]), length.out = dim(fwi.df)[1])))
+# range01 <- function(x){(x-min(x))/(max(x)-min(x))}
+# xholder <- as.data.frame(sapply(fwi.df[, c(1:7)], FUN = range01))
 colnames(xholder) <- colnames(fwi.df)[1:p]
+xholder$BA <- rep(0, dim(xholder)[1])
 ```
 
-
 ```{r}
-# xholder$BA <- seq(0,1, length.out = n)
-# fwi.df <- 
-plot(fwi.df$FWI, fwi.df$BA)
+library(ggplot2)
+library(dplyr)
+library(patchwork) # Excellent for combining multiple ggplots
 
-# Predict each quantile curve and plot
-colss <- rainbow(length(taus))
-for(i in 1:length(taus)){
-  pred <- qdo(m.gam, taus[i], predict, newdata=xholder)
-  lines(fwi.df$FWI, pred, col = colss[i])
+preds_df <- lapply(taus, function(q) {
+  data.frame(
+    fitted = qdo(m.gam, q, predict, newdata = xholder),
+    quantile = as.factor(q) # Convert to factor for coloring
+  )
+}) %>% bind_rows()
+
+plot_list <- list()
+
+for (j in 1:p) {
+  df_points <- data.frame(
+    x_val = fwi.df[, j],
+    y_val = fwi.df$BA
+  )
+  df_lines <- preds_df %>%
+    mutate(x_val = rep(xholder[, j], length(taus))) # Replicate x for each quantile
+  
+  var_name <- names(xholder)[j]
+  
+  plt <- ggplot() +
+    geom_point(data = df_points, aes(x = x_val, y = y_val), 
+               alpha = 0.3, color = "gray50") +
+    geom_line(data = df_lines, aes(x = x_val, y = fitted, color = quantile), 
+              linewidth = 0.7) +
+    geom_rug(data = df_points, aes(x=x_val, y_val), sides = "b") + 
+    scale_color_viridis_d(name = "Quantile") + # Better alternative to rainbow()
+    labs(x = var_name, y = "BA") +
+    theme_minimal() +
+    # theme_minimal(base_size = 25) +
+    theme(legend.text = element_text(size = 18),
+            legend.title = element_text(size = 18, face="bold"),
+            # legend.key.width = unit(0.2, "cm"),
+            # legend.key.height = unit(0.8, "cm"),
+            plot.margin = margin(0,0,0,-20),
+            axis.text = element_text(size = 15),
+            axis.title = element_text(size = 25)) 
+  plot_list[[length(plot_list) + 1]] <- plt
 }
+
+des <- "
+1234
+5678
+"
+final.plot <- wrap_plots(plot_list) + guide_area() + plot_layout(design = des, guides = "collect", axis_titles = "collect", axes = "collect_y")
+print(final.plot)
 ```
 
+
+
 ```{r}
-qdo(m.gam, 0.975, cqcheck)
+prepare_calibration_data <- function(model, data, response_col, taus, n_bins = 15) {
+  
+  all_calib_data <- list()
+  
+  for (tau in taus) {
+    # Get predictions for specific quantile
+    preds <- qdo(model, tau, predict, newdata = data)
+    
+    # Create a temporary dataframe for calculation
+    tmp_df <- data.frame(
+      obs = data[[response_col]],
+      pred = preds
+    ) %>%
+      mutate(
+        # Check if observation is effectively below the quantile curve
+        is_below = ifelse(obs < pred, 1, 0),
+        # Bin the predictions into groups with equal number of observations
+        bin = cut_number(pred, n = n_bins) 
+      ) %>%
+      group_by(bin) %>%
+      summarise(
+        mean_pred = mean(pred),      # X-axis: Average prediction in this bin
+        prop_below = mean(is_below), # Y-axis: Actual proportion below curve
+        n = n(),
+        .groups = 'drop'
+      ) %>%
+      mutate(
+        quantile = as.factor(tau),
+        # Calculate 95% Confidence Intervals for the proportion
+        # Standard Error of a proportion = sqrt(p(1-p)/n)
+        # We test against the theoretical 'tau'
+        se = sqrt((tau * (1 - tau)) / n),
+        ci_lower = tau - 1.96 * se,
+        ci_upper = tau + 1.96 * se
+      )
+    
+    all_calib_data[[as.character(tau)]] <- tmp_df
+  }
+  
+  bind_rows(all_calib_data)
+}
+
+# --- 2. Execute & Plot ---
+
+# A. Generate the calibration data
+# Replace 'BA' with your actual response variable name
+calib_df <- prepare_calibration_data(m.gam, fwi.df, "BA", taus)
+
+# B. Create the ggplot
+ggplot(calib_df, aes(x = mean_pred, y = prop_below)) +
+  
+  # 1. Add Confidence Bands (The "Target" Zone)
+  geom_ribbon(aes(ymin = ci_lower, ymax = ci_upper), 
+              fill = "blue", alpha = 0.1) +
+  
+  # 2. Add Target Line (Theoretical Tau)
+  geom_hline(aes(yintercept = as.numeric(as.character(quantile))), 
+             linetype = "dashed", color = "blue") +
+  
+  # 3. Add Observed Data Points & Lines
+  geom_point() +
+  geom_line() +
+  
+  # 4. Facet by Quantile so each one gets its own scale/plot
+  facet_wrap(~quantile, scales = "free", labeller = label_both) +
+  
+  # 5. Styling
+  labs(
+    title = "Calibration Check: Observed vs Expected Proportions",
+    subtitle = "Points should fall within the shaded confidence bands",
+    x = "Predicted Value (Binned)",
+    y = "Proportion of Data < Fitted Quantile"
+  ) +
+  theme(legend.text = element_text(size = 18),
+          legend.title = element_text(size = 18, face="bold"),
+          # legend.key.width = unit(0.2, "cm"),
+          # legend.key.height = unit(0.8, "cm"),
+          # plot.margin = margin(0,0,0,-20),
+          axis.text = element_text(size = 15),
+          axis.title = element_text(size = 25)) 
 ```
 
 

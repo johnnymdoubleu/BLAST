@@ -73,6 +73,7 @@ fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 fwi.origin <- fwi.scaled
 
 fwi.origin <- data.frame(fwi.origin[which(Y>1),], BA=Y[Y>1])
+# fwi.origin <- data.frame(fwi.origin[which(Y>1),], BA=Y[Y>1])
 # BA.shifted <- ifelse(fwi.origin$BA == 0, 1e-5, fwi.origin$BA)
 # fwi.origin$log.BA <- log(fwi.origin$BA+1)
 vars <- colnames(fwi.origin)[1:7]
@@ -218,9 +219,17 @@ grid.df <- as.data.frame(setNames(seq_list, vars))
 # par(mfrow = c(1, 1))
 
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
+fwi.df <- as.data.frame(sapply(fwi.origin[, c(1:7)], FUN = range01))
+fwi.df$BA <- fwi.origin$BA
 # quant.fit <- qgam(BA ~ s(DSR, k = 30) + s(FWI, k = 30) + s(BUI, k = 30) + s(ISI, k = 30) + s(FFMC, k = 30) + s(DMC, k = 30) + s(DC, k = 30), qu=0.975, data = fwi.origin)
-quant.fit <- qgamV(BA ~ s(DSR, k = 30) + s(FWI, k = 30) + s(BUI, k = 30) + s(ISI, k = 30) + s(FFMC, k = 30) + s(DMC, k = 30) + s(DC, k = 30), qu=0.975, data = fwi.origin)
-quant.u <- predict(quant.fit, newdata = fwi.origin)
+# quant.u <- predict(quant.fit, newdata = fwi.origin)
+# quant.fit <- qgamV(BA ~ s(DSR, k = 30) + s(FWI, k = 30) + s(BUI, k = 30) + s(ISI, k = 30) + s(FFMC, k = 30) + s(DMC, k = 30) + s(DC, k = 30), qu=0.975, data = fwi.origin)
+quant.fit <- qgamV(BA ~ s(DSR) + s(FWI) + s(BUI) + s(ISI) + s(FFMC) + s(DMC) + s(DC), qu=0.99, data = fwi.df)
+
+print(plot(quant.fit, allTerms = TRUE), pages = 1)
+check1D(quant.fit, fwi.df[1:7]) + l_gridQCheck1D(qu = 0.95)
+# qdo(quant.fit, predict, newdata = )
+
 # plot(quant.fit)
 # fwi.scaled <- fwi.origin[,c(1:7)]
 Y <- Y[Y>1]
@@ -238,7 +247,6 @@ p <- dim(fwi.scaled)[[2]]
 # save(m.gam, file ="./BLAST/application/wildfire_mgam2.Rdata")
 # load("./BLAST/application/wildfire_mgam.Rdata")
 
-# print(plot(m.gam, allTerms = TRUE), pages = 1)
 # summary(m.gam[[7]])
 
 no.theta <- 1 #represents the no. of linear predictors for each smooth functions
