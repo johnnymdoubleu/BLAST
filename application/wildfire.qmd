@@ -1,8 +1,7 @@
 ---
-title: "Assignment 2"
-subtitle: "Biomedical Data Science (MATH11174), 22/23, Semester 2"
-author: ""
-date: "2023-04-06"
+title: "BLAST Application"
+author: "Johnny Myung Won Lee"
+date: "2026-01-01"
 date-format: "long"
 format: 
   pdf:
@@ -363,7 +362,20 @@ fitted.response <- predict(vgam.fit.linear, newdata = data.frame(xholder), type 
 ```{r}
 setwd("C:/Users/Johnny Lee/Documents/GitHub")
 load("./BLAST/application/wildfire_prep.Rdata")
+load("./BLAST/application/mqgam_result.Rdata")
 fwi.df <- fwi.origin[which(fwi.origin$BA>1),c(1:8)]
 taus <- c(0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.975, 0.98, 0.99)
-m.gam <- qgam::mqgam(BA ~ s(DSR, k=30) + s(FWI, k=30) + s(BUI, k=30) + s(ISI, k=30) + s(FFMC, k=30) + s(DMC, k=30) + s(DC, k=30), data = fwi.df, qu = taus)
+# m.gam <- qgam::mqgam(BA ~ s(DSR, k=30) + s(FWI, k=30) + s(BUI, k=30) + s(ISI, k=30) + s(FFMC, k=30) + s(DMC, k=30) + s(DC, k=30), data = fwi.df, qu = taus)
+```
+
+
+```{r}
+xSeq <- data.frame(cbind("accel" = rep(0, 1e3), "times" = seq(2, 58, length.out = 1e3)))
+plot(mcycle$times, mcycle$accel, xlab = "Times", ylab = "Acceleration", ylim = c(-150, 80))
+
+# Predict each quantile curve and plot
+for(iq in quSeq){
+  pred <- qdo(fit, iq, predict, newdata = xSeq)
+  lines(xSeq$times, pred, col = 2)
+}
 ```

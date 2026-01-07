@@ -9,7 +9,7 @@ library(VGAM)
 
 total.iter <- 100
 
-n <- n.origin <- 15000
+n <- n.origin <- 5000
 psi <- 10
 threshold <- 0.95
 p <- 5
@@ -244,18 +244,15 @@ for(iter in 1:total.iter){
                     bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
                     xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear)
   
-    init.alpha <- list(list(gamma = array(rep(0, (psi*p)), dim=c(psi, p)),
-                            theta = rep(0, (p+1)), 
-                            tau = rep(0.1, p), sigma = 0.1, 
-                            lambda1 = 0.1, lambda2 = 0.1),
-                      list(gamma = array(rep(0.02, (psi*p)), dim=c(psi, p)),
-                            theta = rep(0.01, (p+1)), 
-                            tau = rep(0.01, p), sigma = 0.001,
-                            lambda1 = 0.01, lambda2 = 0.1),
-                      list(gamma = array(rep(0.01, (psi*p)), dim=c(psi, p)),
-                            theta = rep(0.05, (p+1)), 
-                            tau = rep(0.01, p), sigma = 0.01,
-                            lambda1 = 0.1, lambda2 = 0.01))
+  init.alpha <- list(list(gammaTemp = array(rep(2, ((psi-2)*p)), dim=c(p,(psi-2))),
+                          theta = rep(0, (p+1)), tau1 = rep(0.1, p),tau2 = rep(0.1, p),
+                          lambda1 = 0.1, lambda2 = 1),
+                      list(gammaTemp = array(rep(-1, ((psi-2)*p)), dim=c(p,(psi-2))),
+                          theta = rep(0, (p+1)), tau1 = rep(0.001, p), tau2=rep(0.001, p),
+                          lambda1 = 100, lambda2 = 100),
+                      list(gammaTemp = array(rep(-3, ((psi-2)*p)), dim=c(p,(psi-2))),
+                          theta = rep(0.1, (p+1)), tau1 = rep(0.5, p),tau2 = rep(0.5, p),
+                          lambda1 = 5, lambda2 = 55))
                             
   fit1 <- stan(
       model_code = model.stan,  # Stan program
@@ -349,7 +346,7 @@ alpha.container$vgam.1 <- rowMeans(vgam.1.container[,1:total.iter])
 alpha.container$vgam.scale <- rowMeans(vgam.scale.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
-# save(newgsmooth.container, alpha.container, evgam.1.container, evgam.scale.container, mise.container, mise.evgam.1.container, mise.evgam.scale.container, mise.vgam.1.container, mise.vgam.scale.container, file="evgam_mc_scC.Rdata")
+save(newgsmooth.container, alpha.container, evgam.1.container, evgam.scale.container, mise.container, mise.evgam.1.container, mise.evgam.scale.container, mise.vgam.1.container, mise.vgam.scale.container, file=paste0("evgam_mc_scC_", n,".Rdata"))
 # load("./simulation/results/evgam_mc_scA.Rdata")
 
 print(mean(mise.container))
@@ -358,9 +355,9 @@ print(mean(mise.evgam.scale.container))
 print(mean(mise.vgam.1.container))
 print(mean(mise.vgam.scale.container))
 
-# load("./simulation/results/evgam_mc_scC_750.Rdata")
+load(paste0("./simulation/results/evgam_mc_scC_",(n.origin*0.05),".Rdata"))
 
-plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab(expression(xi(c,ldots,c))) #+ ylab("")
+plt <- ggplot(data = alpha.container, aes(x = x)) + ylab("") + xlab(expression(c)) + labs(col = "") #+ ylab(expression(alpha(bold("c"),"...",bold("c"))))
 if(total.iter <= 50){
   for(i in 1:total.iter){
     plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.075, linewidth = 0.7)
@@ -382,9 +379,10 @@ print(plt +
         scale_color_manual(values = c("steelblue", "red"))+
         guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) +
-        theme_minimal(base_size = 40) + #ylim(-1, 2.4) +
+        theme_minimal(base_size = 40) + ylim(0, 7) +
         theme(legend.position = "none",
                 strip.text = element_blank(),
-                axis.text = element_text(size = 30)))
+                axis.text.y = element_blank(),
+                axis.text.x = element_text(size = 30)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_evgam_scC_.pdf"), width=10, height = 7.78)
+ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_evgam_scC_",n.origin,".pdf"), width=9.5, height = 7.78)

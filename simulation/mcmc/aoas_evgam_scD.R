@@ -365,9 +365,9 @@ print(mean(mise.evgam.scale.container))
 print(mean(mise.vgam.1.container))
 print(mean(mise.vgam.scale.container))
 
-# load("./simulation/results/evgam_mc_scD_750.Rdata")
+load(paste0("./simulation/results/evgam_mc_scD_",(n.origin*0.05),".Rdata"))
 
-plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab(expression(xi(c,ldots,c))) #+ ylab("")
+plt <- ggplot(data = alpha.container, aes(x = x)) + ylab("") + xlab(expression(c)) + labs(col = "") #+ ylab(expression(alpha(bold("c"),"...",bold("c"))))
 if(total.iter <= 50){
   for(i in 1:total.iter){
     plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.075, linewidth = 0.7)
@@ -385,13 +385,12 @@ print(plt +
         geom_line(aes(y=mean, col = "Mean"), linewidth = 1.8) +
         geom_line(aes(y=evgam.1), colour="purple", linewidth = 1.8) +
         geom_line(aes(y=evgam.scale), colour="orange", linewidth = 1.8) +
-        scale_fill_manual(values=c("steelblue"), name = "") +
         scale_color_manual(values = c("steelblue", "red"))+
-        guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) +
-        theme_minimal(base_size = 40) + #ylim(-1, 2.4) +
+        guides(color = guide_legend(order = 2)) +
+        theme_minimal(base_size = 40) + ylim(0, 7) +
         theme(legend.position = "none",
                 strip.text = element_blank(),
-                axis.text = element_text(size = 30)))
+                axis.text.y = element_blank(),
+                axis.text.x = element_text(size = 30)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_evgam_scD_.pdf"), width=10, height = 7.78)
+ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_evgam_scD_",n.origin, ".pdf"), width=9.5, height = 7.78)

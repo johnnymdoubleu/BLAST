@@ -228,7 +228,7 @@ u <- quant.u[which(Y>quant.u)]
 fwi.scaled <- as.data.frame(sapply(fwi.origin[which(Y>quant.u),c(1:7)], FUN = range01))
 n <- dim(fwi.scaled)[[1]]
 p <- dim(fwi.scaled)[[2]]
-save(quant.fit, quant.u, fwi.scaled, y, n,p, u, file="./BLAST/application/quant975_prep.Rdata")
+# save(quant.fit, quant.u, fwi.scaled, y, n,p, u, file="./BLAST/application/quant975_prep.Rdata")
 # save(fwi.scaled, fwi.origin, qu, y, Y, u, n, p, psi, file = "./BLAST/application/wildfire_prep.Rdata")
 # load("./BLAST/application/quant975_prep.Rdata")
 

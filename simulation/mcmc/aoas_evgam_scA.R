@@ -345,7 +345,7 @@ alpha.container$evgam.scale <- rowMeans(evgam.scale.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
 # save(newgsmooth.container, alpha.container, evgam.1.container, evgam.scale.container, mise.1.container, mise.scale.container, file="./simulation/results/vgam_mc_scA.Rdata")
-load("./simulation/results/evgam_mc_scA_750.Rdata")
+load(paste0("./simulation/results/evgam_mc_scA_",(n.origin*0.05),".Rdata"))
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab(expression(xi(c,ldots,c))) #+ ylab("")
 if(total.iter <= 50){
@@ -374,7 +374,7 @@ print(plt +
                 strip.text = element_blank(),
                 axis.text = element_text(size = 30)))
 
-ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_evgam_scA_.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_evgam_scA_.pdf"), width=10, height = 7.78)
 
 
 
@@ -418,10 +418,10 @@ print(plt +
         theme_minimal(base_size = 30) +
         theme(legend.position = "none",
                 plot.margin = margin(0,0,0,-20),
-                strip.text.y = element_text(size = 25, colour = "black", angle = 0, face = "bold.italic"),
+                strip.text.y = element_text(size = 38, colour = "black", angle = 0, face = "bold.italic"),
                 strip.placement = "outside",
-                axis.title.x = element_text(size = 35),                
-                axis.text = element_text(size = 18)))
+                axis.title.x = element_text(size = 40),
+                axis.text = element_text(size = 30)))
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_scA_",n.origin,".pdf"), width=12.5, height = 15)
 
