@@ -9,7 +9,7 @@ library(VGAM)
 
 total.iter <- 100
 
-n <- n.origin <- 5000
+n <- n.origin <- 15000
 psi <- 10
 threshold <- 0.95
 p <- 5

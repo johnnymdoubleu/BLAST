@@ -364,18 +364,32 @@ setwd("C:/Users/Johnny Lee/Documents/GitHub")
 load("./BLAST/application/wildfire_prep.Rdata")
 load("./BLAST/application/mqgam_result.Rdata")
 fwi.df <- fwi.origin[which(fwi.origin$BA>1),c(1:8)]
-taus <- c(0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.975, 0.98, 0.99)
+taus <- c(0.5, 0.75, 0.8, 0.85, 0.9, 0.95, 0.975, 0.99)
 # m.gam <- qgam::mqgam(BA ~ s(DSR, k=30) + s(FWI, k=30) + s(BUI, k=30) + s(ISI, k=30) + s(FFMC, k=30) + s(DMC, k=30) + s(DC, k=30), data = fwi.df, qu = taus)
+xholder <- data.frame(sapply(1:p, function(i) seq(min(fwi.df[,i]), max(fwi.df[,i]), length.out = dim(fwi.df)[1])))
+colnames(xholder) <- colnames(fwi.df)[1:p]
 ```
 
 
 ```{r}
-xSeq <- data.frame(cbind("accel" = rep(0, 1e3), "times" = seq(2, 58, length.out = 1e3)))
-plot(mcycle$times, mcycle$accel, xlab = "Times", ylab = "Acceleration", ylim = c(-150, 80))
+# xholder$BA <- seq(0,1, length.out = n)
+# fwi.df <- 
+plot(fwi.df$FWI, fwi.df$BA)
 
 # Predict each quantile curve and plot
-for(iq in quSeq){
-  pred <- qdo(fit, iq, predict, newdata = xSeq)
-  lines(xSeq$times, pred, col = 2)
+colss <- rainbow(length(taus))
+for(i in 1:length(taus)){
+  pred <- qdo(m.gam, taus[i], predict, newdata=xholder)
+  lines(fwi.df$FWI, pred, col = colss[i])
 }
+```
+
+```{r}
+qdo(m.gam, 0.975, cqcheck)
+```
+
+
+```{r}
+library(mgcViz)
+print(plot(m.gam, allTerms = TRUE), pages = 1)
 ```

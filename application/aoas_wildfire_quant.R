@@ -218,7 +218,8 @@ grid.df <- as.data.frame(setNames(seq_list, vars))
 # par(mfrow = c(1, 1))
 
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
-quant.fit <- qgam(BA ~ s(DSR, k = 30) + s(FWI, k = 30) + s(BUI, k = 30) + s(ISI, k = 30) + s(FFMC, k = 30) + s(DMC, k = 30) + s(DC, k = 30), qu=0.975, data = fwi.origin)
+# quant.fit <- qgam(BA ~ s(DSR, k = 30) + s(FWI, k = 30) + s(BUI, k = 30) + s(ISI, k = 30) + s(FFMC, k = 30) + s(DMC, k = 30) + s(DC, k = 30), qu=0.975, data = fwi.origin)
+quant.fit <- qgamV(BA ~ s(DSR, k = 30) + s(FWI, k = 30) + s(BUI, k = 30) + s(ISI, k = 30) + s(FFMC, k = 30) + s(DMC, k = 30) + s(DC, k = 30), qu=0.975, data = fwi.origin)
 quant.u <- predict(quant.fit, newdata = fwi.origin)
 # plot(quant.fit)
 # fwi.scaled <- fwi.origin[,c(1:7)]
