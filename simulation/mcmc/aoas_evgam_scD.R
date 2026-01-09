@@ -67,7 +67,6 @@ parameters {
     array[p] vector[(psi-2)] gammaTemp; // constraint splines coefficient from 2 to psi-1
     real <lower=0> lambda1; // lasso penalty
     real <lower=0> lambda2; // group lasso penalty
-    real <lower=0> sigma; //
     array[p] real <lower=0> tau;
 }
 

@@ -5,7 +5,7 @@ library(rstan)
 library(MESS)
 library(evgam)
 library(VGAM)
-# Scenario A
+# Scenario C  
 
 total.iter <- 100
 
@@ -51,7 +51,6 @@ parameters {
     array[p] vector[(psi-2)] gammaTemp; // constraint splines coefficient from 2 to psi-1
     real <lower=0> lambda1; // lasso penalty
     real <lower=0> lambda2; // group lasso penalty
-    real <lower=0> sigma; //
     array[p] real <lower=0> tau;
 }
 
@@ -346,7 +345,7 @@ alpha.container$vgam.1 <- rowMeans(vgam.1.container[,1:total.iter])
 alpha.container$vgam.scale <- rowMeans(vgam.scale.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
-save(newgsmooth.container, alpha.container, evgam.1.container, evgam.scale.container, mise.container, mise.evgam.1.container, mise.evgam.scale.container, mise.vgam.1.container, mise.vgam.scale.container, file=paste0("evgam_mc_scC_", n,".Rdata"))
+# save(newgsmooth.container, alpha.container, evgam.1.container, evgam.scale.container, mise.container, mise.evgam.1.container, mise.evgam.scale.container, mise.vgam.1.container, mise.vgam.scale.container, file=paste0("evgam_mc_scC_", n,".Rdata"))
 # load("./simulation/results/evgam_mc_scA.Rdata")
 
 print(mean(mise.container))
@@ -385,4 +384,5 @@ print(plt +
                 axis.text.y = element_blank(),
                 axis.text.x = element_text(size = 30)))
 
-ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_evgam_scC_",n.origin,".pdf"), width=9.5, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_evgam_scC_",n.origin,".pdf"), width=9.5, height = 7.78)
+

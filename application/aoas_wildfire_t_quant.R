@@ -72,7 +72,7 @@ fwi.index$date <- as.numeric(fwi.index$date)
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 fwi.origin <- fwi.scaled
 
-fwi.origin <- data.frame(fwi.origin[which(Y>1),], time = c(1:length(Y))[which(Y>1)], BA=Y[Y>1])
+fwi.origin <- data.frame(fwi.origin, time = c(1:length(Y)), BA=Y)
 # fwi.origin <- data.frame(fwi.origin[which(Y>1),], BA=Y[Y>1])
 # BA.shifted <- ifelse(fwi.origin$BA == 0, 1e-5, fwi.origin$BA)
 # fwi.origin$log.BA <- log(fwi.origin$BA+1)
@@ -219,20 +219,26 @@ grid.df <- as.data.frame(setNames(seq_list, vars))
 # par(mfrow = c(1, 1))
 
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
-fwi.df <- as.data.frame(sapply(fwi.origin[, c(1:8)], FUN = range01))
-fwi.df$BA <- fwi.origin$BA
+fwi.df <- as.data.frame(sapply(fwi.origin[which(fwi.origin$BA>1), c(1:8)], FUN = range01))
+fwi.df$BA <- fwi.origin$BA[fwi.origin$BA>1]
 # quant.fit <- qgam(BA ~ s(DSR, k = 30) + s(FWI, k = 30) + s(BUI, k = 30) + s(ISI, k = 30) + s(FFMC, k = 30) + s(DMC, k = 30) + s(DC, k = 30), qu=0.975, data = fwi.df)
 # quant.fit <- qgam(BA ~ s(DSR) + s(FWI) + s(BUI) + s(ISI) + s(FFMC) + s(DMC) + s(DC) + s(time), qu=0.99, data = fwi.df)
 
 # quant.u <- predict(quant.fit)
 
 # quant.fit <- qgamV(BA ~ s(DSR, k = 30) + s(FWI, k = 30) + s(BUI, k = 30) + s(ISI, k = 30) + s(FFMC, k = 30) + s(DMC, k = 30) + s(DC, k = 30), qu=0.975, data = fwi.origin)
-quant.fit <- mqgamV(BA ~ s(DSR) + s(FWI) + s(BUI) + s(ISI) + s(FFMC) + s(DMC) + s(DC) + s(time), qu=c(0.9, 0.91, 0.92, 0.93, 0.94, 0.95, 0.96, 0.97, 0.98, 0.99), data = fwi.df)
+taus <- c(0.9, 0.91, 0.92, 0.93, 0.94, 0.95, 0.96, 0.97, 0.98, 0.99)
+quant.fit <- mqgamV(BA ~ s(DSR) + s(FWI) + s(BUI) + s(ISI) + s(FFMC) + s(DMC) + s(DC) + s(time), qu=taus, data = fwi.df)
+# save(quant.fit, fwi.df, fwi.origin, taus, file="./BLAST/application/mqgam_time.Rdata")
+load("./BLAST/application/mqgam_time.Rdata")
 
 print(plot(quant.fit, allTerms = TRUE), pages = 1)
-print(check1D(quant.fit[[8]], fwi.df[1:8]) + l_gridQCheck1D(qu = 0.97), pages=1)
-print(check1D(quant.fit[[9]], fwi.df[1:8]) + l_gridQCheck1D(qu = 0.98), pages=1)
-print(check1D(quant.fit[[10]], fwi.df[1:8]) + l_gridQCheck1D(qu = 0.99), pages=1)
+for(i in 1:length(taus)){
+    print(check1D(quant.fit[[i]], fwi.df[1:8]) + l_gridQCheck1D(qu = taus[i]), pages=1)
+}
+# print(check1D(quant.fit[[8]], fwi.df[1:8]) + l_gridQCheck1D(qu = 0.97), pages=1)
+# print(check1D(quant.fit[[9]], fwi.df[1:8]) + l_gridQCheck1D(qu = 0.98), pages=1)
+# print(check1D(quant.fit[[10]], fwi.df[1:8]) + l_gridQCheck1D(qu = 0.99), pages=1)
 # qdo(quant.fit, predict, newdata = )
 
 # plot(quant.fit)
@@ -244,7 +250,7 @@ fwi.scaled <- as.data.frame(sapply(fwi.origin[which(Y>quant.u),c(1:7)], FUN = ra
 n <- dim(fwi.scaled)[[1]]
 p <- dim(fwi.scaled)[[2]]
 # save(quant.fit, quant.u, fwi.scaled, y, n,p, u, file="./BLAST/application/quant975_prep.Rdata")
-# save(fwi.scaled, fwi.origin, qu, y, Y, u, n, p, psi, file = "./BLAST/application/wildfire_prep.Rdata")
+save(fwi.scaled, fwi.origin, fwi.df, Y, n, psi, file = "./BLAST/application/wildfire_time_prep.Rdata")
 # load("./BLAST/application/quant975_prep.Rdata")
 
 # m.gam <- mqgam(BA ~ s(DSR) + s(FWI) + s(BUI) + s(ISI) + s(FFMC) + s(DMC) + s(DC), data = fwi.origin, qu = taus)

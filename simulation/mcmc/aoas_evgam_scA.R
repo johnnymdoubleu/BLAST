@@ -252,17 +252,17 @@ for(iter in 1:total.iter){
   simul.data <- data.frame(y = y.origin, x.origin)
   vgam.fit.scale <- VGAM::vgam(y ~ s(X1, bs = "tp", k = 10) + s(X2, bs = "tp", k = 10) + s(X3, bs = "tp", k = 10) + s(X4, bs = "tp", k = 10) + s(X5, bs = "tp", k = 10),
                         data = simul.data,
-                        family = gpd(threshold= 0,
+                        family = gpd(threshold= u,
                                       # lscale="loglink", 
                                       lshape="loglink",
                                       zero = NULL),
                         trace = TRUE,
-                        control = vgam.control(maxit = 200))
+                        control = vgam.control(maxit = 200)) 
   fitted.terms <- predict(vgam.fit.scale,newdata = data.frame(xholder), type = "terms")
   vgam.xi.scale <- exp(rowSums(fitted.terms[,c(2, 4, 6, 8, 10)]))
   vgam.fit.1 <- VGAM::vgam(y ~ s(X1, bs = "tp", k = 10) + s(X2, bs = "tp", k = 10) + s(X3, bs = "tp", k = 10) + s(X4, bs = "tp", k = 10) + s(X5, bs = "tp", k = 10),
                         data = simul.data,
-                        family = gpd(threshold= 0,
+                        family = gpd(threshold= u,
                                       lscale="loglink", 
                                       lshape="loglink",
                                       zero = 1),

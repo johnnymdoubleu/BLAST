@@ -1,4 +1,5 @@
 library(npreg)
+library(Pareto)
 library(ggplot2)
 library(parallel)
 library(rstan)
