@@ -7,7 +7,7 @@ library(MESS)
 
 total.iter <- 250
 
-n <- n.origin <- 5000
+n <- n.origin <- 15000
 psi <- 10
 threshold <- 0.95
 p <- 5
@@ -293,12 +293,12 @@ load(paste0("./simulation/results/MC-Scenario_A/2024-05-01_",total.iter,"_MC_scA
 plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab(expression(alpha(c,...,c))) #+ ylab("")
 if(total.iter <= 50){
   for(i in 1:total.iter){
-    plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.075, linewidth = 0.7)
+    plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.05, linewidth = 0.7)
   }
 } else{
-  for(i in 1:total.iter){
-  # for(i in 50:100){
-    plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.075, linewidth = 0.7)
+  # for(i in 1:total.iter){
+  for(i in 50:100){
+    plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.05, linewidth = 0.7)
   }
 }
 print(plt +
@@ -314,7 +314,7 @@ print(plt +
                 strip.text = element_blank(),
                 axis.text = element_text(size = 30)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_scA_",n.origin,".pdf"), width=10, height = 7.78)
+ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_scA_",n.origin,".pdf"), width=10, height = 7.78)
 
 
 # resg <- gather(theta.container,
@@ -413,12 +413,13 @@ newgsmooth.container <- as.data.frame(newgsmooth.container)
 plt <- ggplot(data = newgsmooth.container, aes(x = x, group = covariate)) + ylab("") + xlab(expression(c))
 if(total.iter <= 50){
   for(i in 1:total.iter){
-    plt <- plt + geom_line(aes(y = .data[[names(newgsmooth.container)[i]]]), alpha = 0.075, linewidth = 0.7)
+    plt <- plt + geom_line(aes(y = .data[[names(newgsmooth.container)[i]]]), alpha = 0.05, linewidth = 0.7)
     # plt <- plt + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
   }
 } else{
-  for(i in 1:total.iter){
-    plt <- plt + geom_line(aes(y = .data[[names(newgsmooth.container)[i]]]), alpha = 0.075, linewidth = 0.7)
+  # for(i in 1:total.iter){
+  for(i in 50:100){
+    plt <- plt + geom_line(aes(y = .data[[names(newgsmooth.container)[i]]]), alpha = 0.05, linewidth = 0.7)
     # plt <- plt + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
   }
 }
@@ -532,8 +533,8 @@ ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_scA_
 qqplot.container$grid <- grid
 qqplot.container$mean <- rowMeans(qqplot.container[,1:total.iter])
 plt <- ggplot(data = qqplot.container, aes(x = grid))
-for(i in 1:total.iter){
-  plt <- plt + geom_line(aes(y = .data[[names(qqplot.container)[i]]]), alpha = 0.1, linewidth = 0.7)
+for(i in 50:100){
+  plt <- plt + geom_line(aes(y = .data[[names(qqplot.container)[i]]]), alpha = 0.05, linewidth = 0.7)
 }
 print(plt + 
         geom_line(aes(y = mean), colour = "steelblue", linewidth = 1.5, linetype = 2) + 
@@ -546,7 +547,7 @@ print(plt +
         #         axis.text.y = element_blank()) +
         coord_fixed(xlim = c(-2, 2),  
                     ylim = c(-2, 2)))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_qqplot_scA_",n.origin,".pdf"), width=10, height = 7.78)
+ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_qqplot_scA_",n.origin,".pdf"), width=10, height = 7.78)
 
 # save(alpha.container, newgsmooth.container, mise.container, qqplot.container, file = (paste0("./simulation/results/MC-scenario_A/",Sys.Date(),"_",total.iter,"_MC_scA_",n.origin,".Rdata")))
 # total.iter <- 250

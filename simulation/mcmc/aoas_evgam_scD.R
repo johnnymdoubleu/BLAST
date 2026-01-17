@@ -369,12 +369,12 @@ load(paste0("./simulation/results/evgam_mc_scD_",(n.origin*0.05),".Rdata"))
 plt <- ggplot(data = alpha.container, aes(x = x)) + ylab("") + xlab(expression(c)) + labs(col = "") #+ ylab(expression(alpha(bold("c"),"...",bold("c"))))
 if(total.iter <= 50){
   for(i in 1:total.iter){
-    plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.075, linewidth = 0.7)
+    plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.05, linewidth = 0.7)
   }
 } else{
-  for(i in 1:total.iter){
-  # for(i in 50:100){
-    plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.075, linewidth = 0.7)
+  # for(i in 1:total.iter){
+  for(i in 50:100){
+    plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.05, linewidth = 0.7)
     # plt <- plt + geom_line(data=evgam.1.container, aes(x=x, y = .data[[names(evgam.1.container)[i]]]), alpha = 0.075, linewidth = 0.7)
   }
 }
@@ -382,11 +382,11 @@ if(total.iter <= 50){
 print(plt +
         geom_line(aes(y=true, col = "True"), linewidth = 2, linetype = 2) + 
         geom_line(aes(y=mean, col = "Mean"), linewidth = 1.8) +
-        geom_line(aes(y=evgam.1), colour="purple", linewidth = 1.8) +
-        geom_line(aes(y=evgam.scale), colour="orange", linewidth = 1.8) +
+        geom_line(aes(y=evgam.1), colour="purple", linewidth = 1.8, linetype = 3) +
+        geom_line(aes(y=evgam.scale), colour="orange", linewidth = 1.8, linetype = 4) +
         scale_color_manual(values = c("steelblue", "red"))+
         guides(color = guide_legend(order = 2)) +
-        theme_minimal(base_size = 40) + ylim(0, 7) +
+        theme_minimal(base_size = 40) + ylim(0, 5) +
         theme(legend.position = "none",
                 strip.text = element_blank(),
                 axis.text.y = element_blank(),
