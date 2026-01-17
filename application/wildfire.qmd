@@ -364,9 +364,10 @@ fitted.response <- predict(vgam.fit.linear, newdata = data.frame(xholder), type 
 setwd("C:/Users/Johnny Lee/Documents/GitHub")
 load("./BLAST/application/wildfire_prep.Rdata")
 # load("./BLAST/application/mqgam_result.Rdata")
-load("./BLAST/application/mqgam_result_0.Rdata")
+load("./BLAST/application/mqgam_result_t.Rdata")
 fwi.df <- fwi.origin[which(fwi.origin$BA>1),c(1:8)]
-taus <- c(0.5, 0.75, 0.8, 0.85, 0.9, 0.95, 0.975, 0.99)
+# taus <- c(0.5, 0.75, 0.8, 0.85, 0.9, 0.95, 0.975, 0.99)
+taus <- c(0.75, 0.8, 0.825, 0.85, 0.875, 0.9, 0.91, 0.92, 0.93, 0.94, 0.95)
 # taus <- c(0.5,0.6, 0.7, 0.8, 0.9, 0.95, 0.975, 0.98, 0.99)
 # m.gam <- qgam::mqgam(BA ~ s(DSR, k=30) + s(FWI, k=30) + s(BUI, k=30) + s(ISI, k=30) + s(FFMC, k=30) + s(DMC, k=30) + s(DC, k=30), data = fwi.df, qu = taus)
 xholder <- data.frame(sapply(1:p, function(i) seq(min(fwi.df[,i]), max(fwi.df[,i]), length.out = dim(fwi.df)[1])))
@@ -432,13 +433,10 @@ print(final.plot)
 
 ```{r}
 prepare_calibration_data <- function(model, data, response_col, taus, n_bins = 15) {
-  
   all_calib_data <- list()
-  
   for (tau in taus) {
     # Get predictions for specific quantile
     preds <- qdo(model, tau, predict, newdata = data)
-    
     # Create a temporary dataframe for calculation
     tmp_df <- data.frame(
       obs = data[[response_col]],
@@ -472,11 +470,6 @@ prepare_calibration_data <- function(model, data, response_col, taus, n_bins = 1
   
   bind_rows(all_calib_data)
 }
-
-# --- 2. Execute & Plot ---
-
-# A. Generate the calibration data
-# Replace 'BA' with your actual response variable name
 calib_df <- prepare_calibration_data(m.gam, fwi.df, "BA", taus)
 
 # B. Create the ggplot

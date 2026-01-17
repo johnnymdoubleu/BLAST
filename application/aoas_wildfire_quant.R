@@ -72,7 +72,7 @@ fwi.index$date <- as.numeric(fwi.index$date)
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 fwi.origin <- fwi.scaled
 
-fwi.origin <- data.frame(fwi.origin[which(Y>1),], BA=Y[Y>1])
+fwi.origin <- data.frame(fwi.origin, BA=Y)
 # fwi.origin <- data.frame(fwi.origin[which(Y>1),], BA=Y[Y>1])
 # BA.shifted <- ifelse(fwi.origin$BA == 0, 1e-5, fwi.origin$BA)
 # fwi.origin$log.BA <- log(fwi.origin$BA+1)
@@ -224,7 +224,7 @@ fwi.df$BA <- fwi.origin$BA
 # quant.fit <- qgam(BA ~ s(DSR, k = 30) + s(FWI, k = 30) + s(BUI, k = 30) + s(ISI, k = 30) + s(FFMC, k = 30) + s(DMC, k = 30) + s(DC, k = 30), qu=0.975, data = fwi.origin)
 # quant.u <- predict(quant.fit, newdata = fwi.origin)
 # quant.fit <- qgamV(BA ~ s(DSR, k = 30) + s(FWI, k = 30) + s(BUI, k = 30) + s(ISI, k = 30) + s(FFMC, k = 30) + s(DMC, k = 30) + s(DC, k = 30), qu=0.975, data = fwi.origin)
-quant.fit <- qgamV(BA ~ s(DSR) + s(FWI) + s(BUI) + s(ISI) + s(FFMC) + s(DMC) + s(DC), qu=0.99, data = fwi.df)
+# quant.fit <- qgamV(BA ~ s(DSR) + s(FWI) + s(BUI) + s(ISI) + s(FFMC) + s(DMC) + s(DC), qu=0.99, data = fwi.df)
 
 print(plot(quant.fit, allTerms = TRUE), pages = 1)
 check1D(quant.fit, fwi.df[1:7]) + l_gridQCheck1D(qu = 0.95)
@@ -232,7 +232,7 @@ check1D(quant.fit, fwi.df[1:7]) + l_gridQCheck1D(qu = 0.95)
 
 # plot(quant.fit)
 # fwi.scaled <- fwi.origin[,c(1:7)]
-Y <- Y[Y>1]
+# Y <- Y[Y>1]
 y <- Y[Y>quant.u]
 u <- quant.u[which(Y>quant.u)]
 fwi.scaled <- as.data.frame(sapply(fwi.origin[which(Y>quant.u),c(1:7)], FUN = range01))

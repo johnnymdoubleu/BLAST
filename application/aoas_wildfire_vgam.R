@@ -14,13 +14,13 @@ library(VGAM)
 #FFMC : Fine FUel Moisture Code
 #DMC : Duff Moisture Code
 #DC : Drought Code
-evgam.fit.1$plotdata
+
 
 setwd("C:/Users/Johnny Lee/Documents/GitHub")
 # setwd("A:/GitHub")
 load("./BLAST/application/wildfire_prep.Rdata") #loading covariate-dependent thresholds
 psi <- 30
-u <- quantile(Y[Y>1], 0.975)
+u <- quantile(Y, 0.975)
 # u <- quantile(Y, 0.975)
 y <- Y[which(Y>u)]
 fwi.scaled <- fwi.origin[which(Y>u),c(1:7)]

@@ -219,8 +219,8 @@ grid.df <- as.data.frame(setNames(seq_list, vars))
 # par(mfrow = c(1, 1))
 
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
-fwi.df <- as.data.frame(sapply(fwi.origin[which(fwi.origin$BA>1), c(1:8)], FUN = range01))
-fwi.df$BA <- fwi.origin$BA[fwi.origin$BA>1]
+fwi.df <- as.data.frame(sapply(fwi.origin[, c(1:8)], FUN = range01))
+fwi.df$BA <- fwi.origin$BA
 # quant.fit <- qgam(BA ~ s(DSR, k = 30) + s(FWI, k = 30) + s(BUI, k = 30) + s(ISI, k = 30) + s(FFMC, k = 30) + s(DMC, k = 30) + s(DC, k = 30), qu=0.975, data = fwi.df)
 # quant.fit <- qgam(BA ~ s(DSR) + s(FWI) + s(BUI) + s(ISI) + s(FFMC) + s(DMC) + s(DC) + s(time), qu=0.99, data = fwi.df)
 
@@ -228,7 +228,12 @@ fwi.df$BA <- fwi.origin$BA[fwi.origin$BA>1]
 
 # quant.fit <- qgamV(BA ~ s(DSR, k = 30) + s(FWI, k = 30) + s(BUI, k = 30) + s(ISI, k = 30) + s(FFMC, k = 30) + s(DMC, k = 30) + s(DC, k = 30), qu=0.975, data = fwi.origin)
 taus <- c(0.9, 0.91, 0.92, 0.93, 0.94, 0.95, 0.96, 0.97, 0.98, 0.99)
-quant.fit <- mqgamV(BA ~ s(DSR) + s(FWI) + s(BUI) + s(ISI) + s(FFMC) + s(DMC) + s(DC) + s(time), qu=taus, data = fwi.df)
+library(parallel)
+n.cores <- length(taus)
+cl <- makeCluster(n.cores)
+# quant.fit <- mqgamV(BA ~ s(DSR) + s(FWI) + s(BUI) + s(ISI) + s(FFMC) + s(DMC) + s(DC) + s(time), qu=taus, data = fwi.df, aQgam = list(cluster = cl, multicore = TRUE, ncores = n.cores))
+quant.fit <- qgam::mqgam(BA ~ s(DSR) + s(FWI) + s(BUI) + s(ISI) + s(FFMC) + s(DMC) + s(DC) + s(time), qu=taus, data = fwi.df, cluster = cl, multicore = TRUE, ncores = n.cores)
+stopCluster(cl)
 # save(quant.fit, fwi.df, fwi.origin, taus, file="./BLAST/application/mqgam_time.Rdata")
 load("./BLAST/application/mqgam_time.Rdata")
 
@@ -243,7 +248,6 @@ for(i in 1:length(taus)){
 
 # plot(quant.fit)
 # fwi.scaled <- fwi.origin[,c(1:7)]
-Y <- Y[Y>1]
 y <- Y[Y>quant.u]
 u <- quant.u[which(Y>quant.u)]
 fwi.scaled <- as.data.frame(sapply(fwi.origin[which(Y>quant.u),c(1:7)], FUN = range01))
