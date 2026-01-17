@@ -228,11 +228,28 @@ fwi.df$BA <- fwi.origin$BA
 
 # quant.fit <- qgamV(BA ~ s(DSR, k = 30) + s(FWI, k = 30) + s(BUI, k = 30) + s(ISI, k = 30) + s(FFMC, k = 30) + s(DMC, k = 30) + s(DC, k = 30), qu=0.975, data = fwi.origin)
 taus <- c(0.9, 0.91, 0.92, 0.93, 0.94, 0.95, 0.96, 0.97, 0.98, 0.99)
-library(parallel)
-n.cores <- length(taus)
-cl <- makeCluster(n.cores)
+
+
 # quant.fit <- mqgamV(BA ~ s(DSR) + s(FWI) + s(BUI) + s(ISI) + s(FFMC) + s(DMC) + s(DC) + s(time), qu=taus, data = fwi.df, aQgam = list(cluster = cl, multicore = TRUE, ncores = n.cores))
-quant.fit <- qgam::mqgam(BA ~ s(DSR) + s(FWI) + s(BUI) + s(ISI) + s(FFMC) + s(DMC) + s(DC) + s(time), qu=taus, data = fwi.df, cluster = cl, multicore = TRUE, ncores = n.cores)
+n.cores <- length(taus)
+library(parallel)
+cl <- makeCluster(n.cores)
+clusterExport(cl, varlist = c("fwi.df", "taus"))
+clusterEvalQ(cl, {
+  library(qgam)
+  library(mgcv)
+})
+
+fit_single_quantile <- function(q) {
+  model <- qgam(BA ~ s(DSR) + s(FWI) + s(BUI) + s(ISI) + s(FFMC) + s(DMC) + s(DC) + s(time),
+                data = fwi.df,
+                qu = q)
+  return(model)
+}
+system.time({
+  results.list <- parLapply(cl, taus, fit_single_quantile)
+})
+
 stopCluster(cl)
 # save(quant.fit, fwi.df, fwi.origin, taus, file="./BLAST/application/mqgam_time.Rdata")
 load("./BLAST/application/mqgam_time.Rdata")
