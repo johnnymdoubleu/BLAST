@@ -19,13 +19,13 @@ simul.no <- 50
 C <- diag(p)
 xholder.nonlinear <- xholder.linear <- bs.nonlinear <- bs.linear <- matrix(,nrow=n, ncol=0)
 x.origin <- pnorm(matrix(rnorm(n*p), ncol = p) %*% chol(C))
-end.holder <- basis.holder <- matrix(, nrow = 2, ncol =0)
-index.holder <- matrix(, nrow = 0, ncol = 2)
-for(i in 1:p){
-  index.holder <- rbind(index.holder, 
-                        matrix(c(which.min(x.origin[,i]),
-                                 which.max(x.origin[,i])), ncol=2))
-}
+# end.holder <- basis.holder <- matrix(, nrow = 2, ncol =0)
+# index.holder <- matrix(, nrow = 0, ncol = 2)
+# for(i in 1:p){
+#   index.holder <- rbind(index.holder, 
+#                         matrix(c(which.min(x.origin[,i]),
+#                                  which.max(x.origin[,i])), ncol=2))
+# }
 for(i in 1:p){
   knots <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = psi)
   tps <- basis.tps(x.origin[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
@@ -52,7 +52,7 @@ for(j in 1:p){
     if(j %in% c(1,4,5)){gamma.origin[ps,j] <- 0}
     else {
       # if(ps==1 || ps==psi){gamma.origin[ps,j] <- -15}
-      gamma.origin[ps,j] <- rnorm(1) * 10
+      gamma.origin[ps,j] <- rnorm(1, 0, 5) * 10
       # if(ps==1 || ps==psi){gamma.origin[ps,j] <- -15}
       # else{gamma.origin[ps,j] <- -15}
     }
@@ -202,8 +202,8 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += normal_lpdf(theta[1] | 0, 10);
-    target += gamma_lpdf(lambda1 | 1, 1e-3);
+    target += normal_lpdf(theta[1] | 0, 5);
+    target += gamma_lpdf(lambda1 | 1, 1e-1);
     target += gamma_lpdf(lambda2 | 1, 1e-3);
     target += (2*p*log(lambda2));
     for (j in 1:p){
@@ -244,9 +244,9 @@ system.time(fit1 <- stan(
   init = init.alpha,      # initial value
   chains = 3,             # number of Markov chains
   # warmup = 1000,          # number of warmup iterations per chain
-  iter = 2000,            # total number of iterations per chain
+  iter = 4000,            # total number of iterations per chain
   cores = parallel::detectCores(), # number of cores (could use one per chain)
-  refresh = 500             # no progress shown
+  refresh = 1000             # no progress shown
 ))
 
 posterior <- extract(fit1)
@@ -379,7 +379,7 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values=c("steelblue", "red")) + 
   guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) + ylim(-1.3, 1.3) + 
+          fill = guide_legend(order = 1)) + #ylim(-1.3, 1.3) + 
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 15),
         legend.position="none",
@@ -416,7 +416,7 @@ ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) +
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values=c("steelblue", "red")) + 
   guides(color = guide_legend(order = 2), 
-         fill = guide_legend(order = 1)) + ylim(-0.55, 0.5) + 
+         fill = guide_legend(order = 1)) + #ylim(-0.55, 0.5) + 
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 15),
         legend.position="none",
