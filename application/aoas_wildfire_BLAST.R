@@ -71,8 +71,6 @@ fwi.index$date <- as.numeric(fwi.index$date)
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 
 fwi.index <- fwi.index[which(Y>1),]
-fwi.origin <- fwi.scaled <-fwi.scaled[which(Y>1),]
-Y <- Y[Y>1]
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
@@ -213,14 +211,14 @@ transformed parameters {
     };
 
     for (i in 1:n){
-        alpha[i] = 1/exp(theta[1] + sum(gsmooth[i,]));
+        alpha[i] = exp(theta[1] + sum(gsmooth[i,]));
     };    
 }
 
 model {
     // likelihood
     for (i in 1:n){
-        target += pareto_lpdf(y[i] | u, 1/alpha[i]);
+        target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += normal_lpdf(theta[1] | 0, 10);
     target += gamma_lpdf(lambda1 | 1, 1e-3);
@@ -241,7 +239,7 @@ generated quantities {
     vector[n] f;
     matrix[n, p] newgsmooth; // linear component
 
-    yrep = pareto_rng(u, 1/alpha[1]); 
+    yrep = pareto_rng(u, alpha[1]); 
 
     for (j in 1:p){
       newgsmooth[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j] + xholderLinear[,j] * theta[j+1];

@@ -252,7 +252,10 @@ system.time({
 
 stopCluster(cl)
 # save(quant.fit, fwi.df, fwi.origin, taus, file="./BLAST/application/mqgam_time.Rdata")
-load("./BLAST/application/mqgam_time.Rdata")
+# save(results.list, fwi.df, fwi.origin, taus, file="./BLAST/application/mqgam_time_09above.Rdata")
+print(plot(results.list[[6]], allTerms = TRUE), pages = 1)
+cqcheck(obj = results.list[[6]], v = c("time"), X = fwi.df, y = fwi.df$BA) 
+load("./BLAST/application/mqgam_time_09above.Rdata")
 
 print(plot(quant.fit, allTerms = TRUE), pages = 1)
 for(i in 1:length(taus)){
