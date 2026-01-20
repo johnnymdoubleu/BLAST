@@ -80,6 +80,63 @@ vars <- colnames(fwi.origin)[1:7]
 seq_list <- lapply(vars, function(var) seq(min(fwi.origin[[var]]), max(fwi.origin[[var]]), length.out = length(Y)))
 grid.df <- as.data.frame(setNames(seq_list, vars))
 
+library(tidyverse)
+fwi.index$BA <- fwi.origin$BA
+# 1. Prepare the Data
+# We create a new dataframe 'df_seasonal' to avoid overwriting your original data
+df_seasonal <- fwi.index %>%
+  mutate(
+    # --- FIX IS HERE ---
+    year = as.numeric(as.character(year)), 
+    # -------------------
+    
+    # Convert "Jan", "Feb" to numbers 1, 2...
+    Month_Num = match(month, month.abb), 
+    
+    # Assign Seasons
+    Season = case_when(
+      Month_Num %in% c(12, 1, 2) ~ "Winter",
+      Month_Num %in% c(3, 4, 5) ~ "Spring",
+      Month_Num %in% c(6, 7, 8) ~ "Summer",
+      Month_Num %in% c(9, 10, 11) ~ "Autumn"
+    ),
+    
+    # Correct the Year for Winter
+    SeasonYear = ifelse(Month_Num == 12, year + 1, year)
+  )
+# 2. Calculate the 0.95 Quantile
+# Change 'FWI' below to 'DSR' or 'ISI' if you want to plot a different variable
+plot_data <- df_seasonal %>%
+  group_by(SeasonYear, Season) %>%
+  summarise(
+    Q95 = quantile(BA, 0.95, na.rm = TRUE), 
+    .groups = "drop"
+  ) %>%
+  mutate(Season = factor(Season, levels = c("Winter", "Spring", "Summer", "Autumn"))) %>%
+  arrange(SeasonYear, Season) %>%
+  mutate(Label = paste(SeasonYear, Season)) %>%
+  mutate(Label = factor(Label, levels = unique(Label)))
+
+df_seasonal <- df_seasonal %>% 
+  mutate(Label = paste(SeasonYear, Season)) %>%
+  mutate(Label = factor(Label, levels = unique(Label)))
+# 3. Plot
+# ggplot(plot_data, aes(x = Label, y = Q95, group = 1)) +
+ggplot(df_seasonal, aes(x = Label, y = BA, group = 1)) +
+  geom_line(color = "steelblue", linewidth = 1) +
+  geom_point(aes(color = Season), size = 3) +
+  scale_color_manual(values = c(
+    "Summer" = "orange", 
+    "Winter" = "red", 
+    "Spring" = "red", 
+    "Autumn" = "red"
+  )) +
+  labs(y = "BA", x = "Season", color = "Season") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "none"
+  )
 
 # 1. Get predictions at tau = 0.5 and tau = 0.95
 # fit.50 <- quantreg::rq(BA ~ bs(DSR) + bs(FWI) + bs(BUI) + bs(ISI) + bs(FFMC) + bs(DMC) + bs(DC), tau = 0.5, data = fwi.origin)
@@ -219,7 +276,8 @@ grid.df <- as.data.frame(setNames(seq_list, vars))
 # par(mfrow = c(1, 1))
 
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
-fwi.df <- as.data.frame(sapply(fwi.origin[, c(1:8)], FUN = range01))
+fwi.df <- as.data.frame(sapply(fwi.origin[, c(1:7)], FUN = range01))
+fwi.df$time <- fwi.origin$time
 fwi.df$BA <- fwi.origin$BA
 # quant.fit <- qgam(BA ~ s(DSR, k = 30) + s(FWI, k = 30) + s(BUI, k = 30) + s(ISI, k = 30) + s(FFMC, k = 30) + s(DMC, k = 30) + s(DC, k = 30), qu=0.975, data = fwi.df)
 # quant.fit <- qgam(BA ~ s(DSR) + s(FWI) + s(BUI) + s(ISI) + s(FFMC) + s(DMC) + s(DC) + s(time), qu=0.99, data = fwi.df)
@@ -296,7 +354,7 @@ for(i in 1:p){
                               which.max(fwi.scaled[,i])), ncol=2))
 }
 
-for(i in 1:p){
+for(i in 1:(p-1)){
   xholder[,i] <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n)
   test.knot <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
   splines <- basis.tps(xholder[,i], test.knot, m=2, rk=FALSE, intercept = FALSE)
@@ -376,7 +434,7 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u[i], alpha[i]);
     }
-    target += normal_lpdf(theta[1] | 0, 100);
+    target += normal_lpdf(theta[1] | 0, 5);
     target += gamma_lpdf(lambda1 | 1, 1e-3);
     target += gamma_lpdf(lambda2o | 1, 1e-3);
     target += (2*p*log(lambda2o));
@@ -502,7 +560,7 @@ data.smooth <- data.frame("x" = as.vector(xholder),
 
 
 grid.plts <- list()
-for(i in 1:p){
+for(i in 1:(p+1)){
   grid.plt <- ggplot(data = data.frame(data.smooth[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + 
                   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
                   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
@@ -511,7 +569,7 @@ for(i in 1:p){
                   ylab("") + xlab(names(fwi.scaled)[i]) +
                   scale_fill_manual(values=c("steelblue"), name = "") + 
                   scale_color_manual(values=c("steelblue")) +
-                  ylim(-1, 1.1) + #max(data.smooth$q3[((((i-1)*n)+1):(i*n))])) +
+                  #ylim(-1, 1.1) + #max(data.smooth$q3[((((i-1)*n)+1):(i*n))])) +
                   theme_minimal(base_size = 30) +
                   theme(legend.position = "none",
                           plot.margin = margin(0,0,0,-20),
@@ -523,4 +581,5 @@ for(i in 1:p){
 grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
 
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_DC.pdf"), grid.plts[[7]], width=10, height = 7.78)
+
 

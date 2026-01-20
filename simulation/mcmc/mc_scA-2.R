@@ -98,7 +98,6 @@ model {
     }
 }
 "
-, "model_simulation_scA.stan"
 
 # theta.container <- as.data.frame(matrix(, nrow = newp, ncol= total.iter))
 # gamma.container <- as.data.frame(matrix(, nrow = (p*psi), ncol = total.iter))
@@ -277,15 +276,15 @@ for(iter in 1:total.iter){
   qqplot.container[iter] <- apply(traj, 2, quantile, prob = 0.5)
 }
 
-# total.iter<-250
+total.iter<-50
 # colnames(alpha.container)[1:total.iter] <- as.character(1:total.iter)
 alpha.container$x <- seq(0,1, length.out = n)
 alpha.container$true <- alp.new
 alpha.container <- cbind(alpha.container, t(apply(alpha.container[,1:total.iter], 1, quantile, c(0.05, .5, .95))))
 colnames(alpha.container)[(dim(alpha.container)[2]-2):(dim(alpha.container)[2])] <- c("q1","q2","q3")
 alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
-alpha.container$q1 <- apply(alpha.lower.container[,1:total.iter], 1, quantile, c(.5))
-alpha.container$q3 <- apply(alpha.upper.container[,1:total.iter], 1, quantile, c(.5))
+# alpha.container$q1 <- apply(alpha.lower.container[,1:total.iter], 1, quantile, c(.5))
+# alpha.container$q3 <- apply(alpha.upper.container[,1:total.iter], 1, quantile, c(.5))
 alpha.container <- as.data.frame(alpha.container)
 
 
@@ -550,8 +549,10 @@ print(plt +
                     ylim = c(-2, 2)))
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_qqplot_scA_",n.origin,".pdf"), width=10, height = 7.78)
 
-save(alpha.container, newgsmooth.container, mise.container, qqplot.container, file = (paste0("./simulation/results/MC-scenario_A/",Sys.Date(),"_",total.iter,"_MC_scA-2_",n.origin,".Rdata")))
-# total.iter <- 250
+# save(alpha.container, newgsmooth.container, mise.container, qqplot.container, file = (paste0("./simulation/results/MC-scenario_A/",Sys.Date(),"_",total.iter,"_MC_scA-2_",n.origin,".Rdata")))
+
+
+total.iter <- 250
 
 # alpha.container.comb <- alpha.container[,1:total.iter]
 # newgsmooth.container.comb <- newgsmooth.container[,1:total.iter]

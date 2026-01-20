@@ -84,7 +84,7 @@ transformed parameters {
           gnl[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
           gridgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
           gl[,j] = bsLinear[,j] * theta[j+1];
-          gridgl[,j] = xholderLinear[,j] * theta[j+1];
+          gridgl[,j] = xholderfLinear[,j] * theta[j+1];
           gsmooth[,j] = gl[,j] + gnl[,j];
           gridgsmooth[,j] = gridgl[,j] + gridgnl[,j];
       };
