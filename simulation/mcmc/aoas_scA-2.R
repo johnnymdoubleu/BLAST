@@ -29,9 +29,9 @@ for(i in 1:p){
 gamma.origin <- matrix(, nrow=psi, ncol=p)
 for(j in 1:p){
   if(j %in% c(1,4,5)){gamma.origin[,j] <- rep(0, psi)}
-    else {gamma.origin[,j] <- runif(psi, 0.5,1)}
+    else {gamma.origin[,j] <- runif(psi, 0.25, 0.5)}
 }
-theta.origin <- c(0.5, 0, -0.5, -0.5, 0, 0)
+theta.origin <- c(0.5, 0, -0.25, -0.25, 0, 0)
 
 f.nonlinear.origin <- f.linear.origin <- f.origin <- matrix(, nrow = n, ncol = p)
 for(j in 1:p){
@@ -100,6 +100,9 @@ for(i in 1:n){
   alp.new[i] <- exp(theta.origin[1] + sum(f.new[i,]))
 }
 
+X_means <- colMeans(bs.linear)
+bs.linear <- scale(bs.linear, center = X_means, scale = FALSE)
+
 model.stan <- "// Stan model for BRSTIR Pareto Uncorrelated Samples
 data {
     int <lower=1> n; // Sample size
@@ -114,6 +117,7 @@ data {
     real <lower=0> atau;
     matrix[2, (2*p)] basisFL;
     array[(p*2)] int indexFL;
+    vector[p] X_means;
 }
 parameters {
     vector[(p+1)] theta; // linear predictor
@@ -131,6 +135,7 @@ transformed parameters {
     matrix[n, p] gridgl; // linear component
     matrix[n, p] gridgsmooth; // linear component
     real <lower=0> lambda2;
+    real theta0;
     {
       array[p] vector[2] gammaFL;
       matrix[2, p] subgnl;
@@ -156,9 +161,9 @@ transformed parameters {
           gsmooth[,j] = gl[,j] + gnl[,j];
           gridgsmooth[,j] = gridgl[,j] + gridgnl[,j];
       };
-
+      theta0 = theta[1] - dot_product(X_means, theta[2:(p+1)]);
       for (i in 1:n){
-          alpha[i] = exp(theta[1] + sum(gsmooth[i,])); 
+          alpha[i] = exp(theta0 + sum(gsmooth[i,])); 
           gridalpha[i] = exp(theta[1] + sum(gridgsmooth[i,]));
       };
     }
@@ -170,9 +175,10 @@ model {
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += normal_lpdf(theta[1] | 0, 10);
-    target += gamma_lpdf(rho | 2, 2);
+    target += gamma_lpdf(rho | 0.1, 0.1);
+    
     for (j in 1:p){
-      target += gamma_lpdf(lambda1 | 1, 1); //target += gamma_lpdf(lambda2 | 1, 1) //target += (2*p*log(lambda2))    
+      target += gamma_lpdf(lambda1 | 0.1, 0.1); //target += gamma_lpdf(lambda2 | 1, 1) //target += (2*p*log(lambda2));
       target += double_exponential_lpdf(theta[(j+1)] | 0, 1/lambda1);
       target += gamma_lpdf(tau[j] | atau, square(lambda2)*0.5);
       target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(tau[j], psi)));
@@ -190,7 +196,7 @@ generated quantities {
 
 data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, 
                   atau = ((psi+1)/2), basisFL = basis.holder,
-                  indexFL = as.vector(t(index.holder)),
+                  indexFL = as.vector(t(index.holder)), X_means = X_means,
                   bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
                   xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear)
 
@@ -210,7 +216,7 @@ system.time(fit1 <- stan(
   init = init.alpha,      # initial value
   chains = 3,             # number of Markov chains
   # warmup = 1000,          # number of warmup iterations per chain
-  iter = 4000,            # total number of iterations per chain
+  iter = 2000,            # total number of iterations per chain
   cores = parallel::detectCores(), # number of cores (could use one per chain)
   refresh = 1000             # no progress shown
 ))
@@ -226,8 +232,8 @@ bayesplot::mcmc_trace(fit1, pars="lp__") + ylab("Scenario A2") +
         axis.text = element_text(size = 18))
 # ggsave(paste0("./simulation/results/appendix_",n,"_traceplot_scA.pdf"), width=22, height = 3)
 
-tau.samples <- summary(fit1, par=c("tau"), probs = c(0.05,0.5, 0.95))$summary
-theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
+# tau.samples <- summary(fit1, par=c("tau"), probs = c(0.05,0.5, 0.95))$summary
+theta.samples <- summary(fit1, par=c("theta0", "theta[2]", "theta[3]", "theta[4]", "theta[5]", "theta[6]"), probs = c(0.05,0.5, 0.95))$summary
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
 lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
 
