@@ -31,8 +31,8 @@ for(j in 1:p){
 
 theta.origin <- c(0.5, 0, 0.25, 0.25, 0, 0)
 f <- function(x){
-  0.25*x[,2] - cos(pi * x[,2])*x[,2] + 
-  0.25*x[,3] - 0.5*sin(2*pi *x[,3])
+  0.25*x[,2] + x[,2]^2+ 
+  0.25*x[,3] - 1.5*x[,3]^3
 }
 alp.origin <- exp(rep(theta.origin[1], n) + f(x.origin))
 y.origin <- rPareto(n, rep(1,n), alpha = alp.origin)
@@ -43,15 +43,14 @@ x.origin <- x.origin[excess.index,]
 y.origin <- y.origin[y.origin > u]
 n <- length(y.origin)
 newx <- seq(0,1,length.out = n)
-f2.l <- function(x) {0.25*x}
-f2.nl <- function(x) {-cos(pi * x)*x}
-f2 <- f2.l(newx) + f2.nl(newx)
-f3.l <- function(x) {0.25*x}
-f3.nl <- function(x) {-0.5*sin(2*pi *x)}
-f3 <- f3.l(newx) + f3.nl(newx)
+f.l <- function(x) {0.25*x}
+f2.nl <- function(x) {x^2}
+f2 <- f.l(newx) + f2.nl(newx)
+f3.nl <- function(x) {-1.5*x^3}
+f3 <- f.l(newx) + f3.nl(newx)
 grid.zero <- rep(0, n)
 g.new <- c(grid.zero, f2, f3, grid.zero, grid.zero)
-l.new <- c(grid.zero, f2.l(newx), f3.l(newx), grid.zero, grid.zero)
+l.new <- c(grid.zero, f.l(newx), f.l(newx), grid.zero, grid.zero)
 nl.new <- c(grid.zero, f2.nl(newx), f3.nl(newx), grid.zero, grid.zero)
 
 covariates <- colnames(x.origin) 
@@ -150,9 +149,10 @@ data {
 parameters {
     vector[(p+1)] theta; // linear predictor
     array[p] vector[psi] gamma_raw;
-    real <lower=0> lambda1; // lasso penalty //array[p] real <lower=0> 
+    array[p] real <lower=0> lambda1; // lasso penalty //array[p] real <lower=0> 
     array[p] real <lower=0> lambda2; // lambda2 group lasso penalty
     array[p] real <lower=0> tau;
+    real <lower=0> rho;
 }
 
 transformed parameters {
@@ -177,13 +177,14 @@ model {
     for (i in 1:n){
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
-    target += normal_lpdf(theta[1] | 0, 1);
+    target += normal_lpdf(theta[1] | 0, 10);
+    target += gamma_lpdf(rho | 2, 2);
     for (j in 1:p){
-        target += gamma_lpdf(lambda1 | 1, 1); 
-        target += gamma_lpdf(lambda2[j] | 0.001, 0.001);
-        target += double_exponential_lpdf(theta[(j+1)] | 0, 1/lambda1);
-        target += gamma_lpdf(tau[j] | atau, square(lambda2[j])*0.5);
-        target += multi_normal_lpdf(gamma_raw[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)));
+        target += gamma_lpdf(lambda1[j] | 0.1, 0.1); 
+        target += gamma_lpdf(lambda2[j] | 0.1, 0.1);
+        target += double_exponential_lpdf(theta[(j+1)] | 0, 1/(lambda1[j]*rho));
+        target += gamma_lpdf(tau[j] | atau, square(lambda2[j]*rho)*0.5);
+        target += std_normal_lpdf(gamma_raw[j]); // target += multi_normal_lpdf(gamma_raw[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)))
     }
 }
 
@@ -215,15 +216,15 @@ data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi,
                   bsLinear = bs.linear[,c(2:(p+1))], bsNonlinear = bs.nonlinear,
                   xholderLinear = xholder.linear[,c(2:(p+1))], xholderNonlinear = xholder.nonlinear)
 
-init.alpha <- list(list(gamma= array(rep(0.2, (psi*p)), dim=c(p,psi)),
-                        theta = rep(-0.1, (p+1)), tau = rep(0.1, p),# rho = 1, 
-                        lambda1 = 0.1, lambda2 = rep(1, p)),
-                   list(gamma = array(rep(-0.15, (psi*p)), dim=c(p,psi)),
-                        theta = rep(0.05, (p+1)), tau = rep(2, p), #rho = 1,
-                        lambda1 = 2, lambda2 = rep(5, p)),
-                   list(gamma = array(rep(-0.75, (psi*p)), dim=c(p,psi)),
-                        theta = rep(0.01, (p+1)), tau = rep(1.5, p),# rho = 1,
-                        lambda1 = 0.5, lambda2= rep(5, p)))
+init.alpha <- list(list(gamma_raw= array(rep(0.2, (psi*p)), dim=c(p,psi)),
+                        theta = rep(-0.1, (p+1)), tau = rep(0.1, p), rho = 1, 
+                        lambda1 = rep(0.1, p), lambda2 = rep(1, p)),
+                   list(gamma_raw = array(rep(-0.15, (psi*p)), dim=c(p,psi)),
+                        theta = rep(0.05, (p+1)), tau = rep(2, p), rho = 1,
+                        lambda1 = rep(2, p), lambda2 = rep(5, p)),
+                   list(gamma_raw = array(rep(-0.75, (psi*p)), dim=c(p,psi)),
+                        theta = rep(0.01, (p+1)), tau = rep(1.5, p), rho = 1,
+                        lambda1 = rep(0.5,p), lambda2= rep(5, p)))
 
 system.time(fit1 <- stan(
   model_code = model.stan,  # Stan program
@@ -303,7 +304,7 @@ df.gamma <- data.frame("seq" = seq(1, (psi*p)),
 df.gamma$covariate <- factor(rep(seq(1, 1 + nrow(df.gamma) %/% psi), each = psi, length.out = nrow(df.gamma)))
 df.gamma$labels <- factor(1:(psi*p))
 ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) + 
-  geom_errorbar(aes(ymin = l, ymax = u),valpha = 0.4, width = 4, linewidth = 1.2) +
+  geom_errorbar(aes(ymin = l, ymax = u), alpha = 0.4, width = 4, linewidth = 1.2) +
   # geom_point(aes(y=true), size =4, color ="red")+
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_point(size = 4) + ylab("") + xlab("" ) + 

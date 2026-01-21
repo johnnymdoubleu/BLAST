@@ -163,7 +163,7 @@ transformed parameters {
       };
       theta0 = theta[1] - dot_product(X_means, theta[2:(p+1)]);
       for (i in 1:n){
-          alpha[i] = exp(theta0 + sum(gsmooth[i,])); 
+          alpha[i] = exp(theta[1] + sum(gsmooth[i,])); 
           gridalpha[i] = exp(theta[1] + sum(gridgsmooth[i,]));
       };
     }
@@ -175,7 +175,6 @@ model {
         target += pareto_lpdf(y[i] | u, alpha[i]);
     }
     target += normal_lpdf(theta[1] | 0, 10);
-    target += gamma_lpdf(rho | 0.1, 0.1);
     
     for (j in 1:p){
       target += gamma_lpdf(lambda1 | 0.1, 0.1); //target += gamma_lpdf(lambda2 | 1, 1) //target += (2*p*log(lambda2));
@@ -201,14 +200,14 @@ data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi,
                   xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear)
 
 init.alpha <- list(list(gammaTemp = array(rep(2, ((psi-2)*p)), dim=c(p,(psi-2))),
-                        theta = rep(0, (p+1)), tau = rep(0.1, p), 
-                        lambda1 = 0.1, lambda2 = 1, rho = 1),
+                        theta = rep(0, (p+1)), tau = rep(0.1, p), #rho = 1, 
+                        lambda1 = 0.1, lambda2 = 1),
                    list(gammaTemp = array(rep(-1, ((psi-2)*p)), dim=c(p,(psi-2))),
-                        theta = rep(0, (p+1)), tau = rep(0.25, p), 
-                        lambda1 = 20, lambda2 = 20, rho = 2),
+                        theta = rep(0, (p+1)), tau = rep(0.25, p), #rho = 2, 
+                        lambda1 = 20, lambda2 = 20),
                    list(gammaTemp = array(rep(-0.75, ((psi-2)*p)), dim=c(p,(psi-2))),
-                        theta = rep(0.1, (p+1)), tau = rep(0.5, p), 
-                        lambda1 = 5, lambda2 = 0.1, rho = 5))
+                        theta = rep(0.1, (p+1)), tau = rep(0.5, p), #rho = 5, 
+                        lambda1 = 5, lambda2 = 0.1))
 
 system.time(fit1 <- stan(
   model_code = model.stan,  # Stan program
