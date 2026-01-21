@@ -5,7 +5,7 @@ library(rstan)
 library(MESS)
 
 # Scenario A-2
-total.iter <- 2
+total.iter <- 160
 
 n <- n.origin <- 15000
 psi <- 10
@@ -70,7 +70,7 @@ transformed parameters {
     };
     theta0 = theta[1] - dot_product(X_means, theta[2:(p+1)]);
     for (i in 1:n){
-      alpha[i] = exp(theta0 + sum(gsmooth[i,]));
+      alpha[i] = exp(theta[1] + sum(gsmooth[i,]));
       gridalpha[i] = exp(theta[1] + sum(gridgsmooth[i,]));
       se[i] = pow((gridalpha[i]-trueAlpha[i]), 2);
     };
@@ -85,8 +85,8 @@ model {
   }
   target += normal_lpdf(theta[1] | 0, 1); //
   for (j in 1:p){
-      target += gamma_lpdf(lambda1[j] | 0.1, 0.1); 
-      target += gamma_lpdf(lambda2[j] | 0.1, 0.1);
+      target += gamma_lpdf(lambda1[j] | 1, 1); 
+      target += gamma_lpdf(lambda2[j] | 0.01, 0.01);
       target += double_exponential_lpdf(theta[(j+1)] | 0, 1/lambda1[j]);
       target += gamma_lpdf(tau[j] | atau, square(lambda2[j])*0.5);
       target += multi_normal_lpdf(gamma_raw[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)));
@@ -275,7 +275,8 @@ print(plt +
                 axis.text = element_text(size = 30)))
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_scA_",n.origin,".pdf"), width=10, height = 7.78)
-
+n<- 750
+newx <- seq(0, 1, length.out = n)
 f2.l <- function(x) {0.25*x}
 f2.nl <- function(x) {-cos(pi * x)*x}
 f2 <- f2.l(newx) + f2.nl(newx)
@@ -327,8 +328,6 @@ print(plt +
 
 gridgl.container$x <- newx
 gridgl.container$true <- as.vector(l.new)
-# gridgl.container <- cbind(gridgl.container, t(apply(gridgl.container[,1:total.iter], 1, quantile, c(0.05, .5, .95))))
-# colnames(gridgl.container)[(dim(gridgl.container)[2]-2):(dim(gridgl.container)[2])] <- c("q1","q2","q3")
 gridgl.container$mean <- rowMeans(gridgl.container[,1:total.iter])
 gridgl.container$covariate <- gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]", "g[6]"))
 gridgl.container <- as.data.frame(gridgl.container)
@@ -342,13 +341,12 @@ if(total.iter <= 50){
 }else{
   for(i in 1:50){
     plt <- plt + geom_line(aes(y = .data[[names(gridgl.container)[i]]]), alpha = 0.05, linewidth = 0.7)
-    # plt <- plt + geom_line(aes(y = .data[[names(data.scenario)[i]]]))
   }
 }
 print(plt + 
         geom_line(aes(y=true, col = "True"), linewidth = 2) + 
         geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5, linetype = 2) + 
-        ylim(-0.23, 0.2) +
+        # ylim(-0.23, 0.2) +
         facet_grid(covariate ~ ., scales = "free_x", switch = "y",
                     labeller = label_parsed) +  
         scale_color_manual(values = c("steelblue", "red"))+
@@ -381,7 +379,7 @@ if(total.iter <= 50){
 print(plt + 
         geom_line(aes(y=true, col = "True"), linewidth = 2) + 
         geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5, linetype = 2) + 
-        ylim(-0.23, 0.2) +
+        # ylim(-0.23, 0.2) +
         facet_grid(covariate ~ ., scales = "free_x", switch = "y",
                     labeller = label_parsed) +  
         scale_color_manual(values = c("steelblue", "red"))+
