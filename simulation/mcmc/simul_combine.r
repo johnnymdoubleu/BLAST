@@ -1,6 +1,6 @@
 setwd("../BLAST/simulation/mcmc")
 iter <- 2
-file_pattern <- paste0("2026-01-23_",iter,"_MC_scO_15000_.*.Rdata")
+file_pattern <- paste0("2026-01-23_",iter,"_MC_scSO_15000_.*.Rdata")
 file_list <- list.files(pattern = file_pattern)
 
 # Check if files were found
@@ -63,4 +63,4 @@ gridgnl.container$true <- temp_env$gridgnl.container$true
 gridgnl.container$covarite <- temp_env$gridgnl.container$covariate
 qqplot.container$grid <- temp_env$qqplot.container$grid
 
-save(alpha.container, gridgnl.container, gridgl.container, gridgsmooth.container, mise.container, qqplot.container, file = (paste0(Sys.Date(),"_",length(file_list)*iter,"_MC_sc0_",nrow(alpha.container),".Rdata")))
+# save(alpha.container, gridgnl.container, gridgl.container, gridgsmooth.container, mise.container, qqplot.container, file = (paste0(Sys.Date(),"_",length(file_list)*iter,"_MC_scS0_",nrow(alpha.container),".Rdata")))
