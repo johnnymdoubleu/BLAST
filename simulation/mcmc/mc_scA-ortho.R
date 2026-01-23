@@ -5,7 +5,7 @@ library(rstan)
 library(MESS)
 
 # Scenario A-2
-total.iter <- 2
+total.iter <- 232
 
 n <- n.origin <- 15000
 psi <- 10

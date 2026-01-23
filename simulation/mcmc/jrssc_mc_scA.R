@@ -8,38 +8,28 @@ library(MESS)
 total.iter <- 2
 
 n <- n.origin <- 15000
-psi <- 10
+psi.origin <- psi <- 10
 threshold <- 0.95
 p <- 5
 
 no.theta <- 1
 
 C <- diag(p)
-## Generate sample
-newx <- seq(0, 1, length.out = n * 0.05)
 
-raw_f2_nl <- function(x) 1.5 * sin(2 * pi * x^2)*x^3
-raw_f3_nl <- function(x) -1.5 * cos(3 * pi * x^2)*x^2
+raw_f2_nl <- function(x) {1.5 * sin(2 * pi * x^2)*x^3}
+raw_f3_nl <- function(x) {-1.5 * cos(3 * pi * x^2)*x^2}
 
 make.nl <- function(x, raw_y) {
   fit <- lm(raw_y ~ x)
-  return(residuals(fit))
+  
+  return(list(
+    nl = residuals(fit), 
+    slope = coef(fit)[["x"]],
+    intercept = coef(fit)[["(Intercept)"]]
+  ))
 }
 
-theta.origin <- c(1, 0, 0.8, -0.8, 0, 0) 
-g2.nl <- make.nl(newx, raw_f2_nl(newx))
-g3.nl <- make.nl(newx, raw_f3_nl(newx))
-g2.l <- theta.origin[3]*newx
-g3.l <- theta.origin[4]*newx
-g2 <- g2.l + g2.nl
-g3 <- g3.l + g3.nl
-eta.g <- rep(theta.origin[1], n*0.05) + g2 + g3
-alp.new <- exp(eta.g)
-grid.zero <- rep(0, n*0.05)
-g.new <- c(grid.zero, g2, g3, grid.zero, grid.zero)
-l.new <- c(grid.zero, g2.l, g3.l, grid.zero, grid.zero)
-nl.new <- c(grid.zero, g2.nl, g3.nl, grid.zero, grid.zero)
-
+theta.origin <- c(1, 0, 0.8, -0.8, 0, 0)
 psi <- psi -2
 
 model.stan <- "// Stan model for BLAST Pareto Samples
@@ -96,7 +86,7 @@ model {
       target += gamma_lpdf(lambda2[j] | 0.01, 0.01);    
       target += double_exponential_lpdf(theta[(j+1)] | 0, 1/(lambda1[j]));
       target += gamma_lpdf(tau[j] | atau, square(lambda2[j])*0.5);
-      target += std_normal_lpdf(gamma_raw[j]); // target += multi_normal_lpdf(gamma_raw[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)))
+      target += std_normal_lpdf(gamma_raw[j]);
     }
 }
 
@@ -142,8 +132,8 @@ qqplot.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = tota
 for(iter in 1:total.iter){
   n <- n.origin
   x.origin <- pnorm(matrix(rnorm(n*p), ncol = p) %*% chol(C))
-  f2.nl <- make.nl(x.origin[,2], raw_f2_nl(x.origin[,2]))
-  f3.nl <- make.nl(x.origin[,3], raw_f3_nl(x.origin[,3]))
+  f2.nl <- raw_f2_nl(x.origin[,2])
+  f3.nl <- raw_f3_nl(x.origin[,3])
   f2.l <- theta.origin[3]*x.origin[,2]
   f3.l <- theta.origin[4]*x.origin[,3]
 
@@ -155,9 +145,30 @@ for(iter in 1:total.iter){
   u <- quantile(y.origin, threshold)
   excess.index <- which(y.origin>u)
   x.origin <- x.origin[excess.index,]
-  y.origin <- y.origin[y.origin > u]
+  y.origin <- y.origin[excess.index]
   n <- length(y.origin)
-  # covariates <- colnames(x.origin) 
+
+  f2.hidden <- make.nl(x.origin[,2], raw_f2_nl(x.origin[,2]))
+  f3.hidden <- make.nl(x.origin[,3], raw_f3_nl(x.origin[,3]))
+  theta.adjusted <- c(theta.origin[1] + f2.hidden$intercept + f3.hidden$intercept,
+                      theta.origin[2],
+                      theta.origin[3] + f2.hidden$slope,
+                      theta.origin[4] + f3.hidden$slope,
+                      theta.origin[5],
+                      theta.origin[6])
+  newx <- seq(0,1,length.out = n)
+  g2.nl <- raw_f2_nl(newx) - (f2.hidden$intercept + f2.hidden$slope*newx)
+  g3.nl <- raw_f3_nl(newx) - (f2.hidden$intercept + f2.hidden$slope*newx)
+  g2.l <- theta.adjusted[3]*newx
+  g3.l <- theta.adjusted[4]*newx
+  g2 <- g2.l + g2.nl
+  g3 <- g3.l + g3.nl
+  eta.g <- rep(theta.adjusted[1], n) + g2 + g3
+  alp.new <- exp(eta.g)
+  grid.zero <- rep(0, n)
+  g.new <- c(grid.zero, g2, g3, grid.zero, grid.zero)
+  l.new <- c(grid.zero, g2.l, g3.l, grid.zero, grid.zero)
+  nl.new <- c(grid.zero, g2.nl, g3.nl, grid.zero, grid.zero)
 
   bs.linear <- model.matrix(~ ., data = data.frame(x.origin))
   
@@ -390,8 +401,8 @@ if(total.iter <= 50){
   }
 }
 print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-        geom_line(aes(y=true, col = "True"), linewidth = 2) + 
-        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5, linetype = 2) + 
+        geom_line(aes(y=true, col = "True"), linewidth = 2, linetype = 2) + 
+        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5) + 
         # ylim(-0.23, 0.2) +
         facet_grid(covariate ~ ., scales = "free_x", switch = "y",
                     labeller = label_parsed) +  
@@ -402,9 +413,10 @@ print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewid
         theme(legend.position = "none",
                 plot.margin = margin(0,0,0,-20),
                 strip.text = element_blank(),
-                axis.text = element_text(size = 20)))
+                axis.title.x = element_text(size = 45),  
+                axis.text = element_text(size = 30)))
 
-# # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_linear_sc1-wi.pdf"), width=10, height = 7.78)                
+# # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_linear_sc1-wi.pdf"), width=12.5, height = 7.78)                
 
 gridgnl.container$x <- newx
 gridgnl.container$true <- as.vector(nl.new)
@@ -423,8 +435,8 @@ if(total.iter <= 50){
   }
 }
 print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-        geom_line(aes(y=true, col = "True"), linewidth = 2) + 
-        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5, linetype = 2) + 
+        geom_line(aes(y=true, col = "True"), linewidth = 2, linetype = 2) + 
+        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5) + 
         # ylim(-0.23, 0.2) +
         facet_grid(covariate ~ ., scales = "free_x", switch = "y",
                     labeller = label_parsed) +  
@@ -435,9 +447,10 @@ print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewid
         theme(legend.position = "none",
                 plot.margin = margin(0,0,0,-20),
                 strip.text = element_blank(),
-                axis.text = element_text(size = 20)))
+                axis.title.x = element_text(size = 45),  
+                axis.text = element_text(size = 30)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_nonlinear_sc1-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_nonlinear_sc1-wi.pdf"), width=12.5, height = 7.78)
 
 qqplot.container$grid <- grid
 qqplot.container$mean <- rowMeans(qqplot.container[,1:total.iter])
