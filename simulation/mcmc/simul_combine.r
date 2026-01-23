@@ -1,5 +1,6 @@
-# setwd("../BLAST/simulation/mcmc")
-file_pattern <- "2026-01-21_5_MC_scO_15000_.*.Rdata" 
+setwd("../BLAST/simulation/mcmc")
+iter <- 2
+file_pattern <- paste0("2026-01-23_",iter,"_MC_scO_15000_.*.Rdata")
 file_list <- list.files(pattern = file_pattern)
 
 # Check if files were found
@@ -28,24 +29,24 @@ for (f in file_list) {
     
     # 4. Append contents to the final containers
     # We wrap the loaded object in list() to maintain structure before combining
-    alpha.container <- cbind(alpha.container, temp_env$alpha.container[,c(1:5)])
+    alpha.container <- cbind(alpha.container, temp_env$alpha.container[,c(1:iter)])
     # newgsmooth.container <- cbind(newgsmooth.container, temp_env$newgsmooth.container[,c(1:5)])
-    gridgsmooth.container <- cbind(gridgsmooth.container, temp_env$gridgsmooth.container[,c(1:5)])
-    gridgl.container <- cbind(gridgl.container, temp_env$gridgl.container[,c(1:5)])
-    gridgnl.container <- cbind(gridgnl.container, temp_env$gridgnl.container[,c(1:5)])
+    gridgsmooth.container <- cbind(gridgsmooth.container, temp_env$gridgsmooth.container[,c(1:iter)])
+    gridgl.container <- cbind(gridgl.container, temp_env$gridgl.container[,c(1:iter)])
+    gridgnl.container <- cbind(gridgnl.container, temp_env$gridgnl.container[,c(1:iter)])
     mise.container <- c(mise.container, temp_env$mise.container)
-    qqplot.container <- cbind(qqplot.container, temp_env$qqplot.container[,c(1:5)])
+    qqplot.container <- cbind(qqplot.container, temp_env$qqplot.container[,c(1:iter)])
     
   }, error = function(e) {
     warning(paste("Error loading file", f, ":", e$message))
   })
 }
 
-colnames(alpha.container) <- paste0("V", 1:(length(file_list)*5))
-colnames(gridgsmooth.container) <- paste0("V", 1:(length(file_list)*5))
-colnames(gridgl.container) <- paste0("V", 1:(length(file_list)*5))
-colnames(gridgnl.container) <- paste0("V", 1:(length(file_list)*5))
-colnames(qqplot.container) <- paste0("V", 1:(length(file_list)*5))
+colnames(alpha.container) <- paste0("V", 1:(length(file_list)*iter))
+colnames(gridgsmooth.container) <- paste0("V", 1:(length(file_list)*iter))
+colnames(gridgl.container) <- paste0("V", 1:(length(file_list)*iter))
+colnames(gridgnl.container) <- paste0("V", 1:(length(file_list)*iter))
+colnames(qqplot.container) <- paste0("V", 1:(length(file_list)*iter))
 alpha.container$x <- temp_env$alpha.container$x
 alpha.container$true <- temp_env$alpha.container$true
 # newgsmooth.container$x <- temp_env$newgsmooth.container$x
@@ -62,4 +63,4 @@ gridgnl.container$true <- temp_env$gridgnl.container$true
 gridgnl.container$covarite <- temp_env$gridgnl.container$covariate
 qqplot.container$grid <- temp_env$qqplot.container$grid
 
-save(alpha.container, gridgnl.container, gridgl.container, gridgsmooth.container, mise.container, qqplot.container, file = (paste0(Sys.Date(),"_",length(file_list)*5,"_MC_sc0_",n.origin,".Rdata")))
+save(alpha.container, gridgnl.container, gridgl.container, gridgsmooth.container, mise.container, qqplot.container, file = (paste0(Sys.Date(),"_",length(file_list)*iter,"_MC_sc0_",nrow(alpha.container),".Rdata")))

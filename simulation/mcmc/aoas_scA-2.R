@@ -6,7 +6,7 @@ library(parallel)
 library(qqboxplot)
 
 #Scenario 1
-set.seed(10)
+# set.seed(10)
 
 n <- 5000
 psi <- 5
@@ -123,8 +123,8 @@ parameters {
     vector[(p+1)] theta; // linear predictor
     array[p] vector[(psi-2)] gammaTemp; // constraint splines coefficient from 2 to psi-1
     real <lower=0> lambda1; // lasso penalty group lasso penalty
+    real <lower=0> lambda2;
     array[p] real <lower=0> tau;
-    real <lower=0> rho;
 }
 
 transformed parameters {
@@ -134,7 +134,6 @@ transformed parameters {
     matrix[n, p] gridgnl; // nonlinear component
     matrix[n, p] gridgl; // linear component
     matrix[n, p] gridgsmooth; // linear component
-    real <lower=0> lambda2;
     real theta0;
     {
       array[p] vector[2] gammaFL;
@@ -143,14 +142,12 @@ transformed parameters {
       matrix[n, p] gl; // linear component
       matrix[n, p] gsmooth; // linear component
 
-
       for(j in 1:p){
           gamma[j][2:(psi-1)] = gammaTemp[j][1:(psi-2)];
           subgnl[,j] = bsNonlinear[indexFL[(((j-1)*2)+1):(((j-1)*2)+2)], (((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] * gammaTemp[j];
           gammaFL[j] = basisFL[, (((j-1)*2)+1):(((j-1)*2)+2)] * subgnl[,j] * (-1);
           gamma[j][1] = gammaFL[j][1];
           gamma[j][psi] = gammaFL[j][2];
-          lambda2 = lambda1 * rho;
       };
       
       for (j in 1:p){
@@ -164,7 +161,7 @@ transformed parameters {
       theta0 = theta[1] - dot_product(X_means, theta[2:(p+1)]);
       for (i in 1:n){
           alpha[i] = exp(theta[1] + sum(gsmooth[i,])); 
-          gridalpha[i] = exp(theta[1] + sum(gridgsmooth[i,]));
+          gridalpha[i] = exp(theta0 + sum(gridgsmooth[i,]));
       };
     }
 }
@@ -177,7 +174,8 @@ model {
     target += normal_lpdf(theta[1] | 0, 10);
     
     for (j in 1:p){
-      target += gamma_lpdf(lambda1 | 0.1, 0.1); //target += gamma_lpdf(lambda2 | 1, 1) //target += (2*p*log(lambda2));
+      target += gamma_lpdf(lambda1 | 0.1, 0.1); 
+      target += gamma_lpdf(lambda2 | 0.01, 0.01); //target += (2*p*log(lambda2));
       target += double_exponential_lpdf(theta[(j+1)] | 0, 1/lambda1);
       target += gamma_lpdf(tau[j] | atau, square(lambda2)*0.5);
       target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(tau[j], psi)));
