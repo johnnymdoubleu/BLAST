@@ -5,7 +5,7 @@ library(rstan)
 library(MESS)
 
 # Scenario A-2
-total.iter <- 2
+total.iter <- 250
 
 n <- n.origin <- 15000
 psi.origin <- psi <- 10
@@ -29,7 +29,7 @@ make.nl <- function(x, raw_y) {
   ))
 }
 
-theta.origin <- c(1, 0, 0.8, -0.8, 0, 0)
+theta.origin <- c(1, 0, 0.8, -0.4, 0, 0)
 psi <- psi -2
 
 model.stan <- "// Stan model for BLAST Pareto Samples
@@ -105,9 +105,6 @@ generated quantities {
       theta_origin[j+1] = theta[j+1] / X_sd[j];
     }
     theta_origin[1] = theta[1] - dot_product(X_means, theta_origin[2:(p+1)]);
-    for(i in 1:n){
-      log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
-    }
     for (j in 1:p){
         gridgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
         gridgl[,j] = xholderLinear[,j] * theta_origin[j+1];
@@ -318,8 +315,7 @@ alpha.container$true <- alp.new
 alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
-
-# load(paste0("./simulation/results/MC-Scenario_A/2024-05-01_",total.iter,"_MC_scA_",n.origin,".Rdata"))
+load(paste0("./simulation/results/MC-Scenario_A/2026-01-24_",total.iter,"_MC_scA_",n.origin,".Rdata"))
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab(expression(alpha(c,...,c))) #+ ylab("")
 if(total.iter <= 50){
@@ -334,7 +330,7 @@ if(total.iter <= 50){
 }
 print(plt +
         geom_line(aes(y=true, col = "True"), linewidth = 2, linetype = 2) + 
-        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.8) +
+        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.8) + ylim(0, 20) +
         scale_fill_manual(values=c("steelblue"), name = "") +
         scale_color_manual(values = c("steelblue", "red"))+
         guides(color = guide_legend(order = 2), 
@@ -345,8 +341,6 @@ print(plt +
                 axis.text = element_text(size = 30)))
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_scA_",n.origin,".pdf"), width=10, height = 7.78)
-# n<- 750
-# newx <- seq(0, 1, length.out = n)
 
 gridgsmooth.container$x <- newx
 gridgsmooth.container$true <- g.new
@@ -369,7 +363,7 @@ print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewid
         geom_line(aes(y=true, col = "True"), linewidth = 2, linetype = 2) + 
         geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5) + 
         facet_grid(covariate ~ ., scales = "free_x", switch = "y",
-                    labeller = label_parsed) +        
+                    labeller = label_parsed) + ylim(-2.3,2.3)+
         scale_color_manual(values = c("steelblue", "red"))+
         guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) +
@@ -381,7 +375,7 @@ print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewid
                 axis.title.x = element_text(size = 45),                
                 axis.text = element_text(size = 30)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_scA_",n.origin,".pdf"), width=12.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_scA_",n.origin,".pdf"), width=11, height = 15)
 
 
 gridgl.container$x <- newx
@@ -403,7 +397,7 @@ if(total.iter <= 50){
 print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
         geom_line(aes(y=true, col = "True"), linewidth = 2, linetype = 2) + 
         geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5) + 
-        # ylim(-0.23, 0.2) +
+        ylim(-2.3,2.3)+
         facet_grid(covariate ~ ., scales = "free_x", switch = "y",
                     labeller = label_parsed) +  
         scale_color_manual(values = c("steelblue", "red"))+
@@ -416,7 +410,7 @@ print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewid
                 axis.title.x = element_text(size = 45),  
                 axis.text = element_text(size = 30)))
 
-# # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_linear_sc1-wi.pdf"), width=12.5, height = 7.78)                
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_linear_scA",n.origin,".pdf"), width=12.5, height = 7.78)                
 
 gridgnl.container$x <- newx
 gridgnl.container$true <- as.vector(nl.new)
@@ -437,7 +431,7 @@ if(total.iter <= 50){
 print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
         geom_line(aes(y=true, col = "True"), linewidth = 2, linetype = 2) + 
         geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5) + 
-        # ylim(-0.23, 0.2) +
+        ylim(-2.3,2.3)+
         facet_grid(covariate ~ ., scales = "free_x", switch = "y",
                     labeller = label_parsed) +  
         scale_color_manual(values = c("steelblue", "red"))+
@@ -450,14 +444,19 @@ print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewid
                 axis.title.x = element_text(size = 45),  
                 axis.text = element_text(size = 30)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_nonlinear_sc1-wi.pdf"), width=12.5, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_nonlinear_sca",n.origin,".pdf"), width=12.5, height = 7.78)
 
 qqplot.container$grid <- grid
 qqplot.container$mean <- rowMeans(qqplot.container[,1:total.iter])
 plt <- ggplot(data = qqplot.container, aes(x = grid))
-for(i in 1:total.iter){
-# for(i in 50:100){
-  plt <- plt + geom_line(aes(y = .data[[names(qqplot.container)[i]]]), alpha = 0.05, linewidth = 0.7)
+if(total.iter <= 50){
+  for(i in 1:total.iter){
+    plt <- plt + geom_line(aes(y = .data[[names(qqplot.container)[i]]]), alpha = 0.05, linewidth = 0.7)
+  }
+}else{
+  for(i in 50:100){
+    plt <- plt + geom_line(aes(y = .data[[names(qqplot.container)[i]]]), alpha = 0.05, linewidth = 0.7)
+  }
 }
 print(plt + 
         geom_line(aes(y = mean), colour = "steelblue", linewidth = 1.5, linetype = 2) + 
@@ -468,6 +467,6 @@ print(plt +
                     ylim = c(-2, 2)))
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_qqplot_scA_",n.origin,".pdf"), width=10, height = 7.78)
 
-# save(alpha.container, gridgnl.container, gridgl.container, gridgsmooth.container, mise.container, qqplot.container, file = (paste0(Sys.Date(),"_",total.iter,"_MC_scA-2_",n.origin,".Rdata")))
+# save(alpha.container, gridgnl.container, gridgl.container, gridgsmooth.container, mise.container, qqplot.container, file = paste0(Sys.Date(),"_",total.iter,"_MC_scA_",n.origin,".Rdata"))
 
 mean(mise.container)

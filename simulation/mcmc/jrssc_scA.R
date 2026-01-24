@@ -6,10 +6,10 @@ library(Pareto)
 library(parallel)
 library(qqboxplot)
 
-# set.seed(10)
+set.seed(10)
 
 n <- 15000
-psi <- 7
+psi <- 10
 threshold <- 0.95
 p <- 5
 
@@ -291,7 +291,7 @@ bayesplot::mcmc_trace(fit1, pars="lp__") + ylab("Scenario A2") +
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 18))
-# ggsave(paste0("./simulation/results/appendix_",n,"_traceplot_scA.pdf"), width=22, height = 3)
+ggsave(paste0("./simulation/results/appendix_",n,"_traceplot_scA.pdf"), width=22, height = 3)
 
 # tau.samples <- summary(fit1, par=c("tau"), probs = c(0.05,0.5, 0.95))$summary
 theta.samples <- summary(fit1, par=c("theta_origin"), probs = c(0.05,0.5, 0.95))$summary
@@ -398,15 +398,15 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_line(aes(y=true, colour = "True"), linewidth=2, linetype=2) + 
-  # geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1.8) + 
-  geom_line(aes(y=post.mean, colour = "Posterior Median"), linewidth=1.8) + 
-  ylab("") + xlab(expression(c)) + 
+  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1.8) + 
+  # geom_line(aes(y=post.mean, colour = "Posterior Median"), linewidth=1.8) + 
+  ylab("") + xlab(expression(c)) + ylim(-2.3,2.3) +
   facet_grid(covariates ~ ., scales = "free_x", switch = "y", 
               labeller = label_parsed) + 
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values=c("steelblue", "red")) + 
   guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) + #ylim(-1.3, 1.3) + 
+          fill = guide_legend(order = 1)) +
   theme_minimal(base_size = 30) +
   theme(plot.title = element_text(hjust = 0.5, size = 15),
         legend.position="none",
@@ -416,7 +416,7 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
         axis.title.x = element_text(size = 45),
         axis.text = element_text(size=30))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_smooth_sc1-wi.pdf"), width=12.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_smooth_scA.pdf"), width=11, height = 15)
 
 data.linear <- data.frame("x"=seq(0,1, length.out = n),
                           "true" = as.vector(l.new),
@@ -432,29 +432,23 @@ ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) +
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   geom_line(aes(y=true, colour = "True"), linewidth=2, linetype=2) + 
-  # geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
-  geom_line(aes(y=post.mean, colour = "Posterior Median"), linewidth=1) + 
-  ylab("") + xlab(expression(c)) +
-  facet_wrap(covariates ~ ., scales = "free_x", nrow = 5,
-             labeller = label_parsed, strip.position = "left") + 
+  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
+  # geom_line(aes(y=post.mean, colour = "Posterior Median"), linewidth=1) + 
+  ylab("") + xlab(expression(c)) + ylim(-2.3, 2.3) + 
+  facet_grid(covariates ~ ., scales = "free_x", switch = "y",
+              labeller = label_parsed) +  
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values=c("steelblue", "red")) + 
   guides(color = guide_legend(order = 2), 
-         fill = guide_legend(order = 1)) + #ylim(-0.55, 0.5) + 
+         fill = guide_legend(order = 1)) + 
   theme_minimal(base_size = 30) +
-  theme(plot.title = element_text(hjust = 0.5, size = 15),
-        legend.position="none",
-        legend.title = element_blank(),
-        legend.text = element_text(size=20),
-        legend.margin=margin(t = 1, unit='cm'),
-        legend.box.margin=margin(-10,0,-10,0),
-        plot.margin = margin(0,0,0,-20),
-        strip.text.y = element_text(size = 25, colour = "black", angle = 0, face = "bold.italic"),
-        strip.placement = "outside",
-        axis.title.x = element_text(size = 45),
-        axis.text = element_text(size=30))
+  theme(legend.position = "none",
+          plot.margin = margin(0,0,0,-20),
+          strip.text = element_blank(),
+          axis.title.x = element_text(size = 45),  
+          axis.text = element_text(size = 30))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_linear_sc1-wi.pdf"), width=12.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_linear_scA.pdf"), width=12.5, height = 15)
 
 
 data.nonlinear <- data.frame("x"=seq(0,1, length.out=n),
@@ -471,31 +465,24 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   geom_line(aes(y=true, colour = "True"), linewidth=2, linetype=2) + 
-  geom_line(aes(y=post.mean, colour = "Posterior Median"), linewidth=1) + 
-  ylab("") + xlab(expression(c)) +
-  facet_wrap(covariates ~ ., scales = "free_x", nrow = 5,
-             labeller = label_parsed, strip.position = "left") + 
+  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
+  ylab("") + xlab(expression(c)) + ylim(-2.3, 2.3) + 
+  facet_grid(covariates ~ ., scales = "free_x", switch = "y",
+              labeller = label_parsed) +  
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values=c("steelblue", "red")) + 
   guides(color = guide_legend(order = 2), 
          fill = guide_legend(order = 1)) + 
   theme_minimal(base_size = 30) +
-  theme(plot.title = element_text(hjust = 0.5, size = 15),
-        legend.position="none",
-        legend.title = element_blank(),
-        legend.text = element_text(size=20),
-        legend.margin=margin(t = 1, unit='cm'),
-        legend.box.margin=margin(-10,0,-10,0),
-        plot.margin = margin(0,0,0,-20),
-        strip.text.y = element_text(size = 25, colour = "black", angle = 0, face = "bold.italic"),
-        strip.placement = "outside",
-        axis.title.x = element_text(size = 45),
-        axis.text = element_text(size=30))
+  theme(legend.position = "none",
+          plot.margin = margin(0,0,0,-20),
+          strip.text = element_blank(),
+          axis.title.x = element_text(size = 45),  
+          axis.text = element_text(size = 30))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_nonlinear_sc1-wi.pdf"), width=12.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_nonlinear_scA.pdf"), width=12.5, height = 15)
 
-data.scenario <- data.frame("x" = seq(0,1, length.out = n),
-                            # "constant" = newx,
+data.scenario <- data.frame("x" = newx,
                             "true" = (alp.new),
                             "post.mean" = (newalpha.samples[,1]),
                             "q2" = (newalpha.samples[,5]),
@@ -505,7 +492,7 @@ data.scenario <- data.frame("x" = seq(0,1, length.out = n),
 ggplot(data.scenario, aes(x=x)) + 
   ylab(expression(alpha(c,...,c))) + xlab(expression(c)) + labs(col = "") +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
-  geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2, linetype=2) + 
+  geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2, linetype=2) + ylim(0, 20) + 
   geom_line(aes(y=q2, col = "Posterior Median"), linewidth=1.5) +
   # geom_line(aes(y=post.mean, col = "Posterior Mean"), linewidth=1.5) +
   scale_color_manual(values=c("steelblue", "red")) + 
@@ -514,7 +501,7 @@ ggplot(data.scenario, aes(x=x)) +
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 30))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_test_sc1-wi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_scA.pdf"), width=10, height = 7.78)
 
 mcmc.alpha <- posterior$alpha
 len <- dim(mcmc.alpha)[1]
@@ -547,7 +534,4 @@ ggplot(data = data.frame(grid = grid, l.band = l.band, trajhat = trajhat,
   theme(text = element_text(size = 20)) + 
   coord_fixed(xlim = c(-3, 3),  
               ylim = c(-3, 3))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_qqplot_sc1-wi.pdf"), width=10, height = 7.78)
-library(loo)
-fit.log.lik <- extract_log_lik(fit1)
-loo(fit.log.lik, is_method = "sis", cores = 2)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_qqplot_scA.pdf"), width=10, height = 7.78)
