@@ -30,7 +30,7 @@ make.nl <- function(x, raw_y) {
   ))
 }
 
-theta.origin <- c(1, 0, 0.1, 0.1, 0.1, 0.1)
+theta.origin <- c(0.5, 0, 0.6, -0.4, 0, 0.8)
 psi <- psi -2
 
 model.stan <- "// Stan model for BLAST Burr Samples
@@ -351,7 +351,6 @@ if(total.iter <= 50){
     plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.05, linewidth = 0.7)
   }
 } else{
-  # for(i in 1:total.iter){
   for(i in 50:100){
     plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.05, linewidth = 0.7)
   }
@@ -359,16 +358,17 @@ if(total.iter <= 50){
 print(plt +
         geom_line(aes(y=true, col = "True"), linewidth = 2, linetype = 2) + 
         geom_line(aes(y=mean, col = "Mean"), linewidth = 1.8) +
-        scale_fill_manual(values=c("steelblue"), name = "") +
+        scale_fill_manual(values=c("steelblue"), name = "") + ylim(0, 20) +
         scale_color_manual(values = c("steelblue", "red"))+
         guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) +
         theme_minimal(base_size = 40) + 
         theme(legend.position = "none",
                 strip.text = element_blank(),
+                axis.text.y = element_blank(),
                 axis.text = element_text(size = 30)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_scD_",n.origin,".pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_scD_",n.origin,".pdf"), width=9.5, height = 7.78)
 
 gridgsmooth.container$x <- newx
 gridgsmooth.container$true <- g.new
@@ -397,12 +397,12 @@ print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewid
         theme_minimal(base_size = 30) +
         theme(legend.position = "none",
                 plot.margin = margin(0,0,0,-20),
-                strip.text.y = element_text(size = 38, colour = "black", angle = 0, face = "bold.italic"),
-                strip.placement = "outside",
+                axis.text.y = element_blank(),
+                strip.text = element_blank(),
                 axis.title.x = element_text(size = 45),                
                 axis.text = element_text(size = 30)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_scD_",n.origin,".pdf"), width=11, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_scD_",n.origin,".pdf"), width=12.5, height = 15)
 
 
 gridgl.container$x <- newx
@@ -434,6 +434,7 @@ print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewid
         theme(legend.position = "none",
                 plot.margin = margin(0,0,0,-20),
                 strip.text = element_blank(),
+                axis.text.y = element_blank(),
                 axis.title.x = element_text(size = 45),  
                 axis.text = element_text(size = 30)))
 
@@ -458,7 +459,7 @@ if(total.iter <= 50){
 print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
         geom_line(aes(y=true, col = "True"), linewidth = 2, linetype = 2) + 
         geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5) + 
-        # ylim(-0.23, 0.2) +
+        ylim(-2.3, 2.3) +
         facet_grid(covariate ~ ., scales = "free_x", switch = "y",
                     labeller = label_parsed) +  
         scale_color_manual(values = c("steelblue", "red"))+

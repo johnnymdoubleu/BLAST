@@ -5,7 +5,7 @@ library(rstan)
 library(MESS)
 
 # Scenario A-2
-total.iter <- 1
+total.iter <- 2
 
 n <- n.origin <- 15000
 psi.origin <- psi <- 10
@@ -29,7 +29,7 @@ make.nl <- function(x, raw_y) {
   ))
 }
 
-theta.origin <- c(1, 1.2, 0, 0.8, 0, 0)
+theta.origin <- c(1, -0.3, 0, 0.5, 0, 0)
 psi <- psi -2
 
 model.stan <- "// Stan model for BLAST Student-t Samples
@@ -322,7 +322,7 @@ alpha.container <- as.data.frame(alpha.container)
 
 # load(paste0("./simulation/results/MC-Scenario_A/2026-01-24_",total.iter,"_MC_scC_",n.origin,".Rdata"))
 
-plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab(expression(alpha(c,...,c))) #+ ylab("")
+plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab("")
 if(total.iter <= 50){
   for(i in 1:total.iter){
     plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.05, linewidth = 0.7)
@@ -332,7 +332,7 @@ if(total.iter <= 50){
     plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.05, linewidth = 0.7)
   }
 }
-print(plt +
+print(plt + ylim(0, 20) +
         geom_line(aes(y=true, col = "True"), linewidth = 2, linetype = 2) + 
         geom_line(aes(y=mean, col = "Mean"), linewidth = 1.8) +
         scale_fill_manual(values=c("steelblue"), name = "") +
@@ -342,9 +342,10 @@ print(plt +
         theme_minimal(base_size = 40) + 
         theme(legend.position = "none",
                 strip.text = element_blank(),
+                axis.text.y = element_blank(),
                 axis.text = element_text(size = 30)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_scA_",n.origin,".pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_scA_",n.origin,".pdf"), width=9.5, height = 7.78)
 # n<- 750
 # newx <- seq(0, 1, length.out = n)
 
@@ -365,9 +366,9 @@ if(total.iter <= 50){
     plt <- plt + geom_line(aes(y = .data[[names(gridgsmooth.container)[i]]]), alpha = 0.05, linewidth = 0.7)
   }
 }
-print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + ylim(-2.3, 2.3) +
         geom_line(aes(y=true, col = "True"), linewidth = 2, linetype = 2) + 
-        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5) + 
+        # geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5) + 
         facet_grid(covariate ~ ., scales = "free_x", switch = "y",
                     labeller = label_parsed) +        
         scale_color_manual(values = c("steelblue", "red"))+
@@ -375,11 +376,9 @@ print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewid
           fill = guide_legend(order = 1)) +
         theme_minimal(base_size = 30) +
         theme(legend.position = "none",
-                plot.margin = margin(0,0,0,-20),
-                strip.text.y = element_text(size = 38, colour = "black", angle = 0, face = "bold.italic"),
-                strip.placement = "outside",
-                axis.title.x = element_text(size = 45),                
-                axis.text = element_text(size = 30)))
+              plot.margin = margin(0,0,0,-20),
+              axis.title.x = element_text(size = 45),                
+              axis.text = element_text(size = 30)))
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_scC_",n.origin,".pdf"), width=11, height = 15)
 
@@ -403,7 +402,7 @@ if(total.iter <= 50){
 print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
         geom_line(aes(y=true, col = "True"), linewidth = 2, linetype = 2) + 
         geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5) + 
-        # ylim(-0.23, 0.2) +
+        ylim(-2.3, 2.3) +
         facet_grid(covariate ~ ., scales = "free_x", switch = "y",
                     labeller = label_parsed) +  
         scale_color_manual(values = c("steelblue", "red"))+
@@ -416,7 +415,7 @@ print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewid
                 axis.title.x = element_text(size = 45),  
                 axis.text = element_text(size = 30)))
 
-# # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_linear_scC",n.origin,".pdf"), width=12.5, height = 7.78)                
+# # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_linear_scC",n.origin,".pdf"), width=11, height = 7.78)                
 
 gridgnl.container$x <- newx
 gridgnl.container$true <- as.vector(nl.new)
@@ -436,8 +435,8 @@ if(total.iter <= 50){
 }
 print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
         geom_line(aes(y=true, col = "True"), linewidth = 2, linetype = 2) + 
-        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5) + 
-        # ylim(-0.23, 0.2) +
+        # geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5) + 
+        ylim(-2.3, 2.3) +
         facet_grid(covariate ~ ., scales = "free_x", switch = "y",
                     labeller = label_parsed) +  
         scale_color_manual(values = c("steelblue", "red"))+
