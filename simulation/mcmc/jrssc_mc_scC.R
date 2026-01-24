@@ -96,7 +96,6 @@ generated quantities {
   matrix[n, p] gridgsmooth; // linear component
   vector[(p+1)] theta_origin;
   vector[n] se;
-  real <lower=0> mse;
 
   for (j in 1:p){
     theta_origin[j+1] = theta[j+1] / X_sd[j];
@@ -112,7 +111,6 @@ generated quantities {
       gridalpha[i] = exp(theta_origin[1] + sum(gridgsmooth[i,]));
       se[i] = pow((gridalpha[i]-trueAlpha[i]), 2);
   };
-  mse = mean(se);
 }
 "
 
@@ -155,7 +153,7 @@ for(iter in 1:total.iter){
   newx <- seq(0,1,length.out = n)
   xholder <- do.call(cbind, lapply(1:p, function(j) {newx}))
   g1.nl <- f1(newx) - (f1.hidden$intercept + f1.hidden$slope*newx)
-  g5.nl <- f5(newx) - (f5.hidden$intercept + f5.hidden$slope*newx)3
+  g5.nl <- f5(newx) - (f5.hidden$intercept + f5.hidden$slope*newx)
 
   g1.l <- theta.adjusted[2]*newx
   g2.l <- theta.adjusted[3]*newx

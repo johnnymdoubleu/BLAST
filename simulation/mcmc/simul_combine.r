@@ -1,6 +1,8 @@
-setwd("../BLAST/simulation/mcmc")
+setwd("../BLAST/simulation/results")
 iter <- 2
-file_pattern <- paste0("2026-01-24_",iter,"_MC_scA_15000_.*.Rdata")
+n <- 15000
+EVGAM <- FALSE
+file_pattern <- paste0("2026-01-24_",iter,"_MC_scC_15000_.*.Rdata")
 file_list <- list.files(pattern = file_pattern)
 
 # Check if files were found
@@ -10,13 +12,13 @@ if (length(file_list) == 0) {
 
 # 2. Initialize the 4 final containers
 # We use lists initially because they are faster to append to than dataframes
-alpha.container <- matrix(, nrow=750, ncol=0)
-newgsmooth.container <- matrix(, nrow=750, ncol=0)
-gridgsmooth.container <- matrix(, nrow=750, ncol=0)
-gridgl.container <- matrix(, nrow=750, ncol=0)
-gridgnl.container <- matrix(, nrow=750, ncol=0)
+alpha.container <- matrix(, nrow=n*0.05, ncol=0)
+newgsmooth.container <- matrix(, nrow=n*0.05, ncol=0)
+gridgsmooth.container <- matrix(, nrow=n*0.05, ncol=0)
+gridgl.container <- matrix(, nrow=n*0.05, ncol=0)
+gridgnl.container <- matrix(, nrow=n*0.05, ncol=0)
 mise.container <- c()
-qqplot.container <- matrix(, nrow=750, ncol=0)
+qqplot.container <- matrix(, nrow=n*0.05, ncol=0)
 
 # 3. Iterate through the files
 for (f in file_list) {
@@ -24,7 +26,7 @@ for (f in file_list) {
   
   temp_env <- new.env()
   
-  if(evgam = TRUE){
+  if(EVGAM == TRUE){
     tryCatch({
       load(f, envir = temp_env)
       alpha.container <- cbind(alpha.container, temp_env$alpha.container[,c(1:iter)])
@@ -51,28 +53,38 @@ for (f in file_list) {
   }
 }
 
-if(evgam=TRUE){  
-  colnames(alpha.container) <- paste0("V", 1:(length(file_list)*iter))
-  colnames(gridgsmooth.container) <- paste0("V", 1:(length(file_list)*iter))
-  colnames(gridgl.container) <- paste0("V", 1:(length(file_list)*iter))
-  colnames(gridgnl.container) <- paste0("V", 1:(length(file_list)*iter))
-  colnames(qqplot.container) <- paste0("V", 1:(length(file_list)*iter))
+if(EVGAM==FALSE){  
+  total.iter <- length(file_list) * iter
+  colnames(alpha.container) <- paste0("V", 1:total.iter)
+  colnames(gridgsmooth.container) <- paste0("V", 1:total.iter)
+  colnames(gridgl.container) <- paste0("V", 1:total.iter)
+  colnames(gridgnl.container) <- paste0("V", 1:total.iter)
+  colnames(qqplot.container) <- paste0("V", 1:total.iter)
   alpha.container$x <- temp_env$alpha.container$x
   alpha.container$true <- temp_env$alpha.container$true
+  alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
+  alpha.container <- as.data.frame(alpha.container)
   # newgsmooth.container$x <- temp_env$newgsmooth.container$x
   # newgsmooth.container$true <- temp_env$newgsmooth.container$true
   # newgsmooth.container$covarite <- temp_env$newgsmooth.container$covariate
   gridgsmooth.container$x <- temp_env$gridgsmooth.container$x
   gridgsmooth.container$true <- temp_env$gridgsmooth.container$true
-  gridgsmooth.container$covarites <- temp_env$gridgsmooth.container$covariate
+  gridgsmooth.container$mean <- rowMeans(gridgsmooth.container[,1:total.iter])
+  gridgsmooth.container$covariate <- temp_env$gridgsmooth.container$covariate
+  gridgsmooth.container <- as.data.frame(gridgsmooth.container)
   gridgl.container$x <- temp_env$gridgl.container$x
   gridgl.container$true <- temp_env$gridgl.container$true
-  gridgl.container$covarites <- temp_env$gridgl.container$covariate
+  gridgl.container$mean <- rowMeans(gridgl.container[,1:total.iter])
+  gridgl.container$covariate <- temp_env$gridgl.container$covariate
+  gridgl.container <- as.data.frame(gridgl.container)
   gridgnl.container$x <- temp_env$gridgnl.container$x
   gridgnl.container$true <- temp_env$gridgnl.container$true
-  gridgnl.container$covarite <- temp_env$gridgnl.container$covariate
+  gridgnl.container$mean <- rowMeans(gridgnl.container[,1:total.iter])
+  gridgnl.container$covariate <- temp_env$gridgnl.container$covariate
+  gridgnl.container <- as.data.frame(gridgnl.container)
   qqplot.container$grid <- temp_env$qqplot.container$grid
+  qqplot.container$mean <- rowMeans(qqplot.container[,1:total.iter])
 
-  save(alpha.container, gridgnl.container, gridgl.container, gridgsmooth.container, mise.container, qqplot.container, file = (paste0(Sys.Date(),"_",length(file_list)*iter,"_MC_scC_",nrow(alpha.container),".Rdata")))
-
+  
+  save(alpha.container, gridgnl.container, gridgl.container, gridgsmooth.container, mise.container, qqplot.container, file = paste0(Sys.Date(),"_",total.iter,"_MC_scA_",n,".Rdata"))
 }

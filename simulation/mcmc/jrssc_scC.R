@@ -6,7 +6,7 @@ library(parallel)
 library(rmutil)
 library(qqboxplot)
 
-set.seed(11)
+set.seed(123)
 
 n <- 15000
 psi.origin <- psi <- 10
