@@ -6,7 +6,7 @@ library(parallel)
 library(rmutil)
 library(qqboxplot)
 
-set.seed(806)
+set.seed(11)
 
 n <- 15000
 psi.origin <- psi <- 10
@@ -17,8 +17,8 @@ p <- 5
 C <- diag(p)
 x.origin <- pnorm(matrix(rnorm(n*p), ncol = p) %*% chol(C))
 
-raw_f2_nl <- function(x) {1.5 * sin(2 * pi * x^2)*x^3}
-raw_f3_nl <- function(x) {-1.5 * cos(3 * pi * x^2)*x^2}
+f1 <- function(x) {1.5 * sin(2 * pi * x^2)*x^3}
+f5 <- function(x) {-1.5 * cos(3 * pi * x^2)*x^2}
 
 make.nl <- function(x, raw_y) {
   fit <- lm(raw_y ~ x)
@@ -29,15 +29,16 @@ make.nl <- function(x, raw_y) {
     intercept = coef(fit)[["(Intercept)"]]
   ))
 }
-theta.origin <- c(1, -0.3, 0, 0.5, 0, 0)
+theta.origin <- c(1, 0, -0.3, 0, 0, 0.5)
 
-f2.nl <- raw_f2_nl(x.origin[,2])
-f3.nl <- raw_f3_nl(x.origin[,3])
+f1.nl <- f1(x.origin[,1])
+f5.nl <- f5(x.origin[,5])
 f1.l <- theta.origin[2]*x.origin[,1]
-f3.l <- theta.origin[4]*x.origin[,3]
+f2.l <- theta.origin[3]*x.origin[,2]
+f5.l <- theta.origin[6]*x.origin[,5]
 
-eta_lin <-  f1.l + f3.l
-eta_nonlin <- f2.nl + f3.nl
+eta_lin <-  f1.l + f2.l + f5.l
+eta_nonlin <- f1.nl + f5.nl
 eta <- theta.origin[1] + eta_lin + eta_nonlin
 alp.origin <- exp(eta)
 
@@ -48,32 +49,32 @@ excess.index <- which(y.origin>u)
 x.origin <- x.origin[excess.index,]
 y.origin <- y.origin[excess.index]
 n <- length(y.origin)
-newx <- seq(0,1,length.out = n)
 
-
-f2.hidden <- make.nl(x.origin[,2], raw_f2_nl(x.origin[,2]))
-f3.hidden <- make.nl(x.origin[,3], raw_f3_nl(x.origin[,3]))
-theta.adjusted <- c(theta.origin[1] + f2.hidden$intercept + f3.hidden$intercept,
-                    theta.origin[2],
-                    theta.origin[3] + f2.hidden$slope,
-                    theta.origin[4] + f3.hidden$slope,
+f1.hidden <- make.nl(x.origin[,1], f1(x.origin[,1]))
+f5.hidden <- make.nl(x.origin[,5], f5(x.origin[,5]))
+theta.adjusted <- c(theta.origin[1] + f1.hidden$intercept + f5.hidden$intercept,
+                    theta.origin[2] + f1.hidden$slope,
+                    theta.origin[3],
+                    theta.origin[4],
                     theta.origin[5],
-                    theta.origin[6])
+                    theta.origin[6] + f5.hidden$slope)
 newx <- seq(0,1,length.out = n)
-g2.nl <- raw_f2_nl(newx) - (f2.hidden$intercept + f2.hidden$slope*newx)
-g3.nl <- raw_f3_nl(newx) - (f2.hidden$intercept + f2.hidden$slope*newx)
+xholder <- do.call(cbind, lapply(1:p, function(j) {newx}))
+g1.nl <- f1(newx) - (f1.hidden$intercept + f1.hidden$slope*newx)
+g5.nl <- f5(newx) - (f5.hidden$intercept + f5.hidden$slope*newx)
 
 g1.l <- theta.adjusted[2]*newx
 g2.l <- theta.adjusted[3]*newx
-g3.l <- theta.adjusted[4]*newx
-g2 <- g2.l + g2.nl
-g3 <- g3.l + g3.nl
-eta.g <- rep(theta.adjusted[1], n) + g1.l + g2 + g3
-alp.new <- exp(eta.g)
+g5.l <- theta.adjusted[4]*newx
+g1 <- g1.l + g1.nl
+g5 <- g5.l + g5.nl
+eta.g <- rep(theta.adjusted[1], n) + g1 + g2.l + g5
+alp.new <- as.vector(exp(theta.origin[1] + xholder %*% theta.origin[-1] + f1(newx) + f5(newx)))
+# alp.new <- exp(eta.g)
 grid.zero <- rep(0, n)
-g.new <- c(g1.l, g2, g3, grid.zero, grid.zero)
-l.new <- c(g1.l, g2.l, g3.l, grid.zero, grid.zero)
-nl.new <- c(grid.zero, g2.nl, g3.nl, grid.zero, grid.zero)
+g.new <- c(g1, g2.l, grid.zero, grid.zero, g5)
+l.new <- c(g1.l, g2.l, grid.zero, grid.zero, g5.l)
+nl.new <- c(g1.nl, grid.zero, grid.zero, grid.zero, g5.nl)
 
 
 bs.linear <- model.matrix(~ ., data = data.frame(x.origin))
@@ -138,7 +139,7 @@ for (i in seq_along(covariates)) {
 
 bs.nonlinear <- do.call(cbind, Z.list)
 
-xholder <- do.call(cbind, lapply(1:p, function(j) {newx}))
+
 colnames(xholder) <- covariates
 grid_Z_list <- list()
 
@@ -281,7 +282,7 @@ system.time(fit1 <- stan(
 posterior <- extract(fit1)
 
 bayesplot::color_scheme_set("mix-blue-red")
-bayesplot::mcmc_trace(fit1, pars="lp__") + ylab("Scenario A2") +
+bayesplot::mcmc_trace(fit1, pars="lp__") + ylab("Scenario C") +
   theme_minimal(base_size = 30) +
   theme(legend.position = "none",
         strip.text = element_blank(),

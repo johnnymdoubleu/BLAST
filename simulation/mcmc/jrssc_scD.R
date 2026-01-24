@@ -6,7 +6,7 @@ library(parallel)
 library(rmutil)
 library(qqboxplot)
 
-set.seed(806)
+set.seed(11)
 
 n <- 15000
 psi.origin <- psi <- 10
@@ -17,8 +17,8 @@ p <- 5
 C <- diag(p)
 x.origin <- pnorm(matrix(rnorm(n*p), ncol = p) %*% chol(C))
 
-raw_f2_nl <- function(x) {1.5 * sin(2 * pi * x^2)*x^3}
-raw_f3_nl <- function(x) {-1.5 * cos(3 * pi * x^2)*x^2}
+f4 <- function(x) {1.5 * sin(2 * pi * x^2)*x^3}
+f3 <- function(x) {-1.5 * cos(3 * pi * x^2)*x^2}
 
 make.nl <- function(x, raw_y) {
   fit <- lm(raw_y ~ x)
@@ -29,18 +29,16 @@ make.nl <- function(x, raw_y) {
     intercept = coef(fit)[["(Intercept)"]]
   ))
 }
-theta.origin <- c(0.5, 0, 0.6, -0.4, 0, 0.8)
+theta.origin <- c(0.5, 0.8, 0, -0.4, 0.6, 0)
 
-
-f2.nl <- raw_f2_nl(x.origin[,2])
-f3.nl <- raw_f3_nl(x.origin[,3])
-f2.l <- theta.origin[3]*x.origin[,2]
+f4.nl <- f4(x.origin[,4])
+f3.nl <- f3(x.origin[,3])
+f1.l <- theta.origin[2]*x.origin[,1]
 f3.l <- theta.origin[4]*x.origin[,3]
 f4.l <- theta.origin[5]*x.origin[,4]
-f5.l <- theta.origin[6]*x.origin[,5]
 
-eta_lin <-  f2.l + f3.l + f4.l + f5.l
-eta_nonlin <- f2.nl + f3.nl
+eta_lin <-  f1.l + f3.l + f4.l
+eta_nonlin <- f4.nl + f3.nl
 eta <- theta.origin[1] + eta_lin + eta_nonlin
 alp.origin <- exp(eta)
 
@@ -57,34 +55,35 @@ n <- length(y.origin)
 newx <- seq(0,1,length.out = n)
 
 
-f2.hidden <- make.nl(x.origin[,2], raw_f2_nl(x.origin[,2]))
-f3.hidden <- make.nl(x.origin[,3], raw_f3_nl(x.origin[,3]))
-theta.adjusted <- c(theta.origin[1] + f2.hidden$intercept + f3.hidden$intercept,
+f4.hidden <- make.nl(x.origin[,4], f4(x.origin[,4]))
+f3.hidden <- make.nl(x.origin[,3], f3(x.origin[,3]))
+theta.adjusted <- c(theta.origin[1] + f4.hidden$intercept + f3.hidden$intercept,
                     theta.origin[2],
-                    theta.origin[3] + f2.hidden$slope,
+                    theta.origin[3],
                     theta.origin[4] + f3.hidden$slope,
-                    theta.origin[5],
+                    theta.origin[5] + f4.hidden$slope,
                     theta.origin[6])
 newx <- seq(0,1,length.out = n)
-g2.nl <- raw_f2_nl(newx) - (f2.hidden$intercept + f2.hidden$slope*newx)
-g3.nl <- raw_f3_nl(newx) - (f2.hidden$intercept + f2.hidden$slope*newx)
+xholder <- do.call(cbind, lapply(1:p, function(j) {newx}))
+g4.nl <- f4(newx) - (f4.hidden$intercept + f4.hidden$slope*newx)
+g3.nl <- f3(newx) - (f3.hidden$intercept + f3.hidden$slope*newx)
 
-g2.l <- theta.adjusted[3]*newx
+g1.l <- theta.adjusted[1]*newx
 g3.l <- theta.adjusted[4]*newx
-g5.l <- theta.adjusted[6]*newx
-g2 <- g2.l + g2.nl
+g4.l <- theta.adjusted[5]*newx
+g4 <- g4.l + g4.nl
 g3 <- g3.l + g3.nl
-eta.g <- rep(theta.adjusted[1], n) + g2 + g3 + g5.l
-alp.new <- exp(eta.g)
+eta.g <- rep(theta.adjusted[1], n) + g4 + g3 + g1.l
+alp.new <- as.vector(exp(theta.origin[1] + xholder %*% theta.origin[-1] + f3(newx) + f4(newx)))
+# alp.new <- exp(eta.g)
 grid.zero <- rep(0, n)
-g.new <- c(grid.zero, g2, g3, grid.zero, g5.l)
-l.new <- c(grid.zero, g2.l, g3.l, grid.zero, g5.l)
-nl.new <- c(grid.zero, g2.nl, g3.nl, grid.zero, grid.zero)
+g.new <- c(g1.l, grid.zero, g3, g4, grid.zero)
+l.new <- c(g1.l, grid.zero, g3.l, g4.l, grid.zero)
+nl.new <- c(grid.zero, grid.zero, g3.nl, g4.nl, grid.zero)
 
 
 bs.linear <- model.matrix(~ ., data = data.frame(x.origin))
 
-# Initialize storage
 group.map <- c()
 Z.list <- list()        # Stores the final non-linear design matrices
 scale_stats_list <- list() 
@@ -108,7 +107,7 @@ for (i in seq_along(covariates)) {
   
   eig <- eigen(S, symmetric = TRUE)
   max_lambda <- max(eig$values)
-  tol <- max_lambda * 1e-6  # Relative threshold (Robust)
+  tol <- max_lambda * 1e-6 
   
   pos_idx <- which(eig$values > tol)
   
@@ -144,7 +143,6 @@ for (i in seq_along(covariates)) {
 
 bs.nonlinear <- do.call(cbind, Z.list)
 
-xholder <- do.call(cbind, lapply(1:p, function(j) {newx}))
 colnames(xholder) <- covariates
 grid_Z_list <- list()
 
@@ -177,7 +175,7 @@ cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear[,c(1,5)]) %*% 
 cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear[,c(1,6)]) %*% bs.nonlinear[,c((psi*4+1):(psi*5))]), "\n")
 
 
-model.stan <- "// Stan model for BLAST Pareto Samples
+model.stan <- "// Stan model for BLAST Burr Samples
 functions{
     real burr_lpdf(real y, real c){
         // Burr distribution log pdf

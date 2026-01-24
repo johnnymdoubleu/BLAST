@@ -17,8 +17,8 @@ p <- 5
 C <- diag(p)
 x.origin <- pnorm(matrix(rnorm(n*p), ncol = p) %*% chol(C))
 
-raw_f2_nl <- function(x) {1.5 * sin(2 * pi * x^2)*x^3}
-raw_f3_nl <- function(x) {-1.5 * cos(3 * pi * x^2)*x^2}
+f2 <- function(x) {1.5 * sin(2 * pi * x^2)*x^3}
+f3 <- function(x) {-1.5 * cos(3 * pi * x^2)*x^2}
 
 make.nl <- function(x, raw_y) {
   fit <- lm(raw_y ~ x)
@@ -30,8 +30,8 @@ make.nl <- function(x, raw_y) {
   ))
 }
 
-f2.nl <- raw_f2_nl(x.origin[,2])
-f3.nl <- raw_f3_nl(x.origin[,3])
+f2.nl <- f2(x.origin[,2])
+f3.nl <- f3(x.origin[,3])
 theta.origin <- c(1, 0, 0.8, -0.8, 0, 0) 
 f2.l <- theta.origin[3]*x.origin[,2]
 f3.l <- theta.origin[4]*x.origin[,3]
@@ -39,7 +39,7 @@ eta_lin <-  f2.l + f3.l
 eta_nonlin <- f2.nl + f3.nl
 psi <- psi - 2
 
-alp.origin <- exp(rep(theta.origin[1],n) + x.origin%*%theta.origin[-1] + raw_f2_nl(x.origin[,2]) + raw_f3_nl(x.origin[,3]))
+alp.origin <- exp(rep(theta.origin[1],n) + x.origin%*%theta.origin[-1] + f2(x.origin[,2]) + f3(x.origin[,3]))
 y.origin <- rPareto(n, rep(1,n), alpha = alp.origin)
 
 u <- quantile(y.origin, threshold)
@@ -47,25 +47,27 @@ excess.index <- which(y.origin>u)
 x.origin <- x.origin[excess.index,]
 y.origin <- y.origin[excess.index]
 n <- length(y.origin)
+
 newx <- seq(0,1,length.out = n)
+xholder <- do.call(cbind, lapply(1:p, function(j) {newx}))
 
-
-f2.hidden <- make.nl(x.origin[,2], raw_f2_nl(x.origin[,2]))
-f3.hidden <- make.nl(x.origin[,3], raw_f3_nl(x.origin[,3]))
+f2.hidden <- make.nl(x.origin[,2], f2(x.origin[,2]))
+f3.hidden <- make.nl(x.origin[,3], f3(x.origin[,3]))
 theta.adjusted <- c(theta.origin[1] + f2.hidden$intercept + f3.hidden$intercept,
                     theta.origin[2],
                     theta.origin[3] + f2.hidden$slope,
                     theta.origin[4] + f3.hidden$slope,
                     theta.origin[5],
                     theta.origin[6])
-g2.nl <- raw_f2_nl(newx) - (f2.hidden$intercept + f2.hidden$slope*newx)
-g3.nl <- raw_f3_nl(newx) - (f2.hidden$intercept + f2.hidden$slope*newx)
+g2.nl <- f2(newx) - (f2.hidden$intercept + f2.hidden$slope*newx)
+g3.nl <- f3(newx) - (f2.hidden$intercept + f2.hidden$slope*newx)
 g2.l <- theta.adjusted[3]*newx
 g3.l <- theta.adjusted[4]*newx
 g2 <- g2.l + g2.nl
 g3 <- g3.l + g3.nl
 eta.g <- rep(theta.adjusted[1], n) + g2 + g3
-alp.new <- exp(eta.g)
+alp.new <- as.vector(exp(theta.origin[1] + xholder %*% theta.origin[-1] + f2(newx) + f3(newx)))
+# alp.new <- exp(eta.g)
 grid.zero <- rep(0, n)
 g.new <- c(grid.zero, g2, g3, grid.zero, grid.zero)
 l.new <- c(grid.zero, g2.l, g3.l, grid.zero, grid.zero)
@@ -74,10 +76,8 @@ nl.new <- c(grid.zero, g2.nl, g3.nl, grid.zero, grid.zero)
 
 bs.linear <- model.matrix(~ ., data = data.frame(x.origin))
 
-# Initialize storage
 group.map <- c()
 Z.list <- list()        # Stores the final non-linear design matrices
-# bs.linear <- NULL       # Stores the strictly linear matrices
 scale_stats_list <- list() 
 projection_coefs_list <- list() #
 spec_decomp_list <- list() # Store eigen-decomp info for prediction
@@ -258,13 +258,13 @@ data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi,
                   xholderLinear = xholder.linear[,c(2:(p+1))], xholderNonlinear = xholder.nonlinear)
 
 init.alpha <- list(list(gamma_raw= array(rep(0.2, (psi*p)), dim=c(p,psi)),
-                        theta = rep(-0.1, (p+1)), tau = rep(0.1, p),# rho = 1, 
+                        theta = rep(-0.1, (p+1)), tau = rep(0.1, p),
                         lambda1 = rep(0.1,p), lambda2 = rep(1, p)),
                    list(gamma_raw = array(rep(-0.15, (psi*p)), dim=c(p,psi)),
-                        theta = rep(0.05, (p+1)), tau = rep(2, p), #rho = 1,
+                        theta = rep(0.05, (p+1)), tau = rep(2, p),
                         lambda1 = rep(2,p), lambda2 = rep(5, p)),
                    list(gamma_raw = array(rep(-0.75, (psi*p)), dim=c(p,psi)),
-                        theta = rep(0.01, (p+1)), tau = rep(1.5, p), #rho = 1,
+                        theta = rep(0.01, (p+1)), tau = rep(1.5, p),
                         lambda1 = rep(0.5,p), lambda2= rep(5, p)))
 
 system.time(fit1 <- stan(
