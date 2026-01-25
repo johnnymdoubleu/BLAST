@@ -30,8 +30,8 @@ missing.values <- which(!is.na(df.long$measurement))
 #considering the case of leap year, the missing values are the 29th of Feb
 #Thus, each year consist of 366 data with either 1 or 0 missing value.
 Y <- df.long$measurement[!is.na(df.long$measurement)]
-psi.origin <- psi <- 15
-threshold <- 0.975
+psi.origin <- psi <- 30
+threshold <- 0.95
 # u <- quantile(Y[Y>1], threshold)
 
 multiplesheets <- function(fname) {

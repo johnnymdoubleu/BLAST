@@ -2,7 +2,7 @@ setwd("../BLAST/simulation/results")
 iter <- 2
 n <- 20000
 EVGAM <- FALSE
-file_pattern <- paste0("2026-01-25_",iter,"_MC_scC_",n,"_.*.Rdata")
+file_pattern <- paste0("2026-01-25_",iter,"_MC_scA_",n,"_.*.Rdata")
 file_list <- list.files(pattern = file_pattern)
 
 # Check if files were found
@@ -86,5 +86,5 @@ if(EVGAM==FALSE){
   qqplot.container$mean <- rowMeans(qqplot.container[,1:total.iter])
 
   
-  # save(alpha.container, gridgnl.container, gridgl.container, gridgsmooth.container, mise.container, qqplot.container, file = paste0(Sys.Date(),"_",total.iter,"_MC_scC_",n,".Rdata"))
+  # save(alpha.container, gridgnl.container, gridgl.container, gridgsmooth.container, mise.container, qqplot.container, file = paste0(Sys.Date(),"_",total.iter,"_MC_scA_",n,".Rdata"))
 }
