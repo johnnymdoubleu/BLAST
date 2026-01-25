@@ -82,49 +82,49 @@ p <- dim(fwi.scaled)[[2]]
 fwi.origin <- data.frame(fwi.index[which(Y>u),], BA=y)
 max.fwi <- fwi.origin[which.max(y),]
 
-ggplot(fwi.origin, aes(x=DSR, y=FFMC)) + 
-  geom_point(aes(colour = BA), size= 2.5) + 
-  scale_colour_stepsn(colours = c("slategray1", "red"), labels=function(x) format(x, big.mark = ",", scientific = TRUE), breaks=c(0.1e5, 0.5e5, 1e5, 2e5)) +
-  geom_density2d(colour="steelblue", linewidth = 1.3) + 
-  geom_mark_circle(aes(x = max.fwi$DSR, y = max.fwi$FFMC, label = "15th Oct 2017"), con.type = "straight",
-                   radius = unit(2.5, "mm"), color = "steelblue", size = 1, 
-                   con.colour = "steelblue", con.cap = unit(0, "mm"),
-                   label.colour = "steelblue", label.buffer = unit(5, "mm"),
-                   label.fill = "transparent")  +
-  theme_minimal(base_size = 30) +
-  theme(plot.title = element_text(hjust = 0.5, size = 30),
-        legend.title = element_text(size = 15),
-        legend.text = element_text(size = 15),
-        strip.text = element_blank(),
-        axis.title = element_text(size = 30))
+# ggplot(fwi.origin, aes(x=DSR, y=FFMC)) + 
+#   geom_point(aes(colour = BA), size= 2.5) + 
+#   scale_colour_stepsn(colours = c("slategray1", "red"), labels=function(x) format(x, big.mark = ",", scientific = TRUE), breaks=c(0.1e5, 0.5e5, 1e5, 2e5)) +
+#   geom_density2d(colour="steelblue", linewidth = 1.3) + 
+#   geom_mark_circle(aes(x = max.fwi$DSR, y = max.fwi$FFMC, label = "15th Oct 2017"), con.type = "straight",
+#                    radius = unit(2.5, "mm"), color = "steelblue", size = 1, 
+#                    con.colour = "steelblue", con.cap = unit(0, "mm"),
+#                    label.colour = "steelblue", label.buffer = unit(5, "mm"),
+#                    label.fill = "transparent")  +
+#   theme_minimal(base_size = 30) +
+#   theme(plot.title = element_text(hjust = 0.5, size = 30),
+#         legend.title = element_text(size = 15),
+#         legend.text = element_text(size = 15),
+#         strip.text = element_blank(),
+#         axis.title = element_text(size = 30))
 # ggsave("./BLAST/application/figures/extremeviz.pdf", width = 10, height = 7.78)
 
-ggplot(fwi.origin, aes(x=as.numeric(year), y=log(BA), color = BA)) + 
-  ylab("Hectares (log)") + xlab("Time (years)") + 
-  geom_point(size= 2.5, alpha = 0.5) + 
-  scale_colour_stepsn(colours = c("slategray1", "red"), labels=function(y) format(y, big.mark = ",", scientific = TRUE), 
-  breaks = quantile(fwi.origin$BA, probs = seq(0,1,length.out = 20))) + 
-  theme_minimal(base_size = 30) +
-  theme(plot.title = element_text(hjust = 0.5, size = 30),
-        legend.position = "none",
-        legend.title = element_text(size = 15),
-        legend.text = element_text(size = 15),
-        strip.text = element_blank(),
-        axis.title = element_text(size = 30))
+# ggplot(fwi.origin, aes(x=as.numeric(year), y=log(BA), color = BA)) + 
+#   ylab("Hectares (log)") + xlab("Time (years)") + 
+#   geom_point(size= 2.5, alpha = 0.5) + 
+#   scale_colour_stepsn(colours = c("slategray1", "red"), labels=function(y) format(y, big.mark = ",", scientific = TRUE), 
+#   breaks = quantile(fwi.origin$BA, probs = seq(0,1,length.out = 20))) + 
+#   theme_minimal(base_size = 30) +
+#   theme(plot.title = element_text(hjust = 0.5, size = 30),
+#         legend.position = "none",
+#         legend.title = element_text(size = 15),
+#         legend.text = element_text(size = 15),
+#         strip.text = element_blank(),
+#         axis.title = element_text(size = 30))
 
 # ggsave("./BLAST/application/figures/hectareslog.pdf", width = 10, height = 7.78)
 
-ggplot(fwi.origin, aes(x=as.numeric(year))) + 
-  ylab("Density") + xlab("Time (years)") + 
-  geom_histogram(aes(y = after_stat(density)), fill = "steelblue", color = "gray", alpha = .2) +
-  geom_rug() +
-  theme_minimal(base_size = 30) +
-  theme(plot.title = element_text(hjust = 0.5, size = 30),
-        legend.position = "none",
-        legend.title = element_text(size = 15),
-        legend.text = element_text(size = 15),
-        strip.text = element_blank(),
-        axis.title = element_text(size = 30))
+# ggplot(fwi.origin, aes(x=as.numeric(year))) + 
+#   ylab("Density") + xlab("Time (years)") + 
+#   geom_histogram(aes(y = after_stat(density)), fill = "steelblue", color = "gray", alpha = .2) +
+#   geom_rug() +
+#   theme_minimal(base_size = 30) +
+#   theme(plot.title = element_text(hjust = 0.5, size = 30),
+#         legend.position = "none",
+#         legend.title = element_text(size = 15),
+#         legend.text = element_text(size = 15),
+#         strip.text = element_blank(),
+#         axis.title = element_text(size = 30))
 
 # ggsave("./BLAST/application/figures/intensityfn.pdf", width = 10, height = 7.78)
 bs.linear <- model.matrix(~ ., data = data.frame(fwi.scaled))
@@ -173,12 +173,12 @@ for (i in seq_along(covariates)) {
   Z_final <- Z_orth[, keep_cols, drop = FALSE]
 
   train_scale <- apply(Z_final, 2, sd)
-  Z_final <- scale(Z_final, center = FALSE, scale = train_scale)
-  if(ncol(Z_final) < psi){
-    n.pad <- psi - ncol(Z_final)
-    zero.pad <- matrix(0, nrow = nrow(Z_final), ncol = n.pad)
-    Z_final <- cbind(Z_final, zero.pad)    
-  }  
+  # Z_final <- scale(Z_final, center = FALSE, scale = train_scale)
+  # if(ncol(Z_final) < psi){
+  #   n.pad <- psi - ncol(Z_final)
+  #   zero.pad <- matrix(0, nrow = nrow(Z_final), ncol = n.pad)
+  #   Z_final <- cbind(Z_final, zero.pad)    
+  # }  
   # Store Results
   Z.list[[i]] <- Z_final
   group.map <- c(group.map, rep(i, ncol(Z_final)))
@@ -208,12 +208,12 @@ for (i in seq_along(covariates)) {
   Z_spectral_grid <- X_raw_grid %*% decomp$U_pen %*% decomp$Lambda_sqrt_inv
   Z_orth_grid <- Z_spectral_grid - X_lin_grid %*% projection_coefs_list[[i]]
   Z_final_grid <- Z_orth_grid[, keep_cols_list[[i]], drop = FALSE]
-  Z_final_grid <- scale(Z_final_grid, center = FALSE, scale = scale_stats_list[[i]])
-  if(ncol(Z_final_grid) < psi){
-    n.pad <- psi - ncol(Z_final_grid)
-    zero.pad <- matrix(0, nrow = nrow(Z_final_grid), ncol = n.pad)
-    Z_final_grid <- cbind(Z_final_grid, zero.pad)    
-  }    
+  # Z_final_grid <- scale(Z_final_grid, center = FALSE, scale = scale_stats_list[[i]])
+  # if(ncol(Z_final_grid) < psi){
+  #   n.pad <- psi - ncol(Z_final_grid)
+  #   zero.pad <- matrix(0, nrow = nrow(Z_final_grid), ncol = n.pad)
+  #   Z_final_grid <- cbind(Z_final_grid, zero.pad)    
+  # }    
   grid_Z_list[[i]] <- Z_final_grid
 }
 
@@ -247,6 +247,7 @@ parameters {
     array[p] real <lower=0> lambda1; // lasso penalty //array[p] real <lower=0> 
     array[p] real <lower=0> lambda2; // lambda2 group lasso penalty
     array[p] real <lower=0> tau;
+    real <lower=0> rho;
 }
 
 transformed parameters {
@@ -271,12 +272,13 @@ model {
   for (i in 1:n){
     target += pareto_lpdf(y[i] | u, alpha[i]);
   }
-  target += normal_lpdf(theta[1] | 0, 10);
+  target += normal_lpdf(theta[1] | 0, 1);
+  target += gamma_lpdf(rho | 2, 1);
   for (j in 1:p){
-    target += gamma_lpdf(lambda1[j] | 1e-2, 1e-2); 
-    target += gamma_lpdf(lambda2[j] | 1e-2, 1e-2);  
-    target += double_exponential_lpdf(theta[(j+1)] | 0, 1/(lambda1[j]));
-    target += gamma_lpdf(tau[j] | atau, square(lambda2[j])*0.5);
+    target += gamma_lpdf(lambda1[j] | 5, 1); 
+    target += gamma_lpdf(lambda2[j] | 1, 1);  
+    target += double_exponential_lpdf(theta[(j+1)] | 0, 1/(lambda1[j]*rho));
+    target += gamma_lpdf(tau[j] | atau, square(lambda2[j]*rho)*0.5);
     target += std_normal_lpdf(gamma_raw[j]);
   }
 }
@@ -320,13 +322,13 @@ data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi,
                   xholderLinear = xholder.linear[,-1], xholderNonlinear = xholder.nonlinear)
 
 init.alpha <- list(list(gamma_raw= array(rep(0.2, (psi*p)), dim=c(p,psi)),
-                        theta = rep(-0.1, (p+1)), tau = rep(0.1, p),
+                        theta = rep(-0.1, (p+1)), tau = rep(0.1, p), rho = 1,
                         lambda1 = rep(0.1,p), lambda2 = rep(1, p)),
                    list(gamma_raw = array(rep(-0.15, (psi*p)), dim=c(p,psi)),
-                        theta = rep(0.05, (p+1)), tau = rep(2, p),
+                        theta = rep(0.05, (p+1)), tau = rep(0.2, p), rho = 1,
                         lambda1 = rep(2,p), lambda2 = rep(5, p)),
                    list(gamma_raw = array(rep(-0.75, (psi*p)), dim=c(p,psi)),
-                        theta = rep(0.01, (p+1)), tau = rep(1.5, p),
+                        theta = rep(0.01, (p+1)), tau = rep(1, p), rho = 1,
                         lambda1 = rep(0.5,p), lambda2= rep(5, p)))
 
 fit1 <- stan(
@@ -352,7 +354,7 @@ bayesplot::mcmc_trace(fit1, pars="lp__") + ylab("") +
 
 theta.samples <- summary(fit1, par=c("theta_origin"), probs = c(0.05,0.5, 0.95))$summary
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
-lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
+lambda.samples <- summary(fit1, par=c("lambda1", "lambda2", "rho"), probs = c(0.05,0.5, 0.95))$summary
 gsmooth.samples <- summary(fit1, par=c("gridgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
 origin.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
 alpha.samples <- summary(fit1, par=c("gridalpha"), probs = c(0.05,0.5, 0.95))$summary
@@ -360,8 +362,8 @@ yrep <- summary(fit1, par=c("yrep"), probs = c(0.05,0.5, 0.95))$summary
 f.samples <- summary(fit1, par=c("f"), probs = c(0.05,0.5, 0.95))$summary
 loglik.samples <- summary(fit1, par=c("log_lik"), probs = c(0.05,0.5, 0.95))$summary
 
-MCMCvis::MCMCplot(fit1, params = 'theta')
-MCMCvis::MCMCsummary(fit1, params = "gamma")
+MCMCvis::MCMCplot(fit1, params = 'theta_origin')
+MCMCvis::MCMCplot(fit1, params = "gamma")
 
 g.smooth.mean <- as.vector(matrix(gsmooth.samples[,1], nrow = n, byrow=TRUE))
 g.smooth.q1 <- as.vector(matrix(gsmooth.samples[,4], nrow = n, byrow=TRUE))
