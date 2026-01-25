@@ -6,7 +6,7 @@ library(rmutil)
 library(MESS)
 
 # Scenario A-2
-total.iter <- 2
+total.iter <- 250
 
 n <- n.origin <- 15000
 psi.origin <- psi <- 10
@@ -341,9 +341,9 @@ alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
 
-# load(paste0("./simulation/results/MC-Scenario_A/2026-01-24_",total.iter,"_MC_scD_",n.origin,".Rdata"))
+load(paste0("./simulation/results/MC-Scenario_D/2026-01-24_",total.iter,"_MC_scD_",n.origin,".Rdata"))
 
-plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab(expression(alpha(c,...,c))) #+ ylab("")
+plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab("")
 if(total.iter <= 50){
   for(i in 1:total.iter){
     plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.05, linewidth = 0.7)
@@ -400,7 +400,7 @@ print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewid
                 axis.title.x = element_text(size = 45),                
                 axis.text = element_text(size = 30)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_scD_",n.origin,".pdf"), width=12.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_scD_",n.origin,".pdf"), width=11, height = 15)
 
 
 gridgl.container$x <- newx
@@ -436,7 +436,7 @@ print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewid
                 axis.title.x = element_text(size = 45),  
                 axis.text = element_text(size = 30)))
 
-# # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_linear_scD_",n.origin,".pdf"), width=12.5, height = 7.78)                
+# # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_linear_scD_",n.origin,".pdf"), width=11, height = 7.78)                
 
 gridgnl.container$x <- newx
 gridgnl.container$true <- as.vector(nl.new)
@@ -470,7 +470,7 @@ print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewid
                 axis.title.x = element_text(size = 45),  
                 axis.text = element_text(size = 30)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_nonlinear_scD",n.origin,".pdf"), width=12.5, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_nonlinear_scD",n.origin,".pdf"), width=11, height = 7.78)
 
 qqplot.container$grid <- grid
 qqplot.container$mean <- rowMeans(qqplot.container[,1:total.iter])

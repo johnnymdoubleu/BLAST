@@ -250,8 +250,8 @@ generated quantities {
     };    
 
     for(i in 1:n){
-      f[i] = pareto_rng(u, 1/alpha[i]);
-      log_lik[i] = pareto_lpdf(y[i] | u, 1/alpha[i]);
+      f[i] = pareto_rng(u, alpha[i]);
+      log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
     }
 }
 "

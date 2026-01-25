@@ -65,7 +65,7 @@ g5.nl <- f5(newx) - (f5.hidden$intercept + f5.hidden$slope*newx)
 
 g1.l <- theta.adjusted[2]*newx
 g2.l <- theta.adjusted[3]*newx
-g5.l <- theta.adjusted[4]*newx
+g5.l <- theta.adjusted[6]*newx
 g1 <- g1.l + g1.nl
 g5 <- g5.l + g5.nl
 eta.g <- rep(theta.adjusted[1], n) + g1 + g2.l + g5

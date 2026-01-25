@@ -5,7 +5,7 @@ library(rstan)
 library(MESS)
 
 # Scenario C
-total.iter <- 2
+total.iter <- 250
 
 n <- n.origin <- 15000
 psi.origin <- psi <- 10
@@ -81,7 +81,7 @@ model {
 
   for (j in 1:p){
     target += gamma_lpdf(lambda1[j] | 2, 1); 
-    target += gamma_lpdf(lambda2[j] | 0.01, 0.01);    
+    target += gamma_lpdf(lambda2[j] | 0.01, 0.01);
     target += double_exponential_lpdf(theta[(j+1)] | 0, 1/(lambda1[j]));
     target += gamma_lpdf(tau[j] | atau, square(lambda2[j])*0.5);
     target += std_normal_lpdf(gamma_raw[j]);
@@ -126,10 +126,11 @@ for(iter in 1:total.iter){
   x.origin <- pnorm(matrix(rnorm(n*p), ncol = p) %*% chol(C))
   f1.nl <- f1(x.origin[,1])
   f5.nl <- f5(x.origin[,5])
-  f3.l <- theta.origin[4]*x.origin[,1]
-  f5.l <- theta.origin[6]*x.origin[,3]
+  f1.l <- theta.origin[2]*x.origin[,1]
+  f2.1 <- theta.origin[3]*x.origin[,2]
+  f5.l <- theta.origin[6]*x.origin[,5]
 
-  eta_lin <-  f3.l + f5.l
+  eta_lin <-  f1.l + f2.l + f5.l
   eta_nonlin <- f1.nl + f5.nl
   eta <- theta.origin[1] + eta_lin + eta_nonlin
   alp.origin <- exp(eta)
@@ -157,7 +158,7 @@ for(iter in 1:total.iter){
 
   g1.l <- theta.adjusted[2]*newx
   g2.l <- theta.adjusted[3]*newx
-  g5.l <- theta.adjusted[4]*newx
+  g5.l <- theta.adjusted[6]*newx
   g1 <- g1.l + g1.nl
   g5 <- g5.l + g5.nl
   eta.g <- rep(theta.adjusted[1], n) + g1 + g2.l + g5
@@ -315,7 +316,7 @@ alpha.container$true <- alp.new
 alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
-# load(paste0("./simulation/results/MC-Scenario_A/2026-01-24_",total.iter,"_MC_scC_",n.origin,".Rdata"))
+load(paste0("./simulation/results/MC-Scenario_C/2026-01-24_",total.iter,"_MC_scC_",n.origin,".Rdata"))
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab("")
 if(total.iter <= 50){
@@ -363,7 +364,7 @@ if(total.iter <= 50){
 }
 print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + ylim(-2.3, 2.3) +
         geom_line(aes(y=true, col = "True"), linewidth = 2, linetype = 2) + 
-        # geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5) + 
+        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5) + 
         facet_grid(covariate ~ ., scales = "free_x", switch = "y",
                     labeller = label_parsed) +        
         scale_color_manual(values = c("steelblue", "red"))+
@@ -371,9 +372,11 @@ print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewid
           fill = guide_legend(order = 1)) +
         theme_minimal(base_size = 30) +
         theme(legend.position = "none",
-              plot.margin = margin(0,0,0,-20),
-              axis.title.x = element_text(size = 45),                
-              axis.text = element_text(size = 30)))
+                plot.margin = margin(0,0,0,-20),
+                axis.text.y = element_blank(),
+                strip.text = element_blank(),
+                axis.title.x = element_text(size = 45),                
+                axis.text = element_text(size = 30)))
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_scC_",n.origin,".pdf"), width=11, height = 15)
 
