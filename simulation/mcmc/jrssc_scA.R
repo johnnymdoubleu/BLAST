@@ -6,8 +6,8 @@ library(Pareto)
 library(parallel)
 library(qqboxplot)
 
-set.seed(10)
-
+# set.seed(829)
+set.seed(10001)
 n <- 15000
 psi <- 10
 threshold <- 0.95
@@ -216,7 +216,7 @@ model {
     }
     target += normal_lpdf(theta[1] | 0, 100);
     for (j in 1:p){
-      target += gamma_lpdf(lambda1[j] | 2, 1); 
+      target += gamma_lpdf(lambda1[j] | 1, 1); 
       target += gamma_lpdf(lambda2[j] | 1e-2, 1e-2);
       target += double_exponential_lpdf(theta[(j+1)] | 0, 1/(lambda1[j]));
       target += gamma_lpdf(tau[j] | atau, square(lambda2[j])*0.5);
@@ -286,7 +286,7 @@ posterior <- extract(fit1)
 
 # plot(fit1, plotfun = "trace", pars = c("lp__"), nrow = 3)
 bayesplot::color_scheme_set("mix-blue-red")
-bayesplot::mcmc_trace(fit1, pars="lp__") + ylab("Scenario A2") +
+bayesplot::mcmc_trace(fit1, pars="lp__") + ylab("Scenario A") +
   theme_minimal(base_size = 30) +
   theme(legend.position = "none",
         strip.text = element_blank(),

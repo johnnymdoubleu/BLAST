@@ -81,15 +81,20 @@ grid.df <- as.data.frame(setNames(seq_list, vars))
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 fwi.scaled <- as.data.frame(sapply(fwi.scaled, FUN = range01))
 fwi.df <- data.frame(fwi.scaled, BA=Y)
-quant.fit <- qgam(BA ~ s(DSR) + s(FWI) + s(BUI) + s(ISI) + 
-                    s(FFMC) + s(DMC) + s(DC),
-                data = fwi.df, qu = 0.975)
+tun <- tuneLearnFast(BA ~ s(DSR, k = 30) + s(FWI, k = 30) + s(BUI, k = 30) + 
+                            s(ISI, k = 30) + s(FFMC, k = 30) + s(DMC, k = 30) + 
+                            s(DC, k = 30), data = fwi.df, qu = 0.975)
+quant.fit <- qgam(BA ~ s(DSR, k = 30) + s(FWI, k = 30) + s(BUI, k = 30) + 
+                            s(ISI, k = 30) + s(FFMC, k = 30) + s(DMC, k = 30) + 
+                            s(DC, k = 30), data = fwi.df, qu = 0.975, lsig = tun$lsig)
 
 print(plot(quant.fit, allTerms = TRUE), pages = 1)
 quant.viz <- getViz(quant.fit, nsim = 20)
 check1D(quant.viz, fwi.df[,c(1:7)]) + l_gridQCheck1D(qu = 0.95)
 
-
+preds <- predict(quant.fit)
+empirical_qu <- mean(fwi.df$BA < preds)
+print(paste("Empirical Quantile:", empirical_qu))
 
 # 1. Get predictions at tau = 0.5 and tau = 0.95
 # fit.50 <- quantreg::rq(BA ~ bs(DSR) + bs(FWI) + bs(BUI) + bs(ISI) + bs(FFMC) + bs(DMC) + bs(DC), tau = 0.5, data = fwi.origin)
