@@ -6,9 +6,9 @@ library(MESS)
 library(evgam)
 # Scenario A
 
-total.iter <- 2
+total.iter <- 250
 
-n <- n.origin <- 15000
+n <- n.origin <- 20000
 psi.origin <- psi <- 10
 threshold <- 0.95
 p <- 5
@@ -106,7 +106,7 @@ generated quantities {
   };
 
   for (i in 1:n){
-      gridalpha[i] = exp(theta_origin[1] + sum(gridgsmooth[i,]));
+      gridalpha[i] = exp(-theta_origin[1] - sum(gridgsmooth[i,]));
       se[i] = pow((gridalpha[i]-trueAlpha[i]), 2);
   };
 }
@@ -255,7 +255,7 @@ for(iter in 1:total.iter){
   bs.linear[,-1] <- scale(bs.linear[,-1], center = X_means, scale = X_sd)
   
   data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, X_sd=X_sd,
-                    atau = ((psi+1)/2), X_means = X_means, trueAlpha = alp.new,
+                    atau = ((psi+1)/2), X_means = X_means, trueAlpha = 1/alp.new,
                     bsLinear = bs.linear[,c(2:(p+1))], bsNonlinear = bs.nonlinear,
                     xholderLinear = xholder.linear[,c(2:(p+1))], xholderNonlinear = xholder.nonlinear)
 
@@ -327,7 +327,7 @@ alpha.container$evgam.scale <- rowMeans(evgam.scale.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
 # save(newgsmooth.container, alpha.container, evgam.1.container, evgam.scale.container, mise.1.container, mise.scale.container, file="./simulation/results/vgam_mc_scC.Rdata")
-# load(paste0("./simulation/results/evgam_mc_scC_",(n.origin*0.05),".Rdata"))
+load(paste0("./simulation/results/2026-01-26_evgam_mc_scC_",(n.origin*0.05),".Rdata"))
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab(expression(xi(c,ldots,c))) #+ ylab("")
 if(total.iter <= 50){
@@ -352,9 +352,10 @@ print(plt +
         theme_minimal(base_size = 40) + ylim(-1.5, 2)+
         theme(legend.position = "none",
                 strip.text = element_blank(),
+                axis.text.y = element_blank(),
                 axis.text = element_text(size = 30)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_evgam_scC_",n.origin, ".pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_evgam_scC_",n.origin, ".pdf"), width=9.5, height = 7.78)
 
 
 # newgsmooth.container$x <- seq(0,1, length.out = n)

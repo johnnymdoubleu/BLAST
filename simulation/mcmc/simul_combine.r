@@ -1,8 +1,14 @@
 setwd("../BLAST/simulation/results")
 iter <- 2
 n <- 20000
-EVGAM <- FALSE
-file_pattern <- paste0("2026-01-25_",iter,"_MC_scA_",n,"_.*.Rdata")
+EV <- TRUE
+
+if(EV==TRUE){
+  file_pattern <- paste0("evgam_mc_scC_",n,"_.*.Rdata")
+}else if(EV==FALSE){
+  file_pattern <- paste0("2026-01-25_",iter,"_MC_scA_",n,"_.*.Rdata")
+}
+
 file_list <- list.files(pattern = file_pattern)
 
 # Check if files were found
@@ -17,7 +23,9 @@ newgsmooth.container <- matrix(, nrow=n*0.05, ncol=0)
 gridgsmooth.container <- matrix(, nrow=n*0.05, ncol=0)
 gridgl.container <- matrix(, nrow=n*0.05, ncol=0)
 gridgnl.container <- matrix(, nrow=n*0.05, ncol=0)
-mise.container <- c()
+evgam.1.container <- matrix(, nrow=n*0.05, ncol=0)
+evgam.scale.container <- matrix(, nrow=n*0.05, ncol=0)
+mise.container <- mise.1.container <- mise.scale.container <- c()
 qqplot.container <- matrix(, nrow=n*0.05, ncol=0)
 
 # 3. Iterate through the files
@@ -26,14 +34,16 @@ for (f in file_list) {
   
   temp_env <- new.env()
   
-  if(EVGAM == TRUE){
+  if(EV == TRUE){
     tryCatch({
       load(f, envir = temp_env)
       alpha.container <- cbind(alpha.container, temp_env$alpha.container[,c(1:iter)])
-      gridgsmooth.container <- cbind(gridgsmooth.container, temp_env$gridgsmooth.container[,c(1:iter)])
-      evgam.1.container <- cbind(gridgl.container, temp_env$gridgl.container[,c(1:iter)])
-      evgam.scale.container <- cbind(gridgnl.container, temp_env$gridgnl.container[,c(1:iter)])
+      gridgsmooth.container <- cbind(gridgsmooth.container, temp_env$newgsmooth.container[,c(1:iter)])
+      evgam.1.container <- cbind(evgam.1.container, temp_env$evgam.1.container[,c(1:iter)])
+      evgam.scale.container <- cbind(evgam.scale.container, temp_env$evgam.scale.container[,c(1:iter)])
       mise.container <- c(mise.container, temp_env$mise.container)
+      mise.1.container <- c(mise.1.container, temp_env$mise.1.container)
+      mise.scale.container <- c(mise.scale.container, temp_env$mise.scale.container)
     }, error = function(e) {
       warning(paste("Error loading file", f, ":", e$message))
     })
@@ -53,7 +63,7 @@ for (f in file_list) {
   }
 }
 
-if(EVGAM==FALSE){  
+if(EV==FALSE){  
   total.iter <- length(file_list) * iter
   colnames(alpha.container) <- paste0("V", 1:total.iter)
   colnames(gridgsmooth.container) <- paste0("V", 1:total.iter)
@@ -87,4 +97,23 @@ if(EVGAM==FALSE){
 
   
   # save(alpha.container, gridgnl.container, gridgl.container, gridgsmooth.container, mise.container, qqplot.container, file = paste0(Sys.Date(),"_",total.iter,"_MC_scA_",n,".Rdata"))
+} else {
+  total.iter <- length(file_list) * iter
+  colnames(alpha.container) <- paste0("V", 1:total.iter)
+  colnames(evgam.1.container) <- paste0("V", 1:total.iter)
+  colnames(evgam.scale.container) <- paste0("V", 1:total.iter)
+  colnames(gridgsmooth.container) <- paste0("V", 1:total.iter)
+  alpha.container$x <- temp_env$alpha.container$x
+  alpha.container$true <- temp_env$alpha.container$true
+  alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
+  alpha.container$evgam.1 <- rowMeans(evgam.1.container[,1:total.iter])
+  alpha.container$evgam.scale <- rowMeans(evgam.scale.container[,1:total.iter])  
+  alpha.container <- as.data.frame(alpha.container)
+  gridgsmooth.container$x <- temp_env$gridgsmooth.container$x
+  gridgsmooth.container$true <- temp_env$gridgsmooth.container$true
+  gridgsmooth.container$mean <- rowMeans(gridgsmooth.container[,1:total.iter])
+  gridgsmooth.container$covariate <- temp_env$gridgsmooth.container$covariate
+  gridgsmooth.container <- as.data.frame(gridgsmooth.container)
+  
+  # save(alpha.container, gridgsmooth.container, evgam.1.container, evgam.scale.container, mise.container, mise.1.container, mise.scale.container, file = paste0(Sys.Date(),"_evgam_mc_scC_",(n*0.05),".Rdata"))  
 }

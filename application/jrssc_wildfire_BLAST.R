@@ -31,7 +31,7 @@ missing.values <- which(!is.na(df.long$measurement))
 #Thus, each year consist of 366 data with either 1 or 0 missing value.
 Y <- df.long$measurement[!is.na(df.long$measurement)]
 psi.origin <- psi <- 30
-threshold <- 0.95
+threshold <- 0.975
 # u <- quantile(Y[Y>1], threshold)
 
 multiplesheets <- function(fname) {
@@ -71,9 +71,10 @@ fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 # fwi.index <- fwi.index[which(Y>1),]
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
-# range01 <- function(x){(x-min(x))/(max(x)-min(x))}
-fwi.scaled <- data.frame(fwi.scaled[which(Y>u),])
-# fwi.scaled <- as.data.frame(sapply(fwi.origin[which(Y>u), c(1:7)], FUN = range01))
+
+# fwi.scaled <- data.frame(fwi.scaled[which(Y>u),])
+range01 <- function(x){(x-min(x))/(max(x)-min(x))}
+fwi.scaled <- as.data.frame(sapply(fwi.scaled[which(Y>u),], FUN = range01))
 
 n <- dim(fwi.scaled)[[1]]
 p <- dim(fwi.scaled)[[2]]
@@ -173,7 +174,8 @@ for (i in seq_along(covariates)) {
   Z_final <- Z_orth[, keep_cols, drop = FALSE]
 
   train_scale <- apply(Z_final, 2, sd)
-  # Z_final <- scale(Z_final, center = FALSE, scale = train_scale)
+  train_scale[train_scale < 1e-12] <- 1 
+  Z_final <- scale(Z_final, center = FALSE, scale = train_scale)
   # if(ncol(Z_final) < psi){
   #   n.pad <- psi - ncol(Z_final)
   #   zero.pad <- matrix(0, nrow = nrow(Z_final), ncol = n.pad)
@@ -208,7 +210,7 @@ for (i in seq_along(covariates)) {
   Z_spectral_grid <- X_raw_grid %*% decomp$U_pen %*% decomp$Lambda_sqrt_inv
   Z_orth_grid <- Z_spectral_grid - X_lin_grid %*% projection_coefs_list[[i]]
   Z_final_grid <- Z_orth_grid[, keep_cols_list[[i]], drop = FALSE]
-  # Z_final_grid <- scale(Z_final_grid, center = FALSE, scale = scale_stats_list[[i]])
+  Z_final_grid <- scale(Z_final_grid, center = FALSE, scale = scale_stats_list[[i]])
   # if(ncol(Z_final_grid) < psi){
   #   n.pad <- psi - ncol(Z_final_grid)
   #   zero.pad <- matrix(0, nrow = nrow(Z_final_grid), ncol = n.pad)
@@ -220,51 +222,53 @@ for (i in seq_along(covariates)) {
 xholder.nonlinear <- do.call(cbind, grid_Z_list)
 xholder.linear <- model.matrix(~ ., data = data.frame(xholder))
 
-X_means <- colMeans(bs.linear[,-1])
-X_sd   <- apply(bs.linear[,-1], 2, sd)
-bs.linear[,-1] <- scale(bs.linear[,-1], center = X_means, scale = X_sd)
+# X_means <- colMeans(bs.linear[,-1])
+# X_sd   <- apply(bs.linear[,-1], 2, sd)
+# bs.linear[,-1] <- scale(bs.linear[,-1], center = X_means, scale = X_sd)
 
 
 model.stan <- "// Stan model for BLAST Pareto Samples
 data {
-    int <lower=1> n; // Sample size
-    int <lower=1> p; // regression coefficient size
-    int <lower=1> psi; // splines coefficient size
-    real <lower=0> u; // large threshold value
-    matrix[n, p] bsLinear; // fwi dataset
-    matrix[n, (psi*p)] bsNonlinear; // thin plate splines basis
-    matrix[n, p] xholderLinear; // fwi dataset
-    matrix[n, (psi*p)] xholderNonlinear; // thin plate splines basis    
-    array[n] real <lower=1> y; // extreme response
-    real <lower=0> atau;
-    vector[p] X_means;
-    vector[p] X_sd;
+  int <lower=1> n; // Sample size
+  int <lower=1> p; // regression coefficient size
+  int <lower=1> psi; // splines coefficient size
+  real <lower=0> u; // large threshold value
+  matrix[n, p] bsLinear; // fwi dataset
+  matrix[n, (psi*p)] bsNonlinear; // thin plate splines basis
+  matrix[n, p] xholderLinear; // fwi dataset
+  matrix[n, (psi*p)] xholderNonlinear; // thin plate splines basis    
+  array[n] real <lower=1> y; // extreme response
+  real <lower=0> atau;
+  vector[(psi*p)] Z_scales;
 }
 
 parameters {
-    vector[(p+1)] theta; // linear predictor
-    array[p] vector[psi] gamma_raw;
-    array[p] real <lower=0> lambda1; // lasso penalty //array[p] real <lower=0> 
-    array[p] real <lower=0> lambda2; // lambda2 group lasso penalty
-    array[p] real <lower=0> tau;
-    real <lower=0> rho;
+  vector[(p+1)] theta; // linear predictor
+  array[p] vector[psi] gamma_raw;
+  array[p] real <lower=0> lambda1; // lasso penalty //array[p] real <lower=0> 
+  array[p] real <lower=0> lambda2; // lambda2 group lasso penalty
+  array[p] real <lower=0> tau;
+  real <lower=0> rho;
 }
 
 transformed parameters {
-    array[n] real <lower=0> alpha; // covariate-adjusted tail index
+  array[n] real <lower=0> alpha; // covariate-adjusted tail index
+  
+  array[p] vector[psi] gamma;
+  {
+    matrix[n, p] gsmooth; // linear component
+    for (j in 1:p){
+      for (k in 1:psi){
+        int idx = (j-1)*psi + k;
+        gamma[j][k] = gamma_raw[j][k] * sqrt(tau[j]) * Z_scales[idx];
+      }; 
+      gsmooth[,j] = bsLinear[,j] * theta[j+1] + bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
+    };
     
-    array[p] vector[psi] gamma;
-    {
-      matrix[n, p] gsmooth; // linear component
-      for (j in 1:p){
-        gamma[j] = gamma_raw[j] * sqrt(tau[j]);
-        gsmooth[,j] = bsLinear[,j] * theta[j+1] + bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
-      };
-      
-      for (i in 1:n){
-        alpha[i] = exp(theta[1] + sum(gsmooth[i,]));
-      };
-    }
+    for (i in 1:n){
+      alpha[i] = exp(theta[1] + sum(gsmooth[i,]));
+    };
+  }
 }
 
 model {
@@ -275,8 +279,8 @@ model {
   target += normal_lpdf(theta[1] | 0, 1);
   target += gamma_lpdf(rho | 2, 1);
   for (j in 1:p){
-    target += gamma_lpdf(lambda1[j] | 5, 1); 
-    target += gamma_lpdf(lambda2[j] | 1, 1);  
+    target += gamma_lpdf(lambda1[j] | 2, 1); 
+    target += gamma_lpdf(lambda2[j] | 0.01, 0.011);  
     target += double_exponential_lpdf(theta[(j+1)] | 0, 1/(lambda1[j]*rho));
     target += gamma_lpdf(tau[j] | atau, square(lambda2[j]*rho)*0.5);
     target += std_normal_lpdf(gamma_raw[j]);
@@ -284,42 +288,52 @@ model {
 }
 
 generated quantities {
-  // Used in Posterior predictive check    
+  // Used in Posterior predictive check
   vector[n] log_lik;
   vector[n] f;
   real <lower=0> yrep;
   array[n] real <lower=0> gridalpha; // new tail index
   matrix[n, p] gridgnl; // nonlinear component
   matrix[n, p] gridgl; // linear component
-  matrix[n, p] gridgsmooth; // linear component
-  vector[(p+1)] theta_origin;
+  matrix[n, p] gridgsmooth; // linear component vector[(p+1)] theta_origin
 
   yrep = pareto_rng(u, alpha[1]); 
-  for (j in 1:p){
-    theta_origin[j+1] = theta[j+1] / X_sd[j];
-  }
-  theta_origin[1] = theta[1] - dot_product(X_means, theta_origin[2:(p+1)]);
+
   for(i in 1:n){
     log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
   }
   for (j in 1:p){
       gridgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
-      gridgl[,j] = xholderLinear[,j] * theta_origin[j+1];
+      gridgl[,j] = xholderLinear[,j] * theta[j+1];
       gridgsmooth[,j] = gridgl[,j] + gridgnl[,j];
   };
 
   for (i in 1:n){
-      gridalpha[i] = exp(theta_origin[1] + sum(gridgsmooth[i,]));
+      gridalpha[i] = exp(theta[1] + sum(gridgsmooth[i,]));
       f[i] = pareto_rng(u, alpha[i]);
   };
 }
 "
 
+  # for (j in 1:p){
+  #   theta_origin[j+1] = theta[j+1] / X_sd[j];
+  # }
+  # theta_origin[1] = theta[1] - dot_product(X_means, theta_origin[2:(p+1)]);
 
-data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, 
-                  atau = ((psi+1)/2), X_means = X_means, X_sd=X_sd,
+Z_scales <- unlist(scale_stats_list)
+
+# cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear[,c(1,2)]) %*% bs.nonlinear[,c((1):(psi))]), "\n")
+# cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear[,c(1,3)]) %*% bs.nonlinear[,c((psi+1):(psi*2))]), "\n")
+# cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear[,c(1,4)]) %*% bs.nonlinear[,c((psi*2+1):(psi*3))]), "\n")
+# cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear[,c(1,5)]) %*% bs.nonlinear[,c((psi*3+1):(psi*4))]), "\n")
+# cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear[,c(1,6)]) %*% bs.nonlinear[,c((psi*4+1):(psi*5))]), "\n")
+# cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear[,c(1,7)]) %*% bs.nonlinear[,c((psi*5+1):(psi*6))]), "\n")
+# cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear[,c(1,8)]) %*% bs.nonlinear[,c((psi*6+1):(psi*7))]), "\n")
+
+data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, Z_scales= Z_scales,
+                  atau = ((psi+1)/2), xholderNonlinear = xholder.nonlinear,
                   bsLinear = bs.linear[,-1], bsNonlinear = bs.nonlinear,
-                  xholderLinear = xholder.linear[,-1], xholderNonlinear = xholder.nonlinear)
+                  xholderLinear = xholder.linear[,-1])
 
 init.alpha <- list(list(gamma_raw= array(rep(0.2, (psi*p)), dim=c(p,psi)),
                         theta = rep(-0.1, (p+1)), tau = rep(0.1, p), rho = 1,
@@ -327,9 +341,9 @@ init.alpha <- list(list(gamma_raw= array(rep(0.2, (psi*p)), dim=c(p,psi)),
                    list(gamma_raw = array(rep(-0.15, (psi*p)), dim=c(p,psi)),
                         theta = rep(0.05, (p+1)), tau = rep(0.2, p), rho = 1,
                         lambda1 = rep(2,p), lambda2 = rep(5, p)),
-                   list(gamma_raw = array(rep(-0.75, (psi*p)), dim=c(p,psi)),
-                        theta = rep(0.01, (p+1)), tau = rep(1, p), rho = 1,
-                        lambda1 = rep(0.5,p), lambda2= rep(5, p)))
+                   list(gamma_raw= array(rep(0.1, (psi*p)), dim=c(p,psi)),
+                        theta = rep(0.1, (p+1)), tau = rep(0.1, p), rho = 1,
+                        lambda1 = rep(0.1,p), lambda2 = rep(0.1, p)))
 
 fit1 <- stan(
     model_code = model.stan,
@@ -352,7 +366,7 @@ bayesplot::mcmc_trace(fit1, pars="lp__") + ylab("") +
         strip.text = element_blank(),
         axis.text = element_text(size = 18))
 
-theta.samples <- summary(fit1, par=c("theta_origin"), probs = c(0.05,0.5, 0.95))$summary
+theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
 lambda.samples <- summary(fit1, par=c("lambda1", "lambda2", "rho"), probs = c(0.05,0.5, 0.95))$summary
 gsmooth.samples <- summary(fit1, par=c("gridgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
@@ -362,7 +376,7 @@ yrep <- summary(fit1, par=c("yrep"), probs = c(0.05,0.5, 0.95))$summary
 f.samples <- summary(fit1, par=c("f"), probs = c(0.05,0.5, 0.95))$summary
 loglik.samples <- summary(fit1, par=c("log_lik"), probs = c(0.05,0.5, 0.95))$summary
 
-MCMCvis::MCMCplot(fit1, params = 'theta_origin')
+MCMCvis::MCMCplot(fit1, params = 'theta')
 MCMCvis::MCMCplot(fit1, params = "gamma")
 
 g.smooth.mean <- as.vector(matrix(gsmooth.samples[,1], nrow = n, byrow=TRUE))
@@ -506,17 +520,17 @@ for(i in 1:p){
                   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
                   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
                   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
-                  # geom_rug(aes(x=true, y=q2), sides = "b") +
+                  geom_rug(aes(x=true, y=q2), sides = "b") +
                   ylab("") + xlab(names(fwi.scaled)[i]) +
                   scale_fill_manual(values=c("steelblue"), name = "") + 
                   scale_color_manual(values=c("steelblue")) +
-                  # ylim(-6, 5) +
+                  ylim(-3.3, 3.3) +
                   theme_minimal(base_size = 30) +
                   theme(legend.position = "none",
                           plot.margin = margin(0,0,0,-20),
                           axis.text = element_text(size = 35),
                           axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt + annotate("point", x= xholder[which.max(y),i], y=-2, color = "red", size = 7)
+  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=-3.3, color = "red", size = 7)
 }
 
 grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)

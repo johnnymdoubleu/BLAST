@@ -71,9 +71,10 @@ fwi.scaled <- data.frame(fwi.scaled, time = seq(1, length(Y), length.out = lengt
 # fwi.index <- fwi.index[which(Y>1),]
 u <- quantile(Y, threshold)
 y <- Y[Y>u]
-# range01 <- function(x){(x-min(x))/(max(x)-min(x))}
-fwi.scaled <- data.frame(fwi.scaled[which(Y>u),])
-# fwi.scaled <- as.data.frame(sapply(fwi.origin[which(Y>u), c(1:7)], FUN = range01))
+
+# fwi.scaled <- data.frame(fwi.scaled[which(Y>u),])
+range01 <- function(x){(x-min(x))/(max(x)-min(x))}
+fwi.scaled <- as.data.frame(sapply(fwi.scaled[which(Y>u),], FUN = range01))
 
 n <- dim(fwi.scaled)[[1]]
 p <- dim(fwi.scaled)[[2]]
@@ -164,20 +165,20 @@ for (i in seq_along(covariates)) {
   Z_orth_grid <- Z_spectral_grid - X_lin_grid %*% projection_coefs_list[[i]]
   Z_final_grid <- Z_orth_grid[, keep_cols_list[[i]], drop = FALSE]
   Z_final_grid <- scale(Z_final_grid, center = FALSE, scale = scale_stats_list[[i]])
-  if(ncol(Z_final_grid) < psi){
-    n.pad <- psi - ncol(Z_final_grid)
-    zero.pad <- matrix(0, nrow = nrow(Z_final_grid), ncol = n.pad)
-    Z_final_grid <- cbind(Z_final_grid, zero.pad)    
-  }    
+  # if(ncol(Z_final_grid) < psi){
+  #   n.pad <- psi - ncol(Z_final_grid)
+  #   zero.pad <- matrix(0, nrow = nrow(Z_final_grid), ncol = n.pad)
+  #   Z_final_grid <- cbind(Z_final_grid, zero.pad)    
+  # }    
   grid_Z_list[[i]] <- Z_final_grid
 }
 
 xholder.nonlinear <- do.call(cbind, grid_Z_list)
 xholder.linear <- model.matrix(~ ., data = data.frame(xholder))
 
-X_means <- colMeans(bs.linear[,-1])
-X_sd   <- apply(bs.linear[,-1], 2, sd)
-bs.linear[,-1] <- scale(bs.linear[,-1], center = X_means, scale = X_sd)
+# X_means <- colMeans(bs.linear[,-1])
+# X_sd   <- apply(bs.linear[,-1], 2, sd)
+# bs.linear[,-1] <- scale(bs.linear[,-1], center = X_means, scale = X_sd)
 
 
 model.stan <- "// Stan model for BLAST Pareto Samples
@@ -192,8 +193,7 @@ data {
     matrix[n, (psi*p)] xholderNonlinear; // thin plate splines basis    
     array[n] real <lower=1> y; // extreme response
     real <lower=0> atau;
-    vector[p] X_means;
-    vector[p] X_sd;
+    vector[(psi*p)] Z_scales;
 }
 
 parameters {
@@ -245,19 +245,14 @@ generated quantities {
   matrix[n, p] gridgnl; // nonlinear component
   matrix[n, p] gridgl; // linear component
   matrix[n, p] gridgsmooth; // linear component
-  vector[(p+1)] theta_origin;
 
   yrep = pareto_rng(u, alpha[1]); 
-  for (j in 1:p){
-    theta_origin[j+1] = theta[j+1] / X_sd[j];
-  }
-  theta_origin[1] = theta[1] - dot_product(X_means, theta_origin[2:(p+1)]);
   for(i in 1:n){
     log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
   }
   for (j in 1:p){
       gridgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
-      gridgl[,j] = xholderLinear[,j] * theta_origin[j+1];
+      gridgl[,j] = xholderLinear[,j] * theta[j+1];
       gridgsmooth[,j] = gridgl[,j] + gridgnl[,j];
   };
 
@@ -269,10 +264,10 @@ generated quantities {
 "
 
 
-data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, 
-                  atau = ((psi+1)/2), X_means = X_means, X_sd=X_sd,
+data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, Z_scales=Z_scales,
+                  atau = ((psi+1)/2), xholderNonlinear = xholder.nonlinear,
                   bsLinear = bs.linear[,-1], bsNonlinear = bs.nonlinear,
-                  xholderLinear = xholder.linear[,-1], xholderNonlinear = xholder.nonlinear)
+                  xholderLinear = xholder.linear[,-1])
 
 init.alpha <- list(list(gamma_raw= array(rep(0.2, (psi*p)), dim=c(p,psi)),
                         theta = rep(-0.1, (p+1)), tau = rep(0.1, p),
