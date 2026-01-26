@@ -393,7 +393,7 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_line(aes(y=true, colour = "True"), linewidth=2, linetype=2) + 
   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1.8) + 
-  ylab("") + xlab(expression(c)) + ylim(-2.1,1.3) +
+  ylab("") + xlab(expression(c)) + ylim(-2.3, 2) +
   facet_grid(covariates ~ ., scales = "free_x", switch = "y", 
               labeller = label_parsed) + 
   scale_fill_manual(values=c("steelblue"), name = "") +

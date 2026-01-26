@@ -310,7 +310,7 @@ for(iter in 1:total.iter){
 
   evgam.1.container[,iter] <- xi.pred.1
   evgam.scale.container[,iter] <- xi.pred.scale
-  alpha.container[,iter] <- 1/(newalpha.samples[,4])
+  alpha.container[,iter] <- newalpha.samples[,4]
   newgsmooth.container[,iter] <- as.vector(matrix(newgsmooth.samples[,4], nrow = n, byrow=TRUE))
   
   mise.container[iter] <- auc(newx, se.samples[,4], type="linear")

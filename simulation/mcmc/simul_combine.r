@@ -4,7 +4,8 @@ n <- 20000
 EV <- TRUE
 
 if(EV==TRUE){
-  file_pattern <- paste0("evgam_mc_scC_",n,"_.*.Rdata")
+  # file_pattern <- paste0("evgam_mc_scD_",n,"_.*.Rdata")
+  file_pattern <- paste0("evgam_mc_scD_.*.Rdata")
 }else if(EV==FALSE){
   file_pattern <- paste0("2026-01-25_",iter,"_MC_scA_",n,"_.*.Rdata")
 }
@@ -115,5 +116,5 @@ if(EV==FALSE){
   gridgsmooth.container$covariate <- temp_env$gridgsmooth.container$covariate
   gridgsmooth.container <- as.data.frame(gridgsmooth.container)
   
-  # save(alpha.container, gridgsmooth.container, evgam.1.container, evgam.scale.container, mise.container, mise.1.container, mise.scale.container, file = paste0(Sys.Date(),"_evgam_mc_scC_",(n*0.05),".Rdata"))  
+  # save(alpha.container, gridgsmooth.container, evgam.1.container, evgam.scale.container, mise.container, mise.1.container, mise.scale.container, file = paste0(Sys.Date(),"_evgam_mc_scD_",(n*0.05),".Rdata"))  
 }

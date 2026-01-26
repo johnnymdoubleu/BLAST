@@ -292,7 +292,7 @@ for(iter in 1:total.iter){
   gridgl.container[,iter] <- as.vector(matrix(gridgl.samples[,4], nrow = n, byrow=TRUE))
   gridgnl.container[,iter] <- as.vector(matrix(gridgnl.samples[,4], nrow = n, byrow=TRUE))
   newx <- seq(0, 1, length.out = n)
-  mise.container[iter] <- auc(newx, se.samples[,1], type="spline")
+  mise.container[iter] <- auc(newx, se.samples[,4], type="spline")
 
   mcmc.alpha <- rstan::extract(fit1)$alpha
   r <- matrix(, nrow = n, ncol = 30)
@@ -362,11 +362,11 @@ if(total.iter <= 50){
     plt <- plt + geom_line(aes(y = .data[[names(gridgsmooth.container)[i]]]), alpha = 0.05, linewidth = 0.7)
   }
 }
-print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + ylim(-2.1,1.3) +
+print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + ylim(-2.3, 2) +
         geom_line(aes(y=true, col = "True"), linewidth = 2, linetype = 2) + 
         geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5) + 
         facet_grid(covariate ~ ., scales = "free_x", switch = "y",
-                    labeller = label_parsed) +        
+                    labeller = label_parsed) + 
         scale_color_manual(values = c("steelblue", "red"))+
         guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) +
