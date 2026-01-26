@@ -175,6 +175,7 @@ for (i in seq_along(covariates)) {
 
 xholder.nonlinear <- do.call(cbind, grid_Z_list)
 xholder.linear <- model.matrix(~ ., data = data.frame(xholder))
+Z_scales <- unlist(scale_stats_list)
 
 # X_means <- colMeans(bs.linear[,-1])
 # X_sd   <- apply(bs.linear[,-1], 2, sd)
@@ -257,7 +258,7 @@ generated quantities {
   };
 
   for (i in 1:n){
-      gridalpha[i] = exp(theta_origin[1] + sum(gridgsmooth[i,]));
+      gridalpha[i] = exp(theta[1] + sum(gridgsmooth[i,]));
       f[i] = pareto_rng(u, alpha[i]);
   };
 }
@@ -300,7 +301,7 @@ bayesplot::mcmc_trace(fit1, pars="lp__") + ylab("") +
         strip.text = element_blank(),
         axis.text = element_text(size = 18))
 
-theta.samples <- summary(fit1, par=c("theta_origin"), probs = c(0.05,0.5, 0.95))$summary
+theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
 lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
 gsmooth.samples <- summary(fit1, par=c("gridgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
@@ -458,13 +459,13 @@ for(i in 1:p){
                   ylab("") + xlab(names(fwi.scaled)[i]) +
                   scale_fill_manual(values=c("steelblue"), name = "") + 
                   scale_color_manual(values=c("steelblue")) +
-                  # ylim(-6, 5) +
+                  ylim(-15, 12) +
                   theme_minimal(base_size = 30) +
                   theme(legend.position = "none",
                           plot.margin = margin(0,0,0,-20),
                           axis.text = element_text(size = 35),
                           axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt + annotate("point", x= xholder[which.max(y),i], y=-2, color = "red", size = 7)
+  grid.plts[[i]] <- grid.plt + annotate("point", x= xholder[which.max(y),i], y=-15, color = "red", size = 7)
 }
 
 grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)

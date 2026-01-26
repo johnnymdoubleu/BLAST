@@ -221,6 +221,7 @@ for (i in seq_along(covariates)) {
 
 xholder.nonlinear <- do.call(cbind, grid_Z_list)
 xholder.linear <- model.matrix(~ ., data = data.frame(xholder))
+Z_scales <- unlist(scale_stats_list)
 
 # X_means <- colMeans(bs.linear[,-1])
 # X_sd   <- apply(bs.linear[,-1], 2, sd)
@@ -276,11 +277,11 @@ model {
   for (i in 1:n){
     target += pareto_lpdf(y[i] | u, alpha[i]);
   }
-  target += normal_lpdf(theta[1] | 0, 1);
+  target += normal_lpdf(theta[1] | 0, 10);
   target += gamma_lpdf(rho | 2, 1);
   for (j in 1:p){
-    target += gamma_lpdf(lambda1[j] | 2, 1); 
-    target += gamma_lpdf(lambda2[j] | 0.01, 0.011);  
+    target += gamma_lpdf(lambda1[j] | 0.1, 0.1); 
+    target += gamma_lpdf(lambda2[j] | 0.01, 0.01);  
     target += double_exponential_lpdf(theta[(j+1)] | 0, 1/(lambda1[j]*rho));
     target += gamma_lpdf(tau[j] | atau, square(lambda2[j]*rho)*0.5);
     target += std_normal_lpdf(gamma_raw[j]);
@@ -320,7 +321,6 @@ generated quantities {
   # }
   # theta_origin[1] = theta[1] - dot_product(X_means, theta_origin[2:(p+1)]);
 
-Z_scales <- unlist(scale_stats_list)
 
 # cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear[,c(1,2)]) %*% bs.nonlinear[,c((1):(psi))]), "\n")
 # cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear[,c(1,3)]) %*% bs.nonlinear[,c((psi+1):(psi*2))]), "\n")
@@ -351,7 +351,7 @@ fit1 <- stan(
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value 
     chains = 3,             # number of Markov chains
-    iter = 2000,            # total number of iterations per chain
+    iter = 3000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
     refresh = 1000           # no progress shown
 )
