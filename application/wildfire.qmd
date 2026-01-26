@@ -365,7 +365,7 @@ setwd("C:/Users/Johnny Lee/Documents/GitHub")
 load("./BLAST/application/wildfire_prep.Rdata")
 # load("./BLAST/application/mqgam_result.Rdata")
 load("./BLAST/application/mqgam_result_t.Rdata")
-fwi.df <- fwi.origin[which(fwi.origin$BA>1),c(1:8)]
+fwi.df <- fwi.origin[,c(1:8)]
 # taus <- c(0.5, 0.75, 0.8, 0.85, 0.9, 0.95, 0.975, 0.99)
 taus <- c(0.75, 0.8, 0.825, 0.85, 0.875, 0.9, 0.91, 0.92, 0.93, 0.94, 0.95)
 # taus <- c(0.5,0.6, 0.7, 0.8, 0.9, 0.95, 0.975, 0.98, 0.99)

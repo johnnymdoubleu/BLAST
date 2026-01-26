@@ -5,9 +5,9 @@ library(rstan)
 library(MESS)
 
 # Scenario C
-total.iter <- 250
+total.iter <- 2
 
-n <- n.origin <- 20000
+n <- n.origin <- 5000
 psi.origin <- psi <- 10
 threshold <- 0.95
 p <- 5
@@ -127,7 +127,7 @@ for(iter in 1:total.iter){
   f1.nl <- f1(x.origin[,1])
   f5.nl <- f5(x.origin[,5])
   f1.l <- theta.origin[2]*x.origin[,1]
-  f2.1 <- theta.origin[3]*x.origin[,2]
+  f2.l <- theta.origin[3]*x.origin[,2]
   f5.l <- theta.origin[6]*x.origin[,5]
 
   eta_lin <-  f1.l + f2.l + f5.l
@@ -316,7 +316,7 @@ alpha.container$true <- alp.new
 alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
-load(paste0("./simulation/results/MC-Scenario_C/2026-01-25_",total.iter,"_MC_scC_",n.origin,".Rdata"))
+# load(paste0("./simulation/results/MC-Scenario_C/2026-01-25_",total.iter,"_MC_scC_",n.origin,".Rdata"))
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab("")
 if(total.iter <= 50){

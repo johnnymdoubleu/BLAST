@@ -212,7 +212,10 @@ transformed parameters {
     {
       matrix[n, p] gsmooth; // linear component
       for (j in 1:p){
-        gamma[j] = gamma_raw[j] * sqrt(tau[j]);
+        for (k in 1:psi){
+          int idx = (j-1)*psi + k;
+          gamma[j][k] = gamma_raw[j][k] * sqrt(tau[j]) * Z_scales[idx];
+        }; 
         gsmooth[,j] = bsLinear[,j] * theta[j+1] + bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
       };
       
@@ -229,8 +232,8 @@ model {
   }
   target += normal_lpdf(theta[1] | 0, 100);
   for (j in 1:p){
-    target += gamma_lpdf(lambda1[j] | 2, 1); 
-    target += gamma_lpdf(lambda2[j] | 2, 1);  
+    target += gamma_lpdf(lambda1[j] | 0.1, 0.1); 
+    target += gamma_lpdf(lambda2[j] | 0.01, 0.01);  
     target += double_exponential_lpdf(theta[(j+1)] | 0, 1/(lambda1[j]));
     target += gamma_lpdf(tau[j] | atau, square(lambda2[j])*0.5);
     target += std_normal_lpdf(gamma_raw[j]);
@@ -455,17 +458,17 @@ for(i in 1:p){
                   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
                   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
                   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
-                  # geom_rug(aes(x=true, y=q2), sides = "b") +
+                  geom_rug(aes(x=true, y=q2), sides = "b") +
                   ylab("") + xlab(names(fwi.scaled)[i]) +
                   scale_fill_manual(values=c("steelblue"), name = "") + 
                   scale_color_manual(values=c("steelblue")) +
-                  ylim(-15, 12) +
+                  ylim(-5, 3.5) +
                   theme_minimal(base_size = 30) +
                   theme(legend.position = "none",
                           plot.margin = margin(0,0,0,-20),
                           axis.text = element_text(size = 35),
                           axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt + annotate("point", x= xholder[which.max(y),i], y=-15, color = "red", size = 7)
+  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=-5, color = "red", size = 7)
 }
 
 grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)

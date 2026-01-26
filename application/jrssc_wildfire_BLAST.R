@@ -370,6 +370,9 @@ theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summar
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
 lambda.samples <- summary(fit1, par=c("lambda1", "lambda2", "rho"), probs = c(0.05,0.5, 0.95))$summary
 gsmooth.samples <- summary(fit1, par=c("gridgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
+gsmooth.samples <- summary(fit1, par=c("gridgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
+gridgl.samples <- summary(fit1, par=c("gridgl"), probs = c(0.05, 0.5, 0.95))$summary
+gridgnl.samples <- summary(fit1, par=c("gridgnl"), probs = c(0.05, 0.5, 0.95))$summary
 origin.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
 alpha.samples <- summary(fit1, par=c("gridalpha"), probs = c(0.05,0.5, 0.95))$summary
 yrep <- summary(fit1, par=c("yrep"), probs = c(0.05,0.5, 0.95))$summary
@@ -383,33 +386,40 @@ g.smooth.mean <- as.vector(matrix(gsmooth.samples[,1], nrow = n, byrow=TRUE))
 g.smooth.q1 <- as.vector(matrix(gsmooth.samples[,4], nrow = n, byrow=TRUE))
 g.smooth.q2 <- as.vector(matrix(gsmooth.samples[,5], nrow = n, byrow=TRUE))
 g.smooth.q3 <- as.vector(matrix(gsmooth.samples[,6], nrow = n, byrow=TRUE))
+g.linear.mean <- as.vector(matrix(gridgl.samples[,1], nrow = n, byrow=TRUE))
+g.linear.q1 <- as.vector(matrix(gridgl.samples[,4], nrow = n, byrow=TRUE))
+g.linear.q2 <- as.vector(matrix(gridgl.samples[,5], nrow = n, byrow=TRUE))
+g.linear.q3 <- as.vector(matrix(gridgl.samples[,6], nrow = n, byrow=TRUE))
+g.nonlinear.mean <- as.vector(matrix(gridgnl.samples[,1], nrow = n, byrow=TRUE))
+g.nonlinear.q1 <- as.vector(matrix(gridgnl.samples[,4], nrow = n, byrow=TRUE))
+g.nonlinear.q2 <- as.vector(matrix(gridgnl.samples[,5], nrow = n, byrow=TRUE))
+g.nonlinear.q3 <- as.vector(matrix(gridgnl.samples[,6], nrow = n, byrow=TRUE))
 
+# data.smooth <- data.frame("x"= as.vector(xholder),
+#                           "post.mean" = as.vector(g.smooth.mean),
+#                           "q1" = as.vector(g.smooth.q1),
+#                           "q2" = as.vector(g.smooth.q2),
+#                           "q3" = as.vector(g.smooth.q3),
+#                           "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)),
+#                           "replicate" = gl(p, n, (p*n), labels = names(fwi.scaled)))
 
-data.smooth <- data.frame("x"= as.vector(xholder),
-                          "post.mean" = as.vector(g.smooth.mean),
-                          "q1" = as.vector(g.smooth.q1),
-                          "q2" = as.vector(g.smooth.q2),
-                          "q3" = as.vector(g.smooth.q3),
-                          "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)),
-                          "replicate" = gl(p, n, (p*n), labels = names(fwi.scaled)))
-
-ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) + 
-  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
-  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
-  ylab("") + xlab("") +
-  facet_grid(covariates ~ ., scales = "free",
-              labeller = label_parsed) + 
-  scale_fill_manual(values=c("steelblue"), name = "") +
-  scale_color_manual(values=c("steelblue")) + 
-  guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) + 
-          # ylim(-3.5, 3.5) +
-  theme_minimal(base_size = 30) +
-  theme(legend.position = "none",
-          plot.margin = margin(0,0,0,-20),
-          # strip.text = element_blank(),
-          axis.text = element_text(size = 20))
+# ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) + 
+#   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+#   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
+#   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
+#   ylab("") + xlab("") +
+#   facet_grid(covariates ~ ., scales = "free",
+#               labeller = label_parsed) + 
+#   scale_fill_manual(values=c("steelblue"), name = "") +
+#   scale_color_manual(values=c("steelblue")) + 
+#   guides(color = guide_legend(order = 2), 
+#           fill = guide_legend(order = 1)) + 
+#           # ylim(-3.5, 3.5) +
+#   theme_minimal(base_size = 30) +
+#   theme(legend.position = "none",
+#           plot.margin = margin(0,0,0,-20),
+#           # strip.text = element_blank(),
+#           axis.text = element_text(size = 20))
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=12.5, height = 15)
 
 data.scenario <- data.frame("x" = newx,
@@ -524,18 +534,80 @@ for(i in 1:p){
                   ylab("") + xlab(names(fwi.scaled)[i]) +
                   scale_fill_manual(values=c("steelblue"), name = "") + 
                   scale_color_manual(values=c("steelblue")) +
-                  ylim(-3.3, 3.3) +
+                  ylim(-6.5, 3.3) +
                   theme_minimal(base_size = 30) +
                   theme(legend.position = "none",
                           plot.margin = margin(0,0,0,-20),
                           axis.text = element_text(size = 35),
                           axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=-3.3, color = "red", size = 7)
+  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=-6.5, color = "red", size = 7)
 }
 
 grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
 
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_DC.pdf"), grid.plts[[7]], width=10, height = 7.78)
+
+
+data.linear <- data.frame("x" = as.vector(xholder),
+                          "true" = as.vector(as.matrix(fwi.scaled)),
+                          "post.mean" = as.vector(g.linear.mean),
+                          "q1" = as.vector(g.linear.q1),
+                          "q2" = as.vector(g.linear.q2),
+                          "q3" = as.vector(g.linear.q3),
+                          "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)))
+
+
+grid.plts <- list()
+for(i in 1:p){
+  grid.plt <- ggplot(data = data.frame(data.linear[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + 
+                  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+                  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
+                  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
+                  geom_rug(aes(x=true, y=q2), sides = "b") +
+                  ylab("") + xlab(names(fwi.scaled)[i]) +
+                  scale_fill_manual(values=c("steelblue"), name = "") + 
+                  scale_color_manual(values=c("steelblue")) +
+                  ylim(-6.5, 3.3) +
+                  theme_minimal(base_size = 30) +
+                  theme(legend.position = "none",
+                          plot.margin = margin(0,0,0,-20),
+                          axis.text = element_text(size = 35),
+                          axis.title.x = element_text(size = 45))
+  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=-6.5, color = "red", size = 7)
+}
+
+grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
+
+
+data.nonlinear <- data.frame("x" = as.vector(xholder),
+                          "true" = as.vector(as.matrix(fwi.scaled)),
+                          "post.mean" = as.vector(g.nonlinear.mean),
+                          "q1" = as.vector(g.nonlinear.q1),
+                          "q2" = as.vector(g.nonlinear.q2),
+                          "q3" = as.vector(g.nonlinear.q3),
+                          "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)))
+
+
+grid.plts <- list()
+for(i in 1:p){
+  grid.plt <- ggplot(data = data.frame(data.nonlinear[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + 
+                  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+                  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
+                  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
+                  geom_rug(aes(x=true, y=q2), sides = "b") +
+                  ylab("") + xlab(names(fwi.scaled)[i]) +
+                  scale_fill_manual(values=c("steelblue"), name = "") + 
+                  scale_color_manual(values=c("steelblue")) +
+                  ylim(-6.5, 3.3) +
+                  theme_minimal(base_size = 30) +
+                  theme(legend.position = "none",
+                          plot.margin = margin(0,0,0,-20),
+                          axis.text = element_text(size = 35),
+                          axis.title.x = element_text(size = 45))
+  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=-6.5, color = "red", size = 7)
+}
+
+grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
 
 # saveRDS(data.smooth, file="./BLAST/application/figures/comparison/full_stanfit.rds")
 

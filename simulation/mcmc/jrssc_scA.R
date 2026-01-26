@@ -60,7 +60,7 @@ theta.adjusted <- c(theta.origin[1] + f2.hidden$intercept + f3.hidden$intercept,
                     theta.origin[5],
                     theta.origin[6])
 g2.nl <- f2(newx) - (f2.hidden$intercept + f2.hidden$slope*newx)
-g3.nl <- f3(newx) - (f2.hidden$intercept + f2.hidden$slope*newx)
+g3.nl <- f3(newx) - (f3.hidden$intercept + f3.hidden$slope*newx)
 g2.l <- theta.adjusted[3]*newx
 g3.l <- theta.adjusted[4]*newx
 g2 <- g2.l + g2.nl

@@ -174,7 +174,7 @@ for(iter in 1:total.iter){
   g4.nl <- f4(newx) - (f4.hidden$intercept + f4.hidden$slope*newx)
   g3.nl <- f3(newx) - (f3.hidden$intercept + f3.hidden$slope*newx)
 
-  g1.l <- theta.adjusted[1]*newx
+  g1.l <- theta.adjusted[2]*newx
   g3.l <- theta.adjusted[4]*newx
   g4.l <- theta.adjusted[5]*newx
   g4 <- g4.l + g4.nl
