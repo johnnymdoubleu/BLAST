@@ -795,7 +795,6 @@ p1 <- ggplot(data.frame(k=k_seq, xi=hill_est), aes(x=k, y=xi)) +
   labs(title="Hill Estimator", y=expression(xi)) +
   theme_minimal(base_size = 30) + ylim(0, 1.2) +
   theme(legend.position = "none",
-          plot.margin = margin(0,0,0,-20),
           axis.text = element_text(size = 35),
           axis.title.x = element_text(size = 45))
 
@@ -806,7 +805,6 @@ p2 <- ggplot(data.frame(k=k_pick, xi=pickands_est), aes(x=k, y=xi)) +
   labs(title="Pickands Estimator", y=expression(xi)) +
   theme_minimal(base_size = 30) + ylim(0, 1.2) +
   theme(legend.position = "none",
-          plot.margin = margin(0,0,0,0),
           axis.text = element_text(size = 35),
           axis.title.x = element_text(size = 45))
 
@@ -816,7 +814,6 @@ p3 <- ggplot(data.frame(k=k_seq, xi=dedh_est), aes(x=k, y=xi)) +
   labs(title="Moment Estimator", y=expression(xi)) +
   theme_minimal(base_size = 30) + ylim(0, 1.2) +
   theme(legend.position = "none",
-          plot.margin = margin(0,0,0,0),
           axis.text = element_text(size = 35),
           axis.title.x = element_text(size = 45))
 

@@ -311,7 +311,7 @@ alpha.container$true <- alp.new
 alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
-load(paste0("./simulation/results/MC-Scenario_A/2026-01-24_",total.iter,"_MC_scA_",n.origin,".Rdata"))
+load(paste0("./simulation/results/MC-Scenario_A/2026-01-26_",total.iter,"_MC_scA_",n.origin,".Rdata"))
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab(expression(alpha(c,...,c))) #+ ylab("")
 if(total.iter <= 50){
