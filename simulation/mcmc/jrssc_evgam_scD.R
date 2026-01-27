@@ -8,7 +8,7 @@ library(evgam)
 
 total.iter <- 250
 
-n <- n.origin <- 20000
+n <- n.origin <- 15000
 psi.origin <- psi <- 10
 threshold <- 0.95
 p <- 5
@@ -340,7 +340,7 @@ alpha.container$evgam.scale <- rowMeans(evgam.scale.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
 # save(newgsmooth.container, alpha.container, evgam.1.container, evgam.scale.container, mise.1.container, mise.scale.container, file="./simulation/results/vgam_mc_scA.Rdata")
-load(paste0("./simulation/results/2026-01-26_evgam_mc_scD_",(n.origin*0.05),".Rdata"))
+load(paste0("./simulation/results/MC-Scenario_D/2026-01-26_evgam_mc_scD_",(n.origin*0.05),".Rdata"))
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab("")
 if(total.iter <= 50){

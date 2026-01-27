@@ -1,6 +1,6 @@
 setwd("../BLAST/simulation/results")
 iter <- 2
-n <- 20000
+n <- 15000
 EV <- TRUE
 
 if(EV==TRUE){

@@ -534,13 +534,13 @@ for(i in 1:p){
                   ylab("") + xlab(names(fwi.scaled)[i]) +
                   scale_fill_manual(values=c("steelblue"), name = "") + 
                   scale_color_manual(values=c("steelblue")) +
-                  ylim(-6.5, 3.3) +
+                  ylim(-4, 3.3) +
                   theme_minimal(base_size = 30) +
                   theme(legend.position = "none",
                           plot.margin = margin(0,0,0,-20),
                           axis.text = element_text(size = 35),
                           axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=-6.5, color = "red", size = 7)
+  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=-4, color = "red", size = 7)
 }
 
 grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
@@ -567,13 +567,13 @@ for(i in 1:p){
                   ylab("") + xlab(names(fwi.scaled)[i]) +
                   scale_fill_manual(values=c("steelblue"), name = "") + 
                   scale_color_manual(values=c("steelblue")) +
-                  ylim(-6.5, 3.3) +
+                  ylim(-4, 3.3) +
                   theme_minimal(base_size = 30) +
                   theme(legend.position = "none",
                           plot.margin = margin(0,0,0,-20),
                           axis.text = element_text(size = 35),
                           axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=-6.5, color = "red", size = 7)
+  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=-4.5, color = "red", size = 7)
 }
 
 grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
@@ -598,13 +598,13 @@ for(i in 1:p){
                   ylab("") + xlab(names(fwi.scaled)[i]) +
                   scale_fill_manual(values=c("steelblue"), name = "") + 
                   scale_color_manual(values=c("steelblue")) +
-                  ylim(-6.5, 3.3) +
+                  ylim(-4, 3.3) +
                   theme_minimal(base_size = 30) +
                   theme(legend.position = "none",
                           plot.margin = margin(0,0,0,-20),
                           axis.text = element_text(size = 35),
                           axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=-6.5, color = "red", size = 7)
+  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=-4, color = "red", size = 7)
 }
 
 grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
@@ -717,22 +717,22 @@ constraint.elpd.loo <- loo(fit.log.lik, is_method = "sis", cores = 2)
 library(qrmtools)
 # library(Dowd)
 library(ReIns)
-hill_qrm <- Hill_estimator(Y[Y>1], k = c(5, 1000))
-Hill_plot(Y[Y>1], k = c(5, 1000), conf.level = 0.95, log="")
+hill_qrm <- Hill_estimator(Y, k = c(5, 10000))
+Hill_plot(Y, k = c(5, 10000), conf.level = 0.95, log="")
 
 tail_size <- length(Y) / 4 - 5 # The tail.size must be < n/4
 # pickands_result <- PickandsEstimator(Y, tail.size = tail_size)
 # PickandsPlot(pickands_result)
 # print(paste("Pickands Estimator:", pickands_result))
-moment_result <- Moment(Y[Y>1], plot = TRUE)
+moment_result <- Moment(Y, plot = TRUE)
 moment_k <- moment_result$k
 moment_gamma <- moment_result$gamma
 stable_estimate <- median(moment_result$gamma[moment_result$k > 50])
 print(paste("DEdH Tail Index Estimate:", stable_estimate))
 
-H <- Hill(Y[Y>1], plot=FALSE)
-M <- Moment(Y[Y>1])
-gH <- genHill(Y[Y>1], gamma=H$gamma)
+H <- Hill(Y, plot=FALSE)
+M <- Moment(Y)
+gH <- genHill(Y, gamma=H$gamma)
 # Plot estimates
 plot(H$k[5:500], M$gamma[5:500], xlab="k", ylab=expression(gamma), type="l")
 # lines(H$k[5:500], gH$gamma[5:500], lty=2)
