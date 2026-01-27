@@ -1,6 +1,6 @@
 setwd("../BLAST/simulation/results")
 iter <- 2
-n <- 15000
+n <- 20000
 EV <- TRUE
 
 if(EV==TRUE){
@@ -126,5 +126,5 @@ if(EV==FALSE){
   gridgsmooth.container$covariate <- temp_env$gridgsmooth.container$covariate
   gridgsmooth.container <- as.data.frame(gridgsmooth.container)
   
-  save(alpha.container, gridgsmooth.container, vgam.1.container, vgam.scale.container, evgam.1.container, evgam.scale.container, mise.container, mise.evgam.1.container, mise.evgam.scale.container, mise.vgam.1.container, mise.vgam.scale.container, file = paste0(Sys.Date(),"_evgam_mc_scA_",(n*0.05),".Rdata"))  
+  # save(alpha.container, gridgsmooth.container, vgam.1.container, vgam.scale.container, evgam.1.container, evgam.scale.container, mise.container, mise.evgam.1.container, mise.evgam.scale.container, mise.vgam.1.container, mise.vgam.scale.container, file = paste0(Sys.Date(),"_evgam_mc_scA_",(n*0.05),".Rdata"))  
 }

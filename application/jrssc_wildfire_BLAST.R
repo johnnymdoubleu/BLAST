@@ -30,7 +30,7 @@ missing.values <- which(!is.na(df.long$measurement))
 #considering the case of leap year, the missing values are the 29th of Feb
 #Thus, each year consist of 366 data with either 1 or 0 missing value.
 Y <- df.long$measurement[!is.na(df.long$measurement)]
-psi.origin <- psi <- 30
+psi.origin <- psi <- 19
 threshold <- 0.975
 # u <- quantile(Y[Y>1], threshold)
 
@@ -82,7 +82,9 @@ p <- dim(fwi.scaled)[[2]]
 
 fwi.origin <- data.frame(fwi.index[which(Y>u),], BA=y)
 max.fwi <- fwi.origin[which.max(y),]
-fwi.grid <- data.frame(lapply(fwi.origin[,c(1:7)], function(x) seq(min(x), max(x), length.out = nrow(fwi.scaled))))
+fwi.grid <- data.frame(lapply(fwi.origin[,c(1:p)], function(x) seq(min(x), max(x), length.out = nrow(fwi.scaled))))
+fwi.minmax <- sapply(fwi.origin[,c(1:p)], function(x) max(x)-min(x))
+fwi.min <- sapply(fwi.origin[,c(1:p)], function(x) min(x))
 # ggplot(fwi.origin, aes(x=DSR, y=FFMC)) + 
 #   geom_point(aes(colour = BA), size= 2.5) + 
 #   scale_colour_stepsn(colours = c("slategray1", "red"), labels=function(x) format(x, big.mark = ",", scientific = TRUE), breaks=c(0.1e5, 0.5e5, 1e5, 2e5)) +
@@ -255,6 +257,8 @@ data {
   array[n] real <lower=1> y; // extreme response
   real <lower=0> atau;
   vector[(psi*p)] Z_scales;
+  vector[p] X_minmax;
+  vector[p] X_min;
 }
 
 parameters {
@@ -290,11 +294,12 @@ model {
   for (i in 1:n){
     target += pareto_lpdf(y[i] | u, alpha[i]);
   }
-  target += normal_lpdf(theta[1] | 0, 10);
+  target += normal_lpdf(theta[1] | 0, 1);
   for (j in 1:p){
-    target += gamma_lpdf(lambda1[j] | 1, 1); 
-    target += gamma_lpdf(lambda2[j] | 0.01, 0.01);  
+    target += gamma_lpdf(lambda1[j] | 1e-4, 1e-4); 
+    target += gamma_lpdf(lambda2[j] | 1e-4, 1e-4);  
     target += double_exponential_lpdf(theta[(j+1)] | 0, 1/(lambda1[j]));
+    target += normal_lpdf(theta[j+1] | 0, 1);
     target += gamma_lpdf(tau[j] | atau, square(lambda2[j])*0.5);
     target += std_normal_lpdf(gamma_raw[j]);
   }
@@ -310,12 +315,18 @@ generated quantities {
   matrix[n, p] gridgl; // linear component
   matrix[n, p] gridgsmooth; // linear component vector[(p+1)] theta_origin
   matrix[n, p] fwismooth;
+  vector[(p+1)] theta_origin;
 
   yrep = pareto_rng(u, alpha[1]); 
 
   for(i in 1:n){
     log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
   }
+  for (j in 1:p){
+     theta_origin[j+1] = theta[j+1] / X_minmax[j];
+  }
+  theta_origin[1] = theta[1] - dot_product(X_min, theta_origin[2:(p+1)]);
+
   for (j in 1:p){
       gridgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
       gridgl[,j] = xholderLinear[,j] * theta[j+1];
@@ -331,7 +342,7 @@ generated quantities {
 "
 
   # for (j in 1:p){
-  #   theta_origin[j+1] = theta[j+1] / X_sd[j];
+  #   theta_origin[j+1] = theta[j+1] / (X_max[j]-X_min[j]);
   # }
   # theta_origin[1] = theta[1] - dot_product(X_means, theta_origin[2:(p+1)]);
 
@@ -346,8 +357,8 @@ generated quantities {
 
 data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, Z_scales= Z_scales,
                   atau = ((psi+1)/2), xholderNonlinear = xholder.nonlinear,
-                  bsLinear = bs.linear[,-1], bsNonlinear = bs.nonlinear,
-                  xholderLinear = xholder.linear[,-1],
+                  bsLinear = bs.linear[,-1], bsNonlinear = bs.nonlinear, X_min=fwi.min,
+                  xholderLinear = xholder.linear[,-1], X_minmax = fwi.minmax,
                   gridL = xgrid.linear[,-1], gridNL = xgrid.nonlinear)
 
 init.alpha <- list(list(gamma_raw= array(rep(0.2, (psi*p)), dim=c(p,psi)),
@@ -383,7 +394,7 @@ bayesplot::mcmc_trace(fit1, pars="lp__") + ylab("") +
 
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
-lambda.samples <- summary(fit1, par=c("lambda1", "lambda2", "rho"), probs = c(0.05,0.5, 0.95))$summary
+lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
 gsmooth.samples <- summary(fit1, par=c("gridgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
 fwismooth.samples <- summary(fit1, par=c("fwismooth"), probs = c(0.05, 0.5, 0.95))$summary
 gridgl.samples <- summary(fit1, par=c("gridgl"), probs = c(0.05, 0.5, 0.95))$summary
@@ -414,6 +425,7 @@ fwi.smooth.q1 <- as.vector(matrix(fwismooth.samples[,4], nrow = n, byrow=TRUE))
 fwi.smooth.q2 <- as.vector(matrix(fwismooth.samples[,5], nrow = n, byrow=TRUE))
 fwi.smooth.q3 <- as.vector(matrix(fwismooth.samples[,6], nrow = n, byrow=TRUE))
 
+g.samples <- matrix(gsmooth.samples[,4], nrow = n, byrow=TRUE)
 fwi.samples <- matrix(fwismooth.samples[,4], nrow = n, byrow=TRUE)
 # data.smooth <- data.frame("x"= as.vector(xholder),
 #                           "post.mean" = as.vector(g.smooth.mean),
@@ -554,13 +566,13 @@ for(i in 1:p){
                   ylab("") + xlab(names(fwi.scaled)[i]) +
                   scale_fill_manual(values=c("steelblue"), name = "") + 
                   scale_color_manual(values=c("steelblue")) +
-                  ylim(-3, 3.3) +
+                  ylim(min(g.samples), 3.3) +
                   theme_minimal(base_size = 30) +
                   theme(legend.position = "none",
                           plot.margin = margin(0,0,0,-20),
                           axis.text = element_text(size = 35),
                           axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=-3, color = "red", size = 7)
+  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=min(g.samples), color = "red", size = 7)
 }
 
 grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
@@ -587,13 +599,13 @@ for(i in 1:p){
                   ylab("") + xlab(names(fwi.scaled)[i]) +
                   scale_fill_manual(values=c("steelblue"), name = "") + 
                   scale_color_manual(values=c("steelblue")) +
-                  ylim(-3, 3.3) +
+                  ylim(min(g.samples[,i]), 3.3) +
                   theme_minimal(base_size = 30) +
                   theme(legend.position = "none",
                           plot.margin = margin(0,0,0,-20),
                           axis.text = element_text(size = 35),
                           axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=-3, color = "red", size = 7)
+  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=min(g.samples[,i]), color = "red", size = 7)
 }
 
 grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
