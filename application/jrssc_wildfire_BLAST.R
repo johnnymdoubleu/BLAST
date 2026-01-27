@@ -714,27 +714,111 @@ constraint.elpd.loo <- loo(fit.log.lik, is_method = "sis", cores = 2)
 
 
 
-library(qrmtools)
+# library(qrmtools)
 # library(Dowd)
-library(ReIns)
-hill_qrm <- Hill_estimator(Y, k = c(5, 10000))
-Hill_plot(Y, k = c(5, 10000), conf.level = 0.95, log="")
+# library(ReIns)
+# hill_qrm <- Hill_estimator(Y, k = c(5, 1000))
+# Hill_plot(Y, k = c(5, 1000), conf.level = 0.95, log="")
 
-tail_size <- length(Y) / 4 - 5 # The tail.size must be < n/4
+# tail_size <- length(Y) / 4 - 5 # The tail.size must be < n/4
 # pickands_result <- PickandsEstimator(Y, tail.size = tail_size)
-# PickandsPlot(pickands_result)
-# print(paste("Pickands Estimator:", pickands_result))
-moment_result <- Moment(Y, plot = TRUE)
-moment_k <- moment_result$k
-moment_gamma <- moment_result$gamma
-stable_estimate <- median(moment_result$gamma[moment_result$k > 50])
-print(paste("DEdH Tail Index Estimate:", stable_estimate))
+# PickandsPlot(pickands_result, 10)
+# # print(paste("Pickands Estimator:", pickands_result))
+# moment_result <- Moment(Y, plot = TRUE)
+# moment_k <- moment_result$k
+# moment_gamma <- moment_result$gamma
+# stable_estimate <- median(moment_result$gamma[moment_result$k > 1000])
+# print(paste("DEdH Tail Index Estimate:", stable_estimate))
 
-H <- Hill(Y, plot=FALSE)
-M <- Moment(Y)
-gH <- genHill(Y, gamma=H$gamma)
-# Plot estimates
-plot(H$k[5:500], M$gamma[5:500], xlab="k", ylab=expression(gamma), type="l")
-# lines(H$k[5:500], gH$gamma[5:500], lty=2)
-lines(H$k[5:500], gH$gamma[5:500], lty=3)
-legend("bottomright", c("Moment", "Generalised Hill"), lty=1:2)
+# H <- Hill(Y, plot=FALSE)
+# M <- Moment(Y)
+# gH <- genHill(Y, gamma=H$gamma)
+# # Plot estimates
+# plot(H$k[5:500], M$gamma[5:500], xlab="k", ylab=expression(gamma), type="l")
+# # lines(H$k[5:500], gH$gamma[5:500], lty=2)
+# lines(H$k[5:500], gH$gamma[5:500], lty=3)
+# legend("bottomright", c("Moment", "Generalised Hill"), lty=1:2)
+
+
+library(evir) # For Hill
+x_data <- sort(Y[Y > 0], decreasing = TRUE)
+n <- length(x_data)
+
+# Define range of k (number of upper order statistics to use)
+# Usually look at top 1% to 10% of data
+k_seq <- 15:500 
+
+# --- 2. HILL ESTIMATOR ---
+# Formula: mean(log(x_top)) - log(threshold)
+hill_est <- numeric(length(k_seq))
+for(i in seq_along(k_seq)) {
+  k <- k_seq[i]
+  y_k <- x_data[1:k]
+  hill_est[i] <- mean(log(y_k)) - log(x_data[k+1])
+}
+
+# --- 3. PICKANDS ESTIMATOR ---
+# Uses differences of quantiles (k, 2k, 4k)
+pickands_est <- numeric(length(k_seq))
+# Adjust k range for Pickands (needs 4k < n)
+k_pick <- k_seq[k_seq < n/4]
+for(i in seq_along(k_pick)) {
+  k <- k_pick[i]
+  # Components based on order statistics X_{n-k+1:n}
+  q1 <- x_data[k]
+  q2 <- x_data[2*k]
+  q3 <- x_data[4*k]
+  pickands_est[i] <- (1/log(2)) * log((q1 - q2) / (q2 - q3))
+}
+
+# --- 4. DEKKERS-EINMAHL-DE HAAN (MOMENT) ESTIMATOR ---
+# Generalization of Hill that works for non-positive xi
+dedh_est <- numeric(length(k_seq))
+for(i in seq_along(k_seq)) {
+  k <- k_seq[i]
+  y_k <- x_data[1:k]
+  # Transform to log excess
+  log_excess <- log(y_k) - log(x_data[k+1])
+  
+  M1 <- mean(log_excess)
+  M2 <- mean(log_excess^2)
+  
+  # The Estimator Formula
+  dedh_est[i] <- M1 + 1 - 0.5 * (1 - (M1^2 / M2))^(-1)
+}
+
+# --- 5. VISUALIZATION ---
+
+p1 <- ggplot(data.frame(k=k_seq, xi=hill_est), aes(x=k, y=xi)) +
+  geom_line(color="steelblue", linewidth=1) +
+  geom_hline(yintercept = 0, linetype="dashed") +
+  labs(title="Hill Estimator", y=expression(xi)) +
+  theme_minimal(base_size = 30) + ylim(0, 1.2) +
+  theme(legend.position = "none",
+          plot.margin = margin(0,0,0,-20),
+          axis.text = element_text(size = 35),
+          axis.title.x = element_text(size = 45))
+
+# Need separate dataframe for Pickands (different length)
+p2 <- ggplot(data.frame(k=k_pick, xi=pickands_est), aes(x=k, y=xi)) +
+  geom_line(color="darkgreen", linewidth=1) +
+  geom_hline(yintercept = 0, linetype="dashed") +
+  labs(title="Pickands Estimator", y=expression(xi)) +
+  theme_minimal(base_size = 30) + ylim(0, 1.2) +
+  theme(legend.position = "none",
+          plot.margin = margin(0,0,0,0),
+          axis.text = element_text(size = 35),
+          axis.title.x = element_text(size = 45))
+
+p3 <- ggplot(data.frame(k=k_seq, xi=dedh_est), aes(x=k, y=xi)) +
+  geom_line(color="firebrick", linewidth=1) +
+  geom_hline(yintercept = 0, linetype="dashed") +
+  labs(title="Moment Estimator", y=expression(xi)) +
+  theme_minimal(base_size = 30) + ylim(0, 1.2) +
+  theme(legend.position = "none",
+          plot.margin = margin(0,0,0,0),
+          axis.text = element_text(size = 35),
+          axis.title.x = element_text(size = 45))
+
+grid.plt <- grid.arrange(p1, p2, p3, nrow=1)
+ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_heavytail.pdf"), grid.plt, width=22, height = 7.78)
