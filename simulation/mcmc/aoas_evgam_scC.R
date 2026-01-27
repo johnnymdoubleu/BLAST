@@ -289,7 +289,8 @@ for(iter in 1:total.iter){
                         control = vgam.control(maxit = 200))
   fitted.linear <- predict(vgam.fit.1, newdata = data.frame(xholder), type = "link")
   fitted.terms <- predict(vgam.fit.1, newdata = data.frame(xholder), type = "terms")
-  vgam.xi.1 <- exp(fitted.linear[,2])  
+  vgam.xi.1 <- exp(fitted.linear[,2])
+  
   simul.data <- data.frame(y = y.origin - u, x.origin)
   gam.scale <- list(y ~ s(X1, bs = "tp", k = 10) + 
                          s(X2, bs = "tp", k = 10) + 

@@ -1,14 +1,17 @@
-library(mgcv)
+library(VGAM)
 library(Pareto)
 suppressMessages(library(tidyverse))
 library(rstan)
 library(MESS)
 library(evgam)
+library(mgcv)
+
+
 # Scenario A
+# array.id <- commandArgs(trailingOnly=TRUE)
+total.iter <- 2
 
-total.iter <- 250
-
-n <- n.origin <- 5000
+n <- n.origin <- 15000
 psi.origin <- psi <- 10
 threshold <- 0.95
 p <- 5
@@ -115,9 +118,8 @@ newgsmooth.container <- as.data.frame(matrix(, nrow = (p*(n*(1-threshold))), nco
 smooth.scale.container <- as.data.frame(matrix(, nrow = (p*(n*(1-threshold))), ncol = total.iter))
 smooth.1.container <- as.data.frame(matrix(, nrow = (p*(n*(1-threshold))), ncol = total.iter))
 alpha.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total.iter))
-evgam.1.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total.iter))
-evgam.scale.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total.iter))
-mise.scale.container <- mise.1.container <- mise.container <- c()
+vgam.scale.container <- vgam.1.container <- evgam.scale.container <- evgam.1.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total.iter))
+mise.vgam.scale.container <- mise.vgam.1.container <- mise.evgam.scale.container <- mise.evgam.1.container <- mise.container <- c()
 
 for(iter in 1:total.iter){
   n <- n.origin
@@ -176,7 +178,7 @@ for(iter in 1:total.iter){
     var_name <- covariates[i]
     x_vec <- x.origin[, i]
     X_lin <- model.matrix(~ x_vec) 
-    sm_spec <- smoothCon(s(x_vec, bs = "tp", k = psi + 2), 
+    sm_spec <- smoothCon(mgcv::s(x_vec, bs = "tp", k = psi + 2), 
                         data = data.frame(x_vec = x_vec), 
                         knots = NULL)[[1]]
     
@@ -271,6 +273,28 @@ for(iter in 1:total.iter){
   newalpha.samples <- summary(fit1, par=c("gridalpha"), probs = c(0.5))$summary
   se.samples <- summary(fit1, par=c("se"), probs = c(0.5))$summary
 
+  simul.data <- data.frame(y = y.origin, x.origin)
+  vgam.fit.scale <- vgam(y ~ s(X1) + s(X2) + s(X3) + s(X4) + s(X5),
+                        data = simul.data,
+                        family = gpd(threshold= u,
+                                      lshape="loglink",
+                                      zero = NULL),
+                        trace = TRUE,
+                        control = vgam.control(maxit = 200))
+  fitted.linear <- predict(vgam.fit.scale,newdata = data.frame(xholder), type = "link")
+  fitted.terms <- predict(vgam.fit.scale,newdata = data.frame(xholder), type = "terms")
+  vgam.xi.scale <- exp(fitted.linear[,2])
+
+  vgam.fit.1 <- vgam(y ~ s(X1) + s(X2) + s(X3) + s(X4) + s(X5),
+                        data = simul.data,
+                        family = gpd(threshold= u,
+                                      lshape="loglink",
+                                      zero = 1),
+                        trace = TRUE,
+                        control = vgam.control(maxit = 200))
+  fitted.linear <- predict(vgam.fit.1, newdata = data.frame(xholder), type = "link")
+  fitted.terms <- predict(vgam.fit.1, newdata = data.frame(xholder), type = "terms")
+  vgam.xi.1 <- exp(fitted.linear[,2])
   
   simul.data <- data.frame(y = y.origin-u, x.origin)
   gam.scale <- list(y ~ s(X1, bs = "tp", k = 10) + 
@@ -295,14 +319,18 @@ for(iter in 1:total.iter){
   evgam.fit.1 <- evgam::evgam(gam.1, data = simul.data, family = "gpd")
   xi.pred.1 <-predict(evgam.fit.1, newdata = data.frame(xholder), type="response")$shape
 
+  vgam.1.container[,iter] <- vgam.xi.1
+  vgam.scale.container[,iter] <- vgam.xi.scale
   evgam.1.container[,iter] <- xi.pred.1
   evgam.scale.container[,iter] <- xi.pred.scale
   alpha.container[,iter] <- newalpha.samples[,4]
   newgsmooth.container[,iter] <- as.vector(matrix(newgsmooth.samples[,4], nrow = n, byrow=TRUE))
   
-  mise.container[iter] <- auc(newx, se.samples[,4], type="linear")
-  mise.1.container[iter] <- auc(newx, (((1/alp.new)-xi.pred.1))^2  ,type="linear")
-  mise.scale.container[iter] <- auc(newx, ((1/alp.new)-xi.pred.scale)^2  ,type="linear")
+  mise.container[iter] <- auc(newx, se.samples[,4], type="spline")
+  mise.evgam.1.container[iter] <- auc(newx, (((1/alp.new)-xi.pred.1))^2  ,type="spline")
+  mise.evgam.scale.container[iter] <- auc(newx, ((1/alp.new)-xi.pred.scale)^2  ,type="spline")
+  mise.vgam.1.container[iter] <- auc(newx, (((1/alp.new)-vgam.xi.1))^2  ,type="spline")
+  mise.vgam.scale.container[iter] <- auc(newx, ((1/alp.new)-vgam.xi.scale)^2  ,type="spline")  
 }
 
 
@@ -311,9 +339,11 @@ alpha.container$true <- 1/alp.new
 alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
 alpha.container$evgam.1 <- rowMeans(evgam.1.container[,1:total.iter])
 alpha.container$evgam.scale <- rowMeans(evgam.scale.container[,1:total.iter])
+alpha.container$vgam.1 <- rowMeans(vgam.1.container[,1:total.iter])
+alpha.container$vgam.scale <- rowMeans(vgam.scale.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
-save(newgsmooth.container, alpha.container, mise.container, evgam.1.container, evgam.scale.container, mise.1.container, mise.scale.container, file=paste0("./simulation/results/evgam_mc_scA_",n.origin,".Rdata"))
+# save(newgsmooth.container, alpha.container, mise.container, evgam.1.container, evgam.scale.container, mise.evgam.1.container, mise.evgam.scale.container, vgam.1.container, vgam.scale.container, mise.vgam.1.container, mise.vgam.scale.container, file=paste0("evgam_mc_scA_",n.origin,"_",array.id ,".Rdata"))
 # load(paste0("./simulation/results/evgam_mc_scA_",(n.origin*0.05),".Rdata"))
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab(expression(xi(c,ldots,c))) #+ ylab("")
@@ -331,12 +361,14 @@ print(plt +
         geom_line(aes(y=true, col = "True"), linewidth = 2, linetype = 2) + 
         geom_line(aes(y=mean, col = "Mean"), linewidth = 1.8) +
         geom_line(aes(y=evgam.1), colour="purple", linewidth = 1.8, linetype = 3) +
-        geom_line(aes(y=evgam.scale), colour="orange", linewidth = 1.8, linetype = 4) +
+        geom_line(aes(y=evgam.scale), colour="orange", linewidth = 1.8, linetype = 3) +
+        geom_line(aes(y=vgam.1), colour="purple", linewidth = 1.8, linetype = 4) +
+        geom_line(aes(y=vgam.scale), colour="orange", linewidth = 1.8, linetype = 4) +
         scale_fill_manual(values=c("steelblue"), name = "") +
         scale_color_manual(values = c("steelblue", "red"))+
         guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) +
-        theme_minimal(base_size = 40) + ylim(-1.5, 2)+
+        theme_minimal(base_size = 40) + ylim(-1.5, 2.5)+
         theme(legend.position = "none",
                 strip.text = element_blank(),
                 axis.text = element_text(size = 30)))
@@ -382,6 +414,8 @@ print(plt +
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_scA_",n.origin,".pdf"), width=12.5, height = 15)
 
 
-print(mean(mise.container))
-print(mean(mise.1.container))
-print(mean(mise.scale.container))
+print(mean(mise.container, na.rm=TRUE))
+print(mean(mise.evgam.1.container, na.rm=TRUE))
+print(mean(mise.evgam.scale.container, na.rm=TRUE))
+print(mean(mise.evgam.1.container, na.rm=TRUE))
+print(mean(mise.evgam.scale.container, na.rm=TRUE))
