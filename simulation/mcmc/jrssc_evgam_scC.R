@@ -425,6 +425,6 @@ print(plt +
 print(mean(mise.container, na.rm=TRUE))
 print(mean(mise.evgam.1.container, na.rm=TRUE))
 print(mean(mise.evgam.scale.container, na.rm=TRUE))
-print(mean(mise.evgam.1.container, na.rm=TRUE))
-print(mean(mise.evgam.scale.container, na.rm=TRUE))
+print(mean(mise.vgam.1.container, na.rm=TRUE))
+print(mean(mise.vgam.scale.container, na.rm=TRUE))
 

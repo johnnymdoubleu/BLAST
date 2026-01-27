@@ -232,7 +232,7 @@ model {
   }
   target += normal_lpdf(theta[1] | 0, 100);
   for (j in 1:p){
-    target += gamma_lpdf(lambda1[j] | 0.1, 0.1); 
+    target += gamma_lpdf(lambda1[j] | 1,1); 
     target += gamma_lpdf(lambda2[j] | 0.01, 0.01);  
     target += double_exponential_lpdf(theta[(j+1)] | 0, 1/(lambda1[j]));
     target += gamma_lpdf(tau[j] | atau, square(lambda2[j])*0.5);
@@ -576,31 +576,3 @@ gpd.fit(y-u, u)
 fit.log.lik <- extract_log_lik(fit1)
 constraint.elpd.loo <- loo(fit.log.lik, is_method = "sis", cores = 2)
 # save(constraint.elpd.loo, constraint.waic, file = (paste0("./BLAST/application/BLAST_constraint_",Sys.Date(),"_",psi,"_",floor(threshold*100),"quantile_IC.Rdata")))
-
-
-
-
-library(qrmtools)
-# library(Dowd)
-library(ReIns)
-hill_qrm <- Hill_estimator(Y[Y>1], k = c(5, 1000))
-Hill_plot(Y[Y>1], k = c(5, 1000), conf.level = 0.95, log="")
-
-tail_size <- length(Y) / 4 - 5 # The tail.size must be < n/4
-# pickands_result <- PickandsEstimator(Y, tail.size = tail_size)
-# PickandsPlot(pickands_result)
-# print(paste("Pickands Estimator:", pickands_result))
-moment_result <- Moment(Y[Y>1], plot = TRUE)
-moment_k <- moment_result$k
-moment_gamma <- moment_result$gamma
-stable_estimate <- median(moment_result$gamma[moment_result$k > 50])
-print(paste("DEdH Tail Index Estimate:", stable_estimate))
-
-H <- Hill(Y[Y>1], plot=FALSE)
-M <- Moment(Y[Y>1])
-gH <- genHill(Y[Y>1], gamma=H$gamma)
-# Plot estimates
-plot(H$k[5:500], M$gamma[5:500], xlab="k", ylab=expression(gamma), type="l")
-# lines(H$k[5:500], gH$gamma[5:500], lty=2)
-lines(H$k[5:500], gH$gamma[5:500], lty=3)
-legend("bottomright", c("Moment", "Generalised Hill"), lty=1:2)
