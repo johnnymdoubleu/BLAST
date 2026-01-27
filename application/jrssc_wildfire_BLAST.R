@@ -267,6 +267,7 @@ parameters {
   array[p] real <lower=0> lambda1; // lasso penalty //array[p] real <lower=0> 
   array[p] real <lower=0> lambda2; // lambda2 group lasso penalty
   array[p] real <lower=0> tau;
+  real <lower=0> rho;
 }
 
 transformed parameters {
@@ -296,11 +297,11 @@ model {
   }
   target += normal_lpdf(theta[1] | 0, 1);
   for (j in 1:p){
-    target += gamma_lpdf(lambda1[j] | 1e-4, 1e-4); 
-    target += gamma_lpdf(lambda2[j] | 1e-4, 1e-4);  
-    target += double_exponential_lpdf(theta[(j+1)] | 0, 1/(lambda1[j]));
+    target += gamma_lpdf(lambda1[j] | 2, 1); 
+    target += gamma_lpdf(lambda2[j] | 1e-2, 1e-2);  
+    target += double_exponential_lpdf(theta[(j+1)] | 0, 1/(lambda1[j]*rho));
     target += normal_lpdf(theta[j+1] | 0, 1);
-    target += gamma_lpdf(tau[j] | atau, square(lambda2[j])*0.5);
+    target += gamma_lpdf(tau[j] | atau, square(lambda2[j]*rho)*0.5);
     target += std_normal_lpdf(gamma_raw[j]);
   }
 }
@@ -362,13 +363,13 @@ data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, Z_scales= Z_s
                   gridL = xgrid.linear[,-1], gridNL = xgrid.nonlinear)
 
 init.alpha <- list(list(gamma_raw= array(rep(0.2, (psi*p)), dim=c(p,psi)),
-                        theta = rep(-0.1, (p+1)), tau = rep(0.1, p),# rho = 1,
+                        theta = rep(-0.1, (p+1)), tau = rep(0.1, p), rho = 1,
                         lambda1 = rep(0.1,p), lambda2 = rep(1, p)),
                    list(gamma_raw = array(rep(-0.15, (psi*p)), dim=c(p,psi)),
-                        theta = rep(0.05, (p+1)), tau = rep(0.2, p),# rho = 1,
+                        theta = rep(0.05, (p+1)), tau = rep(0.2, p), rho = 1,
                         lambda1 = rep(2,p), lambda2 = rep(5, p)),
                    list(gamma_raw= array(rep(0.1, (psi*p)), dim=c(p,psi)),
-                        theta = rep(0.1, (p+1)), tau = rep(0.1, p),# rho = 1,
+                        theta = rep(0.1, (p+1)), tau = rep(0.1, p), rho = 1,
                         lambda1 = rep(0.1,p), lambda2 = rep(0.1, p)))
 
 fit1 <- stan(
