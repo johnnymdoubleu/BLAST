@@ -9,7 +9,7 @@ library(VGAM)
 # Scenario C
 total.iter <- 250
 # array.id <- commandArgs(trailingOnly=TRUE)
-n <- n.origin <- 15000
+n <- n.origin <- 5000
 psi.origin <- psi <- 10
 threshold <- 0.95
 p <- 5

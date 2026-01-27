@@ -9,7 +9,7 @@ library(VGAM)
 # Scenario D
 # array.id <- commandArgs(trailingOnly=TRUE)
 total.iter <- 250
-n <- n.origin <- 15000
+n <- n.origin <- 20000
 psi.origin <- psi <- 10
 threshold <- 0.95
 p <- 5
@@ -368,7 +368,7 @@ alpha.container$vgam.scale <- rowMeans(vgam.scale.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
 # save(newgsmooth.container, alpha.container, mise.container, evgam.1.container, evgam.scale.container, mise.evgam.1.container, mise.evgam.scale.container, vgam.1.container, vgam.scale.container, mise.vgam.1.container, mise.vgam.scale.container, file=paste0("evgam_mc_scD_",n.origin,"_",array.id ,".Rdata"))
-# load(paste0("./simulation/results/2026-01-27_evgam_mc_scD_",(n.origin*0.05),".Rdata"))
+load(paste0("./simulation/results/2026-01-27_evgam_mc_scD_",(n.origin*0.05),".Rdata"))
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab("")
 if(total.iter <= 50){

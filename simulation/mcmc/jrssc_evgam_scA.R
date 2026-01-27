@@ -11,7 +11,7 @@ library(mgcv)
 # array.id <- commandArgs(trailingOnly=TRUE)
 total.iter <- 250
 
-n <- n.origin <- 20000
+n <- n.origin <- 5000
 psi.origin <- psi <- 10
 threshold <- 0.95
 p <- 5
@@ -316,7 +316,7 @@ for(iter in 1:total.iter){
                     s(X3, bs = "tp", k = 10) + 
                     s(X4, bs = "tp", k = 10) + 
                     s(X5, bs = "tp", k = 10))
-  evgam.fit.1 <- evgam::evgam(gam.1, data = simul.data, family = "gpd")
+  evgam.fit.1 <- evgam::evgam(gam.1, data = simul.data, family = gpd2())
   xi.pred.1 <-predict(evgam.fit.1, newdata = data.frame(xholder), type="response")$shape
 
   vgam.1.container[,iter] <- vgam.xi.1
