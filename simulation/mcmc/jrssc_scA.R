@@ -152,13 +152,13 @@ for (i in seq_along(covariates)) {
   
   grid_Z_list[[i]] <- Z_final_grid
 }
-
+Z_scales <- unlist(scale_stats_list)
 xholder.nonlinear <- do.call(cbind, grid_Z_list)
 xholder.linear <- model.matrix(~ ., data = data.frame(xholder))
 
-X_means <- colMeans(bs.linear[,c(2:(p+1))])
-X_sd   <- apply(bs.linear[,c(2:(p+1))], 2, sd)
-bs.linear[,c(2:(p+1))] <- scale(bs.linear[,c(2:(p+1))], center = X_means, scale = X_sd)
+X_means <- colMeans(bs.linear[,-1])
+X_sd   <- apply(bs.linear[,-1], 2, sd)
+# bs.linear[,-1] <- scale(bs.linear[,-1], center = X_means, scale = X_sd)
 
 
 cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear[,c(1,2)]) %*% bs.nonlinear[,c((1):(psi))]), "\n")
@@ -182,6 +182,7 @@ data {
     real <lower=0> atau;
     vector[p] X_means;
     vector[p] X_sd;
+    vector[(psi*p)] Z_scales;
 }
 
 parameters {
@@ -199,7 +200,10 @@ transformed parameters {
     {
       matrix[n, p] gsmooth; // linear component
       for (j in 1:p){
-        gamma[j] = gamma_raw[j] * sqrt(tau[j]);
+        for (k in 1:psi){
+          int idx = (j-1)*psi + k;
+          gamma[j][k] = gamma_raw[j][k] * sqrt(tau[j]) * Z_scales[idx];
+        }; 
         gsmooth[,j] = bsLinear[,j] * theta[j+1] + bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
       };
       
@@ -242,20 +246,20 @@ generated quantities {
     }
     for (j in 1:p){
         gridgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
-        gridgl[,j] = xholderLinear[,j] * theta_origin[j+1];
+        gridgl[,j] = xholderLinear[,j] * theta[j+1];
         gridgsmooth[,j] = gridgl[,j] + gridgnl[,j];
     };
 
     for (i in 1:n){
-        gridalpha[i] = exp(theta_origin[1] + sum(gridgsmooth[i,]));
+        gridalpha[i] = exp(theta[1] + sum(gridgsmooth[i,]));
     };
 }
 "
 
 data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, 
-                  atau = ((psi+1)/2), X_means = X_means, X_sd=X_sd,
-                  bsLinear = bs.linear[,c(2:(p+1))], bsNonlinear = bs.nonlinear,
-                  xholderLinear = xholder.linear[,c(2:(p+1))], xholderNonlinear = xholder.nonlinear)
+                  atau = ((psi+1)/2), X_means = X_means, X_sd=X_sd, Z_scales=Z_scales,
+                  bsLinear = bs.linear[,-1], bsNonlinear = bs.nonlinear,
+                  xholderLinear = xholder.linear[,-1], xholderNonlinear = xholder.nonlinear)
 
 init.alpha <- list(list(gamma_raw= array(rep(0.2, (psi*p)), dim=c(p,psi)),
                         theta = rep(-0.1, (p+1)), tau = rep(0.1, p),
@@ -294,7 +298,7 @@ bayesplot::mcmc_trace(fit1, pars="lp__") + ylab("Scenario A") +
 # ggsave(paste0("./simulation/results/appendix_",n,"_traceplot_scA.pdf"), width=22, height = 3)
 
 # tau.samples <- summary(fit1, par=c("tau"), probs = c(0.05,0.5, 0.95))$summary
-theta.samples <- summary(fit1, par=c("theta_origin"), probs = c(0.05,0.5, 0.95))$summary
+theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
 lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
 

@@ -295,12 +295,11 @@ model {
   for (i in 1:n){
     target += pareto_lpdf(y[i] | u, alpha[i]);
   }
-  target += normal_lpdf(theta[1] | 0, 1);
+  target += normal_lpdf(theta[1] | 0, 10);
   for (j in 1:p){
     target += gamma_lpdf(lambda1[j] | 2, 1); 
     target += gamma_lpdf(lambda2[j] | 1e-2, 1e-2);  
     target += double_exponential_lpdf(theta[(j+1)] | 0, 1/(lambda1[j]*rho));
-    target += normal_lpdf(theta[j+1] | 0, 1);
     target += gamma_lpdf(tau[j] | atau, square(lambda2[j]*rho)*0.5);
     target += std_normal_lpdf(gamma_raw[j]);
   }
@@ -642,35 +641,35 @@ for(i in 1:p){
 
 grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
 
-data.smooth <- data.frame("x" = as.vector(as.matrix(fwi.grid)),
-                          "true" = as.vector(as.matrix(fwi.origin[,c(1:7)])),
-                          "post.mean" = as.vector(fwi.smooth.mean),
-                          "q1" = as.vector(fwi.smooth.q1),
-                          "q2" = as.vector(fwi.smooth.q2),
-                          "q3" = as.vector(fwi.smooth.q3),
-                          "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)))
+# data.smooth <- data.frame("x" = as.vector(as.matrix(fwi.grid)),
+#                           "true" = as.vector(as.matrix(fwi.origin[,c(1:7)])),
+#                           "post.mean" = as.vector(fwi.smooth.mean),
+#                           "q1" = as.vector(fwi.smooth.q1),
+#                           "q2" = as.vector(fwi.smooth.q2),
+#                           "q3" = as.vector(fwi.smooth.q3),
+#                           "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)))
 
 
-grid.plts <- list()
-for(i in 1:p){
-  grid.plt <- ggplot(data = data.frame(data.smooth[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + 
-                  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-                  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
-                  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
-                  geom_rug(aes(x=true, y=q2), sides = "b") +
-                  ylab("") + xlab(names(fwi.scaled)[i]) +
-                  scale_fill_manual(values=c("steelblue"), name = "") + 
-                  scale_color_manual(values=c("steelblue")) +
-                  # ylim(-3, 3.3) +
-                  theme_minimal(base_size = 30) +
-                  theme(legend.position = "none",
-                          plot.margin = margin(0,0,0,-20),
-                          axis.text = element_text(size = 35),
-                          axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.origin[which.max(y),i], y=min(fwi.samples[,i]), color = "red", size = 7)
-}
+# grid.plts <- list()
+# for(i in 1:p){
+#   grid.plt <- ggplot(data = data.frame(data.smooth[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + 
+#                   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+#                   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
+#                   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
+#                   geom_rug(aes(x=true, y=q2), sides = "b") +
+#                   ylab("") + xlab(names(fwi.scaled)[i]) +
+#                   scale_fill_manual(values=c("steelblue"), name = "") + 
+#                   scale_color_manual(values=c("steelblue")) +
+#                   # ylim(-3, 3.3) +
+#                   theme_minimal(base_size = 30) +
+#                   theme(legend.position = "none",
+#                           plot.margin = margin(0,0,0,-20),
+#                           axis.text = element_text(size = 35),
+#                           axis.title.x = element_text(size = 45))
+#   grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.origin[which.max(y),i], y=min(fwi.samples[,i]), color = "red", size = 7)
+# }
 
-grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
+# grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
 
 # saveRDS(data.smooth, file="./BLAST/application/figures/comparison/full_stanfit.rds")
 

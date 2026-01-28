@@ -286,7 +286,7 @@ for(iter in 1:total.iter){
   newalpha.samples <- summary(fit1, par=c("gridalpha"), probs = c(0.5))$summary
   se.samples <- summary(fit1, par=c("se"), probs = c(0.5))$summary 
 
-  alpha.container[,iter] <- newalpha.samples[,1]
+  alpha.container[,iter] <- newalpha.samples[,4]
 
   gridgsmooth.container[,iter] <- as.vector(matrix(gridgsmooth.samples[,4], nrow = n, byrow=TRUE))
   gridgl.container[,iter] <- as.vector(matrix(gridgl.samples[,4], nrow = n, byrow=TRUE))

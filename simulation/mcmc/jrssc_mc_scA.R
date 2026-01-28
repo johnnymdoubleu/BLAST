@@ -7,7 +7,7 @@ library(MESS)
 # Scenario A
 total.iter <- 250
 
-n <- n.origin <- 20000
+n <- n.origin <- 15000
 psi.origin <- psi <- 10
 threshold <- 0.95
 p <- 5
@@ -42,6 +42,7 @@ data {
   matrix[n, (psi*p)] xholderNonlinear; // thin plate splines basis    
   array[n] real <lower=1> y; // extreme response
   real <lower=0> atau;
+  vector[(psi*p)] Z_scales;
   vector[p] X_means;
   vector[p] X_sd;
   array[n] real <lower=0> trueAlpha;
@@ -62,7 +63,10 @@ transformed parameters {
   {
     matrix[n, p] gsmooth; // linear component
     for (j in 1:p){
-      gamma[j] = gamma_raw[j] * sqrt(tau[j]);
+      for (k in 1:psi){
+        int idx = (j-1)*psi + k;
+        gamma[j][k] = gamma_raw[j][k] * sqrt(tau[j]) * Z_scales[idx];
+      }; 
       gsmooth[,j] = bsLinear[,j] * theta[j+1] + bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
     };
     
@@ -222,7 +226,7 @@ for(iter in 1:total.iter){
   }
 
   bs.nonlinear <- do.call(cbind, Z.list)
-
+  Z_scales <- unlist(scale_stats_list)
   xholder <- do.call(cbind, lapply(1:p, function(j) {newx}))
   colnames(xholder) <- covariates
   grid_Z_list <- list()
@@ -244,13 +248,13 @@ for(iter in 1:total.iter){
   xholder.linear <- model.matrix(~ ., data = data.frame(xholder))
   xholder.nonlinear <- do.call(cbind, grid_Z_list)
 
-  X_means <- colMeans(bs.linear[,c(2:(p+1))])
-  X_sd   <- apply(bs.linear[,c(2:(p+1))], 2, sd)
-  bs.linear[,c(2:(p+1))] <- scale(bs.linear[,c(2:(p+1))], center = X_means, scale = X_sd)
+  X_means <- colMeans(bs.linear[,-1])
+  X_sd   <- apply(bs.linear[,-1], 2, sd)
+  bs.linear[,-1] <- scale(bs.linear[,-1], center = X_means, scale = X_sd)
 
   
   data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, X_sd=X_sd,
-                    atau = ((psi+1)/2), X_means = X_means, trueAlpha = alp.new,
+                    atau = ((psi+1)/2), X_means = X_means, trueAlpha = alp.new, Z_scales=Z_scales,
                     bsLinear = bs.linear[,c(2:(p+1))], bsNonlinear = bs.nonlinear,
                     xholderLinear = xholder.linear[,c(2:(p+1))], xholderNonlinear = xholder.nonlinear)
 
@@ -270,7 +274,7 @@ for(iter in 1:total.iter){
       init = init.alpha,      # initial value
       chains = 3,             # number of Markov chains
       # warmup = 1000,          # number of warmup iterations per chain
-      iter = 2000,            # total number of iterations per chain
+      iter = 3000,            # total number of iterations per chain
       cores = parallel::detectCores(), # number of cores (could use one per chain)
       refresh = 1000             # no progress shown
   )
@@ -281,12 +285,12 @@ for(iter in 1:total.iter){
   newalpha.samples <- summary(fit1, par=c("gridalpha"), probs = c(0.5))$summary
   se.samples <- summary(fit1, par=c("se"), probs = c(0.5))$summary 
 
-  alpha.container[,iter] <- newalpha.samples[,1]
+  alpha.container[,iter] <- newalpha.samples[,4]
 
   gridgsmooth.container[,iter] <- as.vector(matrix(gridgsmooth.samples[,4], nrow = n, byrow=TRUE))
   gridgl.container[,iter] <- as.vector(matrix(gridgl.samples[,4], nrow = n, byrow=TRUE))
   gridgnl.container[,iter] <- as.vector(matrix(gridgnl.samples[,4], nrow = n, byrow=TRUE))
-  newx <- seq(0, 1, length.out = n)
+  # newx <- seq(0, 1, length.out = n)
   mise.container[iter] <- auc(newx, se.samples[,1], type="spline")
 
   mcmc.alpha <- rstan::extract(fit1)$alpha
@@ -311,7 +315,7 @@ alpha.container$true <- alp.new
 alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
-load(paste0("./simulation/results/MC-Scenario_A/2026-01-26_",total.iter,"_MC_scA_",n.origin,".Rdata"))
+# load(paste0("./simulation/results/MC-Scenario_A/2026-01-26_",total.iter,"_MC_scA_",n.origin,".Rdata"))
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab(expression(alpha(c,...,c))) #+ ylab("")
 if(total.iter <= 50){
