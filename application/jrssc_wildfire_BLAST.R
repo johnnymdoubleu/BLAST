@@ -30,8 +30,8 @@ missing.values <- which(!is.na(df.long$measurement))
 #considering the case of leap year, the missing values are the 29th of Feb
 #Thus, each year consist of 366 data with either 1 or 0 missing value.
 Y <- df.long$measurement[!is.na(df.long$measurement)]
-psi.origin <- psi <- 19
-threshold <- 0.975
+psi.origin <- psi <- 30
+threshold <- 0.95
 # u <- quantile(Y[Y>1], threshold)
 
 multiplesheets <- function(fname) {
@@ -128,7 +128,10 @@ fwi.min <- sapply(fwi.origin[,c(1:p)], function(x) min(x))
 #         legend.text = element_text(size = 15),
 #         strip.text = element_blank(),
 #         axis.title = element_text(size = 30))
-
+# M <- cor(fwi.scaled)
+# corrplot(M, order = 'AOE', type = 'upper', tl.pos = 'tp')
+# corrplot(M, add = TRUE, type = 'lower', method = 'number', order = 'AOE',
+#          col = 'black', diag = FALSE, tl.pos = 'n', cl.pos = 'n')
 # ggsave("./BLAST/application/figures/intensityfn.pdf", width = 10, height = 7.78)
 bs.linear <- model.matrix(~ ., data = data.frame(fwi.scaled))
 psi <- psi - 2
@@ -200,6 +203,7 @@ bs.nonlinear <- do.call(cbind, Z.list)
 # xholder <- do.call(cbind, lapply(1:p, function(j) {seq(min(fwi.scaled[,j]),max(fwi.scaled[,j]), length.out = n)}))
 newx <- seq(0, 1, length.out = n)
 xholder <- do.call(cbind, lapply(1:p, function(j) {newx}))
+
 colnames(xholder) <- covariates
 grid_Z_list <- list()
 
@@ -236,11 +240,16 @@ for (i in seq_along(covariates)) {
 }
 
 xgrid.nonlinear <- do.call(cbind, grid_Z_list)
+fwi.grid <- as.data.frame(sapply(fwi.grid, FUN = range01))
 xgrid.linear <- model.matrix(~ ., data = data.frame(fwi.grid))
 # X_means <- colMeans(bs.linear[,-1])
 # X_sd   <- apply(bs.linear[,-1], 2, sd)
 # bs.linear[,-1] <- scale(bs.linear[,-1], center = X_means, scale = X_sd)
 
+qr_lin <- qr(bs.linear[,-1])
+Q.lin <- qr.Q(qr_lin) * sqrt(n-1)
+R.lin <- qr.R(qr_lin) / sqrt(n-1)
+R.inv <- solve(R.lin)
 
 model.stan <- "// Stan model for BLAST Pareto Samples
 data {
@@ -259,6 +268,7 @@ data {
   vector[(psi*p)] Z_scales;
   vector[p] X_minmax;
   vector[p] X_min;
+  matrix[p,p] R_inv; 
 }
 
 parameters {
@@ -267,7 +277,6 @@ parameters {
   array[p] real <lower=0> lambda1; // lasso penalty //array[p] real <lower=0> 
   array[p] real <lower=0> lambda2; // lambda2 group lasso penalty
   array[p] real <lower=0> tau;
-  real <lower=0> rho;
 }
 
 transformed parameters {
@@ -295,37 +304,27 @@ model {
   for (i in 1:n){
     target += pareto_lpdf(y[i] | u, alpha[i]);
   }
-  target += normal_lpdf(theta[1] | 0, 10);
+  target += normal_lpdf(theta[1] | 0, 100);
   for (j in 1:p){
     target += gamma_lpdf(lambda1[j] | 2, 1); 
     target += gamma_lpdf(lambda2[j] | 1e-2, 1e-2);  
-    target += double_exponential_lpdf(theta[(j+1)] | 0, 1/(lambda1[j]*rho));
-    target += gamma_lpdf(tau[j] | atau, square(lambda2[j]*rho)*0.5);
+    target += double_exponential_lpdf(theta[(j+1)] | 0, 1/(lambda1[j]));
+    target += gamma_lpdf(tau[j] | atau, square(lambda2[j])*0.5);
     target += std_normal_lpdf(gamma_raw[j]);
   }
 }
 
 generated quantities {
   // Used in Posterior predictive check
-  vector[n] log_lik;
-  vector[n] f;
-  real <lower=0> yrep;
   array[n] real <lower=0> gridalpha; // new tail index
   matrix[n, p] gridgnl; // nonlinear component
   matrix[n, p] gridgl; // linear component
-  matrix[n, p] gridgsmooth; // linear component vector[(p+1)] theta_origin
+  matrix[n, p] gridgsmooth; // linear component 
   matrix[n, p] fwismooth;
   vector[(p+1)] theta_origin;
 
-  yrep = pareto_rng(u, alpha[1]); 
-
-  for(i in 1:n){
-    log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
-  }
-  for (j in 1:p){
-     theta_origin[j+1] = theta[j+1] / X_minmax[j];
-  }
-  theta_origin[1] = theta[1] - dot_product(X_min, theta_origin[2:(p+1)]);
+  theta_origin[2:(p+1)] = R_inv * theta[2:(p+1)];
+  theta_origin[1] = theta[1];
 
   for (j in 1:p){
       gridgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
@@ -336,7 +335,6 @@ generated quantities {
 
   for (i in 1:n){
       gridalpha[i] = exp(theta[1] + sum(gridgsmooth[i,]));
-      f[i] = pareto_rng(u, alpha[i]);
   };
 }
 "
@@ -356,19 +354,19 @@ generated quantities {
 # cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear[,c(1,8)]) %*% bs.nonlinear[,c((psi*6+1):(psi*7))]), "\n")
 
 data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, Z_scales= Z_scales,
-                  atau = ((psi+1)/2), xholderNonlinear = xholder.nonlinear,
+                  atau = ((psi+1)/2), xholderNonlinear = xholder.nonlinear, R_inv = R.inv,
                   bsLinear = bs.linear[,-1], bsNonlinear = bs.nonlinear, X_min=fwi.min,
                   xholderLinear = xholder.linear[,-1], X_minmax = fwi.minmax,
                   gridL = xgrid.linear[,-1], gridNL = xgrid.nonlinear)
 
-init.alpha <- list(list(gamma_raw= array(rep(0.2, (psi*p)), dim=c(p,psi)),
-                        theta = rep(-0.1, (p+1)), tau = rep(0.1, p), rho = 1,
+init.alpha <- list(list(gamma_raw= array(rep(0.2, (psi*p)), dim=c(p, psi)), #rho = 1, 
+                        theta = rep(-0.1, (p+1)), tau = rep(0.1, p), #sigma_ridge = rep(0.1, p),
                         lambda1 = rep(0.1,p), lambda2 = rep(1, p)),
-                   list(gamma_raw = array(rep(-0.15, (psi*p)), dim=c(p,psi)),
-                        theta = rep(0.05, (p+1)), tau = rep(0.2, p), rho = 1,
+                   list(gamma_raw = array(rep(-0.15, (psi*p)), dim=c(p, psi)),# rho = 1,
+                        theta = rep(0.05, (p+1)), tau = rep(0.2, p), #sigma_ridge = rep(0.2, p), 
                         lambda1 = rep(2,p), lambda2 = rep(5, p)),
-                   list(gamma_raw= array(rep(0.1, (psi*p)), dim=c(p,psi)),
-                        theta = rep(0.1, (p+1)), tau = rep(0.1, p), rho = 1,
+                   list(gamma_raw= array(rep(0.1, (psi*p)), dim=c(p, psi)), #rho = 1,
+                        theta = rep(0.1, (p+1)), tau = rep(0.1, p), #sigma_ridge = rep(0.1, p),
                         lambda1 = rep(0.1,p), lambda2 = rep(0.1, p)))
 
 fit1 <- stan(
@@ -377,7 +375,7 @@ fit1 <- stan(
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value 
     chains = 3,             # number of Markov chains
-    iter = 6000,            # total number of iterations per chain
+    iter = 4000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
     refresh = 1000           # no progress shown
 )
@@ -401,9 +399,9 @@ gridgl.samples <- summary(fit1, par=c("gridgl"), probs = c(0.05, 0.5, 0.95))$sum
 gridgnl.samples <- summary(fit1, par=c("gridgnl"), probs = c(0.05, 0.5, 0.95))$summary
 origin.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
 alpha.samples <- summary(fit1, par=c("gridalpha"), probs = c(0.05,0.5, 0.95))$summary
-yrep <- summary(fit1, par=c("yrep"), probs = c(0.05,0.5, 0.95))$summary
-f.samples <- summary(fit1, par=c("f"), probs = c(0.05,0.5, 0.95))$summary
-loglik.samples <- summary(fit1, par=c("log_lik"), probs = c(0.05,0.5, 0.95))$summary
+# yrep <- summary(fit1, par=c("yrep"), probs = c(0.05,0.5, 0.95))$summary
+# f.samples <- summary(fit1, par=c("f"), probs = c(0.05,0.5, 0.95))$summary
+# loglik.samples <- summary(fit1, par=c("log_lik"), probs = c(0.05,0.5, 0.95))$summary
 
 MCMCvis::MCMCplot(fit1, params = 'theta')
 MCMCvis::MCMCplot(fit1, params = "gamma")
@@ -425,7 +423,8 @@ fwi.smooth.q1 <- as.vector(matrix(fwismooth.samples[,4], nrow = n, byrow=TRUE))
 fwi.smooth.q2 <- as.vector(matrix(fwismooth.samples[,5], nrow = n, byrow=TRUE))
 fwi.smooth.q3 <- as.vector(matrix(fwismooth.samples[,6], nrow = n, byrow=TRUE))
 
-g.samples <- matrix(gsmooth.samples[,4], nrow = n, byrow=TRUE)
+g.min.samples <- min(gsmooth.samples[,4])
+g.max.samples <- max(gsmooth.samples[,6])
 fwi.samples <- matrix(fwismooth.samples[,4], nrow = n, byrow=TRUE)
 # data.smooth <- data.frame("x"= as.vector(xholder),
 #                           "post.mean" = as.vector(g.smooth.mean),
@@ -566,13 +565,13 @@ for(i in 1:p){
                   ylab("") + xlab(names(fwi.scaled)[i]) +
                   scale_fill_manual(values=c("steelblue"), name = "") + 
                   scale_color_manual(values=c("steelblue")) +
-                  ylim(min(g.samples), 3.3) +
+                  ylim(g.min.samples, g.max.samples) +
                   theme_minimal(base_size = 30) +
                   theme(legend.position = "none",
                           plot.margin = margin(0,0,0,-20),
                           axis.text = element_text(size = 35),
                           axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=min(g.samples), color = "red", size = 7)
+  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=g.min.samples, color = "red", size = 7)
 }
 
 grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
@@ -599,13 +598,13 @@ for(i in 1:p){
                   ylab("") + xlab(names(fwi.scaled)[i]) +
                   scale_fill_manual(values=c("steelblue"), name = "") + 
                   scale_color_manual(values=c("steelblue")) +
-                  ylim(min(g.samples[,i]), 3.3) +
+                  ylim(g.min.samples, g.max.samples) +
                   theme_minimal(base_size = 30) +
                   theme(legend.position = "none",
                           plot.margin = margin(0,0,0,-20),
                           axis.text = element_text(size = 35),
                           axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=min(g.samples[,i]), color = "red", size = 7)
+  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=g.min.samples, color = "red", size = 7)
 }
 
 grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
@@ -630,13 +629,13 @@ for(i in 1:p){
                   ylab("") + xlab(names(fwi.scaled)[i]) +
                   scale_fill_manual(values=c("steelblue"), name = "") + 
                   scale_color_manual(values=c("steelblue")) +
-                  ylim(-3, 3.3) +
+                  ylim(g.min.samples, g.max.samples) +
                   theme_minimal(base_size = 30) +
                   theme(legend.position = "none",
                           plot.margin = margin(0,0,0,-20),
                           axis.text = element_text(size = 35),
                           axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=-3, color = "red", size = 7)
+  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=g.min.samples, color = "red", size = 7)
 }
 
 grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
@@ -656,7 +655,7 @@ grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
 #                   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
 #                   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
 #                   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
-#                   geom_rug(aes(x=true, y=q2), sides = "b") +
+#                   geom_rug(aes(x=x, y=q2), sides = "b") +
 #                   ylab("") + xlab(names(fwi.scaled)[i]) +
 #                   scale_fill_manual(values=c("steelblue"), name = "") + 
 #                   scale_color_manual(values=c("steelblue")) +
@@ -666,7 +665,7 @@ grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
 #                           plot.margin = margin(0,0,0,-20),
 #                           axis.text = element_text(size = 35),
 #                           axis.title.x = element_text(size = 45))
-#   grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.origin[which.max(y),i], y=min(fwi.samples[,i]), color = "red", size = 7)
+#   grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.grid[which.max(y),i], y=g.min.samples, color = "red", size = 7)
 # }
 
 # grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)

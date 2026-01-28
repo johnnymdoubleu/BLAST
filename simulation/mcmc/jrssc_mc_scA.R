@@ -43,8 +43,6 @@ data {
   array[n] real <lower=1> y; // extreme response
   real <lower=0> atau;
   vector[(psi*p)] Z_scales;
-  vector[p] X_means;
-  vector[p] X_sd;
   array[n] real <lower=0> trueAlpha;
 }
 
@@ -98,21 +96,15 @@ generated quantities {
   matrix[n, p] gridgnl; // nonlinear component
   matrix[n, p] gridgl; // linear component
   matrix[n, p] gridgsmooth; // linear component
-  vector[(p+1)] theta_origin;
   vector[n] se;
-
-  for (j in 1:p){
-    theta_origin[j+1] = theta[j+1] / X_sd[j];
-  }
-  theta_origin[1] = theta[1] - dot_product(X_means, theta_origin[2:(p+1)]);
   for (j in 1:p){
       gridgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
-      gridgl[,j] = xholderLinear[,j] * theta_origin[j+1];
+      gridgl[,j] = xholderLinear[,j] * theta[j+1];
       gridgsmooth[,j] = gridgl[,j] + gridgnl[,j];
   };
 
   for (i in 1:n){
-      gridalpha[i] = exp(theta_origin[1] + sum(gridgsmooth[i,]));
+      gridalpha[i] = exp(theta + sum(gridgsmooth[i,]));
       se[i] = pow((gridalpha[i]-trueAlpha[i]), 2);
   };
 }
@@ -191,7 +183,7 @@ for(iter in 1:total.iter){
     
     eig <- eigen(S, symmetric = TRUE)
     max_lambda <- max(eig$values)
-    tol <- max_lambda * 1e-6  # Relative threshold (Robust)
+    tol <- max_lambda * 1e-7  # Relative threshold (Robust)
     
     pos_idx <- which(eig$values > tol)
     
@@ -250,13 +242,13 @@ for(iter in 1:total.iter){
 
   X_means <- colMeans(bs.linear[,-1])
   X_sd   <- apply(bs.linear[,-1], 2, sd)
-  bs.linear[,-1] <- scale(bs.linear[,-1], center = X_means, scale = X_sd)
+  # bs.linear[,-1] <- scale(bs.linear[,-1], center = X_means, scale = X_sd)
 
   
-  data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, X_sd=X_sd,
-                    atau = ((psi+1)/2), X_means = X_means, trueAlpha = alp.new, Z_scales=Z_scales,
-                    bsLinear = bs.linear[,c(2:(p+1))], bsNonlinear = bs.nonlinear,
-                    xholderLinear = xholder.linear[,c(2:(p+1))], xholderNonlinear = xholder.nonlinear)
+  data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi,
+                    atau = ((psi+1)/2), trueAlpha = alp.new, Z_scales=Z_scales,
+                    bsLinear = bs.linear[,-1], bsNonlinear = bs.nonlinear,
+                    xholderLinear = xholder.linear[,-1], xholderNonlinear = xholder.nonlinear)
 
   init.alpha <- list(list(gamma_raw= array(rep(0.2, (psi*p)), dim=c(p,psi)),
                           theta = rep(-0.1, (p+1)), tau = rep(0.1, p), 

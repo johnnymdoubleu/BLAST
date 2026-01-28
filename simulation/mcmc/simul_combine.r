@@ -7,7 +7,7 @@ if(EV==TRUE){
   file_pattern <- paste0("evgam_mc_scA_",n,"_.*.Rdata")
   # file_pattern <- paste0("evgam_mc_scA_.*.Rdata")
 }else if(EV==FALSE){
-  file_pattern <- paste0("2026-01-27_",iter,"_MC_scA_",n,"_.*.Rdata")
+  file_pattern <- paste0("2026-01-28_",iter,"_MC_scA_",n,"_.*.Rdata")
 }
 
 file_list <- list.files(pattern = file_pattern)
