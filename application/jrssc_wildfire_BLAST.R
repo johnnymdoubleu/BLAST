@@ -31,7 +31,7 @@ missing.values <- which(!is.na(df.long$measurement))
 #Thus, each year consist of 366 data with either 1 or 0 missing value.
 Y <- df.long$measurement[!is.na(df.long$measurement)]
 psi.origin <- psi <- 30
-threshold <- 0.95
+threshold <- 0.975
 # u <- quantile(Y[Y>1], threshold)
 
 multiplesheets <- function(fname) {
@@ -73,7 +73,8 @@ u <- quantile(Y, threshold)
 y <- Y[Y>u]
 
 # fwi.scaled <- data.frame(fwi.scaled[which(Y>u),])
-range01 <- function(x){(x-min(x))/(max(x)-min(x))}
+# range01 <- function(x){(x-min(x))/(max(x)-min(x))}
+range01 <- function(x){(x)/max(x)}
 fwi.scaled <- as.data.frame(sapply(fwi.scaled[which(Y>u),], FUN = range01))
 
 n <- dim(fwi.scaled)[[1]]
@@ -306,7 +307,7 @@ model {
   }
   target += normal_lpdf(theta[1] | 0, 100);
   for (j in 1:p){
-    target += gamma_lpdf(lambda1[j] | 2, 1); 
+    target += gamma_lpdf(lambda1[j] | 1, 1); 
     target += gamma_lpdf(lambda2[j] | 1e-2, 1e-2);  
     target += double_exponential_lpdf(theta[(j+1)] | 0, 1/(lambda1[j]));
     target += gamma_lpdf(tau[j] | atau, square(lambda2[j])*0.5);
