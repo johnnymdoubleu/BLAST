@@ -241,11 +241,11 @@ for (i in seq_along(covariates)) {
 }
 
 xgrid.nonlinear <- do.call(cbind, grid_Z_list)
-fwi.grid <- as.data.frame(sapply(fwi.grid, FUN = range01))
+# fwi.grid <- as.data.frame(sapply(fwi.grid, FUN = range01))
 xgrid.linear <- model.matrix(~ ., data = data.frame(fwi.grid))
 X_means <- colMeans(bs.linear[,-1])
 X_sd   <- apply(bs.linear[,-1], 2, sd)
-bs.linear[,-1] <- scale(bs.linear[,-1], center = X_means, scale = X_sd)
+# bs.linear[,-1] <- scale(bs.linear[,-1], center = X_means, scale = X_sd)
 
 qr_lin <- qr(bs.linear[,-1])
 Q.lin <- qr.Q(qr_lin) * sqrt(n-1)
@@ -335,23 +335,25 @@ generated quantities {
   matrix[n, p] gridgsmooth; // linear component 
   matrix[n, p] fwismooth;
   vector[n] log_lik;
-  vector[p+1] theta_origin;
+  // vector[p+1] theta_origin;
+  vector[p] theta_fwi;
 
   // theta_origin[2:(p+1)] = R_inv * theta[2:(p+1)]
   // theta_origin[1] = theta[1]
   for (j in 1:p){
-    theta_origin[j+1] = theta[j+1] / X_sd[j];
+    // theta_origin[j+1] = theta[j+1] / X_sd[j];
+    theta_fwi[j] = theta[j+1] / X_minmax[j];
   }
-  theta_origin[1] = theta[1] - dot_product(X_means, theta_origin[2:(p+1)]);
+  // theta_origin[1] = theta[1] - dot_product(X_means, theta_origin[2:(p+1)]);
   for (j in 1:p){
     gridgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
     gridgl[,j] = xholderLinear[,j] * theta[j+1];
     gridgsmooth[,j] = gridgl[,j] + gridgnl[,j];
-    fwismooth[,j] = gridNL[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j] + gridL[,j] * theta_origin[j+1];
+    fwismooth[,j] = gridNL[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j] + gridL[,j] * theta_fwi[j];
   };
 
   for (i in 1:n){
-    gridalpha[i] = exp(theta_origin[1] + sum(gridgsmooth[i,]));
+    gridalpha[i] = exp(theta[1] + sum(gridgsmooth[i,]));
     log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
   };
 }

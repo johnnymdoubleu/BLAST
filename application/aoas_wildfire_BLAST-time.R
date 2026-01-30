@@ -72,14 +72,13 @@ fwi.index$date <- as.numeric(fwi.index$date)
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 fwi.origin <- fwi.scaled
 fwi.origin <- data.frame(fwi.origin, time = c(1:length(Y)), BA=Y)
-# fwi.origin <- data.frame(fwi.origin[which(Y>1),], BA=Y[Y>1])
 # BA.shifted <- ifelse(fwi.origin$BA == 0, 1e-5, fwi.origin$BA)
 # fwi.origin$log.BA <- log(fwi.origin$BA+1)
 vars <- colnames(fwi.origin)[1:7]
 seq_list <- lapply(vars, function(var) seq(min(fwi.origin[[var]]), max(fwi.origin[[var]]), length.out = length(Y)))
 grid.df <- as.data.frame(setNames(seq_list, vars))
 
-fwi.index$BA <- Y
+fwi.index$BA <- log(Y)
 # 1. Prepare the Data
 # We create a new dataframe 'df_seasonal' to avoid overwriting your original data
 df_seasonal <- fwi.index %>%
@@ -99,19 +98,24 @@ plot_data <- df_seasonal %>%
     Q975 = quantile(BA, 0.975, na.rm = TRUE), 
     .groups = "drop"
   ) %>%
+  mutate(Is_Extreme = ifelse(Q975 > quantile(log(Y), threshold), "Yes", "No")) %>%
   mutate(Season = factor(Season, levels = c("Winter", "Spring", "Summer", "Autumn"))) %>%
   arrange(SeasonYear, Season) %>%
-  mutate(Label = paste(SeasonYear, Season)) %>%
-  mutate(Label = factor(Label, levels = unique(Label)))
+  mutate(Label = factor(paste(SeasonYear, Season), levels = unique(paste(SeasonYear, Season))))
+  # mutate(Label = paste(SeasonYear, Season)) %>%
+  # mutate(Label = factor(Label, levels = unique(Label)))
 
-df_seasonal <- df_seasonal %>% 
-  mutate(Label = paste(SeasonYear, Season)) %>%
-  mutate(Label = factor(Label, levels = unique(Label)))
+# df_seasonal <- df_seasonal %>% 
+#   mutate(Label = paste(SeasonYear, Season)) %>%
+#   mutate(Label = factor(Label, levels = unique(Label)))
 # 3. Plot
 ggplot(plot_data, aes(x = Label, y = Q975, group = 1)) +
 # ggplot(df_seasonal, aes(x = Label, y = BA, group = 1)) +
   geom_line(color = "steelblue", linewidth = 1) +
-  geom_point(aes(color = Season), size = 3) +
+  # geom_point(aes(color = Season), size = 3) +
+  geom_point(aes(color = Season, size = Is_Extreme)) +
+  # Scale sizes so "Extreme" points are larger
+  scale_size_manual(values = c("No" = 3, "Yes" = 6)) +
   scale_color_manual(values = c(
     "Summer" = "orange", 
     "Winter" = "red", 
@@ -121,7 +125,8 @@ ggplot(plot_data, aes(x = Label, y = Q975, group = 1)) +
   labs(y = "BA", x = "Season", color = "Season") +
   theme_minimal(base_size = 20) +
   theme(
-    axis.text.x = element_text(angle = 45, hjust = 1, size = 12),
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+    panel.grid.minor = element_blank(),
     legend.position = "none"
   )
 

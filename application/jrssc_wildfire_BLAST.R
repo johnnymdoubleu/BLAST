@@ -75,13 +75,13 @@ y <- Y[Y>u]
 # fwi.scaled <- data.frame(fwi.scaled[which(Y>u),])
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 # range01 <- function(x){(x)/max(x)}
-fwi.scaled <- as.data.frame(sapply(fwi.scaled[which(Y>u),], FUN = range01))
+fwi.scaled <- as.data.frame(sapply(fwi.scaled[which(Y>u),c(--1 ,-2)], FUN = range01))
 
 n <- dim(fwi.scaled)[[1]]
 p <- dim(fwi.scaled)[[2]]
 
 
-fwi.origin <- data.frame(fwi.index[which(Y>u),], BA=y)
+fwi.origin <- data.frame(fwi.index[which(Y>u),c(-2)], BA=y)
 max.fwi <- fwi.origin[which.max(y),]
 fwi.grid <- data.frame(lapply(fwi.origin[,c(1:p)], function(x) seq(min(x), max(x), length.out = nrow(fwi.scaled))))
 fwi.minmax <- sapply(fwi.origin[,c(1:p)], function(x) max(x)-min(x))
@@ -129,10 +129,10 @@ fwi.min <- sapply(fwi.origin[,c(1:p)], function(x) min(x))
 #         legend.text = element_text(size = 15),
 #         strip.text = element_blank(),
 #         axis.title = element_text(size = 30))
-M <- cor(fwi.origin[,c(1:7)])
-corrplot(M, order = 'AOE', type = 'upper', tl.pos = 'tp')
-corrplot(M, add = TRUE, type = 'lower', method = 'number', order = 'AOE',
-         col = 'black', diag = FALSE, tl.pos = 'n', cl.pos = 'n')
+# M <- cor(fwi.origin[,c(1:7)])
+# corrplot(M, order = 'AOE', type = 'upper', tl.pos = 'tp')
+# corrplot(M, add = TRUE, type = 'lower', method = 'number', order = 'AOE',
+        #  col = 'black', diag = FALSE, tl.pos = 'n', cl.pos = 'n')
 # ggsave("./BLAST/application/figures/intensityfn.pdf", width = 10, height = 7.78)
 bs.linear <- model.matrix(~ ., data = data.frame(fwi.scaled))
 psi <- psi - 2
@@ -241,11 +241,11 @@ for (i in seq_along(covariates)) {
 }
 
 xgrid.nonlinear <- do.call(cbind, grid_Z_list)
-fwi.grid <- as.data.frame(sapply(fwi.grid, FUN = range01))
+# fwi.grid <- as.data.frame(sapply(fwi.grid, FUN = range01))
 xgrid.linear <- model.matrix(~ ., data = data.frame(fwi.grid))
 X_means <- colMeans(bs.linear[,-1])
 X_sd   <- apply(bs.linear[,-1], 2, sd)
-# bs.linear[,-1] <- scale(bs.linear[,-1], center = X_means, scale = X_sd)
+bs.linear[,-1] <- scale(bs.linear[,-1], center = X_means, scale = X_sd)
 
 qr_lin <- qr(bs.linear[,-1])
 Q.lin <- qr.Q(qr_lin) * sqrt(n-1)
@@ -264,7 +264,7 @@ data {
   matrix[n, (psi*p)] xholderNonlinear; // thin plate splines basis    
   matrix[n, p] gridL; // fwi dataset
   matrix[n, (psi*p)] gridNL; // thin plate splines basis      
-  array[n] real <lower=1> y; // extreme response
+  array[n] real <lower=u> y; // extreme response
   real <lower=0> atau;
   vector[(psi*p)] Z_scales;
   vector[p] X_minmax;
@@ -277,8 +277,8 @@ data {
 parameters {
   vector[(p+1)] theta; // linear predictor
   array[p] vector[psi] gamma_raw;
-  real <lower=0> lambda1; // lasso penalty //array[p] real <lower=0> 
-  real <lower=0> lambda2; // lambda2 group lasso penalty
+  array[p] real <lower=0> lambda1; // lasso penalty //array[p] real <lower=0> 
+  array[p] real <lower=0> lambda2; // lambda2 group lasso penalty
   array[p] real <lower=0> tau;
 }
 
@@ -308,11 +308,11 @@ model {
     target += pareto_lpdf(y[i] | u, alpha[i]);
   }
   target += normal_lpdf(theta[1] | 0, 10);
-  target += gamma_lpdf(lambda1 | 1, 1); 
-  target += gamma_lpdf(lambda2 | 1e-2, 1e-2); 
-  for (j in 1:p){ 
-    target += double_exponential_lpdf(theta[(j+1)] | 0, 1/(lambda1));
-    target += gamma_lpdf(tau[j] | atau, square(lambda2)*0.5);
+  for (j in 1:p){
+    target += gamma_lpdf(lambda1[j] | 1e-2, 1e-2); 
+    target += gamma_lpdf(lambda2[j] | 1e-2, 1e-2);  
+    target += double_exponential_lpdf(theta[(j+1)] | 0, 1/(lambda1[j]));
+    target += gamma_lpdf(tau[j] | atau, square(lambda2[j])*0.5);
     target += std_normal_lpdf(gamma_raw[j]);
   }
 }
@@ -326,18 +326,20 @@ generated quantities {
   matrix[n, p] fwismooth;
   vector[n] log_lik;
   vector[p+1] theta_origin;
+  vector[p] theta_fwi;
 
   // theta_origin[2:(p+1)] = R_inv * theta[2:(p+1)]
   // theta_origin[1] = theta[1]
   for (j in 1:p){
     theta_origin[j+1] = theta[j+1] / X_sd[j];
+    theta_fwi[j] = theta[j+1] / X_minmax[j];
   }
   theta_origin[1] = theta[1] - dot_product(X_means, theta_origin[2:(p+1)]);
   for (j in 1:p){
     gridgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
-    gridgl[,j] = xholderLinear[,j] * theta[j+1];
+    gridgl[,j] = xholderLinear[,j] * theta_origin[j+1];
     gridgsmooth[,j] = gridgl[,j] + gridgnl[,j];
-    fwismooth[,j] = gridNL[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j] + gridL[,j] * theta_origin[j+1];
+    fwismooth[,j] = gridNL[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j] + gridL[,j] * theta_fwi[j];
   };
 
   for (i in 1:n){
@@ -370,13 +372,13 @@ data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, Z_scales= Z_s
 
 init.alpha <- list(list(gamma_raw= array(rep(0.2, (psi*p)), dim=c(p, psi)), #rho = 1, 
                         theta = rep(-0.1, (p+1)), tau = rep(0.1, p), #sigma_ridge = rep(0.1, p),
-                        lambda1 = 0.1, lambda2 = 1),
+                        lambda1 = rep(0.1,p), lambda2 = rep(1, p)),
                    list(gamma_raw = array(rep(-0.15, (psi*p)), dim=c(p, psi)),# rho = 1,
                         theta = rep(0.05, (p+1)), tau = rep(0.2, p), #sigma_ridge = rep(0.2, p), 
-                        lambda1 = 2, lambda2 = 5),
+                        lambda1 = rep(2,p), lambda2 = rep(5, p)),
                    list(gamma_raw= array(rep(0.1, (psi*p)), dim=c(p, psi)), #rho = 1,
                         theta = rep(0.1, (p+1)), tau = rep(0.1, p), #sigma_ridge = rep(0.1, p),
-                        lambda1 = 0.1, lambda2 =0.1))
+                        lambda1 = rep(0.1,p), lambda2 = rep(0.1, p)))
 
 fit1 <- stan(
     model_code = model.stan,
@@ -872,4 +874,4 @@ grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
 # grid.plt <- grid.arrange(p1, p2, nrow=1)
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_heavytail.pdf"), grid.plt, width=22, height = 7.78)
 fit.log.lik <- extract_log_lik(fit1)
-loo(fit.log.lik, is_method = "sis", cores = 4)
+loo(fit.log.lik, is_method = "sis", cores = 2)
