@@ -78,9 +78,18 @@ vars <- colnames(fwi.origin)[1:7]
 seq_list <- lapply(vars, function(var) seq(min(fwi.origin[[var]]), max(fwi.origin[[var]]), length.out = length(Y)))
 grid.df <- as.data.frame(setNames(seq_list, vars))
 
-range01 <- function(x){(x-min(x))/(max(x)-min(x))}
-fwi.scaled <- as.data.frame(sapply(fwi.scaled, FUN = range01))
+# range01 <- function(x){(x-min(x))/(max(x)-min(x))}
+# fwi.scaled <- as.data.frame(sapply(fwi.scaled, FUN = range01))
+fwi.scaled <- scale(fwi.scaled)
 fwi.df <- data.frame(fwi.scaled, BA=Y)
+
+library(brms)
+fit.qr <- brm(bf(BA ~ s(DSR) + s(FWI) + s(BUI) + 
+                      s(ISI) + s(FFMC) + s(DMC) + 
+                      s(DC), quantile = 0.975),
+                data = fwi.df,
+                family = asym_laplace())
+
 tun <- tuneLearnFast(BA ~ s(DSR, k = 30) + s(FWI, k = 30) + s(BUI, k = 30) + 
                             s(ISI, k = 30) + s(FFMC, k = 30) + s(DMC, k = 30) + 
                             s(DC, k = 30), data = fwi.df, qu = 0.975)

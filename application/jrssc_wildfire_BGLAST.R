@@ -84,7 +84,9 @@ fwi.scaled <- as.data.frame(sapply(fwi.scaled[which(Y>u),], FUN = range01))
 
 n <- dim(fwi.scaled)[[1]]
 p <- dim(fwi.scaled)[[2]]
-
+apply(fwi.origin[,c(1:p)], 2, max)
+apply(fwi.origin[,c(1:p)], 2, min)
+apply(fwi.origin[,c(1:p)], 2, max) - apply(fwi.origin[,c(1:p)], 2, min)
 
 fwi.origin <- data.frame(fwi.index[which(Y>u),], BA=y)
 max.fwi <- fwi.origin[which.max(y),]
@@ -231,9 +233,9 @@ xholder.linear <- model.matrix(~ ., data = data.frame(xholder))
 Z_scales <- unlist(scale_stats_list)
 
 grid_Z_list <- list()
-
 for (i in seq_along(covariates)) {
-  grid_df  <- data.frame(x_vec = fwi.grid[,i])
+  scaled_x_grid <- (fwi.grid[,i] - fwi.min[i]) / (fwi.minmax[i])
+  grid_df  <- data.frame(x_vec = scaled_x_grid)
   X_lin_grid <- model.matrix(~ x_vec, data = grid_df)
   X_raw_grid <- PredictMat(sm_spec_list[[i]], grid_df)
   
@@ -245,12 +247,15 @@ for (i in seq_along(covariates)) {
   grid_Z_list[[i]] <- Z_final_grid
 }
 
+rescaled_fwi <- xholder.linear[, -1] * matrix(fwi.minmax[1:p], nrow = n, ncol = p, byrow = TRUE) + 
+                matrix(fwi.min[1:p], nrow = n, ncol = p, byrow = TRUE)
 xgrid.nonlinear <- do.call(cbind, grid_Z_list)
 # fwi.grid <- as.data.frame(sapply(fwi.grid, FUN = range01))
 xgrid.linear <- model.matrix(~ ., data = data.frame(fwi.grid))
 X_means <- colMeans(bs.linear[,-1])
 X_sd   <- apply(bs.linear[,-1], 2, sd)
-bs.linear[,-1] <- scale(bs.linear[,-1], center = X_means, scale = X_sd)
+# bs.linear[,-1] <- scale(bs.linear[,-1], center = X_means, scale = X_sd)
+
 
 qr_lin <- qr(bs.linear[,-1])
 Q.lin <- qr.Q(qr_lin) * sqrt(n-1)
@@ -318,11 +323,12 @@ model {
   vector[3] g_spread = [theta[2], theta[3], theta[5]]';
   vector[3] g_drought = [theta[4], theta[7], theta[8]]';
 
-  target += gamma_lpdf(lambdag | 10, 1);
+  target += gamma_lpdf(lambdag[1] | 1, 1e-2);
+  target += gamma_lpdf(lambdag[2] | 1, 1e-2);
   target += -lambdag[1] * sqrt(3) * sqrt(dot_self(g_spread));
   target += -lambdag[2] * sqrt(3) * sqrt(dot_self(g_drought));
   target += normal_lpdf(theta[1] | 0, 10);
-  target += gamma_lpdf(lambda1 | 5, 1); 
+  target += gamma_lpdf(lambda1 | 1, 1); 
   target += gamma_lpdf(lambda2 | 1e-2, 1e-2);
   target += gamma_lpdf(tau | atau, square(lambda2)*0.5);
   target += double_exponential_lpdf(theta[2:(p+1)] | 0, 1/(lambda1));
@@ -341,23 +347,25 @@ generated quantities {
   vector[n] log_lik;
   vector[p+1] theta_origin;
   vector[p] theta_fwi;
+  array[n] real y_rep;
 
   // theta_origin[2:(p+1)] = R_inv * theta[2:(p+1)]
   // theta_origin[1] = theta[1]
   for (j in 1:p){
     theta_origin[j+1] = theta[j+1] / X_sd[j];
-    theta_fwi[j] = theta_origin[j+1] / X_minmax[j];
+    theta_fwi[j] = theta[j+1] / X_minmax[j];
   }
   theta_origin[1] = theta[1] - dot_product(X_means, theta_origin[2:(p+1)]);
   for (j in 1:p){
     gridgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
-    gridgl[,j] = xholderLinear[,j] * theta_origin[j+1];
+    gridgl[,j] = xholderLinear[,j] * theta[j+1];
     gridgsmooth[,j] = gridgl[,j] + gridgnl[,j];
     fwismooth[,j] = gridNL[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j] + gridL[,j] * theta_fwi[j];
   };
 
   for (i in 1:n){
-    gridalpha[i] = exp(theta_origin[1] + sum(gridgsmooth[i,]));
+    gridalpha[i] = exp(theta[1] + sum(gridgsmooth[i,]));
+    y_rep[i] = u * pow(uniform_rng(0, 1), -1.0 / alpha[i]);
     log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
   };
 }

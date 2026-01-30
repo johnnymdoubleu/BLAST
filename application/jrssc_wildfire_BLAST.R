@@ -228,7 +228,8 @@ Z_scales <- unlist(scale_stats_list)
 grid_Z_list <- list()
 
 for (i in seq_along(covariates)) {
-  grid_df  <- data.frame(x_vec = fwi.grid[,i])
+  scaled_x_grid <- (fwi.grid[,i] - fwi.min[i]) / (fwi.minmax[i])
+  grid_df  <- data.frame(x_vec = scaled_x_grid)
   X_lin_grid <- model.matrix(~ x_vec, data = grid_df)
   X_raw_grid <- PredictMat(sm_spec_list[[i]], grid_df)
   
