@@ -96,7 +96,7 @@ df_seasonal <- fwi.index %>%
 plot_data <- df_seasonal %>%
   group_by(SeasonYear, Season) %>%
   summarise(
-    Q95 = quantile(BA, 0.95, na.rm = TRUE), 
+    Q975 = quantile(BA, 0.975, na.rm = TRUE), 
     .groups = "drop"
   ) %>%
   mutate(Season = factor(Season, levels = c("Winter", "Spring", "Summer", "Autumn"))) %>%
@@ -108,8 +108,8 @@ df_seasonal <- df_seasonal %>%
   mutate(Label = paste(SeasonYear, Season)) %>%
   mutate(Label = factor(Label, levels = unique(Label)))
 # 3. Plot
-# ggplot(plot_data, aes(x = Label, y = Q95, group = 1)) +
-ggplot(df_seasonal, aes(x = Label, y = BA, group = 1)) +
+ggplot(plot_data, aes(x = Label, y = Q975, group = 1)) +
+# ggplot(df_seasonal, aes(x = Label, y = BA, group = 1)) +
   geom_line(color = "steelblue", linewidth = 1) +
   geom_point(aes(color = Season), size = 3) +
   scale_color_manual(values = c(
