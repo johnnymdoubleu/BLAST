@@ -245,7 +245,7 @@ fwi.grid <- as.data.frame(sapply(fwi.grid, FUN = range01))
 xgrid.linear <- model.matrix(~ ., data = data.frame(fwi.grid))
 X_means <- colMeans(bs.linear[,-1])
 X_sd   <- apply(bs.linear[,-1], 2, sd)
-# bs.linear[,-1] <- scale(bs.linear[,-1], center = X_means, scale = X_sd)
+bs.linear[,-1] <- scale(bs.linear[,-1], center = X_means, scale = X_sd)
 
 qr_lin <- qr(bs.linear[,-1])
 Q.lin <- qr.Q(qr_lin) * sqrt(n-1)
@@ -277,9 +277,14 @@ data {
 parameters {
   vector[(p+1)] theta; // linear predictor
   array[p] vector[psi] gamma_raw;
-  real <lower=0> lambda1; // lasso penalty //array[p] real <lower=0> 
-  real <lower=0> lambda2; // lambda2 group lasso penalty
-  array[p] real <lower=0> tau;
+  array[p] real <lower=0> lambda1; // lasso penalty //array[p] real <lower=0> 
+  array[p] real <lower=0> lambda2; // lambda2 group lasso penalty
+  real <lower=0> t1;
+  real <lower=0> b1;
+  real <lower=0> t2;
+  real <lower=0> b2;
+  array[p] real <lower=0> lt1;
+  array[p] real <lower=0> lt2;
 }
 
 transformed parameters {
@@ -291,7 +296,7 @@ transformed parameters {
     for (j in 1:p){
       for (k in 1:psi){
         int idx = (j-1)*psi + k;
-        gamma[j][k] = gamma_raw[j][k] * sqrt(tau[j]) * Z_scales[idx];
+        gamma[j][k] = gamma_raw[j][k] * sqrt(lambda2[j]) * sqrt(t2) * Z_scales[idx];
       }; 
       gsmooth[,j] = bsLinear[,j] * theta[j+1] + bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
     };
@@ -308,11 +313,16 @@ model {
     target += pareto_lpdf(y[i] | u, alpha[i]);
   }
   target += normal_lpdf(theta[1] | 0, 10);
-  target += gamma_lpdf(lambda1 | 1, 1); 
-  target += gamma_lpdf(lambda2 | 1e-2, 1e-2); 
+  target += inv_gamma_lpdf(t1 | 0.5, 1/b1); 
+  target += inv_gamma_lpdf(b1 | 0.5, 1); 
+  target += inv_gamma_lpdf(t2 | 0.5, 1/b2);
+  target += inv_gamma_lpdf(b2 | 0.5, 1);
   for (j in 1:p){ 
-    target += double_exponential_lpdf(theta[(j+1)] | 0, 1/(lambda1));
-    target += gamma_lpdf(tau[j] | atau, square(lambda2)*0.5);
+    target += inv_gamma_lpdf(lambda1[j] | 0.5, 1/lt1[j]);
+    target += cauchy_lpdf(lt1[j] | 0, 1);
+    target += normal_lpdf(theta[(j+1)] | 0, t1 * lambda1[j]);
+    target += inv_gamma_lpdf(lambda2[j] | 0.5, 1/lt2[j]);
+    target += cauchy_lpdf(lt2[j] | 0, 1);
     target += std_normal_lpdf(gamma_raw[j]);
   }
 }
@@ -368,15 +378,21 @@ data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, Z_scales= Z_s
                   X_means = X_means, X_sd = X_sd,
                   gridL = xgrid.linear[,-1], gridNL = xgrid.nonlinear)
 
-init.alpha <- list(list(gamma_raw= array(rep(0.2, (psi*p)), dim=c(p, psi)), #rho = 1, 
-                        theta = rep(-0.1, (p+1)), tau = rep(0.1, p), #sigma_ridge = rep(0.1, p),
-                        lambda1 = 0.1, lambda2 = 1),
-                   list(gamma_raw = array(rep(-0.15, (psi*p)), dim=c(p, psi)),# rho = 1,
-                        theta = rep(0.05, (p+1)), tau = rep(0.2, p), #sigma_ridge = rep(0.2, p), 
-                        lambda1 = 2, lambda2 = 5),
-                   list(gamma_raw= array(rep(0.1, (psi*p)), dim=c(p, psi)), #rho = 1,
-                        theta = rep(0.1, (p+1)), tau = rep(0.1, p), #sigma_ridge = rep(0.1, p),
-                        lambda1 = 0.1, lambda2 =0.1))
+init.alpha <- list(list(gamma_raw = array(rep(1, (psi*p)), dim=c(p,psi)),
+                        theta = rep(0, (p+1)), 
+                        lambda1 = rep(0.1, p), lambda2 = rep(1, p), 
+                        t1 = 0.01, t2 = 0.1, b1 = 0.1, b2 = 0.1,
+                        lt1 = rep(0.1, p), lt2 = rep(0.1, p)),
+                    list(gamma_raw = array(rep(2, (psi*p)), dim=c(p,psi)),
+                        theta = rep(0, (p+1)), 
+                        lambda1 = rep(0.5, p), lambda2 = rep(5, p), 
+                        t1 = 1, t2 = 1, b1 = 0.1, b2 = 0.01,
+                        lt1 = rep(0.1, p), lt2 = rep(0.1, p)),
+                    list(gamma_raw = array(rep(-0.5, (psi*p)), dim=c(p,psi))),
+                        theta = rep(0.2, (p+1)),
+                        lambda1 = rep(1, p), lambda2 = rep(2, p), 
+                        t1 = 1, t2 = 0.01, b1 = 0.01, b2 = 0.01,
+                        lt1 = rep(1, p), lt2 = rep(0.01, p))
 
 fit1 <- stan(
     model_code = model.stan,
