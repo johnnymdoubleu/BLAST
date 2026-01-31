@@ -75,13 +75,13 @@ y <- Y[Y>u]
 # fwi.scaled <- data.frame(fwi.scaled[which(Y>u),])
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 # range01 <- function(x){(x)/max(x)}
-fwi.scaled <- as.data.frame(sapply(fwi.scaled[which(Y>u),c(--1 ,-2)], FUN = range01))
+fwi.scaled <- as.data.frame(sapply(fwi.scaled[which(Y>u),], FUN = range01))
 
 n <- dim(fwi.scaled)[[1]]
 p <- dim(fwi.scaled)[[2]]
 
 
-fwi.origin <- data.frame(fwi.index[which(Y>u),c(-2)], BA=y)
+fwi.origin <- data.frame(fwi.index[which(Y>u),], BA=y)
 max.fwi <- fwi.origin[which.max(y),]
 fwi.grid <- data.frame(lapply(fwi.origin[,c(1:p)], function(x) seq(min(x), max(x), length.out = nrow(fwi.scaled))))
 fwi.minmax <- sapply(fwi.origin[,c(1:p)], function(x) max(x)-min(x))
@@ -305,12 +305,10 @@ transformed parameters {
 
 model {
   // likelihood
-  for (i in 1:n){
-    target += pareto_lpdf(y[i] | u, alpha[i]);
-  }
+  target += pareto_lpdf(y | rep_vector(u,n), alpha);
   target += normal_lpdf(theta[1] | 0, 10);
   for (j in 1:p){
-    target += gamma_lpdf(lambda1[j] | 1e-2, 1e-2); 
+    target += gamma_lpdf(lambda1[j] | 1,1); 
     target += gamma_lpdf(lambda2[j] | 1e-2, 1e-2);  
     target += double_exponential_lpdf(theta[(j+1)] | 0, 1/(lambda1[j]));
     target += gamma_lpdf(tau[j] | atau, square(lambda2[j])*0.5);
@@ -333,7 +331,7 @@ generated quantities {
   // theta_origin[1] = theta[1]
   for (j in 1:p){
     theta_origin[j+1] = theta[j+1] / X_sd[j];
-    theta_fwi[j] = theta[j+1] / X_minmax[j];
+    theta_fwi[j] = theta_origin[j+1] / X_minmax[j];
   }
   theta_origin[1] = theta[1] - dot_product(X_means, theta_origin[2:(p+1)]);
   for (j in 1:p){
@@ -652,35 +650,35 @@ for(i in 1:p){
 
 grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
 
-# data.smooth <- data.frame("x" = as.vector(as.matrix(fwi.grid)),
-#                           "true" = as.vector(as.matrix(fwi.origin[,c(1:7)])),
-#                           "post.mean" = as.vector(fwi.smooth.mean),
-#                           "q1" = as.vector(fwi.smooth.q1),
-#                           "q2" = as.vector(fwi.smooth.q2),
-#                           "q3" = as.vector(fwi.smooth.q3),
-#                           "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)))
+data.smooth <- data.frame("x" = as.vector(as.matrix(fwi.grid)),
+                          "true" = as.vector(as.matrix(fwi.origin[,c(1:7)])),
+                          "post.mean" = as.vector(fwi.smooth.mean),
+                          "q1" = as.vector(fwi.smooth.q1),
+                          "q2" = as.vector(fwi.smooth.q2),
+                          "q3" = as.vector(fwi.smooth.q3),
+                          "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)))
 
 
-# grid.plts <- list()
-# for(i in 1:p){
-#   grid.plt <- ggplot(data = data.frame(data.smooth[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + 
-#                   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-#                   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
-#                   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
-#                   geom_rug(aes(x=x, y=q2), sides = "b") +
-#                   ylab("") + xlab(names(fwi.scaled)[i]) +
-#                   scale_fill_manual(values=c("steelblue"), name = "") + 
-#                   scale_color_manual(values=c("steelblue")) +
-#                   # ylim(-3, 3.3) +
-#                   theme_minimal(base_size = 30) +
-#                   theme(legend.position = "none",
-#                           plot.margin = margin(0,0,0,-20),
-#                           axis.text = element_text(size = 35),
-#                           axis.title.x = element_text(size = 45))
-#   grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.grid[which.max(y),i], y=g.min.samples, color = "red", size = 7)
-# }
+grid.plts <- list()
+for(i in 1:p){
+  grid.plt <- ggplot(data = data.frame(data.smooth[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + 
+                  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+                  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
+                  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
+                  geom_rug(aes(x=true, y=q2), sides = "b") +
+                  ylab("") + xlab(names(fwi.scaled)[i]) +
+                  scale_fill_manual(values=c("steelblue"), name = "") + 
+                  scale_color_manual(values=c("steelblue")) +
+                  # ylim(-3, 3.3) +
+                  theme_minimal(base_size = 30) +
+                  theme(legend.position = "none",
+                          plot.margin = margin(0,0,0,-20),
+                          axis.text = element_text(size = 35),
+                          axis.title.x = element_text(size = 45))
+  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.grid[which.max(y),i], y=g.min.samples, color = "red", size = 7)
+}
 
-# grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
+grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
 
 # saveRDS(data.smooth, file="./BLAST/application/figures/comparison/full_stanfit.rds")
 
@@ -876,3 +874,5 @@ grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_heavytail.pdf"), grid.plt, width=22, height = 7.78)
 fit.log.lik <- extract_log_lik(fit1)
 loo(fit.log.lik, is_method = "sis", cores = 2)
+
+concurvity(fit1, full = TRUE)

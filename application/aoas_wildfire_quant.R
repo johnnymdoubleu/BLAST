@@ -88,6 +88,8 @@ fit.qr <- brm(bf(BA ~ s(DSR) + s(FWI) + s(BUI) +
                       s(ISI) + s(FFMC) + s(DMC) + 
                       s(DC), quantile = 0.975),
                 data = fwi.df,
+                cores = 3,
+                chain = 3,
                 family = asym_laplace())
 
 tun <- tuneLearnFast(BA ~ s(DSR, k = 30) + s(FWI, k = 30) + s(BUI, k = 30) + 
