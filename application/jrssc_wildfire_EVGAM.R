@@ -1,0 +1,218 @@
+library(mgcv)
+library(Pareto)
+suppressMessages(library(tidyverse))
+library(readxl)
+library(gridExtra)
+library(ggdist)
+# Structure of the FWI System
+#DSR : Daily Severity Rating
+#FWI : Fire Weather Index
+#BUI : Buildup Index
+#ISI : Initial Spread Index
+#FFMC : Fine FUel Moisture Code
+#DMC : Duff Moisture Code
+#DC : Drought Code
+
+setwd("C:/Users/Johnny Lee/Documents/GitHub")
+df <- read_excel("./BLAST/application/AADiarioAnual.xlsx", col_types = c("date", rep("numeric",40)))
+df.long <- gather(df, condition, measurement, "1980":"2019", factor_key=TRUE)
+missing.values <- which(!is.na(df.long$measurement))
+
+#NAs on Feb 29 most years, and Feb 14, 1999
+#considering the case of leap year, the missing values are the 29th of Feb
+#Thus, each year consist of 366 data with either 1 or 0 missing value.
+Y <- df.long$measurement[!is.na(df.long$measurement)]
+psi.origin <- psi <- 30
+threshold <- 0.975
+# u <- quantile(Y[Y>1], threshold)
+
+multiplesheets <- function(fname) {
+    setwd("C:/Users/Johnny Lee/Documents/GitHub")
+    # getting info about all excel sheets
+    sheets <- excel_sheets(fname)
+    tibble <- lapply(sheets, function(x) read_excel(fname, sheet = x, col_types = c("date", rep("numeric", 41))))
+    data_frame <- lapply(tibble, as.data.frame)
+    # assigning names to data frames
+    names(data_frame) <- sheets
+    return(data_frame)
+}
+setwd("C:/Users/Johnny Lee/Documents/GitHub")
+path <- "./BLAST/application/DadosDiariosPT_FWI.xlsx"
+# importing fire weather index
+cov <- multiplesheets(path)
+fwi.scaled <- fwi.index <- data.frame(DSR = double(length(Y)),
+                                        FWI = double(length(Y)),
+                                        BUI = double(length(Y)),
+                                        ISI = double(length(Y)),
+                                        FFMC = double(length(Y)),
+                                        DMC = double(length(Y)),
+                                        DC = double(length(Y)),
+                                        stringsAsFactors = FALSE)
+for(i in 1:length(cov)){
+    cov.long <- gather(cov[[i]][,1:41], condition, measurement, "1980":"2019", factor_key=TRUE)
+    fwi.index[,i] <- cov.long$measurement[missing.values]
+    fwi.scaled[,i] <- cov.long$measurement[missing.values]
+}
+
+fwi.index$date <- substr(cov.long$...1[missing.values],9,10)
+fwi.index$month <- factor(format(as.Date(substr(cov.long$...1[missing.values],1,10), "%Y-%m-%d"),"%b"),
+                            levels = c("Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"))
+fwi.index$date <- as.numeric(fwi.index$date)
+fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
+
+# fwi.index <- fwi.index[which(Y>1),]
+load("./BLAST/application/quant-time.Rdata")
+u <- quantile(Y, threshold)
+excess <- which(Y>u)
+# excess <- which(Y>preds)
+# u <- preds[excess]
+# excess <- which(fwi.dd$excess==TRUE)
+# u <- fwi.dd$origin_Model_Smooth_975[excess]
+y <- Y[excess]
+
+range01 <- function(x){(x-min(x))/(max(x)-min(x))}
+fwi.scaled <- as.data.frame(sapply(fwi.scaled[excess,], FUN = range01))
+
+n <- dim(fwi.scaled)[[1]]
+p <- dim(fwi.scaled)[[2]]
+
+
+fwi.origin <- data.frame(fwi.index[excess,], BA=y)
+max.fwi <- fwi.origin[which.max(y),]
+fwi.grid <- data.frame(lapply(fwi.origin[,c(1:p)], function(x) seq(min(x), max(x), length.out = nrow(fwi.scaled))))
+fwi.minmax <- sapply(fwi.origin[,c(1:p)], function(x) max(x)-min(x))
+fwi.min <- sapply(fwi.origin[,c(1:p)], function(x) min(x))
+
+simul.data <- data.frame(y = y-u, fwi.scaled[,c(1:p)])
+newx <- seq(0, 1, length.out = n)
+xholder <- as.data.frame(do.call(cbind, lapply(1:p, function(j) {newx})))
+colnames(xholder) <- colnames(fwi.origin[,c(1:p)])
+gam.scale <- list(y ~ s(DSR, bs = "tp", k = 10) + 
+                      s(FWI, bs = "tp", k = 10) + 
+                      s(BUI, bs = "tp", k = 10) + 
+                      s(ISI, bs = "tp", k = 10) + 
+                      s(FFMC, bs = "tp", k = 10) +
+                      s(DMC, bs = "tp", k = 10) + 
+                      s(DC, bs = "tp", k = 10),
+                    ~ s(DSR, bs = "tp", k = 10) + 
+                      s(FWI, bs = "tp", k = 10) + 
+                      s(BUI, bs = "tp", k = 10) + 
+                      s(ISI, bs = "tp", k = 10) + 
+                      s(FFMC, bs = "tp", k = 10) +
+                      s(DMC, bs = "tp", k = 10) + 
+                      s(DC, bs = "tp", k = 10))
+evgam.fit.scale <- evgam::evgam(gam.scale, data = simul.data, family = "gpd")
+xi.pred.scale <-predict(evgam.fit.scale, newdata = xholder, type="response")$shape
+alpha.pred.scale <- 1/xi.pred.scale
+
+xholder.basis.scale <- predict(evgam.fit.scale, newdata = xholder, type= "lpmatrix")$shape
+psi <- 10
+xi.coef.scale <- tail(evgam.fit.scale$coefficients, (psi-1)*p)
+gamma.xi.scale <- matrix(xi.coef.scale, ncol = p)
+alpha.nonlinear.scale <- xi.nonlinear.scale <- matrix(, nrow = n, ncol = p)
+bs.nonlinear.scale <- xholder.basis.scale[,c(2:((psi-1)*p+1))]
+for(j in 1:p){
+  xi.nonlinear.scale[,j] <- bs.nonlinear.scale[,(((j-1)*(psi-1))+1):(((j-1)*(psi-1))+(psi-1))] %*% gamma.xi.scale[,j]
+  alpha.nonlinear.scale[,j] <- 1/(xi.nonlinear.scale[,j])
+}
+
+gam.1 <- list(y ~ 1,
+                ~ s(DSR, bs = "tp", k = 10) + 
+                    s(FWI, bs = "tp", k = 10) + 
+                    s(BUI, bs = "tp", k = 10) + 
+                    s(ISI, bs = "tp", k = 10) + 
+                    s(FFMC, bs = "tp", k = 10) +
+                    s(DMC, bs = "tp", k = 10) + 
+                    s(DC, bs = "tp", k = 10))
+evgam.fit.1 <- evgam::evgam(gam.1, data = simul.data, family = "gpd")
+xi.pred.1 <-predict(evgam.fit.1, newdata = xholder, type="response")$shape
+alpha.pred.1 <- 1/xi.pred.1
+
+xholder.basis.1 <- predict(evgam.fit.1, newdata = xholder, type= "lpmatrix")$shape
+xi.coef.1 <- tail(evgam.fit.1$coefficients, (psi-1)*p)
+gamma.xi.1 <- matrix(xi.coef.1, ncol = p)
+alpha.nonlinear.1 <- xi.nonlinear.1 <- matrix(, nrow = n, ncol = p)
+bs.nonlinear.1 <- xholder.basis.1[,c(2:((psi-1)*p+1))]
+for(j in 1:p){
+  xi.nonlinear.1[,j] <- bs.nonlinear.1[,(((j-1)*(psi-1))+1):(((j-1)*(psi-1))+(psi-1))] %*% gamma.xi.1[,j]
+  alpha.nonlinear.1[,j] <- 1/(xi.nonlinear.1[,j])
+}
+
+
+alpha.smooth <- data.frame("x" = as.vector(as.matrix(xholder)),
+                          "evgam.scale" = as.vector(alpha.nonlinear.scale),
+                          "evgam.1" = as.vector(alpha.nonlinear.1),
+                          "covariates" = gl(p, n, (p*n), labels = colnames(xholder)))
+
+
+grid.plts <- list()
+for(i in 1:p){
+  grid.plt <- ggplot(data = data.frame(alpha.smooth[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + 
+                  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+                  geom_line(aes(y=evgam.scale), colour = "purple", linewidth=1) + 
+                  geom_line(aes(y=evgam.1), colour = "orange", linewidth=1) + 
+                  ylab("") + xlab(expression(c)) +
+                  # ylim(-2.3, 2.3) +
+                  theme_minimal(base_size = 10) +
+                  theme(legend.position = "none",
+                          plot.margin = margin(0,0,0,-5),
+                          axis.text = element_text(size = 15),
+                          axis.title.x = element_text(size = 15))
+  grid.plts[[i]] <- grid.plt
+}
+
+grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
+
+xi.smooth <- data.frame("x" = as.vector(as.matrix(xholder)),
+                        "evgam.scale" = as.vector(xi.nonlinear.scale),
+                        "evgam.1" = as.vector(xi.nonlinear.1),
+                        "covariates" = gl(p, n, (p*n), labels = colnames(xholder)))
+
+grid.plts <- list()
+for(i in 1:p){
+  grid.plt <- ggplot(data = data.frame(xi.smooth[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + 
+                  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+                  geom_line(aes(y=evgam.scale), colour = "purple", linewidth=1) + 
+                  geom_line(aes(y=evgam.1), colour = "orange", linewidth=1) + 
+                  ylab("") + xlab(expression(c)) +
+                  scale_fill_manual(values=c("steelblue"), name = "") + 
+                  scale_color_manual(values=c("steelblue", "red")) +
+                  # ylim(-2.8, 2.8) + xlim(0,1) +
+                  theme_minimal(base_size = 10) +
+                  theme(legend.position = "none",
+                          plot.margin = margin(0,0,0,-20),
+                          axis.text = element_text(size = 15),
+                          axis.title.x = element_text(size = 15))
+  grid.plts[[i]] <- grid.plt
+}
+
+grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
+
+alpha.scenario <- data.frame("x" = newx,
+                            "evgam.scale" = alpha.pred.scale,
+                            "evgam.1" = alpha.pred.1)
+
+ggplot(alpha.scenario, aes(x=x)) + 
+  ylab(expression(alpha(c,ldots,c))) + xlab(expression(c)) + labs(col = "") +
+  geom_line(aes(y=evgam.scale), colour = "purple", linewidth=1.5, linetype=2) +
+  geom_line(aes(y=evgam.1), colour = "orange", linewidth=1.5, linetype=2) +
+  theme_minimal(base_size = 30) + #ylim(0,20)+
+  theme(legend.position = "none",
+        strip.text = element_blank(),
+        axis.text = element_text(size = 18))
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_evgam_scA.pdf"), width=10, height = 7.78)
+
+xi.scenario <- data.frame("x" = newx,
+                            "evgam.scale" = xi.pred.scale,
+                            "evgam.1" = xi.pred.1)
+
+ggplot(xi.scenario, aes(x=x)) + 
+  ylab(expression(xi(c,ldots,c))) + xlab(expression(c)) +
+  geom_line(aes(y=evgam.scale), colour = "orange", linewidth=1.5, linetype=2) +
+  geom_line(aes(y=evgam.1), colour = "purple", linewidth=1.5, linetype=2) +
+  theme_minimal(base_size = 30) + #ylim(-1.5, 3.1)+
+  theme(legend.position = "none",
+        strip.text = element_blank(),
+        axis.text = element_text(size = 18))
+
+

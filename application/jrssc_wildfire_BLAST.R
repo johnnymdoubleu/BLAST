@@ -72,6 +72,8 @@ fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 load("./BLAST/application/quant-time.Rdata")
 # u <- quantile(Y, threshold)
 # excess <- which(Y>u)
+# u <- quantile(preds, threshold)
+# excess <- which(Y>u)
 excess <- which(Y>preds)
 u <- preds[excess]
 # excess <- which(fwi.dd$excess==TRUE)
@@ -392,9 +394,9 @@ fit1 <- stan(
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value 
     chains = 3,             # number of Markov chains
-    iter = 15000,            # total number of iterations per chain
+    iter = 4000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
-    refresh = 5000           # no progress shown
+    refresh = 2000           # no progress shown
 )
 
 # saveRDS(fit1, file=paste0("./BLAST/application/",Sys.Date(),"_stanfit.rds"))

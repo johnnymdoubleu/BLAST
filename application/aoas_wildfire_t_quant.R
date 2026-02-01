@@ -76,14 +76,14 @@ fwi.origin <- fwi.scaled
 fwi.origin <- data.frame(fwi.origin, time = c(1:length(Y)), BA=Y)
 
 
-fit.qr <- brm(bf(BA ~ s(time), quantile = 0.975),
-                data = fwi.origin,
-                cores = 3,
-                chain = 3,
-                family = asym_laplace())
+# fit.qr <- brm(bf(BA ~ s(time), quantile = 0.975),
+#                 data = fwi.origin,
+#                 cores = 3,
+#                 chain = 3,
+#                 family = asym_laplace())
 
 quant.fit <- qgam(BA ~ s(time), data = fwi.origin, qu = 0.975)
-
+# load("./BLAST/application/quant-time.Rdata")
 print(plot(quant.fit, allTerms = TRUE), pages = 1)
 quant.viz <- getViz(quant.fit, nsim = 20)
 print(plot(quant.viz))
@@ -118,23 +118,23 @@ df_seasonal <- fwi.index %>%
     SeasonYear = ifelse(Month_Num == 12, year + 1, year)
   )
   
-# plot_data <- df_seasonal %>%
-#   group_by(SeasonYear, Season) %>%
-#   summarise(
-#     Q975 = quantile(BA, 0.975, na.rm = TRUE), 
-#     .groups = "drop"
-#   ) %>%
-#   mutate(Season = factor(Season, levels = c("Winter", "Spring", "Summer", "Autumn"))) %>%
-#   arrange(SeasonYear, Season) %>%
-#   mutate(Label = paste(SeasonYear, Season)) %>%
-#   mutate(Label = factor(Label, levels = unique(Label)))
+plot_data <- df_seasonal %>%
+  group_by(SeasonYear, Season) %>%
+  summarise(
+    Q975 = quantile(BA, 0.975, na.rm = TRUE), 
+    .groups = "drop"
+  ) %>%
+  mutate(Season = factor(Season, levels = c("Winter", "Spring", "Summer", "Autumn"))) %>%
+  arrange(SeasonYear, Season) %>%
+  mutate(Label = paste(SeasonYear, Season)) %>%
+  mutate(Label = factor(Label, levels = unique(Label)))
 
 df_seasonal <- df_seasonal %>% 
   mutate(Label = paste(SeasonYear, Season)) %>%
   mutate(Label = factor(Label, levels = unique(Label)))
 # 3. Plot
-# ggplot(plot_data, aes(x = Label, y = Q975, group = 1)) +
-ggplot(df_seasonal, aes(x = Label, y = BA, group = 1)) +
+ggplot(plot_data, aes(x = Label, y = Q975, group = 1)) +
+# ggplot(df_seasonal, aes(x = Label, y = BA, group = 1)) +
   geom_line(color = "steelblue", linewidth = 1) +
   geom_point(aes(color = Season), size = 3) +
   scale_color_manual(values = c(
@@ -177,7 +177,7 @@ ggplot(block_summary, aes(x = Label, group = 1)) +
   )) +
   labs(
     y = "Burnt Area", 
-    x = "Season-Year"
+    x = "Time (blockwise)"
   ) +
   theme_minimal() +
   theme(
@@ -185,14 +185,6 @@ ggplot(block_summary, aes(x = Label, group = 1)) +
     legend.position = "none"
   )
 
-coverage_summary <- df_seasonal %>%
-  group_by(Label, Season) %>%
-  summarise(
-    n_obs = n(),
-    n_below = sum(BA <= fitted_975),
-    empirical_coverage = n_below / n_obs,
-    .groups = 'drop'
-  )
 
 coverage_summary <- df_seasonal %>%
   left_join(block_summary %>% select(Label, Model_Smooth_975), by = "Label") %>%
@@ -220,5 +212,6 @@ df_final <- df_seasonal %>%
 
 fwi.dd <- df_final %>% mutate(excess = BA > origin_Model_Smooth_975)
 tail(fwi.dd[which(fwi.dd$excess==TRUE),])
-# save(preds, quant.fit,fwi.dd, file="./BLAST/application/quant-time.Rdata")
+save(preds, quant.fit,fwi.dd, file="./BLAST/application/quant-time.Rdata")
 
+length(which(fwi.dd$excess==TRUE))

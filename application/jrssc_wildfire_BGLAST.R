@@ -77,10 +77,10 @@ fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 load("./BLAST/application/quant-time.Rdata")
 # u <- quantile(Y, threshold)
 # excess <- which(Y>u)
-# excess <- which(Y>preds)
-# u <- preds[excess]
-excess <- which(fwi.dd$excess==TRUE)
-u <- fwi.dd$origin_Model_Smooth_975[excess]
+excess <- which(Y>preds)
+u <- preds[excess]
+# excess <- which(fwi.dd$excess==TRUE)
+# u <- fwi.dd$origin_Model_Smooth_975[excess]
 y <- Y[excess]
 
 # fwi.scaled <- data.frame(fwi.scaled[which(Y>u),])
@@ -416,9 +416,9 @@ fit1 <- stan(
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value 
     chains = 3,             # number of Markov chains
-    iter = 15000,            # total number of iterations per chain
+    iter = 4000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
-    refresh = 5000           # no progress shown
+    refresh = 2000           # no progress shown
 )
 
 # saveRDS(fit1, file=paste0("./BLAST/application/",Sys.Date(),"_stanfit.rds"))
@@ -576,7 +576,7 @@ rp <- data.frame(rp, group = rep("residuals", n))
 ggplot(data = rp) + 
   # geom_qqboxplot(aes(factor(group, levels=c("residuals")), y=rp), notch=FALSE, varwidth=TRUE, reference_dist="norm")+ 
   geom_qqboxplot(aes(y=rp), notch=FALSE, varwidth=FALSE, reference_dist="norm", width = 0.15, qq.colour = "steelblue")+
-  labs(x = "", y = "Residuals") + ylim(-4,4) + xlim(-.1,.1)+
+  labs(x = "", y = "Residuals") + ylim(-4,4) + xlim(-.2,.2)+
   theme_minimal(base_size = 20) +
   theme(axis.text = element_text(size = 25),
         axis.title = element_text(size = 30))
