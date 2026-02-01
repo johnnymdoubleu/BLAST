@@ -69,19 +69,25 @@ fwi.index$date <- as.numeric(fwi.index$date)
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 
 # fwi.index <- fwi.index[which(Y>1),]
-u <- quantile(Y, threshold)
-y <- Y[Y>u]
+load("./BLAST/application/quant-time.Rdata")
+# u <- quantile(Y, threshold)
+# excess <- which(Y>u)
+excess <- which(Y>preds)
+u <- preds[excess]
+# excess <- which(fwi.dd$excess==TRUE)
+# u <- fwi.dd$origin_Model_Smooth_975[excess]
+y <- Y[excess]
 
 # fwi.scaled <- data.frame(fwi.scaled[which(Y>u),])
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 # range01 <- function(x){(x)/max(x)}
-fwi.scaled <- as.data.frame(sapply(fwi.scaled[which(Y>u),], FUN = range01))
+fwi.scaled <- as.data.frame(sapply(fwi.scaled[excess,], FUN = range01))
 
 n <- dim(fwi.scaled)[[1]]
 p <- dim(fwi.scaled)[[2]]
 
 
-fwi.origin <- data.frame(fwi.index[which(Y>u),], BA=y)
+fwi.origin <- data.frame(fwi.index[excess,], BA=y)
 max.fwi <- fwi.origin[which.max(y),]
 fwi.grid <- data.frame(lapply(fwi.origin[,c(1:p)], function(x) seq(min(x), max(x), length.out = nrow(fwi.scaled))))
 fwi.minmax <- sapply(fwi.origin[,c(1:p)], function(x) max(x)-min(x))
@@ -258,7 +264,7 @@ data {
   int <lower=1> n; // Sample size
   int <lower=1> p; // regression coefficient size
   int <lower=1> psi; // splines coefficient size
-  real <lower=0> u; // large threshold value
+  array[n] real <lower=0> u; // large threshold value
   matrix[n, p] bsLinear; // fwi dataset
   matrix[n, (psi*p)] bsNonlinear; // thin plate splines basis
   matrix[n, p] xholderLinear; // fwi dataset
@@ -305,7 +311,7 @@ transformed parameters {
 
 model {
   // likelihood
-  target += pareto_lpdf(y | rep_vector(u,n), alpha);
+  target += pareto_lpdf(y | u, alpha);
   target += normal_lpdf(theta[1] | 0, 10);
   for (j in 1:p){
     target += gamma_lpdf(lambda1[j] | 1,1); 
@@ -343,7 +349,8 @@ generated quantities {
 
   for (i in 1:n){
     gridalpha[i] = exp(theta_origin[1] + sum(gridgsmooth[i,]));
-    log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
+    log_lik[i] = pareto_lpdf(y[i] | u[i], alpha[i]);
+    // log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
   };
 }
 "
@@ -385,9 +392,9 @@ fit1 <- stan(
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value 
     chains = 3,             # number of Markov chains
-    iter = 4000,            # total number of iterations per chain
+    iter = 15000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
-    refresh = 1000           # no progress shown
+    refresh = 5000           # no progress shown
 )
 
 # saveRDS(fit1, file=paste0("./BLAST/application/",Sys.Date(),"_stanfit.rds"))
@@ -435,7 +442,8 @@ fwi.smooth.q3 <- as.vector(matrix(fwismooth.samples[,6], nrow = n, byrow=TRUE))
 
 g.min.samples <- min(gsmooth.samples[,4])
 g.max.samples <- max(gsmooth.samples[,6])
-fwi.samples <- matrix(fwismooth.samples[,4], nrow = n, byrow=TRUE)
+fwi.smooth <- as.data.frame(matrix(fwismooth.samples[,4], nrow = n, byrow=TRUE))
+fwi.min.samples <- sapply(fwi.smooth, min)
 # data.smooth <- data.frame("x"= as.vector(xholder),
 #                           "post.mean" = as.vector(g.smooth.mean),
 #                           "q1" = as.vector(g.smooth.q1),
@@ -651,7 +659,7 @@ for(i in 1:p){
 grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
 
 data.smooth <- data.frame("x" = as.vector(as.matrix(fwi.grid)),
-                          "true" = as.vector(as.matrix(fwi.origin[,c(1:7)])),
+                          "true" = as.vector(as.matrix(fwi.origin[,c(1:p)])),
                           "post.mean" = as.vector(fwi.smooth.mean),
                           "q1" = as.vector(fwi.smooth.q1),
                           "q2" = as.vector(fwi.smooth.q2),
@@ -669,13 +677,13 @@ for(i in 1:p){
                   ylab("") + xlab(names(fwi.scaled)[i]) +
                   scale_fill_manual(values=c("steelblue"), name = "") + 
                   scale_color_manual(values=c("steelblue")) +
-                  # ylim(-3, 3.3) +
+                  ylim(fwi.min.samples[i], 7) +
                   theme_minimal(base_size = 30) +
                   theme(legend.position = "none",
                           plot.margin = margin(0,0,0,-20),
                           axis.text = element_text(size = 35),
                           axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.grid[which.max(y),i], y=g.min.samples, color = "red", size = 7)
+  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.grid[which.max(y),i], y=fwi.min.samples[i], color = "red", size = 7)
 }
 
 grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
@@ -873,6 +881,4 @@ grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
 # grid.plt <- grid.arrange(p1, p2, nrow=1)
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_heavytail.pdf"), grid.plt, width=22, height = 7.78)
 fit.log.lik <- extract_log_lik(fit1)
-loo(fit.log.lik, is_method = "sis", cores = 2)
-
-concurvity(fit1, full = TRUE)
+loo(fit.log.lik, is_method = "sis", cores = 4)

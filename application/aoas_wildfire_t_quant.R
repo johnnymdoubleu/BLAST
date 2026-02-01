@@ -14,6 +14,7 @@ library(splines)
 library(quantreg)
 library(qgam)
 library(mgcViz)
+library(brms)
 options(mc.cores = parallel::detectCores())
 
 # Structure of the FWI System
@@ -73,6 +74,26 @@ fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 fwi.origin <- fwi.scaled
 
 fwi.origin <- data.frame(fwi.origin, time = c(1:length(Y)), BA=Y)
+
+
+fit.qr <- brm(bf(BA ~ s(time), quantile = 0.975),
+                data = fwi.origin,
+                cores = 3,
+                chain = 3,
+                family = asym_laplace())
+
+quant.fit <- qgam(BA ~ s(time), data = fwi.origin, qu = 0.975)
+
+print(plot(quant.fit, allTerms = TRUE), pages = 1)
+quant.viz <- getViz(quant.fit, nsim = 20)
+print(plot(quant.viz))
+check1D(quant.viz, fwi.origin[,8]) + l_gridQCheck1D(qu = 0.95)
+
+preds <- predict(quant.fit)
+# save(preds, quant.fit, file="./BLAST/application/quant-time.Rdata")
+empirical_qu <- mean(fwi.origin$BA < preds)
+print(paste("Empirical Quantile:", empirical_qu))
+
 # fwi.origin <- data.frame(fwi.origin[which(Y>1),], BA=Y[Y>1])
 # BA.shifted <- ifelse(fwi.origin$BA == 0, 1e-5, fwi.origin$BA)
 # fwi.origin$log.BA <- log(fwi.origin$BA+1)
@@ -82,46 +103,37 @@ grid.df <- as.data.frame(setNames(seq_list, vars))
 
 library(tidyverse)
 fwi.index$BA <- fwi.origin$BA
-# 1. Prepare the Data
-# We create a new dataframe 'df_seasonal' to avoid overwriting your original data
 df_seasonal <- fwi.index %>%
   mutate(
-    # --- FIX IS HERE ---
     year = as.numeric(as.character(year)), 
-    # -------------------
-    
-    # Convert "Jan", "Feb" to numbers 1, 2...
     Month_Num = match(month, month.abb), 
     
-    # Assign Seasons
     Season = case_when(
       Month_Num %in% c(12, 1, 2) ~ "Winter",
       Month_Num %in% c(3, 4, 5) ~ "Spring",
       Month_Num %in% c(6, 7, 8) ~ "Summer",
       Month_Num %in% c(9, 10, 11) ~ "Autumn"
     ),
-    
-    # Correct the Year for Winter
+
     SeasonYear = ifelse(Month_Num == 12, year + 1, year)
   )
-# 2. Calculate the 0.95 Quantile
-# Change 'FWI' below to 'DSR' or 'ISI' if you want to plot a different variable
-plot_data <- df_seasonal %>%
-  group_by(SeasonYear, Season) %>%
-  summarise(
-    Q95 = quantile(BA, 0.95, na.rm = TRUE), 
-    .groups = "drop"
-  ) %>%
-  mutate(Season = factor(Season, levels = c("Winter", "Spring", "Summer", "Autumn"))) %>%
-  arrange(SeasonYear, Season) %>%
-  mutate(Label = paste(SeasonYear, Season)) %>%
-  mutate(Label = factor(Label, levels = unique(Label)))
+  
+# plot_data <- df_seasonal %>%
+#   group_by(SeasonYear, Season) %>%
+#   summarise(
+#     Q975 = quantile(BA, 0.975, na.rm = TRUE), 
+#     .groups = "drop"
+#   ) %>%
+#   mutate(Season = factor(Season, levels = c("Winter", "Spring", "Summer", "Autumn"))) %>%
+#   arrange(SeasonYear, Season) %>%
+#   mutate(Label = paste(SeasonYear, Season)) %>%
+#   mutate(Label = factor(Label, levels = unique(Label)))
 
 df_seasonal <- df_seasonal %>% 
   mutate(Label = paste(SeasonYear, Season)) %>%
   mutate(Label = factor(Label, levels = unique(Label)))
 # 3. Plot
-# ggplot(plot_data, aes(x = Label, y = Q95, group = 1)) +
+# ggplot(plot_data, aes(x = Label, y = Q975, group = 1)) +
 ggplot(df_seasonal, aes(x = Label, y = BA, group = 1)) +
   geom_line(color = "steelblue", linewidth = 1) +
   geom_point(aes(color = Season), size = 3) +
@@ -138,448 +150,75 @@ ggplot(df_seasonal, aes(x = Label, y = BA, group = 1)) +
     legend.position = "none"
   )
 
-# 1. Get predictions at tau = 0.5 and tau = 0.95
-# fit.50 <- quantreg::rq(BA ~ bs(DSR) + bs(FWI) + bs(BUI) + bs(ISI) + bs(FFMC) + bs(DMC) + bs(DC), tau = 0.5, data = fwi.origin)
 
-# fit.95 <- quantreg::rq(BA ~ bs(DSR) + bs(FWI) + bs(BUI) + bs(ISI) + bs(FFMC) + bs(DMC) + bs(DC), tau = 0.95, data = fwi.origin)
+df_seasonal$fitted_975 <- predict(quant.fit)
 
-
-# pred.50 <- predict(fit.50, newdata = fwi.origin)
-# pred.95 <- predict(fit.95, newdata = fwi.origin)
-
-# par(mfrow = c(1, 2))
-# plot(pred.50, fwi.origin$BA,
-#      main = "Predicted 50th Percentile vs Actual BA",
-#      xlab = expression(hat(F)^(-1)),
-#      ylab = expression(y[i]))
-#     #  xlim = c(min_val_50, max_val_50),  # Equal x and y range
-#     #  ylim = c(min_val_50, max_val_50))
-# abline(0, 1, col = "red", lty = 2, lwd = 2)
-# plot(pred.95, fwi.origin$BA,
-#      main = "Predicted 95th Percentile vs Actual BA",
-#      xlab = expression(hat(F)^(-1)),
-#      ylab = expression(y))
-# #     #  xlim = c(min_val_95, max_val_95),  # Equal x and y range
-# #     #  ylim = c(min_val_95, max_val_95))
-# abline(0, 1, col = "red", lty = 2, lwd = 2)
-# par(mfrow = c(1, 1))
-
-
-# # qu <- exp(predict(quant.fit))-1
-# summary(quant.fit)
-# residuals_qr <- residuals(quant.fit)
-# fitted_vals <- fitted(quant.fit)
-
-# par(mfrow=c(1,2))
-
-# # Residuals vs. Fitted
-# plot(fitted_vals, residuals_qr, main="Residuals vs Fitted", 
-# 			xlab="Fitted values", ylab="Residuals")
-# abline(h=0, col="red", lty=2)
-# qqnorm(residuals_qr, main = "Q-Q plot of residuals")
-# qqline(residuals_qr, col="red", lty=2)
-# par(mfrow=c(1,1))
-# predictions <- predict(quant.fit, newdata = fwi.origin)
-# pred.grid <- predict(quant.fit, newdata = grid.df)
-# coverage <- mean(fwi.origin$BA <= predictions)
-# cat("Target coverage level:", 0.975, "\n")
-# cat("Empirical coverage:", coverage, "\n")
-
-
-# For multiple quantiles
-# taus <- c(0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.975, 0.98, 0.99)
-# fits <- quantreg::rq(BA ~ bs(DSR) + bs(FWI) + bs(BUI) + bs(ISI) + bs(FFMC) + bs(DMC) + bs(DC), tau = taus, data = fwi.origin)
-# plot(summary(fits))
-
-# colors <- rainbow(length(taus))
-# par(mfrow = c(3,3))
-# main_vars <- colnames(fwi.origin)[1:7]
-# for (j in 1:7) {
-#   plot(fwi.origin[,j], fwi.origin$BA,
-#        main = paste(main_vars[j]), xlab="",ylab="")
-  
-#   # Add quantile lines
-#   for (i in seq_along(taus)) {
-#     fit_tau <- quantreg::rq(BA ~ bs(DSR) + bs(FWI) + bs(BUI) + bs(ISI) + bs(FFMC) + bs(DMC) + bs(DC), tau = c(taus)[i], data = fwi.origin)
-#     pred_tau <- predict(fit_tau, newdata = grid.df)
-#     lines(grid.df[,j], pred_tau, col = colors[i], lwd = 1)
-#   }
-# }
-
-# par(mfrow = c(3, 3))
-# # taus <- seq(0.9, 1, 0.01)[-c(1, 11)]
-# taus <- c(0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.975, 0.98, 0.99)
-# for (i in seq_along(taus)) {
-#     tau_i <- taus[i]
-
-#     fit_tau <- quantreg::rq(BA ~ bs(DSR) + bs(FWI) + bs(BUI) + bs(ISI) + bs(FFMC) + bs(DMC) + bs(DC), tau = tau_i, data = fwi.origin)
-#     pred_tau <- predict(fit_tau, newdata = fwi.origin)
-
-#     # Bin predictions
-#     nbins <- 100
-#     bins <- cut(pred_tau, 
-#                 breaks = quantile(pred_tau, probs = seq(0, 1, by = 1/nbins)),
-#                 include.lowest = TRUE)
-
-#     # Calculate empirical coverage per bin
-#     coverage_by_bin <- tapply((fwi.origin$BA <= pred_tau), bins, mean)
-#     mean_pred_bin <- tapply(pred_tau, bins, mean)
-
-#     # Plot calibration curve
-#     plot(mean_pred_bin, coverage_by_bin, 
-#             main = paste("tau =", tau_i),
-#             xlab = "Mean Predicted Quantile in Bin",
-#             ylab = "Empirical Coverage",
-#             ylim = c(0, 1),
-#             xlim = c(min(pred_tau), max(pred_tau)))
-
-#     # Perfect calibration line
-#     abline(0, 1, lty = 2, col = "red", lwd = 2)
-#     # Target line
-#     abline(h = tau_i, lty = 3, col = "black", lwd = 1)
-# }
-
-
-
-# results <- data.frame(
-#     tau = numeric(),
-#     target_coverage = numeric(),
-#     empirical_coverage = numeric(),
-#     coverage_error = numeric(),
-#     n_u = numeric()
-# )
-
-# for (i in seq_along(taus)) {
-#     tau_i <- taus[i]
-
-#     # Fit model at this quantile
-#     fit_tau <- quantreg::rq(BA ~ bs(DSR) + bs(FWI) + bs(BUI) + bs(ISI) + bs(FFMC) + bs(DMC) + bs(DC), tau = tau_i, data = fwi.origin)
-
-#     # Get predictions
-#     pred_tau <- predict(fit_tau, newdata = fwi.origin)
-#     hist(pred_tau, main = paste("tau =", tau_i))
-#     # Calculate empirical coverage: proportion of actual values <= predicted
-#     empirical_cov <- mean(fwi.origin$BA <= pred_tau, na.rm = TRUE)
-
-#     # How many observations fall below predicted quantile
-#     n_below <- sum(fwi.origin$BA <= pred_tau, na.rm = TRUE)
-
-#     results <- rbind(results, data.frame(
-#         tau = tau_i,
-#         target_coverage = tau_i,
-#         empirical_coverage = empirical_cov,
-#         coverage_error = abs(empirical_cov - tau_i),
-#         n_u = length(Y) - n_below
-#     ))
-# }
-# results
-# par(mfrow = c(1, 1))
-
-range01 <- function(x){(x-min(x))/(max(x)-min(x))}
-fwi.df <- as.data.frame(sapply(fwi.origin[, c(1:7)], FUN = range01))
-fwi.df$time <- fwi.origin$time
-fwi.df$BA <- fwi.origin$BA
-# quant.fit <- qgam(BA ~ s(DSR, k = 30) + s(FWI, k = 30) + s(BUI, k = 30) + s(ISI, k = 30) + s(FFMC, k = 30) + s(DMC, k = 30) + s(DC, k = 30), qu=0.975, data = fwi.df)
-# quant.fit <- qgam(BA ~ s(DSR) + s(FWI) + s(BUI) + s(ISI) + s(FFMC) + s(DMC) + s(DC) + s(time), qu=0.99, data = fwi.df)
-
-# quant.u <- predict(quant.fit)
-
-# quant.fit <- qgamV(BA ~ s(DSR, k = 30) + s(FWI, k = 30) + s(BUI, k = 30) + s(ISI, k = 30) + s(FFMC, k = 30) + s(DMC, k = 30) + s(DC, k = 30), qu=0.975, data = fwi.origin)
-taus <- c(0.9, 0.91, 0.92, 0.93, 0.94, 0.95, 0.96, 0.97, 0.98, 0.99)
-
-
-# quant.fit <- mqgamV(BA ~ s(DSR) + s(FWI) + s(BUI) + s(ISI) + s(FFMC) + s(DMC) + s(DC) + s(time), qu=taus, data = fwi.df, aQgam = list(cluster = cl, multicore = TRUE, ncores = n.cores))
-n.cores <- length(taus)
-library(parallel)
-cl <- makeCluster(n.cores)
-clusterExport(cl, varlist = c("fwi.df", "taus"))
-clusterEvalQ(cl, {
-  library(qgam)
-  library(mgcv)
-})
-
-fit_single_quantile <- function(q) {
-  model <- qgam(BA ~ s(DSR) + s(FWI) + s(BUI) + s(ISI) + s(FFMC) + s(DMC) + s(DC) + s(time),
-                data = fwi.df,
-                qu = q)
-  return(model)
-}
-system.time({
-  results.list <- parLapply(cl, taus, fit_single_quantile)
-})
-
-stopCluster(cl)
-# save(quant.fit, fwi.df, fwi.origin, taus, file="./BLAST/application/mqgam_time.Rdata")
-# save(results.list, fwi.df, fwi.origin, taus, file="./BLAST/application/mqgam_time_09above.Rdata")
-print(plot(results.list[[6]], allTerms = TRUE), pages = 1)
-cqcheck(obj = results.list[[6]], v = c("time"), X = fwi.df, y = fwi.df$BA) 
-load("./BLAST/application/mqgam_time_09above.Rdata")
-
-print(plot(quant.fit, allTerms = TRUE), pages = 1)
-for(i in 1:length(taus)){
-    print(check1D(quant.fit[[i]], fwi.df[1:8]) + l_gridQCheck1D(qu = taus[i]), pages=1)
-}
-# print(check1D(quant.fit[[8]], fwi.df[1:8]) + l_gridQCheck1D(qu = 0.97), pages=1)
-# print(check1D(quant.fit[[9]], fwi.df[1:8]) + l_gridQCheck1D(qu = 0.98), pages=1)
-# print(check1D(quant.fit[[10]], fwi.df[1:8]) + l_gridQCheck1D(qu = 0.99), pages=1)
-# qdo(quant.fit, predict, newdata = )
-
-# plot(quant.fit)
-# fwi.scaled <- fwi.origin[,c(1:7)]
-y <- Y[Y>quant.u]
-u <- quant.u[which(Y>quant.u)]
-fwi.scaled <- as.data.frame(sapply(fwi.origin[which(Y>quant.u),c(1:7)], FUN = range01))
-n <- dim(fwi.scaled)[[1]]
-p <- dim(fwi.scaled)[[2]]
-# save(quant.fit, quant.u, fwi.scaled, y, n,p, u, file="./BLAST/application/quant975_prep.Rdata")
-save(fwi.scaled, fwi.origin, fwi.df, Y, n, psi, file = "./BLAST/application/wildfire_time_prep.Rdata")
-# load("./BLAST/application/quant975_prep.Rdata")
-
-# m.gam <- mqgam(BA ~ s(DSR) + s(FWI) + s(BUI) + s(ISI) + s(FFMC) + s(DMC) + s(DC), data = fwi.origin, qu = taus)
-# m.gam <- mqgamV(BA ~ s(DSR) + s(FWI) + s(BUI) + s(ISI) + s(FFMC) + s(DMC) + s(DC), data = fwi.origin, qu = taus)
-# save(m.gam, file ="./BLAST/application/wildfire_mgam2.Rdata")
-# load("./BLAST/application/wildfire_mgam.Rdata")
-
-# summary(m.gam[[7]])
-
-no.theta <- 1 #represents the no. of linear predictors for each smooth functions
-newx <- seq(0, 1, length.out=n)
-xholder.linear <- xholder.nonlinear <- bs.linear <- bs.nonlinear <- matrix(,nrow=n, ncol=0)
-xholder <- matrix(nrow=n, ncol=p)
-end.holder <- basis.holder <- matrix(, nrow = 2, ncol = 0)
-index.holder <- matrix(, nrow = 0, ncol = 2)
-for(i in 1:p){
-  index.holder <- rbind(index.holder, 
-                      matrix(c(which.min(fwi.scaled[,i]),
-                              which.max(fwi.scaled[,i])), ncol=2))
-}
-
-for(i in 1:(p-1)){
-  xholder[,i] <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = n)
-  test.knot <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
-  splines <- basis.tps(xholder[,i], test.knot, m=2, rk=FALSE, intercept = FALSE)
-  xholder.linear <- cbind(xholder.linear, splines[,1:no.theta])
-  xholder.nonlinear <- cbind(xholder.nonlinear, splines[,-c(1:no.theta)])
-  knots <- seq(min(fwi.scaled[,i]), max(fwi.scaled[,i]), length.out = psi)
-  tps <- basis.tps(fwi.scaled[,i], knots, m = 2, rk = FALSE, intercept = FALSE)
-  basis.holder <- cbind(basis.holder, 
-          solve(matrix(c(tps[index.holder[i,1], no.theta+1],
-                  tps[index.holder[i,1], no.theta+psi],
-                  tps[index.holder[i,2], no.theta+1],
-                  tps[index.holder[i,2], no.theta+psi]), 
-                  nrow = 2, ncol = 2)))
-  end.holder <- cbind(end.holder, 
-                matrix(c(tps[index.holder[i,1], no.theta+1],
-                  tps[index.holder[i,1], no.theta+psi],
-                  tps[index.holder[i,2], no.theta+1],
-                  tps[index.holder[i,2], no.theta+psi]), 
-                  nrow = 2, ncol = 2))
-  # mid.holder <- cbind(mid.holder,)                  
-  bs.linear <- cbind(bs.linear, tps[,1:no.theta])
-  bs.nonlinear <- cbind(bs.nonlinear, tps[,-c(1:no.theta)])
-}
-
-
-model.stan <- "data {
-    int <lower=1> n; // Sample size
-    int <lower=1> p; // regression coefficient size
-    int <lower=1> psi; // splines coefficient size
-    array[n] real <lower=0> u; // large threshold value
-    matrix[n,p] bsLinear; // fwi dataset
-    matrix[n, (psi*p)] bsNonlinear; // thin plate splines basis
-    matrix[n,p] xholderLinear; // fwi dataset
-    matrix[n, (psi*p)] xholderNonlinear; // thin plate splines basis    
-    array[n] real <lower=1> y; // extreme response
-    real <lower=0> atau;
-    matrix[2, (2*p)] basisFL;
-    array[(p*2)] int indexFL;
-}
-parameters {
-    vector[(p+1)] theta; // linear predictor
-    vector[(psi-2)] gammaTemp[p]; // constraint splines coefficient from 2 to psi-1
-    real <lower=0> lambda1; // lasso penalty
-    real <lower=0> lambda2; // group lasso penalty
-    array[p] real <lower=0> tau1;
-    array[p] real <lower=0> tau2;
-}
-transformed parameters {
-    array[n] real <lower=0> alpha; // covariate-adjusted tail index
-    vector[psi] gamma[p]; // splines coefficient 
-    real <lower=0> lambda2o;
-
-    lambda2o=lambda2*100;
-    {
-      vector[2] gammaFL[p];
-      matrix[n, p] gsmooth; // linear component
-      
-      for(j in 1:p){
-          gamma[j][2:(psi-1)] = gammaTemp[j][1:(psi-2)]*100;
-          gammaFL[j] = basisFL[, (((j-1)*2)+1):(((j-1)*2)+2)] * (bsNonlinear[indexFL[(((j-1)*2)+1):(((j-1)*2)+2)], (((j-1)*psi)+2):(((j-1)*psi)+(psi-1))] * gammaTemp[j]*100) * (-1);
-          gamma[j][1] = gammaFL[j][1];
-          gamma[j][psi] = gammaFL[j][2];
-      };
-      for (j in 1:p){
-          gsmooth[,j] = bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j] + bsLinear[,j] * theta[j+1];
-      };
-
-      for (i in 1:n){
-          alpha[i] = exp(theta[1] + sum(gsmooth[i,]));
-      };
-    }
-
-}
-
-model {
-    // likelihood
-    for (i in 1:n){
-        target += pareto_lpdf(y[i] | u[i], alpha[i]);
-    }
-    target += normal_lpdf(theta[1] | 0, 5);
-    target += gamma_lpdf(lambda1 | 1, 1e-3);
-    target += gamma_lpdf(lambda2o | 1, 1e-3);
-    target += (2*p*log(lambda2o));
-    for (j in 1:p){
-        target += gamma_lpdf(tau1[j] | 1, lambda1^2*0.5);
-        target += normal_lpdf(theta[(j+1)] | 0, sqrt(1/tau1[j]));
-        target += gamma_lpdf(tau2[j] | atau, lambda2o^2*0.5);
-        target += multi_normal_lpdf(gamma[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)) * (1/tau2[j]));
-    }
-}
-generated quantities {
-    // Used in Posterior predictive check
-    array[n] real <lower=0> newalpha; // new tail index
-    matrix[n, p] newgsmooth; // linear component
-
-    for (j in 1:p){
-        newgsmooth[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j] + xholderLinear[,j] * theta[j+1];
-    };    
-
-    for (i in 1:n){ 
-        newalpha[i] = exp(theta[1] + sum(newgsmooth[i,]));
-    };
-}
-"
-
-
-data.stan <- list(y = as.vector(y), u = as.vector(u), p = p, n= n, psi = psi, 
-                    atau = ((psi+1)/2), indexFL = as.vector(t(index.holder)),
-                    bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
-                    xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear, basisFL = basis.holder)
-
-init.alpha <- list(list(gammaTemp = array(rep(0.1, ((psi-2)*p)), dim=c(p, (psi-2))),
-                        theta = rep(0.1, (p+1)), 
-                        tau1 = rep(0.01, p),tau2 = rep(0.01, p),
-                        lambda1 = 1, lambda2 = 2),
-                   list(gammaTemp = array(rep(0.1, ((psi-2)*p)), dim=c(p, (psi-2))),
-                        theta = rep(0.2, (p+1)), 
-                        tau1 = rep(0.1, p),tau2 = rep(0.1, p),
-                        lambda1 = 1, lambda2 = 1),
-                   list(gammaTemp = array(rep(0.1, ((psi-2)*p)), dim=c(p, (psi-2))),
-                        theta = rep(0.5, (p+1)), 
-                        tau1 = rep(0.05, p),tau2 = rep(0.05, p),
-                        lambda1 = 0.5, lambda2 = 1.5))
-
-# stanc("C:/Users/Johnny Lee/Documents/GitHub/BLAST/application/model1.stan")
-fit1 <- stan(
-    model_code = model.stan,
-    model_name = "BLAST",
-    data = data.stan,    # named list of data
-    init = init.alpha,      # initial value
-    chains = 3,             # number of Markov chains
-    iter = 15000,            # total number of iterations per chain
-    cores = parallel::detectCores(), # number of cores (could use one per chain)
-    refresh = 2500           # no progress shown
+# 2. Compute the Blockwise (Seasonal) Empirical Quantile
+# This calculates the actual 97.5th percentile for each specific season/year
+block_summary <- df_seasonal %>%
+  group_by(Label, Season) %>%
+  summarise(
+    Empirical_975 = log(quantile(BA, probs = 0.975, na.rm = TRUE)),
+    Model_Smooth_975 = log(quantile(fitted_975, probs = 0.975, na.rm = TRUE)), # Average smooth value for that block
+    .groups = 'drop'
 )
 
-posterior <- rstan::extract(fit1)
+ggplot(block_summary, aes(x = Label, group = 1)) +
+  geom_point(aes(y = Empirical_975, color = Season), size = 3) +
+  geom_line(aes(y = Empirical_975), color = "grey80", linetype = "dashed") +
+  geom_hline(aes(yintercept=log(quantile(Y,0.975))), linetype="dashed") +
+  geom_line(aes(y = Model_Smooth_975), color = "steelblue", linewidth = 1.2) +
+  
+  scale_color_manual(values = c(
+    "Summer" = "orange", 
+    "Winter" = "red", 
+    "Spring" = "red", 
+    "Autumn" = "red"
+  )) +
+  labs(
+    y = "Burnt Area", 
+    x = "Season-Year"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "none"
+  )
 
-theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
-gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
-lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
-gsmooth.samples <- summary(fit1, par=c("newgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
-origin.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary 
-alpha.samples <- summary(fit1, par=c("newalpha"), probs = c(0.05,0.5, 0.95))$summary
-# intcpt.samples <- summary(fit1, par=c("intcpt"), probs = c(0.05, 0.5, 0.95))
+coverage_summary <- df_seasonal %>%
+  group_by(Label, Season) %>%
+  summarise(
+    n_obs = n(),
+    n_below = sum(BA <= fitted_975),
+    empirical_coverage = n_below / n_obs,
+    .groups = 'drop'
+  )
 
-g.smooth.mean <- as.vector(matrix(gsmooth.samples[,1], nrow = n, byrow=TRUE))
-g.smooth.q1 <- as.vector(matrix(gsmooth.samples[,4], nrow = n, byrow=TRUE))
-g.smooth.q2 <- as.vector(matrix(gsmooth.samples[,5], nrow = n, byrow=TRUE))
-g.smooth.q3 <- as.vector(matrix(gsmooth.samples[,6], nrow = n, byrow=TRUE))
+coverage_summary <- df_seasonal %>%
+  left_join(block_summary %>% select(Label, Model_Smooth_975), by = "Label") %>%
+  group_by(Label, Season) %>%
+  summarise(
+    # Using the block's 97.5th percentile prediction as the boundary
+    n_obs = n(),
+    n_below = sum(log(BA) <= Model_Smooth_975),
+    empirical_coverage = n_below / n_obs,
+    # empirical_coverage = mean(BA <= Model_Predicted_975),
+    .groups = 'drop'
+  )
 
-alpha.smooth <- data.frame("x" = xholder[,1],
-                            "post.mean" = (alpha.samples[,1]),
-                            "post.median" = (alpha.samples[,5]),
-                            "q1" = (alpha.samples[,4]),
-                            "q3" = (alpha.samples[,6]),
-                            "origin.post.mean" = (origin.samples[,1]),
-                            "origin.post.median" = (origin.samples[,5]),
-                            "origin.q1" = (origin.samples[,4]),
-                            "origin.q3" = (origin.samples[,6]))
+# 3. View the summary
+print(coverage_summary)
 
-ggplot(alpha.smooth, aes(x=x)) + 
-  ylab(expression(alpha(c,ldots,c))) + xlab(expression(c)) + labs(col = "") +
-  geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
-  geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
-  scale_fill_manual(values=c("steelblue"), name = "") +
-  scale_color_manual(values = c("steelblue")) + 
-  guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) +
-  theme_minimal(base_size = 30) +
-  theme(legend.position = "none",
-        strip.text = element_blank(),
-        axis.text = element_text(size = 20))
+tail(coverage_summary)
+block_summary$origin_Empirical_975 <- exp(block_summary$Empirical_975)
+block_summary$origin_Model_Smooth_975 <- exp(block_summary$Model_Smooth_975)
 
-xi.smooth <- data.frame("x" = xholder[,1],
-                            "post.mean" = 1/(alpha.samples[,1]),
-                            "post.median" = 1/(alpha.samples[,5]),
-                            "q1" = 1/(alpha.samples[,4]),
-                            "q3" = 1/(alpha.samples[,6]))
+df_final <- df_seasonal %>%
+  left_join(block_summary %>% 
+              select(Label, origin_Empirical_975, origin_Model_Smooth_975), 
+            by = "Label")
 
-ggplot(xi.smooth, aes(x=x)) + 
-  ylab(expression(xi(c,ldots,c))) + xlab(expression(c)) + labs(col = "") +
-  geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
-  geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
-  scale_fill_manual(values=c("steelblue"), name = "") +
-  scale_color_manual(values = c("steelblue")) + 
-  guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) +
-  theme_minimal(base_size = 30) +
-  theme(legend.position = "none",
-        strip.text = element_blank(),
-        axis.text = element_text(size = 20))
-
-# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_alpha.pdf"), width=10, height = 7.78)
-
-data.smooth <- data.frame("x" = as.vector(xholder),
-                          "true" = as.vector(as.matrix(fwi.scaled)),
-                          "post.mean" = as.vector(g.smooth.mean),
-                          "q1" = as.vector(g.smooth.q1),
-                          "q2" = as.vector(g.smooth.q2),
-                          "q3" = as.vector(g.smooth.q3),
-                          "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)))
-
-
-grid.plts <- list()
-for(i in 1:(p+1)){
-  grid.plt <- ggplot(data = data.frame(data.smooth[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + 
-                  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-                  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
-                  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
-                  geom_rug(aes(x=true, y=q2), sides = "b") +
-                  ylab("") + xlab(names(fwi.scaled)[i]) +
-                  scale_fill_manual(values=c("steelblue"), name = "") + 
-                  scale_color_manual(values=c("steelblue")) +
-                  #ylim(-1, 1.1) + #max(data.smooth$q3[((((i-1)*n)+1):(i*n))])) +
-                  theme_minimal(base_size = 30) +
-                  theme(legend.position = "none",
-                          plot.margin = margin(0,0,0,-20),
-                          axis.text = element_text(size = 35),
-                          axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=-1, color = "red", size = 7)
-}
-
-grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
-
-# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_DC.pdf"), grid.plts[[7]], width=10, height = 7.78)
-
+fwi.dd <- df_final %>% mutate(excess = BA > origin_Model_Smooth_975)
+tail(fwi.dd[which(fwi.dd$excess==TRUE),])
+# save(preds, quant.fit,fwi.dd, file="./BLAST/application/quant-time.Rdata")
 

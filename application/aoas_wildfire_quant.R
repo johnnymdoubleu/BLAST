@@ -92,6 +92,58 @@ fit.qr <- brm(bf(BA ~ s(DSR) + s(FWI) + s(BUI) +
                 chain = 3,
                 family = asym_laplace())
 
+load("./BLAST/application/brm_result.Rdata")
+preds <- as.data.frame(fitted(fit.qr, dpar = "mu"))
+y_hat <- preds$Estimate
+y_actual <- fit.qr$data$BA
+empirical_prop <- mean(y_actual <= y_hat)
+theoretical_prop <- fit.qr$formula$pfix$quantile 
+cat("Theoretical Quantile:", theoretical_prop, "\n")
+cat("Empirical Proportion: ", empirical_prop, "\n")
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(modelr) 
+library(purrr)
+
+
+fwi.grid <- data.frame(lapply(fwi.df[,c(1:7)], function(x) seq(min(x), max(x), length.out = nrow(fwi.df))))
+target_covars <- colnames(fwi.df)[1:7]
+col_means <- colMeans(fwi.df[, target_covars], na.rm = TRUE)
+
+preds_list <- lapply(target_covars, function(covar) {
+  val_seq <- seq(min(fwi.df[[covar]]), max(fwi.df[[covar]]), length.out = 100)
+  temp_nd <- as.data.frame(t(col_means))
+  temp_nd <- temp_nd[rep(1, 100), ]
+  temp_nd[[covar]] <- val_seq
+  res <- fitted(fit.qr, newdata = temp_nd) %>%
+    as.data.frame() %>%
+    mutate(
+      covariate_name = covar,
+      value = val_seq
+    )
+  return(res)
+})
+
+preds_long <- do.call(rbind, preds_list)
+data_points <- fwi.df %>%
+  select(all_of(target_covars), y = BA) %>% 
+  pivot_longer(cols = all_of(target_covars), 
+               names_to = "covariate_name", 
+               values_to = "value")
+ggplot(preds_long, aes(x = value, y = Estimate)) +
+  geom_ribbon(aes(ymin = Q2.5, ymax = Q97.5), alpha = 0.2, fill = "steelblue") +
+  geom_point(data = data_points, aes(y = y), alpha=0.5, size = 2) +
+  geom_line(color = "steelblue", linewidth = 1) +
+  facet_wrap(~covariate_name, scales = "free_x") +
+  labs(title = "Quantile Regression Marginal Effects",
+       x = "Covariate Value",
+       y = "Predicted Quantile") +
+  theme_minimal()
+
+
+
 tun <- tuneLearnFast(BA ~ s(DSR, k = 30) + s(FWI, k = 30) + s(BUI, k = 30) + 
                             s(ISI, k = 30) + s(FFMC, k = 30) + s(DMC, k = 30) + 
                             s(DC, k = 30), data = fwi.df, qu = 0.975)
