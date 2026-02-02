@@ -87,7 +87,7 @@ quant.fit <- qgam(BA ~ s(time), data = fwi.origin, qu = 0.975)
 print(plot(quant.fit, allTerms = TRUE), pages = 1)
 quant.viz <- getViz(quant.fit, nsim = 20)
 print(plot(quant.viz))
-check1D(quant.viz, fwi.origin[,8]) + l_gridQCheck1D(qu = 0.95)
+check1D(quant.viz, fwi.origin[,4]) + l_gridQCheck1D(qu = 0.95)
 
 preds <- predict(quant.fit)
 # save(preds, quant.fit, file="./BLAST/application/quant-time.Rdata")
@@ -212,6 +212,6 @@ df_final <- df_seasonal %>%
 
 fwi.dd <- df_final %>% mutate(excess = BA > origin_Model_Smooth_975)
 tail(fwi.dd[which(fwi.dd$excess==TRUE),])
-# save(preds, quant.fit,fwi.dd, file="./BLAST/application/quant-time.Rdata")
+# save(preds, quant.fit,fwi.dd, file="./BLAST/application/quant-t_10.Rdata")
 
 length(which(fwi.dd$excess==TRUE))

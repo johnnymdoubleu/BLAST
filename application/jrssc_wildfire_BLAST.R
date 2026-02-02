@@ -69,7 +69,8 @@ fwi.index$date <- as.numeric(fwi.index$date)
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 
 # fwi.index <- fwi.index[which(Y>1),]
-load("./BLAST/application/quant-time.Rdata")
+# load("./BLAST/application/quant-t.Rdata")
+load("./BLAST/application/quant-t_30.Rdata")
 # u <- rep(quantile(Y, threshold),ceiling(nrow(fwi.index)*(1-threshold)))
 # excess <- which(Y>u)
 # u <- quantile(preds, threshold)
@@ -83,13 +84,13 @@ y <- Y[excess]
 # fwi.scaled <- data.frame(fwi.scaled[which(Y>u),])
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 # range01 <- function(x){(x)/max(x)}
-fwi.scaled <- as.data.frame(sapply(fwi.scaled[excess,], FUN = range01))
+fwi.scaled <- as.data.frame(sapply(fwi.scaled[excess,c(-1,-2)], FUN = range01))
 
 n <- dim(fwi.scaled)[[1]]
 p <- dim(fwi.scaled)[[2]]
 
 
-fwi.origin <- data.frame(fwi.index[excess,], BA=y)
+fwi.origin <- data.frame(fwi.index[excess,c(-1,-2)], BA=y)
 max.fwi <- fwi.origin[which.max(y),]
 fwi.grid <- data.frame(lapply(fwi.origin[,c(1:p)], function(x) seq(min(x), max(x), length.out = nrow(fwi.scaled))))
 fwi.minmax <- sapply(fwi.origin[,c(1:p)], function(x) max(x)-min(x))
@@ -473,28 +474,38 @@ fwi.min.samples <- sapply(fwi.smooth, min)
 #           axis.text = element_text(size = 20))
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=12.5, height = 15)
 xholder <- as.data.frame(xholder)
-colnames(xholder) <- colnames(fwi.scaled)[1:7]
+colnames(xholder) <- colnames(fwi.scaled)[1:p]
 simul.data <- data.frame(y = y-u, fwi.scaled[,c(1:p)])
-gam.scale <- list(y ~ s(DSR, bs = "tp", k = 10) + 
-                      s(FWI, bs = "tp", k = 10) + 
-                      s(BUI, bs = "tp", k = 10) + 
-                      s(ISI, bs = "tp", k = 10) + 
-                      s(FFMC, bs = "tp", k = 10) +
-                      s(DMC, bs = "tp", k = 10) + 
-                      s(DC, bs = "tp", k = 10),
-                    ~ s(DSR, bs = "tp", k = 10) + 
-                      s(FWI, bs = "tp", k = 10) + 
-                      s(BUI, bs = "tp", k = 10) + 
-                      s(ISI, bs = "tp", k = 10) + 
-                      s(FFMC, bs = "tp", k = 10) +
-                      s(DMC, bs = "tp", k = 10) + 
-                      s(DC, bs = "tp", k = 10))
+# gam.scale <- list(y ~ s(DSR, bs = "tp", k = 30) + 
+#                       s(FWI, bs = "tp", k = 30) + 
+#                       s(BUI, bs = "tp", k = 30) + 
+#                       s(ISI, bs = "tp", k = 30) + 
+#                       s(FFMC, bs = "tp", k = 30) +
+#                       s(DMC, bs = "tp", k = 30) + 
+#                       s(DC, bs = "tp", k = 30),
+#                     ~ s(DSR, bs = "tp", k = 30) + 
+#                       s(FWI, bs = "tp", k = 30) + 
+#                       s(BUI, bs = "tp", k = 30) + 
+#                       s(ISI, bs = "tp", k = 30) + 
+#                       s(FFMC, bs = "tp", k = 30) +
+#                       s(DMC, bs = "tp", k = 30) + 
+#                       s(DC, bs = "tp", k = 30))
+gam.scale <- list(y ~ s(BUI, bs = "tp", k = 30) + 
+                      s(ISI, bs = "tp", k = 30) + 
+                      s(FFMC, bs = "tp", k = 30) +
+                      s(DMC, bs = "tp", k = 30) + 
+                      s(DC, bs = "tp", k = 30),
+                    ~ s(BUI, bs = "tp", k = 30) + 
+                      s(ISI, bs = "tp", k = 30) + 
+                      s(FFMC, bs = "tp", k = 30) +
+                      s(DMC, bs = "tp", k = 30) + 
+                      s(DC, bs = "tp", k = 30))                      
 evgam.fit.scale <- evgam::evgam(gam.scale, data = simul.data, family = "gpd")
 xi.pred.scale <-predict(evgam.fit.scale, newdata = xholder, type="response")$shape
 alpha.pred.scale <- 1/xi.pred.scale
 
 xholder.basis.scale <- predict(evgam.fit.scale, newdata = xholder, type= "lpmatrix")$shape
-psi <- 10
+psi <- 30
 xi.coef.scale <- tail(evgam.fit.scale$coefficients, (psi-1)*p)
 gamma.xi.scale <- matrix(xi.coef.scale, ncol = p)
 alpha.nonlinear.scale <- xi.nonlinear.scale <- matrix(, nrow = n, ncol = p)
@@ -504,14 +515,20 @@ for(j in 1:p){
   alpha.nonlinear.scale[,j] <- 1/(xi.nonlinear.scale[,j])
 }
 
+# gam.1 <- list(y ~ 1,
+#                 ~ s(DSR, bs = "tp", k = 30) + 
+#                     s(FWI, bs = "tp", k = 30) + 
+#                     s(BUI, bs = "tp", k = 30) + 
+#                     s(ISI, bs = "tp", k = 30) + 
+#                     s(FFMC, bs = "tp", k = 30) +
+#                     s(DMC, bs = "tp", k = 30) + 
+#                     s(DC, bs = "tp", k = 30))
 gam.1 <- list(y ~ 1,
-                ~ s(DSR, bs = "tp", k = 10) + 
-                    s(FWI, bs = "tp", k = 10) + 
-                    s(BUI, bs = "tp", k = 10) + 
-                    s(ISI, bs = "tp", k = 10) + 
-                    s(FFMC, bs = "tp", k = 10) +
-                    s(DMC, bs = "tp", k = 10) + 
-                    s(DC, bs = "tp", k = 10))
+                ~ s(BUI, bs = "tp", k =30) + 
+                  s(ISI, bs = "tp", k =30) + 
+                  s(FFMC, bs = "tp", k =30) +
+                  s(DMC, bs = "tp", k =30) + 
+                  s(DC, bs = "tp", k =30))
 evgam.fit.1 <- evgam::evgam(gam.1, data = simul.data, family = "gpd")
 xi.pred.1 <-predict(evgam.fit.1, newdata = xholder, type="response")$shape
 alpha.pred.1 <- 1/xi.pred.1
@@ -964,3 +981,4 @@ grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_heavytail.pdf"), grid.plt, width=22, height = 7.78)
 fit.log.lik <- extract_log_lik(fit1)
 loo(fit.log.lik, is_method = "sis", cores = 4)
+
