@@ -212,6 +212,6 @@ df_final <- df_seasonal %>%
 
 fwi.dd <- df_final %>% mutate(excess = BA > origin_Model_Smooth_975)
 tail(fwi.dd[which(fwi.dd$excess==TRUE),])
-save(preds, quant.fit,fwi.dd, file="./BLAST/application/quant-time.Rdata")
+# save(preds, quant.fit,fwi.dd, file="./BLAST/application/quant-time.Rdata")
 
 length(which(fwi.dd$excess==TRUE))

@@ -70,7 +70,7 @@ fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 
 # fwi.index <- fwi.index[which(Y>1),]
 load("./BLAST/application/quant-time.Rdata")
-# u <- quantile(Y, threshold)
+# u <- rep(quantile(Y, threshold),ceiling(nrow(fwi.index)*(1-threshold)))
 # excess <- which(Y>u)
 # u <- quantile(preds, threshold)
 # excess <- which(Y>u)
@@ -472,12 +472,69 @@ fwi.min.samples <- sapply(fwi.smooth, min)
 #           # strip.text = element_blank(),
 #           axis.text = element_text(size = 20))
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=12.5, height = 15)
+xholder <- as.data.frame(xholder)
+colnames(xholder) <- colnames(fwi.scaled)[1:7]
+simul.data <- data.frame(y = y-u, fwi.scaled[,c(1:p)])
+gam.scale <- list(y ~ s(DSR, bs = "tp", k = 10) + 
+                      s(FWI, bs = "tp", k = 10) + 
+                      s(BUI, bs = "tp", k = 10) + 
+                      s(ISI, bs = "tp", k = 10) + 
+                      s(FFMC, bs = "tp", k = 10) +
+                      s(DMC, bs = "tp", k = 10) + 
+                      s(DC, bs = "tp", k = 10),
+                    ~ s(DSR, bs = "tp", k = 10) + 
+                      s(FWI, bs = "tp", k = 10) + 
+                      s(BUI, bs = "tp", k = 10) + 
+                      s(ISI, bs = "tp", k = 10) + 
+                      s(FFMC, bs = "tp", k = 10) +
+                      s(DMC, bs = "tp", k = 10) + 
+                      s(DC, bs = "tp", k = 10))
+evgam.fit.scale <- evgam::evgam(gam.scale, data = simul.data, family = "gpd")
+xi.pred.scale <-predict(evgam.fit.scale, newdata = xholder, type="response")$shape
+alpha.pred.scale <- 1/xi.pred.scale
+
+xholder.basis.scale <- predict(evgam.fit.scale, newdata = xholder, type= "lpmatrix")$shape
+psi <- 10
+xi.coef.scale <- tail(evgam.fit.scale$coefficients, (psi-1)*p)
+gamma.xi.scale <- matrix(xi.coef.scale, ncol = p)
+alpha.nonlinear.scale <- xi.nonlinear.scale <- matrix(, nrow = n, ncol = p)
+bs.nonlinear.scale <- xholder.basis.scale[,c(2:((psi-1)*p+1))]
+for(j in 1:p){
+  xi.nonlinear.scale[,j] <- bs.nonlinear.scale[,(((j-1)*(psi-1))+1):(((j-1)*(psi-1))+(psi-1))] %*% gamma.xi.scale[,j]
+  alpha.nonlinear.scale[,j] <- 1/(xi.nonlinear.scale[,j])
+}
+
+gam.1 <- list(y ~ 1,
+                ~ s(DSR, bs = "tp", k = 10) + 
+                    s(FWI, bs = "tp", k = 10) + 
+                    s(BUI, bs = "tp", k = 10) + 
+                    s(ISI, bs = "tp", k = 10) + 
+                    s(FFMC, bs = "tp", k = 10) +
+                    s(DMC, bs = "tp", k = 10) + 
+                    s(DC, bs = "tp", k = 10))
+evgam.fit.1 <- evgam::evgam(gam.1, data = simul.data, family = "gpd")
+xi.pred.1 <-predict(evgam.fit.1, newdata = xholder, type="response")$shape
+alpha.pred.1 <- 1/xi.pred.1
+
+xholder.basis.1 <- predict(evgam.fit.1, newdata = xholder, type= "lpmatrix")$shape
+xi.coef.1 <- tail(evgam.fit.1$coefficients, (psi-1)*p)
+gamma.xi.1 <- matrix(xi.coef.1, ncol = p)
+alpha.nonlinear.1 <- xi.nonlinear.1 <- matrix(, nrow = n, ncol = p)
+bs.nonlinear.1 <- xholder.basis.1[,c(2:((psi-1)*p+1))]
+for(j in 1:p){
+  xi.nonlinear.1[,j] <- bs.nonlinear.1[,(((j-1)*(psi-1))+1):(((j-1)*(psi-1))+(psi-1))] %*% gamma.xi.1[,j]
+  alpha.nonlinear.1[,j] <- 1/(xi.nonlinear.1[,j])
+}
+
+
 
 data.scenario <- data.frame("x" = newx,
                             "post.mean" = (alpha.samples[,1]),
                             "post.median" = (alpha.samples[,5]),
                             "q1" = (alpha.samples[,4]),
                             "q3" = (alpha.samples[,6]),
+                            "evgam.1" = alpha.pred.1,
+                            "evgam.scale" = alpha.pred.scale,
                             "post.mean.org" = (origin.samples[,1]),
                             "post.median.org" = (origin.samples[,5]),
                             "q1.org" = (origin.samples[,4]),
@@ -497,6 +554,29 @@ ggplot(data.scenario, aes(x=x)) +
         axis.text = element_text(size = 20))
 
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_alpha.pdf"), width=10, height = 7.78)
+
+xi.scenario <- data.frame("x" = newx,
+                            "post.mean" = (1/alpha.samples[,1]),
+                            "post.median" = (1/alpha.samples[,5]),
+                            "q1" = (1/alpha.samples[,4]),
+                            "q3" = (1/alpha.samples[,6]),
+                            "evgam.1" = xi.pred.1,
+                            "evgam.scale" = xi.pred.scale)
+
+ggplot(xi.scenario, aes(x=x)) + 
+  ylab(expression(xi(c,...,c))) + xlab(expression(c)) + labs(col = "") +
+  geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
+  geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
+  geom_line(aes(y=evgam.scale), colour = "orange", linewidth=1, linetype=2) +
+  geom_line(aes(y=evgam.1), colour = "purple", linewidth=1, linetype=3) +  
+  scale_fill_manual(values=c("steelblue"), name = "") +
+  scale_color_manual(values = c("steelblue")) + 
+  guides(color = guide_legend(order = 2), 
+          fill = guide_legend(order = 1)) +
+  theme_minimal(base_size = 30) +
+  theme(legend.position = "none",
+        strip.text = element_blank(),
+        axis.text = element_text(size = 20))
 
 
 
@@ -566,7 +646,7 @@ cat("Finished Running")
 #https://discourse.mc-staqan.org/t/four-questions-about-information-criteria-cross-validation-and-hmc-in-relation-to-a-manuscript-review/13841/3
 
 
-data.smooth <- data.frame("x" = as.vector(xholder),
+data.smooth <- data.frame("x" = as.vector(as.matrix(xholder)),
                           "true" = as.vector(as.matrix(fwi.scaled)),
                           "post.mean" = as.vector(g.smooth.mean),
                           "q1" = as.vector(g.smooth.q1),
@@ -599,7 +679,7 @@ grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_DC.pdf"), grid.plts[[7]], width=10, height = 7.78)
 
 
-data.linear <- data.frame("x" = as.vector(xholder),
+data.linear <- data.frame("x" = as.vector(as.matrix(xholder)),
                           "true" = as.vector(as.matrix(fwi.scaled)),
                           "post.mean" = as.vector(g.linear.mean),
                           "q1" = as.vector(g.linear.q1),
@@ -630,7 +710,7 @@ for(i in 1:p){
 grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
 
 
-data.nonlinear <- data.frame("x" = as.vector(xholder),
+data.nonlinear <- data.frame("x" = as.vector(as.matrix(xholder)),
                           "true" = as.vector(as.matrix(fwi.scaled)),
                           "post.mean" = as.vector(g.nonlinear.mean),
                           "q1" = as.vector(g.nonlinear.q1),
