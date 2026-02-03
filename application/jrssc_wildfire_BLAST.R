@@ -264,11 +264,6 @@ X_means <- colMeans(bs.linear[,-1])
 X_sd   <- apply(bs.linear[,-1], 2, sd)
 bs.linear[,-1] <- scale(bs.linear[,-1], center = X_means, scale = X_sd)
 
-qr_lin <- qr(bs.linear[,-1])
-Q.lin <- qr.Q(qr_lin) * sqrt(n-1)
-R.lin <- qr.R(qr_lin) / sqrt(n-1)
-R.inv <- solve(R.lin)
-
 model.stan <- "// Stan model for BLAST Pareto Samples
 data {
   int <lower=1> n; // Sample size
@@ -288,7 +283,6 @@ data {
   vector[p] X_min;
   vector[p] X_means;
   vector[p] X_sd;
-  matrix[p,p] R_inv; 
 }
 
 parameters {
@@ -377,7 +371,7 @@ generated quantities {
 # cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear[,c(1,8)]) %*% bs.nonlinear[,c((psi*6+1):(psi*7))]), "\n")
 
 data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, Z_scales= Z_scales,
-                  atau = ((psi+1)/2), xholderNonlinear = xholder.nonlinear, R_inv = R.inv,
+                  atau = ((psi+1)/2), xholderNonlinear = xholder.nonlinear, 
                   bsLinear = bs.linear[,-1], bsNonlinear = bs.nonlinear, X_min=fwi.min,
                   xholderLinear = xholder.linear[,-1], X_minmax = fwi.minmax, 
                   X_means = X_means, X_sd = X_sd,
@@ -512,7 +506,7 @@ fwi.min.samples <- sapply(fwi.smooth, min)
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=12.5, height = 15)
 xholder <- as.data.frame(xholder)
 colnames(xholder) <- colnames(fwi.scaled)[1:p]
-simul.data <- data.frame(BA = y-u, fwi.origin[c(1:p)])
+simul.data <- data.frame(BA = y-u, bs.linear[,-1])#fwi.origin[c(1:p)])
 # gam.scale <- list(BA ~ s(DSR, bs = "tp", k = 30) + 
 #                       s(FWI, bs = "tp", k = 30) + 
 #                       s(BUI, bs = "tp", k = 30) + 
@@ -630,7 +624,7 @@ ggplot(xi.scenario, aes(x=x)) +
   ylab(expression(xi(c,...,c))) + xlab(expression(c)) + labs(col = "") +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
   geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
-  # geom_ribbon(aes(ymin = evgam.scale.q1, ymax = evgam.scale.q3), fill= "orange", alpha = 0.2) +
+  geom_ribbon(aes(ymin = evgam.scale.q1, ymax = evgam.scale.q3), fill= "orange", alpha = 0.2) +
   geom_line(aes(y=evgam.scale), colour = "orange", linewidth=1, linetype=2) +
   geom_ribbon(aes(ymin = evgam.1.q1, ymax = evgam.1.q3), fill= "purple", alpha = 0.2) +
   geom_line(aes(y=evgam.1), colour = "purple", linewidth=1, linetype=3) +  
@@ -835,6 +829,7 @@ for(i in 1:p){
 
 grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
 
+summary(fit1, par=c("theta_fwi"), probs = c(0.05,0.5, 0.95))$summary
 # saveRDS(data.smooth, file="./BLAST/application/figures/comparison/full_stanfit.rds")
 
 #Predictive Distribution check
