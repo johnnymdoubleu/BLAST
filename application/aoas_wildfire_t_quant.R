@@ -82,14 +82,14 @@ fwi.origin <- data.frame(fwi.origin, time = c(1:length(Y)), BA=Y)
 #                 chain = 3,
 #                 family = asym_laplace())
 
-quant.fit <- qgam(BA ~ s(time, k = 50), data = fwi.origin, qu = 0.95)
+quant.fit <- qgam(BA ~ s(time), data = fwi.origin, qu = 0.975)
 # load("./BLAST/application/quant-time.Rdata")
 # load("./BLAST/application/qgam_5_none.Rdata")
 # load("./BLAST/application/qgam_5_10.Rdata")
 print(plot(quant.fit, allTerms = TRUE), pages = 1)
 quant.viz <- getViz(quant.fit, nsim = 20)
 print(plot(quant.viz))
-check1D(quant.viz, fwi.origin[,4]) + l_gridQCheck1D(qu = 0.95)
+check1D(quant.viz, fwi.origin[,4]) + l_gridQCheck1D(qu = 0.975)
 
 preds <- predict(quant.fit)
 # save(preds, quant.fit, file="./BLAST/application/quant-time.Rdata")
