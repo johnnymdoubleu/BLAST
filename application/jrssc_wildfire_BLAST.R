@@ -425,30 +425,30 @@ alpha.samples <- summary(fit1, par=c("gridalpha"), probs = c(0.05,0.5, 0.95))$su
 # MCMCvis::MCMCplot(fit1, params = "gamma")
 
 
-post.samples <- as.matrix(fit1)
-theta_samples <- post.samples[, grepl("^theta\\[", colnames(post.samples))]
-gamma_samples <- post.samples[, grepl("^gamma\\[", colnames(post.samples))]
-num_draws <- nrow(post.samples)
-p <- length(X_sd)
-psi <- ncol(gamma_samples) / p
-theta_fwi_samples <- matrix(NA, nrow = num_draws, ncol = p)
-fwismooth_samples <- array(NA, dim = c(num_draws, n, p))
+# post.samples <- as.matrix(fit1)
+# theta_samples <- post.samples[, grepl("^theta\\[", colnames(post.samples))]
+# gamma_samples <- post.samples[, grepl("^gamma\\[", colnames(post.samples))]
+# num_draws <- nrow(post.samples)
+# p <- length(X_sd)
+# psi <- ncol(gamma_samples) / p
+# theta_fwi_samples <- matrix(NA, nrow = num_draws, ncol = p)
+# fwismooth_samples <- array(NA, dim = c(num_draws, n, p))
 
-for (s in 1:num_draws) {
-  curr_theta <- theta_samples[s, ]
-  theta_orig_slopes <- curr_theta[2:(p+1)] / X_sd
-  theta_fwi_s <- theta_orig_slopes / fwi.minmax
-  for (j in 1:p) {
-    start_idx <- ((j - 1) * psi) + 1
-    end_idx   <- j * psi
-    curr_gamma_j <- as.matrix(gamma_samples[s, start_idx:end_idx])
+# for (s in 1:num_draws) {
+#   curr_theta <- theta_samples[s, ]
+#   theta_orig_slopes <- curr_theta[2:(p+1)] / X_sd
+#   theta_fwi_s <- theta_orig_slopes / fwi.minmax
+#   for (j in 1:p) {
+#     start_idx <- ((j - 1) * psi) + 1
+#     end_idx   <- j * psi
+#     curr_gamma_j <- as.matrix(gamma_samples[s, start_idx:end_idx])
     
-    nl_part <- xgrid.nonlinear[, start_idx:end_idx] %*% curr_gamma_j
-    l_part  <- (xgrid.linear[, j+1]-fwi.min[j]) * theta_fwi_s[j]
+#     nl_part <- xgrid.nonlinear[, start_idx:end_idx] %*% curr_gamma_j
+#     l_part  <- (xgrid.linear[, j+1]-fwi.min[j]) * theta_fwi_s[j]
     
-    fwismooth_samples[s, , j] <- as.vector(nl_part + l_part)
-  }
-}
+#     fwismooth_samples[s, , j] <- as.vector(nl_part + l_part)
+#   }
+# }
 
 
 
@@ -1023,5 +1023,6 @@ summary(fit1, par=c("theta_fwi"), probs = c(0.05,0.5, 0.95))$summary
 # grid.plt <- grid.arrange(p1, p2, nrow=1)
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_heavytail.pdf"), grid.plt, width=22, height = 7.78)
 fit.log.lik <- extract_log_lik(fit1)
-loo(fit.log.lik, is_method = "sis", cores = 4)
-
+elpd.loo <- loo(fit.log.lik, is_method = "sis", cores = 4)
+elpd.loo
+save(elpd.loo, file = (paste0("./BLAST/application/BLAST_full_",Sys.Date(),"_",psi+2,"_",floor(threshold*100),"quantile_IC.Rdata")))

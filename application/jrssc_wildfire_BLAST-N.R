@@ -689,5 +689,5 @@ for(i in 1:p){
 grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
 
 fit.log.lik <- extract_log_lik(fit1)
-loo(fit.log.lik, is_method = "sis", cores = 4)
-
+elpd.loo <- loo(fit.log.lik, is_method = "sis", cores = 4)
+save(elpd.loo, file = (paste0("./BLAST/application/BRIT_linear_",Sys.Date(),"_",psi,"_",floor(threshold*100),"quantile_IC.Rdata")))
