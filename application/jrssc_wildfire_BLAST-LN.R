@@ -102,10 +102,10 @@ fwi.grid <- data.frame(lapply(fwi.origin[,c(1:p)], function(x) seq(min(x), max(x
 fwi.minmax <- sapply(fwi.origin[,c(1:p)], function(x) max(x)-min(x))
 fwi.min <- sapply(fwi.origin[,c(1:p)], function(x) min(x))
 
-M <- cor(fwi.origin[,c(1:7)])
-corrplot(M, order = 'AOE', type = 'upper', tl.pos = 'tp')
-corrplot(M, add = TRUE, type = 'lower', method = 'number', order = 'AOE',
-         col = 'black', diag = FALSE, tl.pos = 'n', cl.pos = 'n')
+# M <- cor(fwi.origin[,c(1:p)])
+# corrplot(M, order = 'AOE', type = 'upper', tl.pos = 'tp')
+# corrplot(M, add = TRUE, type = 'lower', method = 'number', order = 'AOE',
+#          col = 'black', diag = FALSE, tl.pos = 'n', cl.pos = 'n')
 bs.linear <- model.matrix(~ ., data = data.frame(fwi.scaled))
 covariates <- colnames(fwi.scaled)
 
@@ -115,7 +115,7 @@ xholder <- do.call(cbind, lapply(1:p, function(j) {newx}))
 
 colnames(xholder) <- covariates
 xholder.linear <- model.matrix(~ ., data = data.frame(xholder))
-fwi.grid <- as.data.frame(sapply(fwi.grid, FUN = range01))
+# fwi.grid <- as.data.frame(sapply(fwi.grid, FUN = range01))
 xgrid.linear <- model.matrix(~ ., data = data.frame(fwi.grid))
 xgrid.linear[,-1] <- sweep(xgrid.linear[, -1], 2, fwi.min, "-")
 X_means <- colMeans(bs.linear[,-1])
@@ -126,13 +126,14 @@ model.stan <- "// Stan model for BLAST Linear
 data {
   int <lower=1> n; // Sample size
   int <lower=1> p; // regression coefficient size
-  real <lower=0> u; // large threshold value
+  array[n] real <lower=0> u; // large threshold value
   matrix[n, p] bsLinear; // fwi dataset
-  matrix[n, p] xholderLinear; // fwi dataset
+  matrix[n, p] xholderLinear; 
   matrix[n, p] gridL; // fwi dataset
   array[n] real <lower=u> y; // extreme response
   vector[p] X_means;
   vector[p] X_sd;
+  vector[p] X_minmax;
 }
 
 parameters {
@@ -156,14 +157,8 @@ transformed parameters {
 
 model {
   // likelihood
-  for (i in 1:n){
-    target += pareto_lpdf(y[i] | u, alpha[i]);
-  }
-  target += normal_lpdf(theta[1] | 0, 10);
-  for (j in 1:p){
-    target += gamma_lpdf(lambda1[j] | 0.1, 0.1); 
-    target += double_exponential_lpdf(theta[(j+1)] | 0, 1/(lambda1[j]));
-  }
+  target += pareto_lpdf(y | u, alpha);
+  target += std_normal_lpdf(theta);
 }
 
 generated quantities {
@@ -183,7 +178,7 @@ generated quantities {
   theta_origin[1] = theta[1] - dot_product(X_means, theta_origin[2:(p+1)]);
   for (j in 1:p){
     gridgl[,j] = xholderLinear[,j] * theta_origin[j+1];
-    gridgsmooth[,j] = gridgl[,j]
+    gridgsmooth[,j] = gridgl[,j];
     fwismooth[,j] = gridL[,j] * theta_fwi[j];
   };
 
@@ -194,27 +189,15 @@ generated quantities {
 }
 "
 
-  # for (j in 1:p){
-  #   theta_origin[j+1] = theta[j+1] / (X_max[j]-X_min[j]);
-  # }
-  # theta_origin[1] = theta[1] - dot_product(X_means, theta_origin[2:(p+1)]);
 
+data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi,
+                  bsLinear = bs.linear[,-1], gridL = xgrid.linear[,-1],
+                  xholderLinear = xholder.linear[,-1], 
+                  X_minmax = fwi.minmax, X_means = X_means, X_sd = X_sd)
 
-# cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear[,c(1,2)]) %*% bs.nonlinear[,c((1):(psi))]), "\n")
-# cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear[,c(1,3)]) %*% bs.nonlinear[,c((psi+1):(psi*2))]), "\n")
-# cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear[,c(1,4)]) %*% bs.nonlinear[,c((psi*2+1):(psi*3))]), "\n")
-# cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear[,c(1,5)]) %*% bs.nonlinear[,c((psi*3+1):(psi*4))]), "\n")
-# cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear[,c(1,6)]) %*% bs.nonlinear[,c((psi*4+1):(psi*5))]), "\n")
-# cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear[,c(1,7)]) %*% bs.nonlinear[,c((psi*5+1):(psi*6))]), "\n")
-# cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear[,c(1,8)]) %*% bs.nonlinear[,c((psi*6+1):(psi*7))]), "\n")
-
-data.stan <- list(y = as.vector(y), u = u, p = p, n= n, 
-                  bsLinear = bs.linear[,-1], xholderLinear = xholder.linear[,-1], X_means = X_means, X_sd = X_sd,
-                  gridL = xgrid.linear[,-1])
-
-init.alpha <- list(list(theta = rep(-0.1, (p+1)), lambda1 = rep(0.1,p)),
-                   list(theta = rep(0.05, (p+1)), lambda1 = rep(2,p)),
-                   list(theta = rep(0.1, (p+1)), lambda1 = rep(0.1,p)))
+init.alpha <- list(list(theta = rep(-0.1, (p+1))),
+                   list(theta = rep(0.05, (p+1))),
+                   list(theta = rep(0.1, (p+1))))
 
 fit1 <- stan(
     model_code = model.stan,
@@ -222,13 +205,11 @@ fit1 <- stan(
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value 
     chains = 3,             # number of Markov chains
-    iter = 4000,            # total number of iterations per chain
+    iter = 8000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
     refresh = 1000           # no progress shown
 )
 
-# saveRDS(fit1, file=paste0("./BLAST/application/",Sys.Date(),"_stanfit.rds"))
-# readRDS(file=paste0("./BLAST/application/2024-11-27","_stanfit.rds"))
 posterior <- rstan::extract(fit1)
 bayesplot::color_scheme_set("mix-blue-red")
 bayesplot::mcmc_trace(fit1, pars="lp__") + ylab("") +
@@ -241,11 +222,10 @@ theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summar
 lambda.samples <- summary(fit1, par=c("lambda1"), probs = c(0.05,0.5, 0.95))$summary
 gsmooth.samples <- summary(fit1, par=c("gridgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
 gridgl.samples <- summary(fit1, par=c("gridgl"), probs = c(0.05, 0.5, 0.95))$summary
+fwismooth.samples <- summary(fit1, par=c("fwismooth"), probs = c(0.05, 0.5, 0.95))$summary
 origin.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
 alpha.samples <- summary(fit1, par=c("gridalpha"), probs = c(0.05,0.5, 0.95))$summary
-# yrep <- summary(fit1, par=c("yrep"), probs = c(0.05,0.5, 0.95))$summary
-# f.samples <- summary(fit1, par=c("f"), probs = c(0.05,0.5, 0.95))$summary
-# loglik.samples <- summary(fit1, par=c("log_lik"), probs = c(0.05,0.5, 0.95))$summary
+
 
 MCMCvis::MCMCplot(fit1, params = 'theta')
 
@@ -264,16 +244,14 @@ fwi.smooth.q3 <- as.vector(matrix(fwismooth.samples[,6], nrow = n, byrow=TRUE))
 
 g.min.samples <- min(gsmooth.samples[,4])
 g.max.samples <- max(gsmooth.samples[,6])
+fwi.smooth <- as.data.frame(matrix(fwismooth.samples[,4], nrow = n, byrow=TRUE))
+fwi.min.samples <- sapply(fwi.smooth, min)
 
 data.scenario <- data.frame("x" = newx,
                             "post.mean" = (alpha.samples[,1]),
                             "post.median" = (alpha.samples[,5]),
                             "q1" = (alpha.samples[,4]),
-                            "q3" = (alpha.samples[,6]),
-                            "post.mean.org" = (origin.samples[,1]),
-                            "post.median.org" = (origin.samples[,5]),
-                            "q1.org" = (origin.samples[,4]),
-                            "q3.org" = (origin.samples[,6]))
+                            "q3" = (alpha.samples[,6]))
 
 ggplot(data.scenario, aes(x=x)) + 
   ylab(expression(alpha(c,...,c))) + xlab(expression(c)) + labs(col = "") +
@@ -421,198 +399,36 @@ for(i in 1:p){
 
 grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
 
-# saveRDS(data.smooth, file="./BLAST/application/figures/comparison/full_stanfit.rds")
 
-#Predictive Distribution check
-# y.container <- as.data.frame(matrix(, nrow = n, ncol = 0))  
-# random.alpha.idx <- floor(runif(100, 1, ncol(t(posterior$f))))
-# for(i in random.alpha.idx){
-#   y.container <- cbind(y.container, log(t(posterior$f)[,i]))
-# }
-# colnames(y.container) <- paste("col", 1:100, sep="")
-# y.container$x <- seq(1,n)
-# y.container$logy <- log(y)
-# plt <- ggplot(data = y.container, aes(x = logy)) + ylab("Density") + xlab("log(Burned Area)") + labs(col = "")
-
-# for(i in names(y.container)){
-#   plt <- plt + geom_density(aes(x=.data[[i]]), color = "slategray1", alpha = 0.1, linewidht = 0.7)
-# }
-
-# print(plt + geom_density(aes(x=logy), color = "steelblue", linewidth = 2) +
-#         theme_minimal(base_size = 30) + ylim(0, 1.25) + xlim(7.5,30) +
-#         theme(legend.position = "none",
-#                 axis.text = element_text(size = 35)))
-# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_BLAST_predictive_distribution.pdf"), width=10, height = 7.78)
+data.smooth <- data.frame("x" = as.vector(as.matrix(fwi.grid)),
+                          "true" = as.vector(as.matrix(fwi.origin[,c(1:p)])),
+                          "post.mean" = as.vector(fwi.smooth.mean),
+                          "q1" = as.vector(fwi.smooth.q1),
+                          "q2" = as.vector(fwi.smooth.q2),
+                          "q3" = as.vector(fwi.smooth.q3),
+                          "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)))
 
 
-# extreme.container <- as.data.frame(matrix(, nrow = n, ncol = 3000))
-# for(i in 1:3000){
-#   extreme.container[,i] <- density(log(posterior$f[i,]), n=n)$y
-# }
-# extreme.container <- cbind(extreme.container, t(apply(extreme.container[,1:3000], 1, quantile, c(0.05, .5, .95))))
-# colnames(extreme.container)[(dim(extreme.container)[2]-2):(dim(extreme.container)[2])] <- c("q1","q2","q3")
-# colnames(extreme.container)[1:3000] <- as.character(1:3000)
-# extreme.container$mean <- rowMeans(extreme.container[,1:3000])
-# extreme.container$y <- seq(0, 30, length.out = n)
-# extreme.container <- as.data.frame(extreme.container)
+grid.plts <- list()
+for(i in 1:p){
+  grid.plt <- ggplot(data = data.frame(data.smooth[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + 
+                  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+                  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
+                  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
+                  geom_rug(aes(x=true, y=q2), sides = "b") +
+                  ylab("") + xlab(names(fwi.scaled)[i]) +
+                  scale_fill_manual(values=c("steelblue"), name = "") + 
+                  scale_color_manual(values=c("steelblue")) +
+                  # ylim(fwi.min.samples[i], 7) +
+                  theme_minimal(base_size = 30) +
+                  theme(legend.position = "none",
+                          plot.margin = margin(0,0,0,-20),
+                          axis.text = element_text(size = 35),
+                          axis.title.x = element_text(size = 45))
+  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.grid[which.max(y),i], y=fwi.min.samples[i], color = "red", size = 7)
+}
 
-
-# plt <- ggplot(data = extreme.container, aes(x = y)) + xlab("log(Burned Area)") + ylab("Density")+
-#         geom_line(aes(y=mean), colour = "steelblue", linewidth = 1.5) +
-#         geom_ribbon(aes(ymin = q1, ymax = q3), fill = "steelblue", alpha = 0.2) + 
-#         theme_minimal(base_size = 30) + 
-#         theme(legend.position = "none",
-#               axis.title = element_text(size = 30))
-# d <- ggplot_build(plt)$data[[1]]
-# print(plt + 
-#         geom_segment(x=12.44009, xend=12.44009, 
-#               y=0, yend=approx(x = d$x, y = d$y, xout = 12.4409)$y,
-#               colour="red", linewidth=1.2, linetype = "dotted"))
-# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_post_generative.pdf"), width = 10, height = 7.78)
-
-# random.alpha.idx <- floor(runif(1000, 1, ncol(t(posterior$alpha))))
-# ev.y1 <- ev.y2 <- as.data.frame(matrix(, nrow = 1, ncol = 0))
-# ev.alpha.single <- c()  
-# for(i in random.alpha.idx){
-#   ev.y1 <- rbind(ev.y1, as.numeric(posterior$yrep[i]))
-# }
-# ev.y1 <- as.data.frame(log(ev.y1))
-# ev.y1$logy <- max(log(y))
-# colnames(ev.y1) <- c("yrep", "logy")
-# ev.y1$group <- rep("15th Oct 2017",1000)
-# ggplot(data=ev.y, aes(x=yrep, y = group)) +
-#   ylab("") + 
-#   xlab("log(Burnt Area)") + labs(col = "") +  
-#   stat_slab(scale = 0.6, colour = "steelblue", fill=NA, slab_linewidth = 1.5, trim = FALSE, expand = TRUE, density = "unbounded", subguide="outside", justification = -0.01) +
-#   # stat_spike(aes(linetype = after_stat(at)), at = c("median"), scale=0.7)+
-#   stat_dotsinterval(subguide = 'integer', side = "bottom", scale = 0.6, slab_linewidth = NA, position = "dodge") +
-#   # geom_point(position = position_jitter(seed = 1, height = 0.05), alpha = 0.1) +  
-#   # geom_boxplot(width = 0.2, notch = TRUE, alpha = 0.25, outlier.color = NA) +
-#   geom_vline(xintercept = log(max(y)), linetype="dashed", color = "red",) +
-#   # geom_label(aes(log(max(y)), 1), label = "Target Length", show.legend = FALSE)+
-#   geom_vline(xintercept = log(y[133]), linetype="dashed", color = "black",) +
-#   # geom_label(aes(log(y[133]), 1), label = "Target Length", show.legend = FALSE)+
-#   theme_minimal(base_size = 30) +  
-#   theme(legend.position = "none",
-#         plot.margin = margin(0,0,0,25),
-#         axis.text.y = element_text(angle = 90, size = 15, vjust = 15, hjust = 0.5),
-#         axis.title = element_text(size = 30)) +
-#         annotate(x=(log(max(y))+2), y= 0.1, label = "15th Oct 2017", geom="label") +
-#         annotate(x=(log(y[133])-2), y= 0.1, label = "18th Jun 2017", geom="label")
-# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_BLAST_two_generative.pdf"), width = 10, height = 7.78)
-
-# plt <- ggplot(data = ev.y1, aes(x = yrep)) + ylab("Density") + xlab("log(Burned Area)") + labs(col = "") +
-#   geom_density(color = "steelblue", linewidth = 1.2) + 
-#   geom_rug(alpha = 0.1) + 
-#   xlim(5.5, 40) +
-#   theme_minimal(base_size = 30) +  
-#   theme(legend.position = "none",
-#         axis.title = element_text(size = 30))
-
-# d <- ggplot_build(plt)$data[[1]]
-# print(plt + geom_area(data = subset(d, x>12.44009), aes(x=x,y=y), fill = "slategray1", alpha = 0.5) +
-#         geom_segment(x=12.44009, xend=12.44009, 
-#               y=0, yend=approx(x = d$x, y = d$y, xout = 12.4409)$y,
-#               colour="red", linewidth=1.2, linetype = "dotted"))
-# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_BLAST_generative.pdf"), width = 10, height = 7.78)
-
-# library(ismev)
-# gpd.fit(y-u, u)
-
-# fit.log.lik <- extract_log_lik(fit1)
-# constraint.elpd.loo <- loo(fit.log.lik, is_method = "sis", cores = 2)
-# save(constraint.elpd.loo, constraint.waic, file = (paste0("./BLAST/application/BLAST_constraint_",Sys.Date(),"_",psi,"_",floor(threshold*100),"quantile_IC.Rdata")))
-
-
-# x_data <- sort(Y[Y > 0], decreasing = TRUE)
-# n <- length(x_data)
-# k_range_pick <- 15:500
-# pick_res <- data.frame(k = k_range_pick, xi = NA, lower = NA, upper = NA)
-
-# for(i in seq_along(k_range_pick)) {
-#   k <- k_range_pick[i]
-  
-#   # Quantiles: X_{n-k+1}, X_{n-2k+1}, X_{n-4k+1}
-#   q1 <- x_data[k]
-#   q2 <- x_data[2*k]
-#   q3 <- x_data[4*k]
-  
-#   # 1. Point Estimate
-#   # Formula: (1/ln2) * ln( (q1-q2) / (q2-q3) )
-#   xi_hat <- (1/log(2)) * log((q1 - q2) / (q2 - q3))
-  
-#   # 2. Asymptotic Variance Formula for Pickands
-#   # Var = [ xi^2 * (2^(2xi+1) + 1) ] / [ (2 * (2^xi - 1) * ln2)^2 ]
-#   # Handle the xi=0 case to prevent division by zero (limit is approx 3.24)
-#   if(abs(xi_hat) < 1e-6) {
-#     asy_var <- 3.24 # Approx limit
-#   } else {
-#     num <- (xi_hat^2) * ((2^(2*xi_hat + 1)) + 1)
-#     den <- (2 * (2^xi_hat - 1) * log(2))^2
-#     asy_var <- num / den
-#   }
-  
-#   # Standard Error = sqrt(Var / k)
-#   se <- sqrt(asy_var / k)
-  
-#   pick_res$xi[i] <- xi_hat
-#   pick_res$lower[i] <- xi_hat - 1.96 * se
-#   pick_res$upper[i] <- xi_hat + 1.96 * se
-# }
-
-# # --- 3. MOMENT (DedH) ESTIMATOR ---
-# # Constraint: Uses all k up to n-1
-# k_range_mom <- 15:500
-# mom_res <- data.frame(k = k_range_mom, xi = NA, lower = NA, upper = NA)
-
-# for(i in seq_along(k_range_mom)) {
-#   k <- k_range_mom[i]
-#   y_k <- x_data[1:k]
-  
-#   # 1. Point Estimate
-#   log_excess <- log(y_k) - log(x_data[k+1])
-#   M1 <- mean(log_excess)
-#   M2 <- mean(log_excess^2)
-  
-#   xi_hat <- M1 + 1 - 0.5 * (1 - (M1^2 / M2))^(-1)
-  
-#   # 2. Asymptotic Variance (for xi > 0)
-#   # Var = 1 + xi^2
-#   asy_var <- 1 + xi_hat^2
-#   se <- sqrt(asy_var / k)
-  
-#   mom_res$xi[i] <- xi_hat
-#   mom_res$lower[i] <- xi_hat - 1.96 * se
-#   mom_res$upper[i] <- xi_hat + 1.96 * se
-# }
-
-
-# p1 <- ggplot(pick_res, aes(x=k, y=xi)) +
-#   geom_ribbon(aes(ymin=lower, ymax=upper), fill="darkgreen", alpha=0.2) +
-#   geom_line(color="darkgreen", linewidth=1) +
-#   geom_hline(yintercept = 0, linetype="dashed") +
-#   coord_cartesian(ylim=c(-0.15, 1.5)) + # Zoom to relevant range
-#   labs(title="Pickands Estimator", 
-#        y="Extreme Value Index") +
-#   theme_minimal(base_size = 30) + ylim(-10,10) +
-#   theme(legend.position = "none",
-#           axis.text = element_text(size = 35),
-#           axis.title.x = element_text(size = 45))
-
-# p2 <- ggplot(mom_res, aes(x=k, y=xi)) +
-#   geom_ribbon(aes(ymin=lower, ymax=upper), fill="purple", alpha=0.2) +
-#   geom_line(color="purple", linewidth=1) +
-#   geom_hline(yintercept = 0, linetype="dashed") +
-#   coord_cartesian(ylim=c(-0.15, 1.5)) + 
-#   labs(title="Moment Estimator", y="") +
-#   theme_minimal(base_size = 30) + ylim(0, 2) +
-#   theme(legend.position = "none",
-#           axis.text = element_text(size = 35),
-#           axis.text.y = element_blank(),
-#           axis.title.x = element_text(size = 45))
-
-# grid.plt <- grid.arrange(p1, p2, nrow=1)
-# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_heavytail.pdf"), grid.plt, width=22, height = 7.78)
+grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
 
 fit.log.lik <- extract_log_lik(fit1)
 loo(fit.log.lik, is_method = "sis", cores = 4)

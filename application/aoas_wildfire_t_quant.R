@@ -15,6 +15,7 @@ library(quantreg)
 library(qgam)
 library(mgcViz)
 library(brms)
+library(evgam)
 options(mc.cores = parallel::detectCores())
 
 # Structure of the FWI System
@@ -82,7 +83,14 @@ fwi.origin <- data.frame(fwi.origin, time = c(1:length(Y)), BA=Y)
 #                 chain = 3,
 #                 family = asym_laplace())
 
-quant.fit <- qgam(BA ~ s(time), data = fwi.origin, qu = 0.975)
+# evgam.time <- BA ~ s(time, k = 30)
+# ald.time.fit <- evgam(evgam.time, data = fwi.origin, family = "ald", ald.args=list(tau = 0.975))
+# evgam.cov <- BA ~ s(BUI, k = 30) + s(ISI, k = 30) + s(FFMC, k = 30) + s(DMC, k = 30) + s(DC, k = 30)
+# ald.cov.fit <- evgam(evgam.cov, data = fwi.origin, family = "ald", ald.args=list(tau = 0.975))
+# save(ald.time.fit, ald.cov.fit, flle="quant-evgam.Rdata")
+
+
+quant.fit <- qgam(BA ~ s(time,k=30), data = fwi.origin, qu = 0.975)
 # load("./BLAST/application/quant-time.Rdata")
 # load("./BLAST/application/qgam_5_none.Rdata")
 # load("./BLAST/application/qgam_5_10.Rdata")
@@ -138,6 +146,7 @@ df_seasonal <- df_seasonal %>%
 ggplot(plot_data, aes(x = Label, y = Q975, group = 1)) +
 # ggplot(df_seasonal, aes(x = Label, y = BA, group = 1)) +
   geom_line(color = "steelblue", linewidth = 1) +
+  geom_hline(aes(yintercept=quantile(Y,0.975)), linetype="dashed") +
   geom_point(aes(color = Season), size = 3) +
   scale_color_manual(values = c(
     "Summer" = "orange", 

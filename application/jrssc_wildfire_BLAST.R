@@ -30,7 +30,7 @@ missing.values <- which(!is.na(df.long$measurement))
 #considering the case of leap year, the missing values are the 29th of Feb
 #Thus, each year consist of 366 data with either 1 or 0 missing value.
 Y <- df.long$measurement[!is.na(df.long$measurement)]
-psi.origin <- psi <- 15
+psi.origin <- psi <- 30
 threshold <- 0.975
 
 multiplesheets <- function(fname) {
@@ -61,10 +61,10 @@ for(i in 1:length(cov)){
     fwi.scaled[,i] <- cov.long$measurement[missing.values]
 }
 
-era5 <- read_excel("./BLAST/application/ERA_5.xlsx")
-era5 <- era5[era5$year>1979,]
-era5 <- era5[!(era5$year == 1999 & era5$month == 2 & era5$day == 14), ]
-fwi.index$ERA5 <- fwi.scaled$ERA5 <- as.numeric(era5$ERA_5)
+# era5 <- read_excel("./BLAST/application/ERA_5.xlsx")
+# era5 <- era5[era5$year>1979,]
+# era5 <- era5[!(era5$year == 1999 & era5$month == 2 & era5$day == 14), ]
+# fwi.index$ERA5 <- fwi.scaled$ERA5 <- as.numeric(era5$ERA_5)
 
 fwi.index$date <- substr(cov.long$...1[missing.values],9,10)
 fwi.index$month <- factor(format(as.Date(substr(cov.long$...1[missing.values],1,10), "%Y-%m-%d"),"%b"),
@@ -80,8 +80,6 @@ load("./BLAST/application/quant-t_10.Rdata")
 # load("./BLAST/application/qgam_5_10.Rdata")
 preds <- predict(quant.fit)
 # u <- rep(quantile(Y, threshold),ceiling(nrow(fwi.index)*(1-threshold)))
-# excess <- which(Y>u)
-# u <- quantile(preds, threshold)
 # excess <- which(Y>u)
 excess <- which(Y>preds)
 u <- preds[excess]
@@ -261,6 +259,7 @@ for (i in seq_along(covariates)) {
 xgrid.nonlinear <- do.call(cbind, grid_Z_list)
 # fwi.grid <- as.data.frame(sapply(fwi.grid, FUN = range01))
 xgrid.linear <- model.matrix(~ ., data = data.frame(fwi.grid))
+xgrid.linear[,-1] <- sweep(xgrid.linear[, -1], 2, fwi.min, "-")
 X_means <- colMeans(bs.linear[,-1])
 X_sd   <- apply(bs.linear[,-1], 2, sd)
 bs.linear[,-1] <- scale(bs.linear[,-1], center = X_means, scale = X_sd)
@@ -344,8 +343,6 @@ generated quantities {
   vector[p+1] theta_origin;
   vector[p] theta_fwi;
 
-  // theta_origin[2:(p+1)] = R_inv * theta[2:(p+1)]
-  // theta_origin[1] = theta[1]
   for (j in 1:p){
     theta_origin[j+1] = theta[j+1] / X_sd[j];
     theta_fwi[j] = theta_origin[j+1] / X_minmax[j];
@@ -361,7 +358,6 @@ generated quantities {
   for (i in 1:n){
     gridalpha[i] = exp(theta_origin[1] + sum(gridgsmooth[i,]));
     log_lik[i] = pareto_lpdf(y[i] | u[i], alpha[i]);
-    // log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
   };
 }
 "
@@ -411,12 +407,12 @@ fit1 <- stan(
 # saveRDS(fit1, file=paste0("./BLAST/application/",Sys.Date(),"_stanfit.rds"))
 # readRDS(file=paste0("./BLAST/application/2024-11-27","_stanfit.rds"))
 posterior <- rstan::extract(fit1)
-bayesplot::color_scheme_set("mix-blue-red")
-bayesplot::mcmc_trace(fit1, pars="lp__") + ylab("") +
-  theme_minimal(base_size = 30) +
-  theme(legend.position = "none",
-        strip.text = element_blank(),
-        axis.text = element_text(size = 18))
+# bayesplot::color_scheme_set("mix-blue-red")
+# bayesplot::mcmc_trace(fit1, pars="lp__") + ylab("") +
+#   theme_minimal(base_size = 30) +
+#   theme(legend.position = "none",
+#         strip.text = element_blank(),
+#         axis.text = element_text(size = 18))
 
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
@@ -431,8 +427,36 @@ alpha.samples <- summary(fit1, par=c("gridalpha"), probs = c(0.05,0.5, 0.95))$su
 # f.samples <- summary(fit1, par=c("f"), probs = c(0.05,0.5, 0.95))$summary
 # loglik.samples <- summary(fit1, par=c("log_lik"), probs = c(0.05,0.5, 0.95))$summary
 
-MCMCvis::MCMCplot(fit1, params = 'theta')
-MCMCvis::MCMCplot(fit1, params = "gamma")
+# MCMCvis::MCMCplot(fit1, params = 'theta')
+# MCMCvis::MCMCplot(fit1, params = "gamma")
+
+
+post.samples <- as.matrix(fit1)
+theta_samples <- post.samples[, grepl("^theta\\[", colnames(post.samples))]
+gamma_samples <- post.samples[, grepl("^gamma\\[", colnames(post.samples))]
+num_draws <- nrow(post.samples)
+p <- length(X_sd)
+psi <- ncol(gamma_samples) / p
+theta_fwi_samples <- matrix(NA, nrow = num_draws, ncol = p)
+fwismooth_samples <- array(NA, dim = c(num_draws, n, p))
+
+for (s in 1:num_draws) {
+  curr_theta <- theta_samples[s, ]
+  theta_orig_slopes <- curr_theta[2:(p+1)] / X_sd
+  theta_fwi_s <- theta_orig_slopes / fwi.minmax
+  for (j in 1:p) {
+    start_idx <- ((j - 1) * psi) + 1
+    end_idx   <- j * psi
+    curr_gamma_j <- as.matrix(gamma_samples[s, start_idx:end_idx])
+    
+    nl_part <- xgrid.nonlinear[, start_idx:end_idx] %*% curr_gamma_j
+    l_part  <- (xgrid.linear[, j+1]-fwi.min[j]) * theta_fwi_s[j]
+    
+    fwismooth_samples[s, , j] <- as.vector(nl_part + l_part)
+  }
+}
+
+
 
 g.smooth.mean <- as.vector(matrix(gsmooth.samples[,1], nrow = n, byrow=TRUE))
 g.smooth.q1 <- as.vector(matrix(gsmooth.samples[,4], nrow = n, byrow=TRUE))
@@ -450,9 +474,14 @@ fwi.smooth.mean <- as.vector(matrix(fwismooth.samples[,1], nrow = n, byrow=TRUE)
 fwi.smooth.q1 <- as.vector(matrix(fwismooth.samples[,4], nrow = n, byrow=TRUE))
 fwi.smooth.q2 <- as.vector(matrix(fwismooth.samples[,5], nrow = n, byrow=TRUE))
 fwi.smooth.q3 <- as.vector(matrix(fwismooth.samples[,6], nrow = n, byrow=TRUE))
+# fwi.smooth.mean <- as.vector(apply(fwismooth_samples, c(2, 3), mean))
+# fwi.smooth.q2 <- as.vector(apply(fwismooth_samples, c(2, 3), median))
+# fwi.smooth.q1 <- as.vector(apply(fwismooth_samples, c(2, 3), quantile, probs = 0.05))
+# fwi.smooth.q3 <- as.vector(apply(fwismooth_samples, c(2, 3), quantile, probs = 0.95))
 
 g.min.samples <- min(gsmooth.samples[,4])
 g.max.samples <- max(gsmooth.samples[,6])
+# fwi.smooth <- as.data.frame(apply(fwismooth_samples, c(2, 3), quantile, probs = 0.05))
 fwi.smooth <- as.data.frame(matrix(fwismooth.samples[,4], nrow = n, byrow=TRUE))
 fwi.min.samples <- sapply(fwi.smooth, min)
 # data.smooth <- data.frame("x"= as.vector(xholder),
@@ -483,41 +512,37 @@ fwi.min.samples <- sapply(fwi.smooth, min)
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=12.5, height = 15)
 xholder <- as.data.frame(xholder)
 colnames(xholder) <- colnames(fwi.scaled)[1:p]
-simul.data <- data.frame(y = y-u, fwi.scaled[,c(1:p)])
-# gam.scale <- list(y ~ s(DSR, bs = "tp", k = 15) + 
-#                       s(FWI, bs = "tp", k = 15) + 
-#                       s(BUI, bs = "tp", k = 15) + 
-#                       s(ISI, bs = "tp", k = 15) + 
-#                       s(FFMC, bs = "tp", k = 15) +
-#                       s(DMC, bs = "tp", k = 15) + 
-#                       # s(DC, bs = "tp", k = 15),
-#                       s(DC, bs = "tp", k = 15) + 
-#                       s(ERA5, bs = "tp", k = 15),
-#                     ~ s(DSR, bs = "tp", k = 15) + 
-#                       s(FWI, bs = "tp", k = 15) + 
-#                       s(BUI, bs = "tp", k = 15) + 
-#                       s(ISI, bs = "tp", k = 15) + 
-#                       s(FFMC, bs = "tp", k = 15) +
-#                       s(DMC, bs = "tp", k = 15) + 
-#                       # s(DC, bs = "tp", k = 15)) 
-#                       s(DC, bs = "tp", k = 15) + 
-#                       s(ERA5, bs = "tp", k = 15))
-gam.scale <- list(y ~ s(BUI, bs = "tp", k = 15) + 
-                      s(ISI, bs = "tp", k = 15) + 
-                      s(FFMC, bs = "tp", k = 15) +
-                      s(DMC, bs = "tp", k = 15) + 
-                      # s(DC, bs = "tp", k = 30),
-                      s(DC, bs = "tp", k = 15) +
-                      s(ERA5, bs = "tp", k = 15),
-                    ~ s(BUI, bs = "tp", k = 15) + 
-                      s(ISI, bs = "tp", k = 15) + 
-                      s(FFMC, bs = "tp", k = 15) +
-                      s(DMC, bs = "tp", k = 15) +
-                      # s(DC, bs = "tp", k = 30))
-                      s(DC, bs = "tp", k = 15) +
-                      s(ERA5, bs = "tp", k=15))
+simul.data <- data.frame(BA = y-u, fwi.origin[c(1:p)])
+# gam.scale <- list(BA ~ s(DSR, bs = "tp", k = 30) + 
+#                       s(FWI, bs = "tp", k = 30) + 
+#                       s(BUI, bs = "tp", k = 30) + 
+#                       s(ISI, bs = "tp", k = 30) + 
+#                       s(FFMC, bs = "tp", k = 30) +
+#                       s(DMC, bs = "tp", k = 30) + 
+#                       s(DC, bs = "tp", k = 30),
+#                     ~ s(DSR, bs = "tp", k = 30) + 
+#                       s(FWI, bs = "tp", k = 30) + 
+#                       s(BUI, bs = "tp", k = 30) + 
+#                       s(ISI, bs = "tp", k = 30) + 
+#                       s(FFMC, bs = "tp", k = 30) +
+#                       s(DMC, bs = "tp", k = 30) +
+#                       s(DC, bs = "tp", k = 30))
+gam.scale <- list(BA ~ s(BUI, bs = "tp", k = 30) + 
+                      s(ISI, bs = "tp", k = 30) + 
+                      s(FFMC, bs = "tp", k = 30) +
+                      s(DMC, bs = "tp", k = 30) + 
+                      s(DC, bs = "tp", k = 30),
+                    ~ s(BUI, bs = "tp", k = 30) + 
+                      s(ISI, bs = "tp", k = 30) + 
+                      s(FFMC, bs = "tp", k = 30) +
+                      s(DMC, bs = "tp", k = 30) +
+                      s(DC, bs = "tp", k = 30))
 evgam.fit.scale <- evgam::evgam(gam.scale, data = simul.data, family = "gpd")
-xi.pred.scale <-predict(evgam.fit.scale, newdata = xholder, type="response")$shape
+pred.scale <- predict(evgam.fit.scale, newdata = xholder, type="response", se.fit = TRUE)
+xi.pred.scale <-pred.scale$fitted$shape
+xi.se.scale <- pred.scale$se.fit$shape
+xi.low.scale <- xi.pred.scale - (1.96 * xi.se.scale)
+xi.high.scale <- xi.pred.scale + (1.96 * xi.se.scale)
 alpha.pred.scale <- 1/xi.pred.scale
 
 # xholder.basis.scale <- predict(evgam.fit.scale, newdata = xholder, type= "lpmatrix")$shape
@@ -531,26 +556,27 @@ alpha.pred.scale <- 1/xi.pred.scale
 #   alpha.nonlinear.scale[,j] <- 1/(xi.nonlinear.scale[,j])
 # }
 
-# gam.1 <- list(y ~ 1,
-#                 ~ s(DSR, bs = "tp", k = 15) + 
-#                     s(FWI, bs = "tp", k = 15) + 
-#                     s(BUI, bs = "tp", k = 15) + 
-#                     s(ISI, bs = "tp", k = 15) + 
-#                     s(FFMC, bs = "tp", k = 15) +
-#                     s(DMC, bs = "tp", k = 15) + 
-#                     # s(DC, bs = "tp", k = 15)) 
-#                     s(DC, bs = "tp", k = 15) +
-#                     s(ERA5, bs = "tp", k = 15))
-gam.1 <- list(y ~ 1,
-                ~ s(BUI, bs = "tp", k = 15) + 
-                  s(ISI, bs = "tp", k = 15) + 
-                  s(FFMC, bs = "tp", k = 15) +
-                  s(DMC, bs = "tp", k = 15) +
-                  # s(DC, bs = "tp", k = 30)) 
-                  s(DC, bs = "tp", k = 15) +
-                  s(ERA5, bs = "tp", k = 15))
+# gam.1 <- list(BA ~ 1,
+#                 ~ s(DSR, bs = "tp", k = 30) + 
+#                     s(FWI, bs = "tp", k = 30) + 
+#                     s(BUI, bs = "tp", k = 30) + 
+#                     s(ISI, bs = "tp", k = 30) + 
+#                     s(FFMC, bs = "tp", k = 30) +
+#                     s(DMC, bs = "tp", k = 30) + 
+#                     s(DC, bs = "tp", k = 30)) 
+
+gam.1 <- list(BA ~ 1,
+                ~ s(BUI, bs = "tp", k = 30) + 
+                  s(ISI, bs = "tp", k = 30) + 
+                  s(FFMC, bs = "tp", k = 30) +
+                  s(DMC, bs = "tp", k = 30) +
+                  s(DC, bs = "tp", k = 30))
 evgam.fit.1 <- evgam::evgam(gam.1, data = simul.data, family = "gpd")
-xi.pred.1 <-predict(evgam.fit.1, newdata = xholder, type="response")$shape
+pred.1 <- predict(evgam.fit.1, newdata = xholder, type="response", se.fit = TRUE)
+xi.pred.1 <-pred.1$fitted$shape
+xi.se.1 <- pred.1$se.fit$shape
+xi.low.1 <- xi.pred.1 - (1.96 * xi.se.1)
+xi.high.1 <- xi.pred.1 + (1.96 * xi.se.1)
 alpha.pred.1 <- 1/xi.pred.1
 
 # xholder.basis.1 <- predict(evgam.fit.1, newdata = xholder, type= "lpmatrix")$shape
@@ -563,15 +589,11 @@ alpha.pred.1 <- 1/xi.pred.1
 #   alpha.nonlinear.1[,j] <- 1/(xi.nonlinear.1[,j])
 # }
 
-
-
 data.scenario <- data.frame("x" = newx,
                             "post.mean" = (alpha.samples[,1]),
                             "post.median" = (alpha.samples[,5]),
                             "q1" = (alpha.samples[,4]),
                             "q3" = (alpha.samples[,6]),
-                            "evgam.1" = alpha.pred.1,
-                            "evgam.scale" = alpha.pred.scale,
                             "post.mean.org" = (origin.samples[,1]),
                             "post.median.org" = (origin.samples[,5]),
                             "q1.org" = (origin.samples[,4]),
@@ -598,13 +620,19 @@ xi.scenario <- data.frame("x" = newx,
                             "q1" = (1/alpha.samples[,4]),
                             "q3" = (1/alpha.samples[,6]),
                             "evgam.1" = xi.pred.1,
+                            "evgam.1.q1" = xi.low.1,
+                            "evgam.1.q3" = xi.high.1,
+                            "evgam.scale.q1" = xi.low.scale,
+                            "evgam.scale.q3" = xi.high.scale,
                             "evgam.scale" = xi.pred.scale)
 
 ggplot(xi.scenario, aes(x=x)) + 
   ylab(expression(xi(c,...,c))) + xlab(expression(c)) + labs(col = "") +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
   geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
+  # geom_ribbon(aes(ymin = evgam.scale.q1, ymax = evgam.scale.q3), fill= "orange", alpha = 0.2) +
   geom_line(aes(y=evgam.scale), colour = "orange", linewidth=1, linetype=2) +
+  geom_ribbon(aes(ymin = evgam.1.q1, ymax = evgam.1.q3), fill= "purple", alpha = 0.2) +
   geom_line(aes(y=evgam.1), colour = "purple", linewidth=1, linetype=3) +  
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values = c("steelblue")) + 
@@ -796,7 +824,7 @@ for(i in 1:p){
                   ylab("") + xlab(names(fwi.scaled)[i]) +
                   scale_fill_manual(values=c("steelblue"), name = "") + 
                   scale_color_manual(values=c("steelblue")) +
-                  ylim(fwi.min.samples[i], 7) +
+                  # ylim(fwi.min.samples[i], 7) +
                   theme_minimal(base_size = 30) +
                   theme(legend.position = "none",
                           plot.margin = margin(0,0,0,-20),
