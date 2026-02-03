@@ -15,10 +15,10 @@ elpd.loo.full.30 <- elpd.loo
 load(paste0("./BLAST/application/BLAST_linear_",date,"_",30,"_",floor(threshold*100),"quantile_IC.Rdata"))
 elpd.loo.linear <- elpd.loo
 load(paste0("./BLAST/application/BHST_full_",date,"_",30,"_",floor(threshold*100),"quantile_IC.Rdata"))
-constraint.elpd.loo.30 <- elpd.loo
+elpd.loo.hs <- elpd.loo
 
 
-compare <- loo_compare(constraint.elpd.loo.10, constraint.elpd.loo.20,constraint.elpd.loo.30, brtir.elpd.loo)
+compare <- loo_compare(elpd.loo.full.30, elpd.loo.linear, elpd.loo.hs)
 print(compare, simplify = FALSE)
 
 # threshold <- 0.99
