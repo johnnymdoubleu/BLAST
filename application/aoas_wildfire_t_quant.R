@@ -82,8 +82,10 @@ fwi.origin <- data.frame(fwi.origin, time = c(1:length(Y)), BA=Y)
 #                 chain = 3,
 #                 family = asym_laplace())
 
-quant.fit <- qgam(BA ~ s(time), data = fwi.origin, qu = 0.975)
+quant.fit <- qgam(BA ~ s(time, k = 50), data = fwi.origin, qu = 0.95)
 # load("./BLAST/application/quant-time.Rdata")
+# load("./BLAST/application/qgam_5_none.Rdata")
+# load("./BLAST/application/qgam_5_10.Rdata")
 print(plot(quant.fit, allTerms = TRUE), pages = 1)
 quant.viz <- getViz(quant.fit, nsim = 20)
 print(plot(quant.viz))
@@ -212,6 +214,6 @@ df_final <- df_seasonal %>%
 
 fwi.dd <- df_final %>% mutate(excess = BA > origin_Model_Smooth_975)
 tail(fwi.dd[which(fwi.dd$excess==TRUE),])
-# save(preds, quant.fit,fwi.dd, file="./BLAST/application/quant-t_10.Rdata")
+# save(preds, quant.fit,fwi.dd, file="./BLAST/application/quant-t_50.Rdata")
 
 length(which(fwi.dd$excess==TRUE))
