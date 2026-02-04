@@ -87,8 +87,11 @@ fwi.origin <- data.frame(fwi.origin, time = c(1:length(Y)), BA=Y)
 # ald.time.fit <- evgam(evgam.time, data = fwi.origin, family = "ald", ald.args=list(tau = 0.975))
 # evgam.cov <- BA ~ s(BUI, k = 30) + s(ISI, k = 30) + s(FFMC, k = 30) + s(DMC, k = 30) + s(DC, k = 30)
 # ald.cov.fit <- evgam(evgam.cov, data = fwi.origin, family = "ald", ald.args=list(tau = 0.975))
-# save(ald.time.fit, ald.cov.fit, flle="quant-evgam.Rdata")
-
+# save(ald.time.fit, ald.cov.fit, file="quant-evgam.Rdata")
+# load("./BLAST/application/quant-evgam.Rdata")
+evgam.cov.pred <- predict(ald.cov.fit, type = "response")$location
+evgam.time.pred <- predict(ald.time.fit, type = "response")$location
+save(ald.time.fit, ald.cov.fit, evgam.cov.pred, evgam.time.pred, file="./BLAST/application/quant-evgam.Rdata")
 
 quant.fit <- qgam(BA ~ s(time,k=30), data = fwi.origin, qu = 0.975)
 # load("./BLAST/application/quant-time.Rdata")

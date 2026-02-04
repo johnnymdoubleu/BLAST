@@ -1,47 +1,25 @@
 library(loo)
 setwd("C:/Users/Johnny Lee/Documents/GitHub")
 threshold <- 0.97
-date <- "2026-02-03"
-# load(paste0("./BLAST/application/BRTIR_",date,"_",floor(threshold*100),"quantile_IC.Rdata"))
-# load(paste0("./BRSTIR/application/BRSTIR_",Sys.Date(),"_",floor(threshold*100),"quantile_IC.Rdata"))
-# load(paste0("./BRSTIR/application/BRSTIR_constraint_",date,"_",5,"_",floor(threshold*100),"quantile_IC.Rdata"))
-# constraint.elpd.loo.5 <- constraint.elpd.loo
-# load(paste0("./BRSTIR/application/BRSTIR_constraint_",date,"_",10,"_",floor(threshold*100),"quantile_IC.Rdata"))
-# constraint.elpd.loo.10 <- constraint.elpd.loo
-# load(paste0("./BRSTIR/application/BRSTIR_constraint_",date,"_",20,"_",floor(threshold*100),"quantile_IC.Rdata"))
-# constraint.elpd.loo.20 <- constraint.elpd.loo
-load(paste0("./BLAST/application/BLAST_full_",date,"_",30,"_",floor(threshold*100),"quantile_IC.Rdata"))
+date <- "2026-02-04"
+method <- "static"
+
+load(paste0("./BLAST/application/BLAST_full_",date,"_",30,"_",floor(threshold*100),"quantile_IC_", method ,".Rdata"))
 elpd.loo.full.30 <- elpd.loo
-load(paste0("./BLAST/application/BLAST_linear_",date,"_",30,"_",floor(threshold*100),"quantile_IC.Rdata"))
+load(paste0("./BLAST/application/BLAST_linear_",date,"_",30,"_",floor(threshold*100),"quantile_IC_", method ,".Rdata"))
 elpd.loo.linear <- elpd.loo
-load(paste0("./BLAST/application/BHST_full_",date,"_",30,"_",floor(threshold*100),"quantile_IC.Rdata"))
+load(paste0("./BLAST/application/BHST_full_",date,"_",30,"_",floor(threshold*100),"quantile_IC_", method ,".Rdata"))
 elpd.loo.hs <- elpd.loo
+load(paste0("./BLAST/application/BRIT_full_",date,"_",30,"_",floor(threshold*100),"quantile_IC_", method ,".Rdata"))
+elpd.loo.ridge.full <- elpd.loo
+load(paste0("./BLAST/application/BRIT_linear_",date,"_",30,"_",floor(threshold*100),"quantile_IC_", method ,".Rdata"))
+elpd.loo.ridge.linear <- elpd.loo
 
 
-compare <- loo_compare(elpd.loo.full.30, elpd.loo.linear, elpd.loo.hs)
+compare <- loo_compare(list(BLAST_full = elpd.loo.full.30, 
+                            BLAST_linear=elpd.loo.linear, 
+                            BHST_full = elpd.loo.hs,
+                            BRIT_full = elpd.loo.ridge.full,
+                            BRIT_linear = elpd.loo.ridge.linear))
 print(compare, simplify = FALSE)
 
-# threshold <- 0.99
-# date <- "2024-06-06"
-# load(paste0("./BRSTIR/application/BRTIR_",date,"_",floor(threshold*100),"quantile_time_IC.Rdata"))
-# load(paste0("./BRSTIR/application/BRSTIR_",Sys.Date(),"_",floor(threshold*100),"quantile_IC.Rdata"))
-# load(paste0("./BRSTIR/application/BRSTIR_constraint_",date,"_",5,"_",floor(threshold*100),"quantile_IC.Rdata"))
-# constraint.elpd.loo.5 <- constraint.elpd.loo
-# load(paste0("./BRSTIR/application/BRSTIR_constraint_",date,"_",10,"_",floor(threshold*100),"quantile_time_IC.Rdata"))
-# constraint.elpd.loo.10 <- constraint.elpd.loo
-# load(paste0("./BRSTIR/application/BRSTIR_constraint_",date,"_",20,"_",floor(threshold*100),"quantile_time_IC.Rdata"))
-# constraint.elpd.loo.20 <- constraint.elpd.loo
-# load(paste0("./BRSTIR/application/BRSTIR_constraint_",date,"_",30,"_",floor(threshold*100),"quantile_time_IC.Rdata"))
-# constraint.elpd.loo.30 <- constraint.elpd.loo
-# load(paste0("./BRSTIR/application/BRSTIR_constraint_",date,"_",40,"_",floor(threshold*100),"quantile_IC.Rdata"))
-# constraint.elpd.loo.40 <- constraint.elpd.loo
-
-
-# compare <- loo_compare(constraint.elpd.loo.10, constraint.elpd.loo.20,constraint.elpd.loo.30, brtir.elpd.loo)
-print(compare, simplify = FALSE)
-
-# loo_compare(brtir.elpd.loo, brstir.elpd.loo)
-# loo_compare(brtir.waic, brstir.waic)
-# loo_compare(constraint.waic, brstir.waic)
-# compare <- loo_compare(constraint.elpd.loo.10, constraint.elpd.loo.20)
-# print(compare, simplify = FALSE)

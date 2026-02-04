@@ -78,11 +78,11 @@ fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 # load("./BLAST/application/quant-t.Rdata")
 load("./BLAST/application/quant-t_10.Rdata")
 # load("./BLAST/application/qgam_5_10.Rdata")
-preds <- predict(quant.fit)
-# u <- rep(quantile(Y, threshold),ceiling(nrow(fwi.index)*(1-threshold)))
-# excess <- which(Y>u)
-excess <- which(Y>preds)
-u <- preds[excess]
+# preds <- predict(quant.fit)
+u <- rep(quantile(Y, threshold),ceiling(nrow(fwi.index)*(1-threshold)))
+excess <- which(Y>u)
+# excess <- which(Y>preds)
+# u <- preds[excess]
 # excess <- which(fwi.dd$excess==TRUE)
 # u <- fwi.dd$origin_Model_Smooth_975[excess]
 y <- Y[excess]
@@ -498,6 +498,25 @@ ggplot(data.scenario, aes(x=x)) +
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_alpha.pdf"), width=10, height = 7.78)
 
 
+xi.scenario <- data.frame("x" = newx,
+                            "post.mean" = (1/alpha.samples[,1]),
+                            "post.median" = (1/alpha.samples[,5]),
+                            "q1" = (1/alpha.samples[,4]),
+                            "q3" = (1/alpha.samples[,6]))
+
+ggplot(xi.scenario, aes(x=x)) + 
+  ylab(expression(xi(c,...,c))) + xlab(expression(c)) + labs(col = "") +
+  geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
+  geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
+  scale_fill_manual(values=c("steelblue"), name = "") +
+  scale_color_manual(values = c("steelblue")) + 
+  guides(color = guide_legend(order = 2), 
+          fill = guide_legend(order = 1)) +
+  theme_minimal(base_size = 30) +
+  theme(legend.position = "none",
+        strip.text = element_blank(),
+        axis.text = element_text(size = 20))
+
 T <- 100
 len <- dim(posterior$alpha)[1]
 posterior_idx <- sample(1:len, T, replace = TRUE)
@@ -677,7 +696,7 @@ for(i in 1:p){
                   ylab("") + xlab(names(fwi.scaled)[i]) +
                   scale_fill_manual(values=c("steelblue"), name = "") + 
                   scale_color_manual(values=c("steelblue")) +
-                  ylim(fwi.min.samples[i], 7) +
+                  # ylim(fwi.min.samples[i], 7) +
                   theme_minimal(base_size = 30) +
                   theme(legend.position = "none",
                           plot.margin = margin(0,0,0,-20),
@@ -690,4 +709,5 @@ grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
 
 fit.log.lik <- extract_log_lik(fit1)
 elpd.loo <- loo(fit.log.lik, is_method = "sis", cores = 4)
-save(elpd.loo, file = (paste0("./BLAST/application/BRIT_linear_",Sys.Date(),"_",psi,"_",floor(threshold*100),"quantile_IC.Rdata")))
+elpd.loo
+save(elpd.loo, file = (paste0("./BLAST/application/BRIT_full_",Sys.Date(),"_",psi+2,"_",floor(threshold*100),"quantile_IC.Rdata")))

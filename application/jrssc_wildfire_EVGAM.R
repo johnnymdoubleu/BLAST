@@ -60,8 +60,9 @@ fwi.index$month <- factor(format(as.Date(substr(cov.long$...1[missing.values],1,
 fwi.index$date <- as.numeric(fwi.index$date)
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 
-# fwi.index <- fwi.index[which(Y>1),]
-load("./BLAST/application/quant-time.Rdata")
+# load("./BLAST/application/quant-evgam.Rdata")
+
+# load("./BLAST/application/quant-time.Rdata")
 u <- quantile(Y, threshold)
 excess <- which(Y>u)
 # excess <- which(Y>preds)

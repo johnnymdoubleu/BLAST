@@ -72,19 +72,21 @@ fwi.index$month <- factor(format(as.Date(substr(cov.long$...1[missing.values],1,
 fwi.index$date <- as.numeric(fwi.index$date)
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 
-
-
-# fwi.index <- fwi.index[which(Y>1),]
 # load("./BLAST/application/quant-t.Rdata")
 load("./BLAST/application/quant-t_10.Rdata")
 # load("./BLAST/application/qgam_5_10.Rdata")
-preds <- predict(quant.fit)
-# u <- rep(quantile(Y, threshold),ceiling(nrow(fwi.index)*(1-threshold)))
-# excess <- which(Y>u)
-excess <- which(Y>preds)
-u <- preds[excess]
+# load("./BLAST/application/quant-evgam.Rdata")
+# preds <- predict(quant.fit)
+u <- rep(quantile(Y, threshold),ceiling(nrow(fwi.index)*(1-threshold)))
+excess <- which(Y>u)
+# excess <- which(Y>preds)
+# u <- preds[excess]
 # excess <- which(fwi.dd$excess==TRUE)
 # u <- fwi.dd$origin_Model_Smooth_975[excess]
+# excess <- which(Y>evgam.cov.pred)
+# u <- evgam.cov.pred[excess]
+# excess <- which(Y>evgam.time.pred)
+# u <- evgam.time.pred[excess]
 y <- Y[excess]
 
 # fwi.scaled <- data.frame(fwi.scaled[which(Y>u),])
@@ -204,7 +206,7 @@ init.alpha <- list(list(theta = rep(-0.1, (p+1)), lambda1 = rep(0.1,p)),
 
 fit1 <- stan(
     model_code = model.stan,
-    model_name = "BLAST",
+    model_name = "BLAST_linear",
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value 
     chains = 3,             # number of Markov chains
@@ -276,6 +278,24 @@ ggplot(data.scenario, aes(x=x)) +
 
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_alpha.pdf"), width=10, height = 7.78)
 
+xi.scenario <- data.frame("x" = newx,
+                            "post.mean" = (1/alpha.samples[,1]),
+                            "post.median" = (1/alpha.samples[,5]),
+                            "q1" = (1/alpha.samples[,4]),
+                            "q3" = (1/alpha.samples[,6]))
+
+ggplot(xi.scenario, aes(x=x)) + 
+  ylab(expression(xi(c,...,c))) + xlab(expression(c)) + labs(col = "") +
+  geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
+  geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
+  scale_fill_manual(values=c("steelblue"), name = "") +
+  scale_color_manual(values = c("steelblue")) + 
+  guides(color = guide_legend(order = 2), 
+          fill = guide_legend(order = 1)) +
+  theme_minimal(base_size = 30) +
+  theme(legend.position = "none",
+        strip.text = element_blank(),
+        axis.text = element_text(size = 20))
 
 
 T <- 100
@@ -439,4 +459,5 @@ grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
 
 fit.log.lik <- extract_log_lik(fit1)
 elpd.loo <- loo(fit.log.lik, is_method = "sis", cores = 4)
-save(elpd.loo, file = (paste0("./BLAST/application/BLAST_linear_",Sys.Date(),"_",psi,"_",floor(threshold*100),"quantile_IC.Rdata")))
+elpd.loo
+# save(elpd.loo, file = (paste0("./BLAST/application/BLAST_linear_",Sys.Date(),"_",psi,"_",floor(threshold*100),"quantile_IC.Rdata")))

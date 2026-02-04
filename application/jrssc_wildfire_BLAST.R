@@ -74,10 +74,10 @@ fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 
 
 
-# fwi.index <- fwi.index[which(Y>1),]
 # load("./BLAST/application/quant-t.Rdata")
-load("./BLAST/application/quant-t_10.Rdata")
-# load("./BLAST/application/qgam_5_10.Rdata")
+# load("./BLAST/application/quant-t_10.Rdata")
+load("./BLAST/application/qgam_975_30.Rdata")
+# load("./BLAST/application/quant-evgam.Rdata")
 preds <- predict(quant.fit)
 # u <- rep(quantile(Y, threshold),ceiling(nrow(fwi.index)*(1-threshold)))
 # excess <- which(Y>u)
@@ -85,6 +85,10 @@ excess <- which(Y>preds)
 u <- preds[excess]
 # excess <- which(fwi.dd$excess==TRUE)
 # u <- fwi.dd$origin_Model_Smooth_975[excess]
+# excess <- which(Y>evgam.cov.pred)
+# u <- evgam.cov.pred[excess]
+# excess <- which(Y>evgam.time.pred)
+# u <- evgam.time.pred[excess]
 y <- Y[excess]
 
 # fwi.scaled <- data.frame(fwi.scaled[which(Y>u),])
@@ -174,7 +178,7 @@ for (i in seq_along(covariates)) {
   
   eig <- eigen(S, symmetric = TRUE)
   max_lambda <- max(eig$values)
-  tol <- max_lambda * 1e-7  # Relative threshold (Robust)
+  tol <- max_lambda * 1e-8  # Relative threshold (Robust)
   
   pos_idx <- which(eig$values > tol)
   
@@ -1025,4 +1029,4 @@ summary(fit1, par=c("theta_fwi"), probs = c(0.05,0.5, 0.95))$summary
 fit.log.lik <- extract_log_lik(fit1)
 elpd.loo <- loo(fit.log.lik, is_method = "sis", cores = 4)
 elpd.loo
-save(elpd.loo, file = (paste0("./BLAST/application/BLAST_full_",Sys.Date(),"_",psi+2,"_",floor(threshold*100),"quantile_IC.Rdata")))
+# save(elpd.loo, file = (paste0("./BLAST/application/BLAST_full_",Sys.Date(),"_",psi+2,"_",floor(threshold*100),"quantile_IC.Rdata")))
