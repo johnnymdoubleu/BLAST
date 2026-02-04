@@ -75,9 +75,9 @@ fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 
 
 # load("./BLAST/application/quant-t.Rdata")
-# load("./BLAST/application/quant-t_10.Rdata")
-load("./BLAST/application/qgam_975_30.Rdata")
-# load("./BLAST/application/quant-evgam.Rdata")
+load("./BLAST/application/quant-t_10.Rdata")
+# load("./BLAST/application/qgam_975_10.Rdata")
+# load("./BLAST/application/quant-evgam-scaled.Rdata")
 preds <- predict(quant.fit)
 # u <- rep(quantile(Y, threshold),ceiling(nrow(fwi.index)*(1-threshold)))
 # excess <- which(Y>u)
@@ -94,13 +94,13 @@ y <- Y[excess]
 # fwi.scaled <- data.frame(fwi.scaled[which(Y>u),])
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 # range01 <- function(x){(x)/max(x)}
-fwi.scaled <- as.data.frame(sapply(fwi.scaled[excess,c(-1,-2)], FUN = range01))
+fwi.scaled <- as.data.frame(sapply(fwi.scaled[excess,], FUN = range01))
 
 n <- dim(fwi.scaled)[[1]]
 p <- dim(fwi.scaled)[[2]]
 
 
-fwi.origin <- data.frame(fwi.index[excess,c(-1,-2)], BA=y)
+fwi.origin <- data.frame(fwi.index[excess,], BA=y)
 max.fwi <- fwi.origin[which.max(y),]
 fwi.grid <- data.frame(lapply(fwi.origin[,c(1:p)], function(x) seq(min(x), max(x), length.out = nrow(fwi.scaled))))
 fwi.minmax <- sapply(fwi.origin[,c(1:p)], function(x) max(x)-min(x))
@@ -511,30 +511,30 @@ fwi.min.samples <- sapply(fwi.smooth, min)
 xholder <- as.data.frame(xholder)
 colnames(xholder) <- colnames(fwi.scaled)[1:p]
 simul.data <- data.frame(BA = y-u, bs.linear[,-1])#fwi.origin[c(1:p)])
-# gam.scale <- list(BA ~ s(DSR, bs = "tp", k = 30) + 
-#                       s(FWI, bs = "tp", k = 30) + 
-#                       s(BUI, bs = "tp", k = 30) + 
-#                       s(ISI, bs = "tp", k = 30) + 
-#                       s(FFMC, bs = "tp", k = 30) +
-#                       s(DMC, bs = "tp", k = 30) + 
-#                       s(DC, bs = "tp", k = 30),
-#                     ~ s(DSR, bs = "tp", k = 30) + 
-#                       s(FWI, bs = "tp", k = 30) + 
-#                       s(BUI, bs = "tp", k = 30) + 
-#                       s(ISI, bs = "tp", k = 30) + 
-#                       s(FFMC, bs = "tp", k = 30) +
-#                       s(DMC, bs = "tp", k = 30) +
-#                       s(DC, bs = "tp", k = 30))
-gam.scale <- list(BA ~ s(BUI, bs = "tp", k = 30) + 
+gam.scale <- list(BA ~ s(DSR, bs = "tp", k = 30) + 
+                      s(FWI, bs = "tp", k = 30) + 
+                      s(BUI, bs = "tp", k = 30) + 
                       s(ISI, bs = "tp", k = 30) + 
                       s(FFMC, bs = "tp", k = 30) +
                       s(DMC, bs = "tp", k = 30) + 
                       s(DC, bs = "tp", k = 30),
-                    ~ s(BUI, bs = "tp", k = 30) + 
+                    ~ s(DSR, bs = "tp", k = 30) + 
+                      s(FWI, bs = "tp", k = 30) + 
+                      s(BUI, bs = "tp", k = 30) + 
                       s(ISI, bs = "tp", k = 30) + 
                       s(FFMC, bs = "tp", k = 30) +
                       s(DMC, bs = "tp", k = 30) +
                       s(DC, bs = "tp", k = 30))
+# gam.scale <- list(BA ~ s(BUI, bs = "tp", k = 30) + 
+#                       s(ISI, bs = "tp", k = 30) + 
+#                       s(FFMC, bs = "tp", k = 30) +
+#                       s(DMC, bs = "tp", k = 30) + 
+#                       s(DC, bs = "tp", k = 30),
+#                     ~ s(BUI, bs = "tp", k = 30) + 
+#                       s(ISI, bs = "tp", k = 30) + 
+#                       s(FFMC, bs = "tp", k = 30) +
+#                       s(DMC, bs = "tp", k = 30) +
+#                       s(DC, bs = "tp", k = 30))
 evgam.fit.scale <- evgam::evgam(gam.scale, data = simul.data, family = "gpd")
 pred.scale <- predict(evgam.fit.scale, newdata = xholder, type="response", se.fit = TRUE)
 xi.pred.scale <-pred.scale$fitted$shape
@@ -554,21 +554,21 @@ alpha.pred.scale <- 1/xi.pred.scale
 #   alpha.nonlinear.scale[,j] <- 1/(xi.nonlinear.scale[,j])
 # }
 
-# gam.1 <- list(BA ~ 1,
-#                 ~ s(DSR, bs = "tp", k = 30) + 
-#                     s(FWI, bs = "tp", k = 30) + 
-#                     s(BUI, bs = "tp", k = 30) + 
-#                     s(ISI, bs = "tp", k = 30) + 
-#                     s(FFMC, bs = "tp", k = 30) +
-#                     s(DMC, bs = "tp", k = 30) + 
-#                     s(DC, bs = "tp", k = 30)) 
-
 gam.1 <- list(BA ~ 1,
-                ~ s(BUI, bs = "tp", k = 30) + 
-                  s(ISI, bs = "tp", k = 30) + 
-                  s(FFMC, bs = "tp", k = 30) +
-                  s(DMC, bs = "tp", k = 30) +
-                  s(DC, bs = "tp", k = 30))
+                ~ s(DSR, bs = "tp", k = 30) + 
+                    s(FWI, bs = "tp", k = 30) + 
+                    s(BUI, bs = "tp", k = 30) + 
+                    s(ISI, bs = "tp", k = 30) + 
+                    s(FFMC, bs = "tp", k = 30) +
+                    s(DMC, bs = "tp", k = 30) + 
+                    s(DC, bs = "tp", k = 30)) 
+
+# gam.1 <- list(BA ~ 1,
+#                 ~ s(BUI, bs = "tp", k = 30) + 
+#                   s(ISI, bs = "tp", k = 30) + 
+#                   s(FFMC, bs = "tp", k = 30) +
+#                   s(DMC, bs = "tp", k = 30) +
+#                   s(DC, bs = "tp", k = 30))
 evgam.fit.1 <- evgam::evgam(gam.1, data = simul.data, family = "gpd")
 pred.1 <- predict(evgam.fit.1, newdata = xholder, type="response", se.fit = TRUE)
 xi.pred.1 <-pred.1$fitted$shape

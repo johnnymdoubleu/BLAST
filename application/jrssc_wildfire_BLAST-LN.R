@@ -78,11 +78,11 @@ fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 # load("./BLAST/application/quant-t.Rdata")
 load("./BLAST/application/quant-t_10.Rdata")
 # load("./BLAST/application/qgam_5_10.Rdata")
-# preds <- predict(quant.fit)
-u <- rep(quantile(Y, threshold),ceiling(nrow(fwi.index)*(1-threshold)))
-excess <- which(Y>u)
-# excess <- which(Y>preds)
-# u <- preds[excess]
+preds <- predict(quant.fit)
+# u <- rep(quantile(Y, threshold),ceiling(nrow(fwi.index)*(1-threshold)))
+# excess <- which(Y>u)
+excess <- which(Y>preds)
+u <- preds[excess]
 # excess <- which(fwi.dd$excess==TRUE)
 # u <- fwi.dd$origin_Model_Smooth_975[excess]
 y <- Y[excess]
@@ -90,13 +90,13 @@ y <- Y[excess]
 # fwi.scaled <- data.frame(fwi.scaled[which(Y>u),])
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 # range01 <- function(x){(x)/max(x)}
-fwi.scaled <- as.data.frame(sapply(fwi.scaled[excess,c(-1,-2)], FUN = range01))
+fwi.scaled <- as.data.frame(sapply(fwi.scaled[excess,], FUN = range01))
 
 n <- dim(fwi.scaled)[[1]]
 p <- dim(fwi.scaled)[[2]]
 
 
-fwi.origin <- data.frame(fwi.index[excess,c(-1,-2)], BA=y)
+fwi.origin <- data.frame(fwi.index[excess,], BA=y)
 max.fwi <- fwi.origin[which.max(y),]
 fwi.grid <- data.frame(lapply(fwi.origin[,c(1:p)], function(x) seq(min(x), max(x), length.out = nrow(fwi.scaled))))
 fwi.minmax <- sapply(fwi.origin[,c(1:p)], function(x) max(x)-min(x))
@@ -211,12 +211,12 @@ fit1 <- stan(
 )
 
 posterior <- rstan::extract(fit1)
-bayesplot::color_scheme_set("mix-blue-red")
-bayesplot::mcmc_trace(fit1, pars="lp__") + ylab("") +
-  theme_minimal(base_size = 30) +
-  theme(legend.position = "none",
-        strip.text = element_blank(),
-        axis.text = element_text(size = 18))
+# bayesplot::color_scheme_set("mix-blue-red")
+# bayesplot::mcmc_trace(fit1, pars="lp__") + ylab("") +
+#   theme_minimal(base_size = 30) +
+#   theme(legend.position = "none",
+#         strip.text = element_blank(),
+#         axis.text = element_text(size = 18))
 
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
 lambda.samples <- summary(fit1, par=c("lambda1"), probs = c(0.05,0.5, 0.95))$summary
@@ -453,4 +453,4 @@ fit.log.lik <- extract_log_lik(fit1)
 loo(fit.log.lik, is_method = "sis", cores = 4)
 elpd.loo <- loo(fit.log.lik, is_method = "sis", cores = 4)
 elpd.loo
-# save(elpd.loo, file = (paste0("./BLAST/application/BRIT_linear_",Sys.Date(),"_",psi,"_",floor(threshold*100),"quantile_IC.Rdata")))
+save(elpd.loo, file = (paste0("./BLAST/application/BRIT_linear_",Sys.Date(),"_",psi,"_",floor(threshold*100),"quantile_IC.Rdata")))

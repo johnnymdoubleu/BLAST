@@ -78,11 +78,11 @@ fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 # load("./BLAST/application/quant-t.Rdata")
 load("./BLAST/application/quant-t_10.Rdata")
 # load("./BLAST/application/qgam_5_10.Rdata")
-# preds <- predict(quant.fit)
-u <- rep(quantile(Y, threshold),ceiling(nrow(fwi.index)*(1-threshold)))
-excess <- which(Y>u)
-# excess <- which(Y>preds)
-# u <- preds[excess]
+preds <- predict(quant.fit)
+# u <- rep(quantile(Y, threshold),ceiling(nrow(fwi.index)*(1-threshold)))
+# excess <- which(Y>u)
+excess <- which(Y>preds)
+u <- preds[excess]
 # excess <- which(fwi.dd$excess==TRUE)
 # u <- fwi.dd$origin_Model_Smooth_975[excess]
 y <- Y[excess]
@@ -90,13 +90,13 @@ y <- Y[excess]
 # fwi.scaled <- data.frame(fwi.scaled[which(Y>u),])
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 # range01 <- function(x){(x)/max(x)}
-fwi.scaled <- as.data.frame(sapply(fwi.scaled[excess,c(-1,-2)], FUN = range01))
+fwi.scaled <- as.data.frame(sapply(fwi.scaled[excess,], FUN = range01))
 
 n <- dim(fwi.scaled)[[1]]
 p <- dim(fwi.scaled)[[2]]
 
 
-fwi.origin <- data.frame(fwi.index[excess,c(-1,-2)], BA=y)
+fwi.origin <- data.frame(fwi.index[excess,], BA=y)
 max.fwi <- fwi.origin[which.max(y),]
 fwi.grid <- data.frame(lapply(fwi.origin[,c(1:p)], function(x) seq(min(x), max(x), length.out = nrow(fwi.scaled))))
 fwi.minmax <- sapply(fwi.origin[,c(1:p)], function(x) max(x)-min(x))

@@ -88,19 +88,21 @@ fwi.origin <- data.frame(fwi.origin, time = c(1:length(Y)), BA=Y)
 # evgam.cov <- BA ~ s(BUI, k = 30) + s(ISI, k = 30) + s(FFMC, k = 30) + s(DMC, k = 30) + s(DC, k = 30)
 # ald.cov.fit <- evgam(evgam.cov, data = fwi.origin, family = "ald", ald.args=list(tau = 0.975))
 # save(ald.time.fit, ald.cov.fit, file="quant-evgam.Rdata")
-# load("./BLAST/application/quant-evgam.Rdata")
-evgam.cov.pred <- predict(ald.cov.fit, type = "response")$location
-evgam.time.pred <- predict(ald.time.fit, type = "response")$location
-save(ald.time.fit, ald.cov.fit, evgam.cov.pred, evgam.time.pred, file="./BLAST/application/quant-evgam.Rdata")
+# load("./BLAST/application/quant-evgam-scaled.Rdata")
+# evgam.cov.pred <- predict(ald.cov.fit, type = "response")$location
+# evgam.time.pred <- predict(ald.time.fit, type = "response")$location
+# save(ald.time.fit, ald.cov.fit, evgam.cov.pred, evgam.time.pred, file="./BLAST/application/quant-evgam-scaled.Rdata")
 
-quant.fit <- qgam(BA ~ s(time,k=30), data = fwi.origin, qu = 0.975)
+# quant.fit <- qgam(BA ~ s(time,k=30), data = fwi.origin, qu = 0.975)
 # load("./BLAST/application/quant-time.Rdata")
 # load("./BLAST/application/qgam_5_none.Rdata")
-# load("./BLAST/application/qgam_5_10.Rdata")
-print(plot(quant.fit, allTerms = TRUE), pages = 1)
+# load("./BLAST/application/quant-t_10.Rdata")
+load("./BLAST/application/qgam_975_30.Rdata")
+# print(plot(quant.fit, allTerms = TRUE), pages = 1)
+check(quant.fit)
 quant.viz <- getViz(quant.fit, nsim = 20)
-print(plot(quant.viz))
-check1D(quant.viz, fwi.origin[,4]) + l_gridQCheck1D(qu = 0.975)
+print(plot(quant.viz, allTerms = TRUE), pages = 1)
+# check1D(quant.viz, fwi.origin[,4]) + l_gridQCheck1D(qu = 0.975)
 
 preds <- predict(quant.fit)
 # save(preds, quant.fit, file="./BLAST/application/quant-time.Rdata")
@@ -190,7 +192,7 @@ ggplot(block_summary, aes(x = Label, group = 1)) +
     "Autumn" = "red"
   )) +
   labs(
-    y = "Burnt Area", 
+    y = "Log Burnt Area", 
     x = "Time (blockwise)"
   ) +
   theme_minimal() +
