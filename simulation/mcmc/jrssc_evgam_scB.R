@@ -7,9 +7,9 @@ library(evgam)
 library(mgcv)
 
 
-# Scenario A
+# Scenario B
 # array.id <- commandArgs(trailingOnly=TRUE)
-total.iter <- 10
+total.iter <- 250
 
 n <- n.origin <- 15000
 psi.origin <- psi <- 10
@@ -351,8 +351,8 @@ alpha.container$vgam.1 <- rowMeans(vgam.1.container[,1:total.iter])
 alpha.container$vgam.scale <- rowMeans(vgam.scale.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
-# save(newgsmooth.container, alpha.container, mise.container, evgam.1.container, evgam.scale.container, mise.evgam.1.container, mise.evgam.scale.container, vgam.1.container, vgam.scale.container, mise.vgam.1.container, mise.vgam.scale.container, file=paste0("evgam_mc_scA_",n.origin,"_",array.id ,".Rdata"))
-# load(paste0("./simulation/results/2026-01-27_evgam_mc_scA_",(n.origin*0.05),".Rdata"))
+# save(newgsmooth.container, alpha.container, mise.container, evgam.1.container, evgam.scale.container, mise.evgam.1.container, mise.evgam.scale.container, vgam.1.container, vgam.scale.container, mise.vgam.1.container, mise.vgam.scale.container, file=paste0("evgam_mc_scB_",n.origin,"_",array.id ,".Rdata"))
+load(paste0("./simulation/results/2026-02-05_evgam_mc_scB_",(n.origin*0.05),".Rdata"))
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab(expression(xi(c,ldots,c))) #+ ylab("")
 if(total.iter <= 50){
@@ -381,7 +381,7 @@ print(plt +
                 strip.text = element_blank(),
                 axis.text = element_text(size = 30)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_evgam_scA_",n.origin, ".pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_evgam_scB_",n.origin, ".pdf"), width=10, height = 7.78)
 
 
 # newgsmooth.container$x <- seq(0,1, length.out = n)
