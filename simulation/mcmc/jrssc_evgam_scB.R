@@ -9,9 +9,9 @@ library(mgcv)
 
 # Scenario B
 # array.id <- commandArgs(trailingOnly=TRUE)
-total.iter <- 250
+total.iter <- 2
 
-n <- n.origin <- 15000
+n <- n.origin <- 5000
 psi.origin <- psi <- 10
 threshold <- 0.95
 p <- 5
@@ -282,18 +282,18 @@ for(iter in 1:total.iter){
   se.samples <- summary(fit1, par=c("se"), probs = c(0.5))$summary
 
   simul.data <- data.frame(y = y.origin, x.origin)
-  vgam.fit.scale <- vgam(y ~ VGAM::s(X1) + VGAM::s(X2) + VGAM::s(X3) + VGAM::s(X4) + VGAM::s(X5),
+  vgam.fit.scale <- vgam(y ~ sm.ps(X1, ps.int = 8, outer.ok=TRUE) + sm.ps(X2, ps.int = 8, outer.ok=TRUE) + sm.ps(X3, ps.int = 8, outer.ok=TRUE) + sm.ps(X4, ps.int = 8, outer.ok=TRUE) + sm.ps(X5, ps.int = 8, outer.ok=TRUE),
                         data = simul.data,
                         family = gpd(threshold= u,
                                       lshape="loglink",
                                       zero = NULL),
                         trace = TRUE,
                         control = vgam.control(maxit = 200))
-  fitted.linear <- predict(vgam.fit.scale,newdata = data.frame(xholder), type = "link")
+  fitted.linear <- predict(vgam.fit.scale, newdata = data.frame(xholder), type = "link")
   fitted.terms <- predict(vgam.fit.scale,newdata = data.frame(xholder), type = "terms")
   vgam.xi.scale <- exp(fitted.linear[,2])
 
-  vgam.fit.1 <- vgam(y ~ VGAM::s(X1) + VGAM::s(X2) + VGAM::s(X3) + VGAM::s(X4) + VGAM::s(X5),
+  vgam.fit.1 <- vgam(y ~ sm.ps(X1, ps.int = 8, outer.ok=TRUE) + sm.ps(X2, ps.int = 8, outer.ok=TRUE) + sm.ps(X3, ps.int = 8, outer.ok=TRUE) + sm.ps(X4, ps.int = 8, outer.ok=TRUE) + sm.ps(X5, ps.int = 8, outer.ok=TRUE),
                         data = simul.data,
                         family = gpd(threshold= u,
                                       lshape="loglink",
@@ -352,7 +352,7 @@ alpha.container$vgam.scale <- rowMeans(vgam.scale.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
 # save(newgsmooth.container, alpha.container, mise.container, evgam.1.container, evgam.scale.container, mise.evgam.1.container, mise.evgam.scale.container, vgam.1.container, vgam.scale.container, mise.vgam.1.container, mise.vgam.scale.container, file=paste0("evgam_mc_scB_",n.origin,"_",array.id ,".Rdata"))
-load(paste0("./simulation/results/2026-02-05_evgam_mc_scB_",(n.origin*0.05),".Rdata"))
+# load(paste0("./simulation/results/2026-02-05_evgam_mc_scB_",(n.origin*0.05),".Rdata"))
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab(expression(xi(c,ldots,c))) #+ ylab("")
 if(total.iter <= 50){

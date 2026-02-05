@@ -94,13 +94,13 @@ y <- Y[excess]
 # fwi.scaled <- data.frame(fwi.scaled[which(Y>u),])
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 # range01 <- function(x){(x)/max(x)}
-fwi.scaled <- as.data.frame(sapply(fwi.scaled[excess,], FUN = range01))
+fwi.scaled <- as.data.frame(sapply(fwi.scaled[excess,c(-1,-2)], FUN = range01))
 
 n <- dim(fwi.scaled)[[1]]
 p <- dim(fwi.scaled)[[2]]
 
 
-fwi.origin <- data.frame(fwi.index[excess,], BA=y)
+fwi.origin <- data.frame(fwi.index[excess,c(-1,-2)], BA=y)
 max.fwi <- fwi.origin[which.max(y),]
 fwi.grid <- data.frame(lapply(fwi.origin[,c(1:p)], function(x) seq(min(x), max(x), length.out = nrow(fwi.scaled))))
 fwi.minmax <- sapply(fwi.origin[,c(1:p)], function(x) max(x)-min(x))
@@ -148,10 +148,10 @@ fwi.min <- sapply(fwi.origin[,c(1:p)], function(x) min(x))
 #         legend.text = element_text(size = 15),
 #         strip.text = element_blank(),
 #         axis.title = element_text(size = 30))
-# M <- cor(fwi.origin[,c(1:7)])
-# corrplot(M, order = 'AOE', type = 'upper', tl.pos = 'tp')
-# corrplot(M, add = TRUE, type = 'lower', method = 'number', order = 'AOE',
-        #  col = 'black', diag = FALSE, tl.pos = 'n', cl.pos = 'n')
+M <- cor(fwi.origin[,c(1:p)])
+corrplot(M, order = 'AOE', type = 'upper', tl.pos = 'tp')
+corrplot(M, add = TRUE, type = 'lower', method = 'number', order = 'AOE',
+         col = 'black', diag = FALSE, tl.pos = 'n', cl.pos = 'n')
 # ggsave("./BLAST/application/figures/intensityfn.pdf", width = 10, height = 7.78)
 bs.linear <- model.matrix(~ ., data = data.frame(fwi.scaled))
 psi <- psi - 2
