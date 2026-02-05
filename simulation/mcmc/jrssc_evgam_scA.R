@@ -11,7 +11,7 @@ library(mgcv)
 # array.id <- commandArgs(trailingOnly=TRUE)
 total.iter <- 250
 
-n <- n.origin <- 5000
+n <- n.origin <- 15000
 psi.origin <- psi <- 10
 threshold <- 0.95
 p <- 5
@@ -34,6 +34,7 @@ make.nl <- function(x, raw_y) {
 theta.origin <- c(1, 0, 0.8, -0.8, 0, 0) 
 psi <- psi -2
 
+
 model.stan <- "// Stan model for BLAST Pareto Samples
 data {
   int <lower=1> n; // Sample size
@@ -48,6 +49,7 @@ data {
   real <lower=0> atau;
   vector[p] X_means;
   vector[p] X_sd;
+  vector[(psi*p)] Z_scales;
   array[n] real <lower=0> trueAlpha;
 }
 
@@ -66,7 +68,10 @@ transformed parameters {
   {
     matrix[n, p] gsmooth; // linear component
     for (j in 1:p){
-      gamma[j] = gamma_raw[j] * sqrt(tau[j]);
+      for (k in 1:psi){
+        int idx = (j-1)*psi + k;
+        gamma[j][k] = gamma_raw[j][k] * sqrt(tau[j]) * Z_scales[idx];
+      }; 
       gsmooth[,j] = bsLinear[,j] * theta[j+1] + bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
     };
     
