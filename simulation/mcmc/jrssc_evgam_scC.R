@@ -9,7 +9,7 @@ library(VGAM)
 # Scenario C
 total.iter <- 250
 # array.id <- commandArgs(trailingOnly=TRUE)
-n <- n.origin <- 5000
+n <- n.origin <- 15000
 psi.origin <- psi <- 10
 threshold <- 0.95
 p <- 5
@@ -352,7 +352,7 @@ alpha.container$vgam.scale <- rowMeans(vgam.scale.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
 # save(newgsmooth.container, alpha.container, mise.container, evgam.1.container, evgam.scale.container, mise.evgam.1.container, mise.evgam.scale.container, vgam.1.container, vgam.scale.container, mise.vgam.1.container, mise.vgam.scale.container, file=paste0("evgam_mc_scC_",n.origin,"_",array.id ,".Rdata"))
-load(paste0("./simulation/results/2026-01-27_evgam_mc_scC_",(n.origin*0.05),".Rdata"))
+load(paste0("./simulation/results/2026-02-05_evgam_mc_scC_",(n.origin*0.05),".Rdata"))
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab("")
 if(total.iter <= 50){
@@ -379,6 +379,7 @@ print(plt +
         theme_minimal(base_size = 40) + ylim(-1.5, 2.5)+
         theme(legend.position = "none",
                 strip.text = element_blank(),
+                axis.text.y = element_blank(),
                 axis.text = element_text(size = 30)))
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_evgam_scC_",n.origin, ".pdf"), width=9.5, height = 7.78)
@@ -421,10 +422,8 @@ print(plt +
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_scC_",n.origin,".pdf"), width=12.5, height = 15)
 
-
-print(mean(mise.container, na.rm=TRUE))
-print(mean(mise.evgam.1.container, na.rm=TRUE))
-print(mean(mise.evgam.scale.container, na.rm=TRUE))
-print(mean(mise.vgam.1.container, na.rm=TRUE))
-print(mean(mise.vgam.scale.container, na.rm=TRUE))
-
+cat("BLAST:   ", mean(mise.container, na.rm=TRUE), "±", sd(mise.container, na.rm=TRUE)/sqrt(sum(!is.na(mise.container))), "\n", 
+    "EVGAM:  ", mean(mise.evgam.1.container, na.rm=TRUE), "±", sd(mise.evgam.1.container, na.rm=TRUE)/sqrt(sum(!is.na(mise.evgam.1.container))), "\n",
+    "EVGAM-σ:", mean(mise.evgam.scale.container, na.rm=TRUE), "±", sd(mise.evgam.scale.container, na.rm=TRUE)/sqrt(sum(!is.na(mise.evgam.scale.container))), "\n",
+    "VGAM:   ", mean(mise.vgam.1.container, na.rm=TRUE), "±", sd(mise.vgam.1.container, na.rm=TRUE)/sqrt(sum(!is.na(mise.vgam.1.container))), "\n",
+    "VGAM-σ: ", mean(mise.vgam.scale.container, na.rm=TRUE), "±", sd(mise.vgam.scale.container, na.rm=TRUE)/sqrt(sum(!is.na(mise.vgam.scale.container))), "\n")

@@ -1,4 +1,6 @@
+library(VGAM)
 library(mgcv)
+library(evgam)
 library(Pareto)
 suppressMessages(library(tidyverse))
 library(readxl)
@@ -61,47 +63,43 @@ fwi.index$date <- as.numeric(fwi.index$date)
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 
 # load("./BLAST/application/quant-evgam.Rdata")
-
-# load("./BLAST/application/quant-time.Rdata")
-u <- quantile(Y, threshold)
-excess <- which(Y>u)
-# excess <- which(Y>preds)
-# u <- preds[excess]
+load("./BLAST/application/quant-t_10.Rdata")
+# u <- quantile(Y, threshold)
+# excess <- which(Y>u)
+preds <- predict(quant.fit)
+excess <- which(Y>preds)
+u <- preds[excess]
 # excess <- which(fwi.dd$excess==TRUE)
 # u <- fwi.dd$origin_Model_Smooth_975[excess]
 y <- Y[excess]
 
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
-fwi.scaled <- as.data.frame(sapply(fwi.scaled[excess,], FUN = range01))
+fwi.scaled <- as.data.frame(sapply(fwi.scaled[excess,c(-1,-2)], FUN = range01))
 
 n <- dim(fwi.scaled)[[1]]
 p <- dim(fwi.scaled)[[2]]
 
 
-fwi.origin <- data.frame(fwi.index[excess,], BA=y)
+fwi.origin <- data.frame(fwi.index[excess,c(-1,-2)], BA=y)
 max.fwi <- fwi.origin[which.max(y),]
 fwi.grid <- data.frame(lapply(fwi.origin[,c(1:p)], function(x) seq(min(x), max(x), length.out = nrow(fwi.scaled))))
 fwi.minmax <- sapply(fwi.origin[,c(1:p)], function(x) max(x)-min(x))
 fwi.min <- sapply(fwi.origin[,c(1:p)], function(x) min(x))
 
-simul.data <- data.frame(y = y-u, fwi.scaled[,c(1:p)])
+simul.data <- data.frame(BA = y-u, fwi.scaled[,c(1:p)])
 newx <- seq(0, 1, length.out = n)
 xholder <- as.data.frame(do.call(cbind, lapply(1:p, function(j) {newx})))
 colnames(xholder) <- colnames(fwi.origin[,c(1:p)])
-gam.scale <- list(y ~ s(DSR, bs = "tp", k = 10) + 
-                      s(FWI, bs = "tp", k = 10) + 
-                      s(BUI, bs = "tp", k = 10) + 
-                      s(ISI, bs = "tp", k = 10) + 
-                      s(FFMC, bs = "tp", k = 10) +
-                      s(DMC, bs = "tp", k = 10) + 
-                      s(DC, bs = "tp", k = 10),
-                    ~ s(DSR, bs = "tp", k = 10) + 
-                      s(FWI, bs = "tp", k = 10) + 
-                      s(BUI, bs = "tp", k = 10) + 
-                      s(ISI, bs = "tp", k = 10) + 
-                      s(FFMC, bs = "tp", k = 10) +
-                      s(DMC, bs = "tp", k = 10) + 
-                      s(DC, bs = "tp", k = 10))
+gam.scale <- list(BA ~ s(BUI, bs = "tp", k = 30) + 
+                      s(ISI, bs = "tp", k = 30) + 
+                      s(FFMC, bs = "tp", k = 30) +
+                      s(DMC, bs = "tp", k = 30) + 
+                      s(DC, bs = "tp", k = 30),
+                    ~ s(BUI, bs = "tp", k = 30) + 
+                      s(ISI, bs = "tp", k = 30) + 
+                      s(FFMC, bs = "tp", k = 30) +
+                      s(DMC, bs = "tp", k = 30) + 
+                      s(DC, bs = "tp", k = 30))
 evgam.fit.scale <- evgam::evgam(gam.scale, data = simul.data, family = "gpd")
 xi.pred.scale <-predict(evgam.fit.scale, newdata = xholder, type="response")$shape
 alpha.pred.scale <- 1/xi.pred.scale
@@ -117,14 +115,12 @@ for(j in 1:p){
   alpha.nonlinear.scale[,j] <- 1/(xi.nonlinear.scale[,j])
 }
 
-gam.1 <- list(y ~ 1,
-                ~ s(DSR, bs = "tp", k = 10) + 
-                    s(FWI, bs = "tp", k = 10) + 
-                    s(BUI, bs = "tp", k = 10) + 
-                    s(ISI, bs = "tp", k = 10) + 
-                    s(FFMC, bs = "tp", k = 10) +
-                    s(DMC, bs = "tp", k = 10) + 
-                    s(DC, bs = "tp", k = 10))
+gam.1 <- list(BA ~ 1,
+                ~ s(BUI, bs = "tp", k = 30) + 
+                  s(ISI, bs = "tp", k = 30) + 
+                  s(FFMC, bs = "tp", k = 30) +
+                  s(DMC, bs = "tp", k = 30) + 
+                  s(DC, bs = "tp", k = 30))
 evgam.fit.1 <- evgam::evgam(gam.1, data = simul.data, family = "gpd")
 xi.pred.1 <-predict(evgam.fit.1, newdata = xholder, type="response")$shape
 alpha.pred.1 <- 1/xi.pred.1
@@ -140,29 +136,53 @@ for(j in 1:p){
 }
 
 
-alpha.smooth <- data.frame("x" = as.vector(as.matrix(xholder)),
-                          "evgam.scale" = as.vector(alpha.nonlinear.scale),
-                          "evgam.1" = as.vector(alpha.nonlinear.1),
-                          "covariates" = gl(p, n, (p*n), labels = colnames(xholder)))
+# simul.data <- data.frame(BA = y, fwi.scaled[,c(1:p)])
+# vgam.fit.scale <- vgam(y ~ sm.ps(BUI, ps.int = 28, outer.ok = TRUE) + sm.ps(ISI, ps.int = 28, outer.ok = TRUE) + sm.ps(FFMC, ps.int = 28, outer.ok = TRUE) + sm.ps(DMC, ps.int = 28, outer.ok = TRUE) + sm.ps(DC, ps.int = 28, outer.ok = TRUE),
+#                       data = simul.data,
+#                       family = gpd(threshold= u,
+#                                     lshape="loglink",
+#                                     zero = NULL),
+#                       trace = TRUE,
+#                       control = vgam.control(maxit = 200))
+# fitted.linear <- predict(vgam.fit.scale, newdata = data.frame(xholder), type = "link")
+# fitted.terms <- predict(vgam.fit.scale, newdata = data.frame(xholder), type = "terms")
+# vgam.xi.scale <- exp(fitted.linear[,2])
+
+# vgam.fit.1 <- vgam(y ~ sm.ps(BUI, ps.int = 28, outer.ok = TRUE) + sm.ps(ISI, ps.int = 28, outer.ok = TRUE) + sm.ps(FFMC, ps.int = 28, outer.ok = TRUE) + sm.ps(DMC, ps.int = 28, outer.ok = TRUE) + sm.ps(DC, ps.int = 28, outer.ok = TRUE),
+#                       data = simul.data,
+#                       family = gpd(threshold= u,
+#                                     lshape="loglink",
+#                                     zero = 1),
+#                       trace = TRUE,
+#                       control = vgam.control(maxit = 200))
+# fitted.linear <- predict(vgam.fit.1, newdata = data.frame(xholder), type = "link")
+# fitted.terms <- predict(vgam.fit.1, newdata = data.frame(xholder), type = "terms")
+# vgam.xi.1 <- exp(fitted.linear[,2])
 
 
-grid.plts <- list()
-for(i in 1:p){
-  grid.plt <- ggplot(data = data.frame(alpha.smooth[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + 
-                  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-                  geom_line(aes(y=evgam.scale), colour = "purple", linewidth=1) + 
-                  geom_line(aes(y=evgam.1), colour = "orange", linewidth=1) + 
-                  ylab("") + xlab(expression(c)) +
-                  # ylim(-2.3, 2.3) +
-                  theme_minimal(base_size = 10) +
-                  theme(legend.position = "none",
-                          plot.margin = margin(0,0,0,-5),
-                          axis.text = element_text(size = 15),
-                          axis.title.x = element_text(size = 15))
-  grid.plts[[i]] <- grid.plt
-}
+# alpha.smooth <- data.frame("x" = as.vector(as.matrix(xholder)),
+#                           "evgam.scale" = as.vector(alpha.nonlinear.scale),
+#                           "evgam.1" = as.vector(alpha.nonlinear.1),
+#                           "covariates" = gl(p, n, (p*n), labels = colnames(xholder)))
 
-grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
+
+# grid.plts <- list()
+# for(i in 1:p){
+#   grid.plt <- ggplot(data = data.frame(alpha.smooth[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + 
+#                   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+#                   geom_line(aes(y=evgam.scale), colour = "purple", linewidth=1) + 
+#                   geom_line(aes(y=evgam.1), colour = "orange", linewidth=1) + 
+#                   ylab("") + xlab(expression(c)) +
+#                   # ylim(-2.3, 2.3) +
+#                   theme_minimal(base_size = 10) +
+#                   theme(legend.position = "none",
+#                           plot.margin = margin(0,0,0,-5),
+#                           axis.text = element_text(size = 15),
+#                           axis.title.x = element_text(size = 15))
+#   grid.plts[[i]] <- grid.plt
+# }
+
+# grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
 
 xi.smooth <- data.frame("x" = as.vector(as.matrix(xholder)),
                         "evgam.scale" = as.vector(xi.nonlinear.scale),
@@ -204,8 +224,10 @@ ggplot(alpha.scenario, aes(x=x)) +
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_evgam_scA.pdf"), width=10, height = 7.78)
 
 xi.scenario <- data.frame("x" = newx,
-                            "evgam.scale" = xi.pred.scale,
-                            "evgam.1" = xi.pred.1)
+                          "evgam.scale" = xi.pred.scale,
+                          "evgam.1" = xi.pred.1,
+                          "vgam.scale" = vgam.xi.scale,
+                          "vgam.1" = vgam.xi.1)
 
 ggplot(xi.scenario, aes(x=x)) + 
   ylab(expression(xi(c,ldots,c))) + xlab(expression(c)) +

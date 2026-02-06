@@ -1,3 +1,4 @@
+library(VGAM)
 library(mgcv)
 library(Pareto)
 suppressMessages(library(tidyverse))
@@ -148,10 +149,10 @@ fwi.min <- sapply(fwi.origin[,c(1:p)], function(x) min(x))
 #         legend.text = element_text(size = 15),
 #         strip.text = element_blank(),
 #         axis.title = element_text(size = 30))
-M <- cor(fwi.origin[,c(1:p)])
-corrplot(M, order = 'AOE', type = 'upper', tl.pos = 'tp')
-corrplot(M, add = TRUE, type = 'lower', method = 'number', order = 'AOE',
-         col = 'black', diag = FALSE, tl.pos = 'n', cl.pos = 'n')
+# M <- cor(fwi.origin[,c(1:p)])
+# corrplot(M, order = 'AOE', type = 'upper', tl.pos = 'tp')
+# corrplot(M, add = TRUE, type = 'lower', method = 'number', order = 'AOE',
+#          col = 'black', diag = FALSE, tl.pos = 'n', cl.pos = 'n')
 # ggsave("./BLAST/application/figures/intensityfn.pdf", width = 10, height = 7.78)
 bs.linear <- model.matrix(~ ., data = data.frame(fwi.scaled))
 psi <- psi - 2
@@ -169,7 +170,7 @@ for (i in seq_along(covariates)) {
   var_name <- covariates[i]
   x_vec <- fwi.scaled[, i]
   X_lin <- model.matrix(~ x_vec) 
-  sm_spec <- smoothCon(s(x_vec, bs = "tp", k = psi + 2), 
+  sm_spec <- smoothCon(mgcv::s(x_vec, bs = "tp", k = psi + 2), 
                       data = data.frame(x_vec = x_vec), 
                       knots = NULL)[[1]]
   
@@ -510,31 +511,31 @@ fwi.min.samples <- sapply(fwi.smooth, min)
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=12.5, height = 15)
 xholder <- as.data.frame(xholder)
 colnames(xholder) <- colnames(fwi.scaled)[1:p]
-simul.data <- data.frame(BA = y-u, bs.linear[,-1])#fwi.origin[c(1:p)])
-gam.scale <- list(BA ~ s(DSR, bs = "tp", k = 30) + 
-                      s(FWI, bs = "tp", k = 30) + 
-                      s(BUI, bs = "tp", k = 30) + 
-                      s(ISI, bs = "tp", k = 30) + 
-                      s(FFMC, bs = "tp", k = 30) +
-                      s(DMC, bs = "tp", k = 30) + 
-                      s(DC, bs = "tp", k = 30),
-                    ~ s(DSR, bs = "tp", k = 30) + 
-                      s(FWI, bs = "tp", k = 30) + 
-                      s(BUI, bs = "tp", k = 30) + 
-                      s(ISI, bs = "tp", k = 30) + 
-                      s(FFMC, bs = "tp", k = 30) +
-                      s(DMC, bs = "tp", k = 30) +
-                      s(DC, bs = "tp", k = 30))
-# gam.scale <- list(BA ~ s(BUI, bs = "tp", k = 30) + 
+simul.data <- data.frame(BA = y-u, fwi.scaled[,c(1:p)])#fwi.origin[c(1:p)])
+# gam.scale <- list(BA ~ s(DSR, bs = "tp", k = 30) + 
+#                       s(FWI, bs = "tp", k = 30) + 
+#                       s(BUI, bs = "tp", k = 30) + 
 #                       s(ISI, bs = "tp", k = 30) + 
 #                       s(FFMC, bs = "tp", k = 30) +
 #                       s(DMC, bs = "tp", k = 30) + 
 #                       s(DC, bs = "tp", k = 30),
-#                     ~ s(BUI, bs = "tp", k = 30) + 
+#                     ~ s(DSR, bs = "tp", k = 30) + 
+#                       s(FWI, bs = "tp", k = 30) + 
+#                       s(BUI, bs = "tp", k = 30) + 
 #                       s(ISI, bs = "tp", k = 30) + 
 #                       s(FFMC, bs = "tp", k = 30) +
 #                       s(DMC, bs = "tp", k = 30) +
 #                       s(DC, bs = "tp", k = 30))
+gam.scale <- list(BA ~ s(BUI, bs = "tp", k = 30) + 
+                      s(ISI, bs = "tp", k = 30) + 
+                      s(FFMC, bs = "tp", k = 30) +
+                      s(DMC, bs = "tp", k = 30) + 
+                      s(DC, bs = "tp", k = 30),
+                    ~ s(BUI, bs = "tp", k = 30) + 
+                      s(ISI, bs = "tp", k = 30) + 
+                      s(FFMC, bs = "tp", k = 30) +
+                      s(DMC, bs = "tp", k = 30) +
+                      s(DC, bs = "tp", k = 30))
 evgam.fit.scale <- evgam::evgam(gam.scale, data = simul.data, family = "gpd")
 pred.scale <- predict(evgam.fit.scale, newdata = xholder, type="response", se.fit = TRUE)
 xi.pred.scale <-pred.scale$fitted$shape
@@ -554,21 +555,21 @@ alpha.pred.scale <- 1/xi.pred.scale
 #   alpha.nonlinear.scale[,j] <- 1/(xi.nonlinear.scale[,j])
 # }
 
-gam.1 <- list(BA ~ 1,
-                ~ s(DSR, bs = "tp", k = 30) + 
-                    s(FWI, bs = "tp", k = 30) + 
-                    s(BUI, bs = "tp", k = 30) + 
-                    s(ISI, bs = "tp", k = 30) + 
-                    s(FFMC, bs = "tp", k = 30) +
-                    s(DMC, bs = "tp", k = 30) + 
-                    s(DC, bs = "tp", k = 30)) 
-
 # gam.1 <- list(BA ~ 1,
-#                 ~ s(BUI, bs = "tp", k = 30) + 
-#                   s(ISI, bs = "tp", k = 30) + 
-#                   s(FFMC, bs = "tp", k = 30) +
-#                   s(DMC, bs = "tp", k = 30) +
-#                   s(DC, bs = "tp", k = 30))
+#                 ~ s(DSR, bs = "tp", k = 30) + 
+#                     s(FWI, bs = "tp", k = 30) + 
+#                     s(BUI, bs = "tp", k = 30) + 
+#                     s(ISI, bs = "tp", k = 30) + 
+#                     s(FFMC, bs = "tp", k = 30) +
+#                     s(DMC, bs = "tp", k = 30) + 
+#                     s(DC, bs = "tp", k = 30)) 
+
+gam.1 <- list(BA ~ 1,
+                ~ s(BUI, bs = "tp", k = 30) + 
+                  s(ISI, bs = "tp", k = 30) + 
+                  s(FFMC, bs = "tp", k = 30) +
+                  s(DMC, bs = "tp", k = 30) +
+                  s(DC, bs = "tp", k = 30))
 evgam.fit.1 <- evgam::evgam(gam.1, data = simul.data, family = "gpd")
 pred.1 <- predict(evgam.fit.1, newdata = xholder, type="response", se.fit = TRUE)
 xi.pred.1 <-pred.1$fitted$shape
@@ -587,15 +588,12 @@ alpha.pred.1 <- 1/xi.pred.1
 #   alpha.nonlinear.1[,j] <- 1/(xi.nonlinear.1[,j])
 # }
 
+
 data.scenario <- data.frame("x" = newx,
                             "post.mean" = (alpha.samples[,1]),
                             "post.median" = (alpha.samples[,5]),
                             "q1" = (alpha.samples[,4]),
-                            "q3" = (alpha.samples[,6]),
-                            "post.mean.org" = (origin.samples[,1]),
-                            "post.median.org" = (origin.samples[,5]),
-                            "q1.org" = (origin.samples[,4]),
-                            "q3.org" = (origin.samples[,6]))
+                            "q3" = (alpha.samples[,6]))
 
 ggplot(data.scenario, aes(x=x)) + 
   ylab(expression(alpha(c,...,c))) + xlab(expression(c)) + labs(col = "") +
@@ -620,6 +618,8 @@ xi.scenario <- data.frame("x" = newx,
                             "evgam.1" = xi.pred.1,
                             "evgam.1.q1" = xi.low.1,
                             "evgam.1.q3" = xi.high.1,
+                            "vgam.1" = vgam.xi.1,
+                            "vgam.scale" = vgam.xi.scale,
                             "evgam.scale.q1" = xi.low.scale,
                             "evgam.scale.q3" = xi.high.scale,
                             "evgam.scale" = xi.pred.scale)
@@ -629,9 +629,11 @@ ggplot(xi.scenario, aes(x=x)) +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
   geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
   geom_ribbon(aes(ymin = evgam.scale.q1, ymax = evgam.scale.q3), fill= "orange", alpha = 0.2) +
-  geom_line(aes(y=evgam.scale), colour = "orange", linewidth=1, linetype=2) +
+  geom_line(aes(y=evgam.scale), colour = "orange", linewidth=1, linetype=3) +
+  geom_line(aes(y=vgam.scale), colour = "orange", linewidth=1, linetype=4) +
   geom_ribbon(aes(ymin = evgam.1.q1, ymax = evgam.1.q3), fill= "purple", alpha = 0.2) +
-  geom_line(aes(y=evgam.1), colour = "purple", linewidth=1, linetype=3) +  
+  geom_line(aes(y=evgam.1), colour = "purple", linewidth=1, linetype=3) +
+  geom_line(aes(y=vgam.1), colour = "purple", linewidth=1, linetype=4) +  
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values = c("steelblue")) + 
   guides(color = guide_legend(order = 2), 
