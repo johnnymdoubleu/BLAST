@@ -16,8 +16,8 @@ p <- 5
 
 C <- diag(p)
 ## Generate sample
-f1 <- function(x) {1.5 * sin(2 * pi * x^2)*x^3}
-f5 <- function(x) {-1.5 * cos(3 * pi * x^2)*x^2}
+f1 <- function(x) {-0.4 * sin(2 * pi * (x-1.5)^2)*(x-1.5)^3}
+f5 <- function(x) {0.1* cos(3 * pi * (x-1.4)^2)*(x-1.4)^2}
 
 make.nl <- function(x, raw_y) {
   fit <- lm(raw_y ~ x)
@@ -352,7 +352,7 @@ alpha.container$vgam.scale <- rowMeans(vgam.scale.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
 # save(newgsmooth.container, alpha.container, mise.container, evgam.1.container, evgam.scale.container, mise.evgam.1.container, mise.evgam.scale.container, vgam.1.container, vgam.scale.container, mise.vgam.1.container, mise.vgam.scale.container, file=paste0("evgam_mc_scC_",n.origin,"_",array.id ,".Rdata"))
-load(paste0("./simulation/results/2026-02-05_evgam_mc_scC_",(n.origin*0.05),".Rdata"))
+load(paste0("./simulation/results/2026-02-07_evgam_mc_scC_",(n.origin*0.05),".Rdata"))
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab("")
 if(total.iter <= 50){
@@ -376,7 +376,7 @@ print(plt +
         scale_color_manual(values = c("steelblue", "red"))+
         guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) +
-        theme_minimal(base_size = 40) + ylim(-1.5, 2.5)+
+        theme_minimal(base_size = 40) + ylim(-1, 2.5)+
         theme(legend.position = "none",
                 strip.text = element_blank(),
                 axis.text.y = element_blank(),

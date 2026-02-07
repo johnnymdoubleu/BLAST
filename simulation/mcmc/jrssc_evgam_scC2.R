@@ -9,7 +9,7 @@ library(VGAM)
 # Scenario C
 total.iter <- 250
 # array.id <- commandArgs(trailingOnly=TRUE)
-n <- n.origin <- 15000
+n <- n.origin <- 20000
 psi.origin <- psi <- 10
 threshold <- 0.95
 p <- 5
@@ -20,8 +20,8 @@ C <- matrix(c(1,  0.3,  0.0,  0.0, -0.04,
             0.0, 0.15, 0.99,    1,  0.56,
           -0.04, 0.06, 0.48, 0.56,     1), nrow = p)
 ## Generate sample
-f1 <- function(x) {1.5 * sin(2 * pi * x^2)*x^3}
-f5 <- function(x) {-1.5 * cos(3 * pi * x^2)*x^2}
+f1 <- function(x) {-0.4 * sin(2 * pi * (x-1.5)^2)*(x-1.5)^3}
+f5 <- function(x) {0.1* cos(3 * pi * (x-1.4)^2)*(x-1.4)^2}
 
 make.nl <- function(x, raw_y) {
   fit <- lm(raw_y ~ x)

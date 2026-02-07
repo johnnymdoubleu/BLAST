@@ -5,16 +5,16 @@ library(rstan)
 library(MESS)
 
 # Scenario C
-total.iter <- 2
+total.iter <- 250
 
-n <- n.origin <- 5000
+n <- n.origin <- 15000
 psi.origin <- psi <- 10
 threshold <- 0.95
 p <- 5
 C <- diag(p)
 
-f1 <- function(x) {1.5 * sin(2 * pi * x^2)*x^3}
-f5 <- function(x) {-1.5 * cos(3 * pi * x^2)*x^2}
+f1 <- function(x) {-0.4 * sin(2 * pi * (x-1.5)^2)*(x-1.5)^3}
+f5 <- function(x) {0.1* cos(3 * pi * (x-1.4)^2)*(x-1.4)^2}
 
 make.nl <- function(x, raw_y) {
   fit <- lm(raw_y ~ x)
@@ -77,6 +77,7 @@ model {
     target += student_t_lpdf(y[i] | alpha[i], 0, 1);
     target += -1*log(1-student_t_cdf(u, alpha[i], 0, 1));
   }
+  // target += pareto_lpdf(y | rep_vector(u,n), alpha);
   target += normal_lpdf(theta[1] | 0, 100);
 
   for (j in 1:p){
@@ -102,14 +103,14 @@ generated quantities {
   }
   theta_origin[1] = theta[1] - dot_product(X_means, theta_origin[2:(p+1)]);
   for (j in 1:p){
-      gridgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
-      gridgl[,j] = xholderLinear[,j] * theta_origin[j+1];
-      gridgsmooth[,j] = gridgl[,j] + gridgnl[,j];
+    gridgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
+    gridgl[,j] = xholderLinear[,j] * theta_origin[j+1];
+    gridgsmooth[,j] = gridgl[,j] + gridgnl[,j];
   };
 
   for (i in 1:n){
-      gridalpha[i] = exp(theta_origin[1] + sum(gridgsmooth[i,]));
-      se[i] = pow((gridalpha[i]-trueAlpha[i]), 2);
+    gridalpha[i] = exp(theta_origin[1] + sum(gridgsmooth[i,]));
+    se[i] = pow((gridalpha[i]-trueAlpha[i]), 2);
   };
 }
 "
@@ -316,7 +317,7 @@ alpha.container$true <- alp.new
 alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
-# load(paste0("./simulation/results/MC-Scenario_C/2026-01-25_",total.iter,"_MC_scC_",n.origin,".Rdata"))
+load(paste0("./simulation/results/MC-Scenario_C/2026-02-07_",total.iter,"_MC_scC_",n.origin,".Rdata"))
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab("")
 if(total.iter <= 50){
@@ -364,7 +365,7 @@ if(total.iter <= 50){
 }
 print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + ylim(-2.3, 2) +
         geom_line(aes(y=true, col = "True"), linewidth = 2, linetype = 2) + 
-        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5) + 
+        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.2) + 
         facet_grid(covariate ~ ., scales = "free_x", switch = "y",
                     labeller = label_parsed) + 
         scale_color_manual(values = c("steelblue", "red"))+
@@ -399,7 +400,7 @@ if(total.iter <= 50){
 }
 print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
         geom_line(aes(y=true, col = "True"), linewidth = 2, linetype = 2) + 
-        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5) + 
+        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.2) + 
         ylim(-2.3, 2.3) +
         facet_grid(covariate ~ ., scales = "free_x", switch = "y",
                     labeller = label_parsed) +  
@@ -413,7 +414,7 @@ print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewid
                 axis.title.x = element_text(size = 45),  
                 axis.text = element_text(size = 30)))
 
-# # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_linear_scC",n.origin,".pdf"), width=11, height = 7.78)                
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_linear_scC",n.origin,".pdf"), width=11, height = 7.78)                
 
 gridgnl.container$x <- newx
 gridgnl.container$true <- as.vector(nl.new)
@@ -433,7 +434,7 @@ if(total.iter <= 50){
 }
 print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
         geom_line(aes(y=true, col = "True"), linewidth = 2, linetype = 2) + 
-        # geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5) + 
+        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5) + 
         ylim(-2.3, 2.3) +
         facet_grid(covariate ~ ., scales = "free_x", switch = "y",
                     labeller = label_parsed) +  
@@ -457,7 +458,7 @@ if(total.iter <= 50){
     plt <- plt + geom_line(aes(y = .data[[names(qqplot.container)[i]]]), alpha = 0.05, linewidth = 0.7)
   }
 }else{
-  for(i in 50:100){
+  for(i in 110:160){
     plt <- plt + geom_line(aes(y = .data[[names(qqplot.container)[i]]]), alpha = 0.05, linewidth = 0.7)
   }
 }

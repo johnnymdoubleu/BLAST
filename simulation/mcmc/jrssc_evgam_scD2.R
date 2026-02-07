@@ -9,7 +9,7 @@ library(VGAM)
 # Scenario D2
 # array.id <- commandArgs(trailingOnly=TRUE)
 total.iter <- 250
-n <- n.origin <- 15000
+n <- n.origin <- 20000
 psi.origin <- psi <- 10
 threshold <- 0.95
 p <- 5
@@ -20,8 +20,8 @@ C <- matrix(c(1,  0.61,  0.94, 0.9, 0.0,
             0.90, 0.69,  0.99,    1, 0.35,
             0.0,  0.16,  0.28,  0.35,   1), nrow = p)
 ## Generate sample
-f4 <- function(x) {1.5 * sin(2 * pi * x^2)*x^3}
-f3 <- function(x) {-1.5 * cos(3 * pi * x^2)*x^2}
+f4 <- function(x) {-1.5 * sin(2 * pi * (x-1.1)^2)*(x-1.1)^3}
+f3 <- function(x) {0.5 * cos(3 * pi * (x)^2)*(x)^2}
 
 make.nl <- function(x, raw_y) {
   fit <- lm(raw_y ~ x)
@@ -33,7 +33,7 @@ make.nl <- function(x, raw_y) {
   ))
 }
 
-theta.origin <- c(0.5, 0.8, 0, -0.4, 0.6, 0)
+theta.origin <- c(0.7, 1.2, 0, -1.2, 1.2, 0)
 psi <- psi -2
 
 model.stan <- "// Stan model for BLAST Burr Samples
@@ -372,7 +372,7 @@ alpha.container$vgam.scale <- rowMeans(vgam.scale.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
 # save(newgsmooth.container, alpha.container, mise.container, evgam.1.container, evgam.scale.container, mise.evgam.1.container, mise.evgam.scale.container, vgam.1.container, vgam.scale.container, mise.vgam.1.container, mise.vgam.scale.container, file=paste0("evgam_mc_scD_",n.origin,"_",array.id ,".Rdata"))
-load(paste0("./simulation/results/2026-02-05_evgam_mc_scD2_",(n.origin*0.05),".Rdata"))
+load(paste0("./simulation/results/2026-02-07_evgam_mc_scD2_",(n.origin*0.05),".Rdata"))
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab("")
 if(total.iter <= 50){
@@ -396,7 +396,7 @@ print(plt +
         scale_color_manual(values = c("steelblue", "red"))+
         guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) +
-        theme_minimal(base_size = 40) + ylim(-1.5, 2.5)+
+        theme_minimal(base_size = 40) + ylim(-1, 2.5)+
         theme(legend.position = "none",
                 strip.text = element_blank(),
                 axis.text.y = element_blank(),

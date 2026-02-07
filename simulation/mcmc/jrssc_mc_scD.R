@@ -15,8 +15,8 @@ p <- 5
 
 C <- diag(p)
 
-f4 <- function(x) {1.5 * sin(2 * pi * x^2)*x^3}
-f3 <- function(x) {-1.5 * cos(3 * pi * x^2)*x^2}
+f4 <- function(x) {-1.5 * sin(2 * pi * (x-1)^2)*(x-1)^3}
+f3 <- function(x) {0.5 *cos(3 * pi * x^2)*x^2}
 
 make.nl <- function(x, raw_y) {
   fit <- lm(raw_y ~ x)
@@ -28,7 +28,7 @@ make.nl <- function(x, raw_y) {
   ))
 }
 
-theta.origin <- c(0.5, 0.8, 0, -0.4, 0.6, 0)
+theta.origin <- c(0.7, 1.2, 0, -1.2, 1.2, 0)
 psi <- psi -2
 
 model.stan <- "// Stan model for BLAST Burr Samples
@@ -49,88 +49,90 @@ functions{
 }
 
 data {
-  int <lower=1> n; // Sample size
-  int <lower=1> p; // regression coefficient size
-  int <lower=1> psi; // splines coefficient size
-  real <lower=0> u; // large threshold value
-  matrix[n, p] bsLinear; // fwi dataset
-  matrix[n, (psi*p)] bsNonlinear; // thin plate splines basis
-  matrix[n, p] xholderLinear; // fwi dataset
-  matrix[n, (psi*p)] xholderNonlinear; // thin plate splines basis    
-  array[n] real <lower=1> y; // extreme response
-  real <lower=0> atau;
-  vector[p] X_means;
-  vector[p] X_sd;
-  array[n] real <lower=0> trueAlpha;
+    int <lower=1> n; // Sample size
+    int <lower=1> p; // regression coefficient size
+    int <lower=1> psi; // splines coefficient size
+    real <lower=0> u; // large threshold value
+    matrix[n, p] bsLinear; // fwi dataset
+    matrix[n, (psi*p)] bsNonlinear; // thin plate splines basis
+    matrix[n, p] xholderLinear; // fwi dataset
+    matrix[n, (psi*p)] xholderNonlinear; // thin plate splines basis    
+    array[n] real <lower=1> y; // extreme response
+    real <lower=0> atau;
+    vector[p] X_means;
+    vector[p] X_sd;
+    vector[(psi*p)] Z_scales;
+    array[n] real <lower=0> trueAlpha;
 }
 
 parameters {
-  vector[(p+1)] theta; // linear predictor
-  array[p] vector[psi] gamma_raw;
-  array[p] real <lower=0> lambda1; // lasso penalty //array[p] real <lower=0> 
-  array[p] real <lower=0> lambda2; // lambda2 group lasso penalty
-  array[p] real <lower=0> tau;
+    vector[(p+1)] theta; // linear predictor
+    array[p] vector[psi] gamma_raw;
+    array[p] real <lower=0> lambda1; // lasso penalty //array[p] real <lower=0> 
+    array[p] real <lower=0> lambda2; // lambda2 group lasso penalty
+    array[p] real <lower=0> tau;
 }
 
 transformed parameters {
-  array[n] real <lower=0> alpha; // covariate-adjusted tail index
-  
-  array[p] vector[psi] gamma;
-  {
-    matrix[n, p] gsmooth; // linear component
-    for (j in 1:p){
-      gamma[j] = gamma_raw[j] * sqrt(tau[j]);
-      gsmooth[,j] = bsLinear[,j] * theta[j+1] + bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
-    };
+    array[n] real <lower=0> alpha; // covariate-adjusted tail index
     
-    for (i in 1:n){
-      alpha[i] = exp(theta[1] + sum(gsmooth[i,]));
-    };
-  }
+    array[p] vector[psi] gamma;
+    {
+      matrix[n, p] gsmooth; // linear component
+      for (j in 1:p){
+        for (k in 1:psi){
+          int idx = (j-1)*psi + k;
+          gamma[j][k] = gamma_raw[j][k] * sqrt(tau[j]) * Z_scales[idx];
+        }; 
+        gsmooth[,j] = bsLinear[,j] * theta[j+1] + bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
+      };
+      
+      for (i in 1:n){
+        alpha[i] = exp(theta[1] + sum(gsmooth[i,]));
+      };
+    }
 }
 
 model {
-  // likelihood
-  for (i in 1:n){
-    target += burr_lpdf(y[i] | alpha[i]);
-    target += -1*log(1-burr_cdf(u, alpha[i]));
-  }
-  target += normal_lpdf(theta[1] | 0, 100);
-
-  for (j in 1:p){
-    target += gamma_lpdf(lambda1[j] | 2, 1); 
-    target += gamma_lpdf(lambda2[j] | 0.01, 0.01);    
-    target += double_exponential_lpdf(theta[(j+1)] | 0, 1/(lambda1[j]));
-    target += gamma_lpdf(tau[j] | atau, square(lambda2[j])*0.5);
-    target += std_normal_lpdf(gamma_raw[j]);
-  }
+    // likelihood
+    // for (i in 1:n){
+    //   target += burr_lpdf(y[i] | alpha[i]);
+    //   target += -1*log(1-burr_cdf(u, alpha[i]));
+    // }
+    target += pareto_lpdf(y | rep_vector(u, n), alpha);
+    target += normal_lpdf(theta[1] | 0, 100);
+    for (j in 1:p){
+      target += gamma_lpdf(lambda1[j] | 2, 1); 
+      target += gamma_lpdf(lambda2[j] | 1e-3, 1e-3);
+      target += double_exponential_lpdf(theta[(j+1)] | 0, 1/(lambda1[j]));
+      target += gamma_lpdf(tau[j] | atau, square(lambda2[j])*0.5);
+      target += std_normal_lpdf(gamma_raw[j]);
+    }
 }
 
 generated quantities {
-  // Used in Posterior predictive check
-  array[n] real <lower=0> gridalpha; // new tail index
-  matrix[n, p] gridgnl; // nonlinear component
-  matrix[n, p] gridgl; // linear component
-  matrix[n, p] gridgsmooth; // linear component
-  vector[(p+1)] theta_origin;
-  vector[n] se;
-  real <lower=0> mse;
+    // Used in Posterior predictive check
+    array[n] real <lower=0> gridalpha; // new tail index
+    matrix[n, p] gridgnl; // nonlinear component
+    matrix[n, p] gridgl; // linear component
+    matrix[n, p] gridgsmooth; // linear component
+    vector[(p+1)] theta_origin;
+    vector[n] se;
 
-  for (j in 1:p){
-    theta_origin[j+1] = theta[j+1] / X_sd[j];
-  }
-  theta_origin[1] = theta[1] - dot_product(X_means, theta_origin[2:(p+1)]);
-  for (j in 1:p){
+    for (j in 1:p){
+      theta_origin[j+1] = theta[j+1] / X_sd[j];
+    }
+    theta_origin[1] = theta[1] - dot_product(X_means, theta_origin[2:(p+1)]);
+    for (j in 1:p){
       gridgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
       gridgl[,j] = xholderLinear[,j] * theta_origin[j+1];
       gridgsmooth[,j] = gridgl[,j] + gridgnl[,j];
-  };
+    };
 
-  for (i in 1:n){
+    for (i in 1:n){
       gridalpha[i] = exp(theta_origin[1] + sum(gridgsmooth[i,]));
       se[i] = pow((gridalpha[i]-trueAlpha[i]), 2);
-  };
-  mse = mean(se);
+    };
 }
 "
 
@@ -174,7 +176,7 @@ for(iter in 1:total.iter){
                       theta.origin[4] + f3.hidden$slope,
                       theta.origin[5] + f4.hidden$slope,
                       theta.origin[6])
-  newx <- seq(0,1,length.out = n)
+  newx <- seq(0, 1, length.out = n)
   xholder <- do.call(cbind, lapply(1:p, function(j) {newx}))
   g4.nl <- f4(newx) - (f4.hidden$intercept + f4.hidden$slope*newx)
   g3.nl <- f3(newx) - (f3.hidden$intercept + f3.hidden$slope*newx)
@@ -272,7 +274,7 @@ for(iter in 1:total.iter){
 
   xholder.linear <- model.matrix(~ ., data = data.frame(xholder))
   xholder.nonlinear <- do.call(cbind, grid_Z_list)
-
+  Z_scales <- unlist(scale_stats_list)
   X_means <- colMeans(bs.linear[,c(2:(p+1))])
   X_sd   <- apply(bs.linear[,c(2:(p+1))], 2, sd)
   bs.linear[,c(2:(p+1))] <- scale(bs.linear[,c(2:(p+1))], center = X_means, scale = X_sd)
@@ -281,7 +283,7 @@ for(iter in 1:total.iter){
   data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, X_sd=X_sd,
                     atau = ((psi+1)/2), X_means = X_means, trueAlpha = alp.new,
                     bsLinear = bs.linear[,c(2:(p+1))], bsNonlinear = bs.nonlinear,
-                    xholderLinear = xholder.linear[,c(2:(p+1))], xholderNonlinear = xholder.nonlinear)
+                    xholderLinear = xholder.linear[,c(2:(p+1))], xholderNonlinear = xholder.nonlinear, Z_scales = Z_scales)
 
   init.alpha <- list(list(gamma_raw= array(rep(0.2, (psi*p)), dim=c(p,psi)),
                           theta = rep(-0.1, (p+1)), tau = rep(0.1, p), 
@@ -341,7 +343,7 @@ alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
 
-load(paste0("./simulation/results/MC-Scenario_D/2026-01-26_",total.iter,"_MC_scD_",n.origin,".Rdata"))
+load(paste0("./simulation/results/MC-Scenario_D/2026-02-07_",total.iter,"_MC_scD_",n.origin,".Rdata"))
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab("")
 if(total.iter <= 50){
@@ -384,9 +386,9 @@ if(total.iter <= 50){
     plt <- plt + geom_line(aes(y = .data[[names(gridgsmooth.container)[i]]]), alpha = 0.05, linewidth = 0.7)
   }
 }
-print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + ylim(-2.3, 2) +
+print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + ylim(-2.5, 2.5) +
         geom_line(aes(y=true, col = "True"), linewidth = 2, linetype = 2) + 
-        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5) + 
+        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.2) + 
         facet_grid(covariate ~ ., scales = "free_x", switch = "y",
                     labeller = label_parsed) +
         scale_color_manual(values = c("steelblue", "red"))+
@@ -397,7 +399,7 @@ print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewid
                 plot.margin = margin(0,0,0,-20),
                 axis.text.y = element_blank(),
                 strip.text = element_blank(),
-                axis.title.x = element_text(size = 45),                
+                axis.title.x = element_text(size = 45),
                 axis.text = element_text(size = 30)))
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_scD_",n.origin,".pdf"), width=11, height = 15)
@@ -409,7 +411,7 @@ gridgl.container$mean <- rowMeans(gridgl.container[,1:total.iter])
 gridgl.container$covariate <- gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]", "g[6]"))
 gridgl.container <- as.data.frame(gridgl.container)
 
-plt <- ggplot(data = gridgl.container, aes(x = x, group = covariate)) + ylab("") + xlab(expression(x))
+plt <- ggplot(data = gridgl.container, aes(x = x, group = covariate)) + ylab("") + xlab(expression(c))
 if(total.iter <= 50){
   for(i in 1:total.iter){
     plt <- plt + geom_line(aes(y = .data[[names(gridgl.container)[i]]]), alpha = 0.05, linewidth = 0.7)
@@ -421,8 +423,8 @@ if(total.iter <= 50){
 }
 print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
         geom_line(aes(y=true, col = "True"), linewidth = 2, linetype = 2) + 
-        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5) + 
-        # ylim(-0.23, 0.2) +
+        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.2) + 
+        ylim(-2.5, 2.5) +
         facet_grid(covariate ~ ., scales = "free_x", switch = "y",
                     labeller = label_parsed) +  
         scale_color_manual(values = c("steelblue", "red"))+
@@ -433,10 +435,10 @@ print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewid
                 plot.margin = margin(0,0,0,-20),
                 strip.text = element_blank(),
                 axis.text.y = element_blank(),
-                axis.title.x = element_text(size = 45),  
+                axis.title.x = element_text(size = 45),
                 axis.text = element_text(size = 30)))
 
-# # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_linear_scD_",n.origin,".pdf"), width=11, height = 7.78)                
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_linear_scD_",n.origin,".pdf"), width=11, height = 7.78)                
 
 gridgnl.container$x <- newx
 gridgnl.container$true <- as.vector(nl.new)
@@ -444,7 +446,7 @@ gridgnl.container$mean <- rowMeans(gridgnl.container[,1:total.iter])
 gridgnl.container$covariate <- gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]", "g[6]"))
 gridgnl.container <- as.data.frame(gridgnl.container)
 
-plt <- ggplot(data = gridgnl.container, aes(x = x, group = covariate)) + ylab("") + xlab(expression(x))
+plt <- ggplot(data = gridgnl.container, aes(x = x, group = covariate)) + ylab("") + xlab(expression(c))
 if(total.iter <= 50){
   for(i in 1:total.iter){
     plt <- plt + geom_line(aes(y = .data[[names(gridgnl.container)[i]]]), alpha = 0.05, linewidth = 0.7)
@@ -456,8 +458,8 @@ if(total.iter <= 50){
 }
 print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
         geom_line(aes(y=true, col = "True"), linewidth = 2, linetype = 2) + 
-        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5) + 
-        ylim(-2.3, 2.3) +
+        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.2) + 
+        ylim(-2.5, 2.5) +
         facet_grid(covariate ~ ., scales = "free_x", switch = "y",
                     labeller = label_parsed) +  
         scale_color_manual(values = c("steelblue", "red"))+
@@ -467,7 +469,8 @@ print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewid
         theme(legend.position = "none",
                 plot.margin = margin(0,0,0,-20),
                 strip.text = element_blank(),
-                axis.title.x = element_text(size = 45),  
+                axis.text.y = element_blank(),
+                axis.title.x = element_text(size = 45),
                 axis.text = element_text(size = 30)))
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_nonlinear_scD",n.origin,".pdf"), width=11, height = 7.78)

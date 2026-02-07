@@ -94,10 +94,16 @@ fwi.origin <- data.frame(fwi.origin, time = c(1:length(Y)), BA=Y)
 # save(ald.time.fit, ald.cov.fit, evgam.cov.pred, evgam.time.pred, file="./BLAST/application/quant-evgam-scaled.Rdata")
 
 # quant.fit <- qgam(BA ~ s(time,k=30), data = fwi.origin, qu = 0.975)
+# quant.fit <- qgam(BA ~ s(BUI,bs="ts", k=10) +
+#                       s(ISI,bs="ts", k=10) +
+#                       s(FFMC,bs="ts", k=10) +
+#                       s(DMC,bs="ts", k=10) +
+#                       s(DC,bs="ts", k=10), data = fwi.origin, qu = 0.95)
+# save(quant.fit, file = './BLAST/application/qgam_95_10_ts.Rdata')
 # load("./BLAST/application/quant-time.Rdata")
 # load("./BLAST/application/qgam_5_none.Rdata")
-# load("./BLAST/application/quant-t_10.Rdata")
-load("./BLAST/application/qgam_975_30.Rdata")
+load("./BLAST/application/quant-t_30.Rdata")
+# load("./BLAST/application/qgam_975_30.Rdata")
 # print(plot(quant.fit, allTerms = TRUE), pages = 1)
 check(quant.fit)
 quant.viz <- getViz(quant.fit, nsim = 20)
@@ -168,7 +174,8 @@ ggplot(plot_data, aes(x = Label, y = Q975, group = 1)) +
 
 
 df_seasonal$fitted_975 <- predict(quant.fit)
-
+load("./BLAST/application/qgam_95_30_ts.Rdata")
+df_seasonal$fitted_cov <- predict(quant.fit)
 # 2. Compute the Blockwise (Seasonal) Empirical Quantile
 # This calculates the actual 97.5th percentile for each specific season/year
 block_summary <- df_seasonal %>%
@@ -176,6 +183,7 @@ block_summary <- df_seasonal %>%
   summarise(
     Empirical_975 = log(quantile(BA, probs = 0.975, na.rm = TRUE)),
     Model_Smooth_975 = log(quantile(fitted_975, probs = 0.975, na.rm = TRUE)), # Average smooth value for that block
+    Model_cov_975 = log(quantile(fitted_cov, probs = 0.975, na.rm = TRUE)),
     .groups = 'drop'
 )
 
@@ -184,7 +192,7 @@ ggplot(block_summary, aes(x = Label, group = 1)) +
   geom_line(aes(y = Empirical_975), color = "grey80", linetype = "dashed") +
   geom_hline(aes(yintercept=log(quantile(Y,0.975))), linetype="dashed") +
   geom_line(aes(y = Model_Smooth_975), color = "steelblue", linewidth = 1.2) +
-  
+  geom_line(aes(y = Model_cov_975), color = "darkgreen", linewidth = 1.2, linetype=2) +
   scale_color_manual(values = c(
     "Summer" = "orange", 
     "Winter" = "red", 

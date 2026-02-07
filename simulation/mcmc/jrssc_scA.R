@@ -402,9 +402,9 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_line(aes(y=true, colour = "True"), linewidth=2, linetype=2) + 
-  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1.8) + 
+  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1.5) + 
   # geom_line(aes(y=post.mean, colour = "Posterior Median"), linewidth=1.8) + 
-  ylab("") + xlab(expression(c)) + ylim(-2.3, 2) +
+  ylab("") + xlab(expression(c)) + ylim(-2.5, 2.5) +
   facet_grid(covariates ~ ., scales = "free_x", switch = "y", 
               labeller = label_parsed) + 
   scale_fill_manual(values=c("steelblue"), name = "") +
@@ -436,9 +436,9 @@ ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) +
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   geom_line(aes(y=true, colour = "True"), linewidth=2, linetype=2) + 
-  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
+  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1.5) + 
   # geom_line(aes(y=post.mean, colour = "Posterior Median"), linewidth=1) + 
-  ylab("") + xlab(expression(c)) + ylim(-2.3, 2.3) + 
+  ylab("") + xlab(expression(c)) + ylim(-2.5, 2.5) + 
   facet_grid(covariates ~ ., scales = "free_x", switch = "y",
               labeller = label_parsed) +  
   scale_fill_manual(values=c("steelblue"), name = "") +
@@ -469,8 +469,8 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   geom_line(aes(y=true, colour = "True"), linewidth=2, linetype=2) + 
-  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
-  ylab("") + xlab(expression(c)) + ylim(-2.3, 2.3) + 
+  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1.5) + 
+  ylab("") + xlab(expression(c)) + ylim(-2.5, 2.5) + 
   facet_grid(covariates ~ ., scales = "free_x", switch = "y",
               labeller = label_parsed) +  
   scale_fill_manual(values=c("steelblue"), name = "") +

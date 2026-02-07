@@ -141,7 +141,13 @@ for(iter in 1:total.iter){
   eta_nonlin <- f2.nl + f3.nl
   eta <- theta.origin[1] + eta_lin + eta_nonlin
   alp.origin <- exp(eta)
-  y.origin <- rPareto(n, rep(1,n), alpha = alp.origin)
+  # y.origin <- rPareto(n, rep(1,n), alpha = alp.origin)
+  scale.origin <- xi.origin <- y.origin <- NULL
+  for(i in 1:n){
+    xi.origin[i] <- 1/alp.origin[i]
+    scale.origin[i] <- alp.origin[i]
+    y.origin[i] <- evd::rgpd(1, scale=scale.origin[i], loc=0, shape=xi.origin[i])
+  }
   u <- quantile(y.origin, threshold)
   excess.index <- which(y.origin>u)
   x.origin <- x.origin[excess.index,]
@@ -285,7 +291,7 @@ for(iter in 1:total.iter){
   vgam.fit.scale <- vgam(y ~ sm.ps(X1, ps.int = 8, outer.ok=TRUE) + sm.ps(X2, ps.int = 8, outer.ok=TRUE) + sm.ps(X3, ps.int = 8, outer.ok=TRUE) + sm.ps(X4, ps.int = 8, outer.ok=TRUE) + sm.ps(X5, ps.int = 8, outer.ok=TRUE),
                         data = simul.data,
                         family = gpd(threshold= u,
-                                      lshape="identitylink",
+                                      lshape="loglink",
                                       zero = NULL),
                         trace = TRUE,
                         control = vgam.control(maxit = 200))
@@ -296,7 +302,7 @@ for(iter in 1:total.iter){
   vgam.fit.1 <- vgam(y ~ sm.ps(X1, ps.int = 8, outer.ok=TRUE) + sm.ps(X2, ps.int = 8, outer.ok=TRUE) + sm.ps(X3, ps.int = 8, outer.ok=TRUE) + sm.ps(X4, ps.int = 8, outer.ok=TRUE) + sm.ps(X5, ps.int = 8, outer.ok=TRUE),
                         data = simul.data,
                         family = gpd(threshold= u,
-                                      lshape="identitylink",
+                                      lshape="loglink",
                                       zero = 1),
                         trace = TRUE,
                         control = vgam.control(maxit = 200))
@@ -352,7 +358,7 @@ alpha.container$vgam.scale <- rowMeans(vgam.scale.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
 # save(newgsmooth.container, alpha.container, mise.container, evgam.1.container, evgam.scale.container, mise.evgam.1.container, mise.evgam.scale.container, vgam.1.container, vgam.scale.container, mise.vgam.1.container, mise.vgam.scale.container, file=paste0("evgam_mc_scB_",n.origin,"_",array.id ,".Rdata"))
-load(paste0("./simulation/results/2026-02-05_evgam_mc_scB_",(n.origin*0.05),".Rdata"))
+# load(paste0("./simulation/results/2026-02-05_evgam_mc_scB_",(n.origin*0.05),".Rdata"))
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab(expression(xi(c,ldots,c))) #+ ylab("")
 if(total.iter <= 50){

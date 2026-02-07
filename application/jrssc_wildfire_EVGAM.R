@@ -102,10 +102,11 @@ gam.scale <- list(BA ~ s(BUI, bs = "tp", k = 30) +
                       s(DC, bs = "tp", k = 30))
 evgam.fit.scale <- evgam::evgam(gam.scale, data = simul.data, family = "gpd")
 xi.pred.scale <-predict(evgam.fit.scale, newdata = xholder, type="response")$shape
+sigma.pred.scale <-predict(evgam.fit.scale, newdata = xholder, type="response")$scale
 alpha.pred.scale <- 1/xi.pred.scale
 
 xholder.basis.scale <- predict(evgam.fit.scale, newdata = xholder, type= "lpmatrix")$shape
-psi <- 10
+psi <- 30
 xi.coef.scale <- tail(evgam.fit.scale$coefficients, (psi-1)*p)
 gamma.xi.scale <- matrix(xi.coef.scale, ncol = p)
 alpha.nonlinear.scale <- xi.nonlinear.scale <- matrix(, nrow = n, ncol = p)
@@ -123,6 +124,7 @@ gam.1 <- list(BA ~ 1,
                   s(DC, bs = "tp", k = 30))
 evgam.fit.1 <- evgam::evgam(gam.1, data = simul.data, family = "gpd")
 xi.pred.1 <-predict(evgam.fit.1, newdata = xholder, type="response")$shape
+sigma.pred.1 <-predict(evgam.fit.1, newdata = xholder, type="response")$scale
 alpha.pred.1 <- 1/xi.pred.1
 
 xholder.basis.1 <- predict(evgam.fit.1, newdata = xholder, type= "lpmatrix")$shape
@@ -134,31 +136,32 @@ for(j in 1:p){
   xi.nonlinear.1[,j] <- bs.nonlinear.1[,(((j-1)*(psi-1))+1):(((j-1)*(psi-1))+(psi-1))] %*% gamma.xi.1[,j]
   alpha.nonlinear.1[,j] <- 1/(xi.nonlinear.1[,j])
 }
+# plot(evgam.fit.1)
 
+simul.data <- data.frame(BA = y, fwi.scaled[,c(1:p)])
+vgam.fit.scale <- vgam(y ~ sm.ps(BUI, ps.int = 28, outer.ok = TRUE) + sm.ps(ISI, ps.int = 28, outer.ok = TRUE) + sm.ps(FFMC, ps.int = 28, outer.ok = TRUE) + sm.ps(DMC, ps.int = 28, outer.ok = TRUE) + sm.ps(DC, ps.int = 28, outer.ok = TRUE),
+                      data = simul.data,
+                      family = gpd(threshold= u,
+                                    lshape="loglink",
+                                    zero = NULL),
+                      trace = TRUE,
+                      control = vgam.control(maxit = 200))
+fitted.linear <- predict(vgam.fit.scale, newdata = data.frame(xholder), type = "link")
+fitted.terms <- predict(vgam.fit.scale, newdata = data.frame(xholder), type = "terms")
+vgam.xi.scale <- exp(fitted.linear[,2])
+vgam.sigma.scale <- exp(fitted.linear[,1])
 
-# simul.data <- data.frame(BA = y, fwi.scaled[,c(1:p)])
-# vgam.fit.scale <- vgam(y ~ sm.ps(BUI, ps.int = 28, outer.ok = TRUE) + sm.ps(ISI, ps.int = 28, outer.ok = TRUE) + sm.ps(FFMC, ps.int = 28, outer.ok = TRUE) + sm.ps(DMC, ps.int = 28, outer.ok = TRUE) + sm.ps(DC, ps.int = 28, outer.ok = TRUE),
-#                       data = simul.data,
-#                       family = gpd(threshold= u,
-#                                     lshape="loglink",
-#                                     zero = NULL),
-#                       trace = TRUE,
-#                       control = vgam.control(maxit = 200))
-# fitted.linear <- predict(vgam.fit.scale, newdata = data.frame(xholder), type = "link")
-# fitted.terms <- predict(vgam.fit.scale, newdata = data.frame(xholder), type = "terms")
-# vgam.xi.scale <- exp(fitted.linear[,2])
-
-# vgam.fit.1 <- vgam(y ~ sm.ps(BUI, ps.int = 28, outer.ok = TRUE) + sm.ps(ISI, ps.int = 28, outer.ok = TRUE) + sm.ps(FFMC, ps.int = 28, outer.ok = TRUE) + sm.ps(DMC, ps.int = 28, outer.ok = TRUE) + sm.ps(DC, ps.int = 28, outer.ok = TRUE),
-#                       data = simul.data,
-#                       family = gpd(threshold= u,
-#                                     lshape="loglink",
-#                                     zero = 1),
-#                       trace = TRUE,
-#                       control = vgam.control(maxit = 200))
-# fitted.linear <- predict(vgam.fit.1, newdata = data.frame(xholder), type = "link")
-# fitted.terms <- predict(vgam.fit.1, newdata = data.frame(xholder), type = "terms")
-# vgam.xi.1 <- exp(fitted.linear[,2])
-
+vgam.fit.1 <- vgam(y ~ sm.ps(BUI, ps.int = 28, outer.ok = TRUE) + sm.ps(ISI, ps.int = 28, outer.ok = TRUE) + sm.ps(FFMC, ps.int = 28, outer.ok = TRUE) + sm.ps(DMC, ps.int = 28, outer.ok = TRUE) + sm.ps(DC, ps.int = 28, outer.ok = TRUE),
+                      data = simul.data,
+                      family = gpd(threshold= u,
+                                    lshape="loglink",
+                                    zero = 1),
+                      trace = TRUE,
+                      control = vgam.control(maxit = 200))
+fitted.linear <- predict(vgam.fit.1, newdata = data.frame(xholder), type = "link")
+fitted.terms <- predict(vgam.fit.1, newdata = data.frame(xholder), type = "terms")
+vgam.xi.1 <- exp(fitted.linear[,2])
+vgam.sigma.1 <- exp(fitted.linear[,1])
 
 # alpha.smooth <- data.frame("x" = as.vector(as.matrix(xholder)),
 #                           "evgam.scale" = as.vector(alpha.nonlinear.scale),
@@ -195,15 +198,15 @@ for(i in 1:p){
                   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
                   geom_line(aes(y=evgam.scale), colour = "purple", linewidth=1) + 
                   geom_line(aes(y=evgam.1), colour = "orange", linewidth=1) + 
-                  ylab("") + xlab(expression(c)) +
+                  ylab("") + xlab(names(fwi.scaled)[i]) +
                   scale_fill_manual(values=c("steelblue"), name = "") + 
                   scale_color_manual(values=c("steelblue", "red")) +
-                  # ylim(-2.8, 2.8) + xlim(0,1) +
-                  theme_minimal(base_size = 10) +
+                  ylim(-0.5, 0.5) + xlim(0,1) +
+                  theme_minimal(base_size = 30) +
                   theme(legend.position = "none",
                           plot.margin = margin(0,0,0,-20),
-                          axis.text = element_text(size = 15),
-                          axis.title.x = element_text(size = 15))
+                          axis.text = element_text(size = 35),
+                          axis.title.x = element_text(size = 45))
   grid.plts[[i]] <- grid.plt
 }
 
@@ -224,18 +227,106 @@ ggplot(alpha.scenario, aes(x=x)) +
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_evgam_scA.pdf"), width=10, height = 7.78)
 
 xi.scenario <- data.frame("x" = newx,
-                          "evgam.scale" = xi.pred.scale,
-                          "evgam.1" = xi.pred.1,
                           "vgam.scale" = vgam.xi.scale,
-                          "vgam.1" = vgam.xi.1)
+                          "vgam.1" = vgam.xi.1,
+                          "evgam.scale" = xi.pred.scale,
+                          "evgam.1" = xi.pred.1)
 
 ggplot(xi.scenario, aes(x=x)) + 
   ylab(expression(xi(c,ldots,c))) + xlab(expression(c)) +
-  geom_line(aes(y=evgam.scale), colour = "orange", linewidth=1.5, linetype=2) +
-  geom_line(aes(y=evgam.1), colour = "purple", linewidth=1.5, linetype=2) +
-  theme_minimal(base_size = 30) + #ylim(-1.5, 3.1)+
-  theme(legend.position = "none",
+  geom_line(aes(y = evgam.scale, color = "Scale", linetype = "EVGAM"), linewidth = 1.5) +
+  geom_line(aes(y = evgam.1,     color = "No Scale",     linetype = "EVGAM"), linewidth = 1.5) +
+  geom_line(aes(y = vgam.scale,  color = "Scale", linetype = "VGAM"),  linewidth = 1.5) +
+  geom_line(aes(y = vgam.1,      color = "No Scale",     linetype = "VGAM"),  linewidth = 1.5) +
+  scale_color_manual(name = "Scenario", values = c("Scale" = "orange", "No Scale" = "purple")) +
+  scale_linetype_manual(name = "Model", values = c("EVGAM" = 1, "VGAM" = 4)) +
+  theme_minimal(base_size = 30) +
+  theme(legend.position = "inside",
+        legend.position.inside = c(0.15, 0.8),
+        legend.text = element_text(size = 16),
+        strip.text = element_blank(),
+        axis.text = element_text(size = 18))
+
+sigma.scenario <- data.frame("x" = newx,
+                            "vgam.scale" = unname(vgam.sigma.scale),
+                            "vgam.1" = unname(vgam.sigma.1),
+                            "evgam.scale" = sigma.pred.scale,
+                            "evgam.1" = rep(sigma.pred.1,length(newx)))
+
+ggplot(sigma.scenario, aes(x=x)) + 
+  ylab(expression(sigma(c,ldots,c))) + xlab(expression(c)) +
+  geom_line(aes(y = evgam.scale, color = "Scale", linetype = "EVGAM"), linewidth = 1.5) +
+  geom_line(aes(y = evgam.1,     color = "No Scale",     linetype = "EVGAM"), linewidth = 1.5) +
+  geom_line(aes(y = vgam.scale,  color = "Scale", linetype = "VGAM"),  linewidth = 1.5) +
+  geom_line(aes(y = vgam.1,      color = "No Scale",     linetype = "VGAM"),  linewidth = 1.5) +
+  scale_color_manual(name = "Scenario", values = c("Scale" = "orange", "No Scale" = "purple")) +
+  scale_linetype_manual(name = "Model", values = c("EVGAM" = 1, "VGAM" = 4)) +
+  theme_minimal(base_size = 30) +
+  theme(legend.position = "inside",
+        legend.position.inside = c(0.15, 0.8),
+        legend.text = element_text(size = 16),
         strip.text = element_blank(),
         axis.text = element_text(size = 18))
 
 
+
+
+# save(vgam.fit.1, vgam.fit.scale, evgam.fit.1, evgam.fit.scale, file = "./BLAST/application/vgam-fit.Rdata")
+load("./BLAST/application/vgam-fit.Rdata")
+
+AIC(vgam.fit.1)
+AIC(vgam.fit.scale)
+anova(vgam.fit.1, vgam.fit.scale, test = "LRT", type=1)
+# AIC(evgam.fit.1)
+# AIC(evgam.fit.scale)
+
+library(ggplot2)
+library(gridExtra)
+library(dplyr)
+
+vars <- c("BUI", "ISI", "FFMC", "DMC", "DC")
+xi_list <- list()
+
+pred.vgam.1 <- predict(vgam.fit.1, newdata = data.frame(xholder), type = "terms")
+pred.vgam.scale <- predict(vgam.fit.scale, newdata = data.frame(xholder), type = "terms")
+for (v in vars) {
+  term_col  <- grep(v, colnames(pred.vgam.1), value = TRUE)[2]
+  fitted.1 <- as.numeric(pred.vgam.1[, term_col])
+  fitted.scale <- as.numeric(pred.vgam.scale[, term_col])
+  xi_list[[v]] <- data.frame(
+    x = newx,
+    vgam.1 = fitted.1,#[367:(length(newx)*2)],
+    vgam.scale = fitted.scale#[367:(length(newx)*2)]
+  )
+}
+
+vgam.smooth <- bind_rows(xi_list)
+
+xi.smooth <- data.frame("x" = as.vector(as.matrix(xholder)),
+                        "vgam.scale" = vgam.smooth$vgam.scale,
+                        "vgam.1" = vgam.smooth$vgam.1,
+                        "evgam.scale" = as.vector(xi.nonlinear.scale),
+                        "evgam.1" = as.vector(xi.nonlinear.1),
+                        "covariates" = gl(p, n, (p*n), labels = colnames(xholder)))
+
+grid.plts <- list()
+for(i in 1:p){
+  grid.plt <- ggplot(data = data.frame(xi.smooth[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + 
+                  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+                  geom_line(aes(y=vgam.scale), colour = "purple", linewidth=1, linetype = 3) + 
+                  geom_line(aes(y=vgam.1), colour = "orange", linewidth=1, linetype= 3) +                   
+                  geom_line(aes(y=evgam.scale), colour = "purple", linewidth=1) + 
+                  geom_line(aes(y=evgam.1), colour = "orange", linewidth=1) + 
+                  ylab("") + xlab(names(fwi.scaled)[i]) +
+                  scale_fill_manual(values=c("steelblue"), name = "") + 
+                  scale_color_manual(values=c("steelblue", "red")) +
+                  # ylim(-0.5, 0.5) + xlim(0,1) +
+                  theme_minimal(base_size = 30) +
+                  theme(legend.position = "none",
+                          plot.margin = margin(0,0,0,-20),
+                          axis.text = element_text(size = 35),
+                          axis.title.x = element_text(size = 45))
+  grid.plts[[i]] <- grid.plt
+}
+
+grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)

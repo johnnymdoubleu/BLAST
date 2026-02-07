@@ -76,8 +76,8 @@ fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 
 
 # load("./BLAST/application/quant-t.Rdata")
-load("./BLAST/application/quant-t_10.Rdata")
-# load("./BLAST/application/qgam_975_10.Rdata")
+# load("./BLAST/application/quant-t_10.Rdata")
+load("./BLAST/application/qgam_975_30_ts.Rdata")
 # load("./BLAST/application/quant-evgam-scaled.Rdata")
 preds <- predict(quant.fit)
 # u <- rep(quantile(Y, threshold),ceiling(nrow(fwi.index)*(1-threshold)))
@@ -618,8 +618,8 @@ xi.scenario <- data.frame("x" = newx,
                             "evgam.1" = xi.pred.1,
                             "evgam.1.q1" = xi.low.1,
                             "evgam.1.q3" = xi.high.1,
-                            "vgam.1" = vgam.xi.1,
-                            "vgam.scale" = vgam.xi.scale,
+                            # "vgam.1" = vgam.xi.1,
+                            # "vgam.scale" = vgam.xi.scale,
                             "evgam.scale.q1" = xi.low.scale,
                             "evgam.scale.q3" = xi.high.scale,
                             "evgam.scale" = xi.pred.scale)
@@ -630,10 +630,10 @@ ggplot(xi.scenario, aes(x=x)) +
   geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
   geom_ribbon(aes(ymin = evgam.scale.q1, ymax = evgam.scale.q3), fill= "orange", alpha = 0.2) +
   geom_line(aes(y=evgam.scale), colour = "orange", linewidth=1, linetype=3) +
-  geom_line(aes(y=vgam.scale), colour = "orange", linewidth=1, linetype=4) +
+  # geom_line(aes(y=vgam.scale), colour = "orange", linewidth=1, linetype=4) +
   geom_ribbon(aes(ymin = evgam.1.q1, ymax = evgam.1.q3), fill= "purple", alpha = 0.2) +
   geom_line(aes(y=evgam.1), colour = "purple", linewidth=1, linetype=3) +
-  geom_line(aes(y=vgam.1), colour = "purple", linewidth=1, linetype=4) +  
+  # geom_line(aes(y=vgam.1), colour = "purple", linewidth=1, linetype=4) +  
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values = c("steelblue")) + 
   guides(color = guide_legend(order = 2), 

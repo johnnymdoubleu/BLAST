@@ -6,7 +6,7 @@ library(parallel)
 library(rmutil)
 library(qqboxplot)
 
-set.seed(11)
+set.seed(12)
 
 n <- 15000
 psi.origin <- psi <- 10
@@ -17,8 +17,10 @@ p <- 5
 C <- diag(p)
 x.origin <- pnorm(matrix(rnorm(n*p), ncol = p) %*% chol(C))
 
-f4 <- function(x) {1.5 * sin(2 * pi * x^2)*x^3}
-f3 <- function(x) {-1.5 * cos(3 * pi * x^2)*x^2}
+# f4 <- function(x) {7 * sin(.02 * pi / (x^2+1))*sqrt(x)}
+# f3 <- function(x) {-7 * cos(1 + .03 * pi / (x^2+0.01))*(x-0.1)^2}
+f4 <- function(x) {-1.5 * sin(2 * pi * (x-1.1)^2)*(x-1.1)^3}
+f3 <- function(x) {0.5 * cos(3 * pi * (x)^2)*(x)^2}
 
 make.nl <- function(x, raw_y) {
   fit <- lm(raw_y ~ x)
@@ -29,7 +31,8 @@ make.nl <- function(x, raw_y) {
     intercept = coef(fit)[["(Intercept)"]]
   ))
 }
-theta.origin <- c(0.5, 0.8, 0, -0.4, 0.6, 0)
+theta.origin <- c(0.7, 1.2, 0, -1.2, 1.2, 0)
+
 
 f4.nl <- f4(x.origin[,4])
 f3.nl <- f3(x.origin[,3])
@@ -52,7 +55,7 @@ excess.index <- which(y.origin>u)
 x.origin <- x.origin[excess.index,]
 y.origin <- y.origin[excess.index]
 n <- length(y.origin)
-newx <- seq(0,1,length.out = n)
+newx <- seq(0, 1, length.out = n)
 
 
 f4.hidden <- make.nl(x.origin[,4], f4(x.origin[,4]))
@@ -63,7 +66,7 @@ theta.adjusted <- c(theta.origin[1] + f4.hidden$intercept + f3.hidden$intercept,
                     theta.origin[4] + f3.hidden$slope,
                     theta.origin[5] + f4.hidden$slope,
                     theta.origin[6])
-newx <- seq(0,1,length.out = n)
+newx <- seq(0, 1, length.out = n)
 xholder <- do.call(cbind, lapply(1:p, function(j) {newx}))
 g4.nl <- f4(newx) - (f4.hidden$intercept + f4.hidden$slope*newx)
 g3.nl <- f3(newx) - (f3.hidden$intercept + f3.hidden$slope*newx)
@@ -76,12 +79,13 @@ g3 <- g3.l + g3.nl
 eta.g <- rep(theta.adjusted[1], n) + g4 + g3 + g1.l
 alp.new <- as.vector(exp(theta.origin[1] + xholder %*% theta.origin[-1] + f3(newx) + f4(newx)))
 # alp.new <- exp(eta.g)
+plot(newx, alp.new)
 grid.zero <- rep(0, n)
 g.new <- c(g1.l, grid.zero, g3, g4, grid.zero)
 l.new <- c(g1.l, grid.zero, g3.l, g4.l, grid.zero)
 nl.new <- c(grid.zero, grid.zero, g3.nl, g4.nl, grid.zero)
 
-
+psi <- psi -2
 bs.linear <- model.matrix(~ ., data = data.frame(x.origin))
 
 group.map <- c()
@@ -162,10 +166,10 @@ for (i in seq_along(covariates)) {
 
 xholder.nonlinear <- do.call(cbind, grid_Z_list)
 xholder.linear <- model.matrix(~ ., data = data.frame(xholder))
-
-X_means <- colMeans(bs.linear[,c(2:(p+1))])
-X_sd   <- apply(bs.linear[,c(2:(p+1))], 2, sd)
-bs.linear[,c(2:(p+1))] <- scale(bs.linear[,c(2:(p+1))], center = X_means, scale = X_sd)
+Z_scales <- unlist(scale_stats_list)
+X_means <- colMeans(bs.linear[,-1])
+X_sd   <- apply(bs.linear[,-1], 2, sd)
+bs.linear[,-1] <- scale(bs.linear[,-1], center = X_means, scale = X_sd)
 
 
 cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear[,c(1,2)]) %*% bs.nonlinear[,c((1):(psi))]), "\n")
@@ -205,6 +209,7 @@ data {
     real <lower=0> atau;
     vector[p] X_means;
     vector[p] X_sd;
+    vector[(psi*p)] Z_scales;
 }
 
 parameters {
@@ -222,7 +227,10 @@ transformed parameters {
     {
       matrix[n, p] gsmooth; // linear component
       for (j in 1:p){
-        gamma[j] = gamma_raw[j] * sqrt(tau[j]);
+        for (k in 1:psi){
+          int idx = (j-1)*psi + k;
+          gamma[j][k] = gamma_raw[j][k] * sqrt(tau[j]) * Z_scales[idx];
+        }; 
         gsmooth[,j] = bsLinear[,j] * theta[j+1] + bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
       };
       
@@ -238,13 +246,14 @@ model {
       target += burr_lpdf(y[i] | alpha[i]);
       target += -1*log(1-burr_cdf(u, alpha[i]));
     }
+    // target += pareto_lpdf(y | rep_vector(u, n), alpha);
     target += normal_lpdf(theta[1] | 0, 100);
     for (j in 1:p){
       target += gamma_lpdf(lambda1[j] | 2, 1); 
-      target += gamma_lpdf(lambda2[j] | 1e-2, 1e-2);
+      target += gamma_lpdf(lambda2[j] | 1e-3, 1e-3);
       target += double_exponential_lpdf(theta[(j+1)] | 0, 1/(lambda1[j]));
       target += gamma_lpdf(tau[j] | atau, square(lambda2[j])*0.5);
-      target += std_normal_lpdf(gamma_raw[j]); // target += multi_normal_lpdf(gamma_raw[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)))
+      target += std_normal_lpdf(gamma_raw[j]);
     }
 }
 
@@ -274,18 +283,18 @@ generated quantities {
 
 data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, 
                   atau = ((psi+1)/2), X_means = X_means, X_sd=X_sd,
-                  bsLinear = bs.linear[,c(2:(p+1))], bsNonlinear = bs.nonlinear,
-                  xholderLinear = xholder.linear[,c(2:(p+1))], xholderNonlinear = xholder.nonlinear)
+                  bsLinear = bs.linear[,-1], bsNonlinear = bs.nonlinear,
+                  xholderLinear = xholder.linear[,-1], xholderNonlinear = xholder.nonlinear, Z_scales = Z_scales)
 
-  init.alpha <- list(list(gamma_raw= array(rep(0.2, (psi*p)), dim=c(p,psi)),
-                          theta = rep(-0.1, (p+1)), tau = rep(0.1, p), 
-                          lambda1 = rep(0.1, p), lambda2 = rep(1, p)),
-                    list(gamma_raw = array(rep(0.15, (psi*p)), dim=c(p,psi)),
-                          theta = rep(-0.05, (p+1)), tau = rep(0.3, p),
-                          lambda1 = rep(0.2, p), lambda2 = rep(0.5, p)),
-                    list(gamma_raw = array(rep(0.1, (psi*p)), dim=c(p,psi)),
-                          theta = rep(0.05, (p+1)), tau = rep(0.2, p),
-                          lambda1 = rep(0.2, p), lambda2 = rep(0.5, p)))
+init.alpha <- list(list(gamma_raw= array(rep(0.2, (psi*p)), dim=c(p,psi)),
+                        theta = rep(-0.1, (p+1)), tau = rep(0.1, p), 
+                        lambda1 = rep(0.1, p), lambda2 = rep(1, p)),
+                  list(gamma_raw = array(rep(0.15, (psi*p)), dim=c(p,psi)),
+                        theta = rep(-0.05, (p+1)), tau = rep(0.3, p),
+                        lambda1 = rep(0.2, p), lambda2 = rep(0.5, p)),
+                  list(gamma_raw = array(rep(0.1, (psi*p)), dim=c(p,psi)),
+                        theta = rep(0.05, (p+1)), tau = rep(0.2, p),
+                        lambda1 = rep(0.2, p), lambda2 = rep(0.5, p)))
 
 system.time(fit1 <- stan(
   model_code = model.stan,  # Stan program
@@ -413,9 +422,9 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_line(aes(y=true, colour = "True"), linewidth=2, linetype=2) + 
-  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1.8) + 
+  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1.5) + 
   # geom_line(aes(y=post.mean, colour = "Posterior Median"), linewidth=1.8) + 
-  ylab("") + xlab(expression(c)) + ylim(-2.3, 2) +
+  ylab("") + xlab(expression(c)) + ylim(-2.5, 2.5) +
   facet_grid(covariates ~ ., scales = "free_x", switch = "y", 
               labeller = label_parsed) + 
   scale_fill_manual(values=c("steelblue"), name = "") +
@@ -447,9 +456,9 @@ ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) +
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   geom_line(aes(y=true, colour = "True"), linewidth=2, linetype=2) + 
-  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
+  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1.5) + 
   # geom_line(aes(y=post.mean, colour = "Posterior Median"), linewidth=1) + 
-  ylab("") + xlab(expression(c)) + ylim(-2.3, 2.3) + 
+  ylab("") + xlab(expression(c)) + ylim(-2.5, 2.5) + 
   facet_grid(covariates ~ ., scales = "free_x", switch = "y",
               labeller = label_parsed) +  
   scale_fill_manual(values=c("steelblue"), name = "") +
@@ -482,8 +491,8 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   geom_line(aes(y=true, colour = "True"), linewidth=2, linetype=2) + 
-  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
-  ylab("") + xlab(expression(c)) + ylim(-2.3, 2.3) + 
+  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1.5) + 
+  ylab("") + xlab(expression(c)) + ylim(-2.5, 2.5) + 
   facet_grid(covariates ~ ., scales = "free_x", switch = "y",
               labeller = label_parsed) +  
   scale_fill_manual(values=c("steelblue"), name = "") +

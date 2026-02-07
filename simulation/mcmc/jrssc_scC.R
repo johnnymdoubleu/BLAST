@@ -17,8 +17,8 @@ p <- 5
 C <- diag(p)
 x.origin <- pnorm(matrix(rnorm(n*p), ncol = p) %*% chol(C))
 
-f1 <- function(x) {1.5 * sin(2 * pi * x^2)*x^3}
-f5 <- function(x) {-1.5 * cos(3 * pi * x^2)*x^2}
+f1 <- function(x) {-0.4 * sin(2 * pi * (x-1.5)^2)*(x-1.5)^3}
+f5 <- function(x) {0.1* cos(3 * pi * (x-1.4)^2)*(x-1.4)^2}
 
 make.nl <- function(x, raw_y) {
   fit <- lm(raw_y ~ x)
@@ -71,6 +71,8 @@ g5 <- g5.l + g5.nl
 eta.g <- rep(theta.adjusted[1], n) + g1 + g2.l + g5
 alp.new <- as.vector(exp(theta.origin[1] + xholder %*% theta.origin[-1] + f1(newx) + f5(newx)))
 # alp.new <- exp(eta.g)
+plot(newx, alp.new)
+
 grid.zero <- rep(0, n)
 g.new <- c(g1, g2.l, grid.zero, grid.zero, g5)
 l.new <- c(g1.l, g2.l, grid.zero, grid.zero, g5.l)
@@ -78,7 +80,7 @@ nl.new <- c(g1.nl, grid.zero, grid.zero, grid.zero, g5.nl)
 
 
 bs.linear <- model.matrix(~ ., data = data.frame(x.origin))
-
+psi <- psi - 2
 # Initialize storage
 group.map <- c()
 Z.list <- list()        # Stores the final non-linear design matrices
@@ -159,17 +161,17 @@ for (i in seq_along(covariates)) {
 
 xholder.nonlinear <- do.call(cbind, grid_Z_list)
 xholder.linear <- model.matrix(~ ., data = data.frame(xholder))
+Z_scales <- unlist(scale_stats_list)
+X_means <- colMeans(bs.linear[,-1])
+X_sd   <- apply(bs.linear[,-1], 2, sd)
+bs.linear[,-1] <- scale(bs.linear[,-1], center = X_means, scale = X_sd)
 
-X_means <- colMeans(bs.linear[,c(2:(p+1))])
-X_sd   <- apply(bs.linear[,c(2:(p+1))], 2, sd)
-bs.linear[,c(2:(p+1))] <- scale(bs.linear[,c(2:(p+1))], center = X_means, scale = X_sd)
 
-
-cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear[,c(1,2)]) %*% bs.nonlinear[,c((1):(psi))]), "\n")
-cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear[,c(1,3)]) %*% bs.nonlinear[,c((psi+1):(psi*2))]), "\n")
-cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear[,c(1,4)]) %*% bs.nonlinear[,c((psi*2+1):(psi*3))]), "\n")
-cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear[,c(1,5)]) %*% bs.nonlinear[,c((psi*3+1):(psi*4))]), "\n")
-cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear[,c(1,6)]) %*% bs.nonlinear[,c((psi*4+1):(psi*5))]), "\n")
+# cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear[,c(1,2)]) %*% bs.nonlinear[,c((1):(psi))]), "\n")
+# cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear[,c(1,3)]) %*% bs.nonlinear[,c((psi+1):(psi*2))]), "\n")
+# cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear[,c(1,4)]) %*% bs.nonlinear[,c((psi*2+1):(psi*3))]), "\n")
+# cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear[,c(1,5)]) %*% bs.nonlinear[,c((psi*3+1):(psi*4))]), "\n")
+# cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear[,c(1,6)]) %*% bs.nonlinear[,c((psi*4+1):(psi*5))]), "\n")
 
 
 model.stan <- "// Stan model for BLAST Student-t Samples
@@ -186,6 +188,7 @@ data {
   real <lower=0> atau;
   vector[p] X_means;
   vector[p] X_sd;
+  vector[(psi*p)] Z_scales;
 }
 
 parameters {
@@ -203,7 +206,10 @@ transformed parameters {
   {
     matrix[n, p] gsmooth; // linear component
     for (j in 1:p){
-      gamma[j] = gamma_raw[j] * sqrt(tau[j]);
+      for (k in 1:psi){
+        int idx = (j-1)*psi + k;
+        gamma[j][k] = gamma_raw[j][k] * sqrt(tau[j]) * Z_scales[idx];
+      }; 
       gsmooth[,j] = bsLinear[,j] * theta[j+1] + bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
     };
     
@@ -216,16 +222,17 @@ transformed parameters {
 model {
   // likelihood
   for (i in 1:n){
-    target += student_t_lpdf(y[i] | alpha[i], 0, 1);
-    target += -1*log(1-student_t_cdf(u, alpha[i], 0, 1));
+   target += student_t_lpdf(y[i] | alpha[i], 0, 1);
+   target += -1*log(1-student_t_cdf(u, alpha[i], 0, 1));
   }
+  // target += pareto_lpdf(y | rep_vector(u, n), alpha);
   target += normal_lpdf(theta[1] | 0, 100);
   for (j in 1:p){
     target += gamma_lpdf(lambda1[j] | 2, 1); 
-    target += gamma_lpdf(lambda2[j] | 1e-2, 1e-2);
+    target += gamma_lpdf(lambda2[j] | 1e-3, 1e-3);
     target += double_exponential_lpdf(theta[(j+1)] | 0, 1/(lambda1[j]));
     target += gamma_lpdf(tau[j] | atau, square(lambda2[j])*0.5);
-    target += std_normal_lpdf(gamma_raw[j]); // target += multi_normal_lpdf(gamma_raw[j] | rep_vector(0, psi), diag_matrix(rep_vector(1, psi)))
+    target += std_normal_lpdf(gamma_raw[j]);
   }
 }
 
@@ -255,8 +262,8 @@ generated quantities {
 
 data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, 
                   atau = ((psi+1)/2), X_means = X_means, X_sd=X_sd,
-                  bsLinear = bs.linear[,c(2:(p+1))], bsNonlinear = bs.nonlinear,
-                  xholderLinear = xholder.linear[,c(2:(p+1))], xholderNonlinear = xholder.nonlinear)
+                  bsLinear = bs.linear[,-1], bsNonlinear = bs.nonlinear,
+                  xholderLinear = xholder.linear[,-1], xholderNonlinear = xholder.nonlinear, Z_scales = Z_scales)
 
 init.alpha <- list(list(gamma_raw= array(rep(0.2, (psi*p)), dim=c(p,psi)),
                         theta = rep(-0.1, (p+1)), tau = rep(0.1, p), 
@@ -392,8 +399,8 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_line(aes(y=true, colour = "True"), linewidth=2, linetype=2) + 
-  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1.8) + 
-  ylab("") + xlab(expression(c)) + ylim(-2.3, 2) +
+  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1.5) + 
+  ylab("") + xlab(expression(c)) + ylim(-2.5, 2.5) +
   facet_grid(covariates ~ ., scales = "free_x", switch = "y", 
               labeller = label_parsed) + 
   scale_fill_manual(values=c("steelblue"), name = "") +
@@ -425,9 +432,9 @@ ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) +
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   geom_line(aes(y=true, colour = "True"), linewidth=2, linetype=2) + 
-  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
+  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1.5) + 
   # geom_line(aes(y=post.mean, colour = "Posterior Median"), linewidth=1) + 
-  ylab("") + xlab(expression(c)) + ylim(-2.3, 2.3) + 
+  ylab("") + xlab(expression(c)) + ylim(-2.5, 2.5) + 
   facet_grid(covariates ~ ., scales = "free_x", switch = "y",
               labeller = label_parsed) +  
   scale_fill_manual(values=c("steelblue"), name = "") +
@@ -460,8 +467,8 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   geom_line(aes(y=true, colour = "True"), linewidth=2, linetype=2) + 
-  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
-  ylab("") + xlab(expression(c)) + ylim(-2.3, 2.3) + 
+  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1.5) + 
+  ylab("") + xlab(expression(c)) + ylim(-2.5, 2.5) + 
   facet_grid(covariates ~ ., scales = "free_x", switch = "y",
               labeller = label_parsed) +  
   scale_fill_manual(values=c("steelblue"), name = "") +
@@ -489,7 +496,7 @@ data.scenario <- data.frame("x" = newx,
 ggplot(data.scenario, aes(x=x)) + 
   ylab("") + xlab(expression(c)) + labs(col = "") +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
-  geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2, linetype=2) + ylim(0, 20) + 
+  geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2, linetype=2) + ylim(0, 21.2) + 
   geom_line(aes(y=q2, col = "Posterior Median"), linewidth=1.5) +
   # geom_line(aes(y=post.mean, col = "Posterior Mean"), linewidth=1.5) +
   scale_color_manual(values=c("steelblue", "red")) + 
