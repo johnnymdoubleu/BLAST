@@ -221,15 +221,15 @@ transformed parameters {
 
 model {
   // likelihood
-  for (i in 1:n){
-   target += student_t_lpdf(y[i] | alpha[i], 0, 1);
-   target += -1*log(1-student_t_cdf(u, alpha[i], 0, 1));
-  }
-  // target += pareto_lpdf(y | rep_vector(u, n), alpha);
+  // for (i in 1:n){
+  //  target += student_t_lpdf(y[i] | alpha[i], 0, 1);
+  // target += -1*log(1-student_t_cdf(u, alpha[i], 0, 1));
+  // }
+  target += pareto_lpdf(y | rep_vector(u, n), alpha);
   target += normal_lpdf(theta[1] | 0, 100);
   for (j in 1:p){
     target += gamma_lpdf(lambda1[j] | 2, 1); 
-    target += gamma_lpdf(lambda2[j] | 1e-3, 1e-3);
+    target += gamma_lpdf(lambda2[j] | 1e-2, 1e-2);
     target += double_exponential_lpdf(theta[(j+1)] | 0, 1/(lambda1[j]));
     target += gamma_lpdf(tau[j] | atau, square(lambda2[j])*0.5);
     target += std_normal_lpdf(gamma_raw[j]);
@@ -400,7 +400,7 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_line(aes(y=true, colour = "True"), linewidth=2, linetype=2) + 
   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1.5) + 
-  ylab("") + xlab(expression(c)) + ylim(-2.5, 2.5) +
+  ylab("") + xlab(expression(c)) + ylim(-3,3) +
   facet_grid(covariates ~ ., scales = "free_x", switch = "y", 
               labeller = label_parsed) + 
   scale_fill_manual(values=c("steelblue"), name = "") +
@@ -496,7 +496,7 @@ data.scenario <- data.frame("x" = newx,
 ggplot(data.scenario, aes(x=x)) + 
   ylab("") + xlab(expression(c)) + labs(col = "") +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
-  geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2, linetype=2) + ylim(0, 21.2) + 
+  geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2, linetype=2) + ylim(0, 20) + 
   geom_line(aes(y=q2, col = "Posterior Median"), linewidth=1.5) +
   # geom_line(aes(y=post.mean, col = "Posterior Mean"), linewidth=1.5) +
   scale_color_manual(values=c("steelblue", "red")) + 

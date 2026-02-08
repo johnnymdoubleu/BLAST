@@ -6,7 +6,7 @@ library(parallel)
 library(rmutil)
 library(qqboxplot)
 
-set.seed(12)
+set.seed(77)
 
 n <- 15000
 psi.origin <- psi <- 10
@@ -242,11 +242,11 @@ transformed parameters {
 
 model {
     // likelihood
-    for (i in 1:n){
-      target += burr_lpdf(y[i] | alpha[i]);
-      target += -1*log(1-burr_cdf(u, alpha[i]));
-    }
-    // target += pareto_lpdf(y | rep_vector(u, n), alpha);
+    // for (i in 1:n){
+    //   target += burr_lpdf(y[i] | alpha[i]);
+    //   target += -1*log(1-burr_cdf(u, alpha[i]));
+    // }
+    target += pareto_lpdf(y | rep_vector(u, n), alpha);
     target += normal_lpdf(theta[1] | 0, 100);
     for (j in 1:p){
       target += gamma_lpdf(lambda1[j] | 2, 1); 
@@ -424,7 +424,7 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
   geom_line(aes(y=true, colour = "True"), linewidth=2, linetype=2) + 
   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1.5) + 
   # geom_line(aes(y=post.mean, colour = "Posterior Median"), linewidth=1.8) + 
-  ylab("") + xlab(expression(c)) + ylim(-2.5, 2.5) +
+  ylab("") + xlab(expression(c)) + ylim(-3, 3) +
   facet_grid(covariates ~ ., scales = "free_x", switch = "y", 
               labeller = label_parsed) + 
   scale_fill_manual(values=c("steelblue"), name = "") +

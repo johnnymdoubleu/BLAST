@@ -8,15 +8,15 @@ library(MESS)
 # Scenario A-2
 total.iter <- 250
 
-n <- n.origin <- 15000
+n <- n.origin <- 20000
 psi.origin <- psi <- 10
 threshold <- 0.95
 p <- 5
 
 C <- diag(p)
 
-f4 <- function(x) {-1.5 * sin(2 * pi * (x-1)^2)*(x-1)^3}
-f3 <- function(x) {0.5 *cos(3 * pi * x^2)*x^2}
+f4 <- function(x) {-1.5 * sin(2 * pi * (x-1.1)^2)*(x-1.1)^3}
+f3 <- function(x) {0.5 * cos(3 * pi * (x)^2)*(x)^2}
 
 make.nl <- function(x, raw_y) {
   fit <- lm(raw_y ~ x)
@@ -386,9 +386,9 @@ if(total.iter <= 50){
     plt <- plt + geom_line(aes(y = .data[[names(gridgsmooth.container)[i]]]), alpha = 0.05, linewidth = 0.7)
   }
 }
-print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + ylim(-2.5, 2.5) +
+print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + ylim(-3, 3) +
         geom_line(aes(y=true, col = "True"), linewidth = 2, linetype = 2) + 
-        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.2) + 
+        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5) + 
         facet_grid(covariate ~ ., scales = "free_x", switch = "y",
                     labeller = label_parsed) +
         scale_color_manual(values = c("steelblue", "red"))+

@@ -7,7 +7,7 @@ library(MESS)
 # Scenario A
 total.iter <- 250
 
-n <- n.origin <- 15000
+n <- n.origin <- 20000
 psi.origin <- psi <- 10
 threshold <- 0.95
 p <- 5
@@ -307,7 +307,7 @@ alpha.container$true <- alp.new
 alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
-load(paste0("./simulation/results/MC-Scenario_A/2026-01-26_",total.iter,"_MC_scA_",n.origin,".Rdata"))
+load(paste0("./simulation/results/MC-Scenario_A/2026-02-07_",total.iter,"_MC_scA_",n.origin,".Rdata"))
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab(expression(alpha(c,...,c))) #+ ylab("")
 if(total.iter <= 50){
@@ -352,7 +352,7 @@ if(total.iter <= 50){
 }
 print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + ylim(-2.5, 2.5) +
         geom_line(aes(y=true, col = "True"), linewidth = 2, linetype = 2) + 
-        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.2) + 
+        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5) + 
         facet_grid(covariate ~ ., scales = "free_x", switch = "y",
                     labeller = label_parsed) +
         scale_color_manual(values = c("steelblue", "red"))+

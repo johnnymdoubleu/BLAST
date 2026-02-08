@@ -11,7 +11,7 @@ library(mgcv)
 # array.id <- commandArgs(trailingOnly=TRUE)
 total.iter <- 250
 
-n <- n.origin <- 20000
+n <- n.origin <- 15000
 psi.origin <- psi <- 10
 threshold <- 0.95
 p <- 5
@@ -376,7 +376,7 @@ print(plt +
         scale_color_manual(values = c("steelblue", "red"))+
         guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) +
-        theme_minimal(base_size = 40) + ylim(-1.5, 2.5)+
+        theme_minimal(base_size = 40) + ylim(-1.3, 2.5)+
         theme(legend.position = "none",
                 strip.text = element_blank(),
                 axis.text = element_text(size = 30)))

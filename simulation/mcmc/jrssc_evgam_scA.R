@@ -373,12 +373,12 @@ print(plt +
         scale_color_manual(values = c("steelblue", "red"))+
         guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) +
-        theme_minimal(base_size = 40) + ylim(-1, 2.5)+
+        theme_minimal(base_size = 40) + ylim(-1.5, 2.5)+
         theme(legend.position = "none",
                 strip.text = element_blank(),
                 axis.text = element_text(size = 30)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_evgam_scA_",n.origin, ".pdf"), width=10, height = 7.78)
+ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_evgam_scA_",n.origin, ".pdf"), width=10, height = 7.78)
 
 
 # newgsmooth.container$x <- seq(0,1, length.out = n)
