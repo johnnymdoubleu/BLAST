@@ -8,7 +8,7 @@ library(MESS)
 # Scenario A-2
 total.iter <- 250
 
-n <- n.origin <- 20000
+n <- n.origin <- 5000
 psi.origin <- psi <- 10
 threshold <- 0.95
 p <- 5

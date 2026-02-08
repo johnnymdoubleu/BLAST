@@ -1,13 +1,13 @@
 setwd("../BLAST/simulation/results")
 iter <- 2
 n <- 5000
-EV <- 1
+EV <- 0
 
 if(EV==TRUE){
-  file_pattern <- paste0("evgam_mc_scB_",n,"_.*.Rdata")
+  file_pattern <- paste0("evgam_mc_scD2_",n,"_.*.Rdata")
   # file_pattern <- paste0("evgam_mc_scA_.*.Rdata")
 }else if(EV==FALSE){
-  file_pattern <- paste0("2026-02-07_",iter,"_MC_scD_",n,"_.*.Rdata")
+  file_pattern <- paste0("2026-02-08_",iter,"_MC_scD_",n,"_.*.Rdata")
 }
 
 file_list <- list.files(pattern = file_pattern)
