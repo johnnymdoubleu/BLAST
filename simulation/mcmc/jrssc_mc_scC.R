@@ -7,7 +7,7 @@ library(MESS)
 # Scenario C
 total.iter <- 250
 
-n <- n.origin <- 15000
+n <- n.origin <- 5000
 psi.origin <- psi <- 10
 threshold <- 0.95
 p <- 5
@@ -363,7 +363,7 @@ if(total.iter <= 50){
     plt <- plt + geom_line(aes(y = .data[[names(gridgsmooth.container)[i]]]), alpha = 0.05, linewidth = 0.7)
   }
 }
-print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + ylim(-2.3, 2) +
+print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + ylim(-3, 3) +
         geom_line(aes(y=true, col = "True"), linewidth = 2, linetype = 2) + 
         geom_line(aes(y=mean, col = "Mean"), linewidth = 1.2) + 
         facet_grid(covariate ~ ., scales = "free_x", switch = "y",

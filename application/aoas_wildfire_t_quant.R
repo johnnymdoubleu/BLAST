@@ -174,25 +174,25 @@ ggplot(plot_data, aes(x = Label, y = Q975, group = 1)) +
 
 
 df_seasonal$fitted_975 <- predict(quant.fit)
-load("./BLAST/application/qgam_95_30_ts.Rdata")
+load("./BLAST/application/qgam_95_10_ts.Rdata")
 df_seasonal$fitted_cov <- predict(quant.fit)
 # 2. Compute the Blockwise (Seasonal) Empirical Quantile
 # This calculates the actual 97.5th percentile for each specific season/year
 block_summary <- df_seasonal %>%
   group_by(Label, Season) %>%
   summarise(
-    Empirical_975 = log(quantile(BA, probs = 0.975, na.rm = TRUE)),
-    Model_Smooth_975 = log(quantile(fitted_975, probs = 0.975, na.rm = TRUE)), # Average smooth value for that block
-    Model_cov_975 = log(quantile(fitted_cov, probs = 0.975, na.rm = TRUE)),
+    Empirical_975 = (quantile(BA, probs = 0.975, na.rm = TRUE)),
+    Model_Smooth_975 = (quantile(fitted_975, probs = 0.975, na.rm = TRUE)), # Average smooth value for that block
+    Model_cov_975 = (quantile(fitted_cov, probs = 0.95, na.rm = TRUE)),
     .groups = 'drop'
 )
 
 ggplot(block_summary, aes(x = Label, group = 1)) +
   geom_point(aes(y = Empirical_975, color = Season), size = 3) +
-  geom_line(aes(y = Empirical_975), color = "grey80", linetype = "dashed") +
-  geom_hline(aes(yintercept=log(quantile(Y,0.975))), linetype="dashed") +
+  # geom_line(aes(y = Empirical_975), color = "grey80", linetype = "dashed") +
+  geom_hline(aes(yintercept=(quantile(Y,0.975))), linetype="dashed") +
   geom_line(aes(y = Model_Smooth_975), color = "steelblue", linewidth = 1.2) +
-  geom_line(aes(y = Model_cov_975), color = "darkgreen", linewidth = 1.2, linetype=2) +
+  geom_line(aes(y = Model_cov_975), color = "darkgreen", linewidth = 0.7, linetype=2) + scale_y_log10() +
   scale_color_manual(values = c(
     "Summer" = "orange", 
     "Winter" = "red", 
@@ -200,7 +200,7 @@ ggplot(block_summary, aes(x = Label, group = 1)) +
     "Autumn" = "red"
   )) +
   labs(
-    y = "Log Burnt Area", 
+    y = "Burnt Area", 
     x = "Time (blockwise)"
   ) +
   theme_minimal() +

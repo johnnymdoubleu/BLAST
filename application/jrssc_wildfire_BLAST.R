@@ -77,7 +77,7 @@ fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 
 # load("./BLAST/application/quant-t.Rdata")
 # load("./BLAST/application/quant-t_10.Rdata")
-load("./BLAST/application/qgam_975_30_ts.Rdata")
+load("./BLAST/application/qgam_95_30.Rdata")
 # load("./BLAST/application/quant-evgam-scaled.Rdata")
 preds <- predict(quant.fit)
 # u <- rep(quantile(Y, threshold),ceiling(nrow(fwi.index)*(1-threshold)))
