@@ -1,7 +1,7 @@
 setwd("../BLAST/simulation/results")
 iter <- 2
 n <- 5000
-EV <- 0
+EV <- 1
 
 if(EV==TRUE){
   file_pattern <- paste0("evgam_mc_scD2_",n,"_.*.Rdata")
@@ -129,5 +129,5 @@ if(EV==FALSE){
     "VGAM:   ", mean(mise.vgam.1.container, na.rm=TRUE), "±", sd(mise.vgam.1.container, na.rm=TRUE)/sqrt(sum(!is.na(mise.vgam.1.container))), "\n",
     "VGAM-σ: ", mean(mise.vgam.scale.container, na.rm=TRUE), "±", sd(mise.vgam.scale.container, na.rm=TRUE)/sqrt(sum(!is.na(mise.vgam.scale.container))), "\n")
 
-  # save(alpha.container, gridgsmooth.container, vgam.1.container, vgam.scale.container, evgam.1.container, evgam.scale.container, mise.container, mise.evgam.1.container, mise.evgam.scale.container, mise.vgam.1.container, mise.vgam.scale.container, file = paste0(Sys.Date(),"_evgam_mc_scB_",(n*0.05),".Rdata"))  
+  # save(alpha.container, gridgsmooth.container, vgam.1.container, vgam.scale.container, evgam.1.container, evgam.scale.container, mise.container, mise.evgam.1.container, mise.evgam.scale.container, mise.vgam.1.container, mise.vgam.scale.container, file = paste0(Sys.Date(),"_evgam_mc_scD2_",(n*0.05),".Rdata"))  
 }
