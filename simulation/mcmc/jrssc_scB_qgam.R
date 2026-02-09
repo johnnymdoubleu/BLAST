@@ -194,7 +194,7 @@ data {
     int <lower=1> n; // Sample size
     int <lower=1> p; // regression coefficient size
     int <lower=1> psi; // splines coefficient size
-    real <lower=0> u; // large threshold value
+    array[n] real <lower=0> u; // large threshold value
     matrix[n, p] bsLinear; // fwi dataset
     matrix[n, (psi*p)] bsNonlinear; // thin plate splines basis
     matrix[n, p] xholderLinear; // fwi dataset
@@ -261,7 +261,7 @@ generated quantities {
     }
     theta_origin[1] = theta[1] - dot_product(X_means, theta_origin[2:(p+1)]);
     for(i in 1:n){
-      log_lik[i] = pareto_lpdf(y[i] | u, alpha[i]);
+      log_lik[i] = pareto_lpdf(y[i] | u[i], alpha[i]);
     }
     for (j in 1:p){
         gridgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];

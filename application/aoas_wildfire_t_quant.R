@@ -103,7 +103,7 @@ fwi.origin <- data.frame(fwi.origin, time = c(1:length(Y)), BA=Y)
 # load("./BLAST/application/quant-time.Rdata")
 # load("./BLAST/application/qgam_5_none.Rdata")
 load("./BLAST/application/quant-t_30.Rdata")
-# load("./BLAST/application/qgam_975_30.Rdata")
+# load("./BLAST/application/qgam_96_30_ts.Rdata")
 # print(plot(quant.fit, allTerms = TRUE), pages = 1)
 check(quant.fit)
 quant.viz <- getViz(quant.fit, nsim = 20)
@@ -174,15 +174,15 @@ ggplot(plot_data, aes(x = Label, y = Q975, group = 1)) +
 
 
 df_seasonal$fitted_975 <- predict(quant.fit)
-load("./BLAST/application/qgam_975_30_ts.Rdata")
+load("./BLAST/application/qgam_96_30_ts.Rdata")
 df_seasonal$fitted_cov <- predict(quant.fit)
 
 block_summary <- df_seasonal %>%
   group_by(Label, Season) %>%
   summarise(
     Empirical = (quantile(BA, probs = 0.975, na.rm = TRUE)),
-    Model_Smooth = mean(fitted_975),#(quantile(fitted_975, probs = 0.975, na.rm = TRUE)), # Average smooth value for that block
-    Model_cov = mean(fitted_cov), #(quantile(fitted_cov, probs = 0.95, na.rm = TRUE)),
+    Model_Smooth = median(fitted_975),#(quantile(fitted_975, probs = 0.975, na.rm = TRUE)), # Average smooth value for that block
+    Model_cov = median(fitted_cov), #(quantile(fitted_cov, probs = 0.95, na.rm = TRUE)),
     Exceedance_Count = sum(BA > Model_cov, na.rm = TRUE),
     .groups = 'drop'
 )%>%
