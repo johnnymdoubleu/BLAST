@@ -174,25 +174,53 @@ ggplot(plot_data, aes(x = Label, y = Q975, group = 1)) +
 
 
 df_seasonal$fitted_975 <- predict(quant.fit)
-load("./BLAST/application/qgam_95_10_ts.Rdata")
+load("./BLAST/application/qgam_975_30_ts.Rdata")
 df_seasonal$fitted_cov <- predict(quant.fit)
-# 2. Compute the Blockwise (Seasonal) Empirical Quantile
-# This calculates the actual 97.5th percentile for each specific season/year
+
 block_summary <- df_seasonal %>%
   group_by(Label, Season) %>%
   summarise(
-    Empirical_975 = (quantile(BA, probs = 0.975, na.rm = TRUE)),
-    Model_Smooth_975 = (quantile(fitted_975, probs = 0.975, na.rm = TRUE)), # Average smooth value for that block
-    Model_cov_975 = (quantile(fitted_cov, probs = 0.95, na.rm = TRUE)),
+    Empirical = (quantile(BA, probs = 0.975, na.rm = TRUE)),
+    Model_Smooth = mean(fitted_975),#(quantile(fitted_975, probs = 0.975, na.rm = TRUE)), # Average smooth value for that block
+    Model_cov = mean(fitted_cov), #(quantile(fitted_cov, probs = 0.95, na.rm = TRUE)),
+    Exceedance_Count = sum(BA > Model_cov, na.rm = TRUE),
     .groups = 'drop'
-)
+)%>%
+mutate(across(c(Empirical, Model_Smooth, Model_cov), ~ifelse(. <= 0, 1, .)))
+
+max_log_val <- log10(max(block_summary$Empirical, na.rm = TRUE))
+max_count <- max(block_summary$Exceedance_Count, na.rm = TRUE)
+count_scale <- ifelse(max_count == 0, 1, max_log_val / max_count)
 
 ggplot(block_summary, aes(x = Label, group = 1)) +
-  geom_point(aes(y = Empirical_975, color = Season), size = 3) +
-  # geom_line(aes(y = Empirical_975), color = "grey80", linetype = "dashed") +
-  geom_hline(aes(yintercept=(quantile(Y,0.975))), linetype="dashed") +
-  geom_line(aes(y = Model_Smooth_975), color = "steelblue", linewidth = 1.2) +
-  geom_line(aes(y = Model_cov_975), color = "darkgreen", linewidth = 0.7, linetype=2) + scale_y_log10() +
+  geom_col(aes(y = 10^(Exceedance_Count * count_scale), fill = Season), 
+           alpha = 0.3, width = 0.7) +
+  geom_hline(aes(yintercept=(quantile(Y, 0.975))), linetype="dashed") +
+  geom_line(aes(y = Model_Smooth), color = "steelblue", linewidth = 1.2) +
+  geom_line(aes(y = Model_cov), color = "darkgreen", linewidth = 1, linetype = 2) +
+  geom_point(aes(y = Empirical, color = Season), size = 3) +
+  scale_y_log10(
+    name = "Burnt Area (Log10)",
+    sec.axis = sec_axis(~ log10(.) / count_scale, 
+                        name = "Exceedance Count",
+                        breaks = seq(0, max_count, by = 1))
+  ) +
+  scale_color_manual(values = c("Summer" = "orange", "Winter" = "red", "Spring" = "red", "Autumn" = "red")) +
+  scale_fill_manual(values = c("Summer" = "orange", "Winter" = "red", "Spring" = "red", "Autumn" = "red")) +
+  labs(x = "Season Year") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "none"
+  )
+
+
+ggplot(block_summary, aes(x = Label, group = 1)) +
+  geom_point(aes(y = Empirical, color = Season), size = 3) +
+  # geom_line(aes(y = Empirical), color = "grey80", linetype = "dashed") +
+  geom_hline(aes(yintercept=(quantile(Y, 0.975))), linetype="dashed") +
+  geom_line(aes(y = Model_Smooth), color = "steelblue", linewidth = 1.2) +
+  geom_line(aes(y = Model_cov), color = "darkgreen", linewidth = 0.7, linetype=2) + scale_y_log10() +
   scale_color_manual(values = c(
     "Summer" = "orange", 
     "Winter" = "red", 
@@ -210,15 +238,16 @@ ggplot(block_summary, aes(x = Label, group = 1)) +
   )
 
 
+
 coverage_summary <- df_seasonal %>%
-  left_join(block_summary %>% select(Label, Model_Smooth_975), by = "Label") %>%
+  left_join(block_summary %>% select(Label, Model_Smooth), by = "Label") %>%
   group_by(Label, Season) %>%
   summarise(
     # Using the block's 97.5th percentile prediction as the boundary
     n_obs = n(),
-    n_below = sum(log(BA) <= Model_Smooth_975),
+    n_below = sum(BA <= Model_Smooth),
     empirical_coverage = n_below / n_obs,
-    # empirical_coverage = mean(BA <= Model_Predicted_975),
+    # empirical_coverage = mean(BA <= Model_Predicted),
     .groups = 'drop'
   )
 
@@ -226,16 +255,18 @@ coverage_summary <- df_seasonal %>%
 print(coverage_summary)
 
 tail(coverage_summary)
-block_summary$origin_Empirical_975 <- exp(block_summary$Empirical_975)
-block_summary$origin_Model_Smooth_975 <- exp(block_summary$Model_Smooth_975)
+block_summary$origin_Empirical <- block_summary$Empirical
+block_summary$origin_Model_Smooth <- block_summary$Model_Smooth
+block_summary$origin_Model_cov <- block_summary$Model_cov
 
 df_final <- df_seasonal %>%
   left_join(block_summary %>% 
-              select(Label, origin_Empirical_975, origin_Model_Smooth_975), 
+              select(Label, origin_Empirical, origin_Model_Smooth, origin_Model_cov), 
             by = "Label")
 
-fwi.dd <- df_final %>% mutate(excess = BA > origin_Model_Smooth_975)
+fwi.dd <- df_final %>% mutate(excess = BA > origin_Model_Smooth)
+fwi.dd <- df_final %>% mutate(excess = BA > origin_Model_cov)
 tail(fwi.dd[which(fwi.dd$excess==TRUE),])
-# save(preds, quant.fit,fwi.dd, file="./BLAST/application/quant-t_50.Rdata")
+# save(preds, quant.fit, fwi.dd, file="./BLAST/application/quant-975_30.Rdata")
 
 length(which(fwi.dd$excess==TRUE))

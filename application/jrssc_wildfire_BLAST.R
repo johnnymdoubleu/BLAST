@@ -77,15 +77,16 @@ fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 
 # load("./BLAST/application/quant-t.Rdata")
 # load("./BLAST/application/quant-t_10.Rdata")
-load("./BLAST/application/qgam_95_30.Rdata")
+# load("./BLAST/application/qgam_95_30.Rdata")
+load("./BLAST/application/quant-95_30.Rdata")
 # load("./BLAST/application/quant-evgam-scaled.Rdata")
-preds <- predict(quant.fit)
+# preds <- predict(quant.fit)
 # u <- rep(quantile(Y, threshold),ceiling(nrow(fwi.index)*(1-threshold)))
 # excess <- which(Y>u)
-excess <- which(Y>preds)
-u <- preds[excess]
-# excess <- which(fwi.dd$excess==TRUE)
-# u <- fwi.dd$origin_Model_Smooth_975[excess]
+# excess <- which(Y>preds)
+# u <- preds[excess]
+excess <- which(fwi.dd$excess==TRUE)
+u <- fwi.dd$origin_Model_Smooth_975[excess]
 # excess <- which(Y>evgam.cov.pred)
 # u <- evgam.cov.pred[excess]
 # excess <- which(Y>evgam.time.pred)
