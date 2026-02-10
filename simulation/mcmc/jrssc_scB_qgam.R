@@ -67,7 +67,7 @@ fit_evgam <- evgam::evgam(y ~ s(X1, bs="tp", k=10) +
 # save(quant.fit, file="./simulation/results/scB-qgam-95-ts.Rdata")
 # save(fit_evgam, file="./simulation/results/scB2-evgam-95-tp.Rdata")
 # load(file="./simulation/results/scB-qgam-95.Rdata")
-# load(file="./simulation/results/scB2-evgam-95-tp.Rdata")
+# load(file="./simulation/results/scB2-evgam-95-ts.Rdata")
 # preds <- predict(quant.fit)
 preds <- predict(fit_evgam)$location
 excess.index <- which(as.vector(y.origin)>preds)

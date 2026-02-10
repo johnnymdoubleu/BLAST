@@ -62,10 +62,10 @@ A.df <- data.frame(y = y.origin, x.origin)
 # stopCluster(cl)
 # save(quant.fit, file="./simulation/results/scA-qgam-95-ts.Rdata")
 # save(fit_evgam, file="./simulation/results/scA-evgam-95-ts.Rdata")
-# load(file="./simulation/results/scA-qgam-95-ts.Rdata")
+# load(file="./simulation/results/scA-qgam-95-tp.Rdata")
 load(file="./simulation/results/scA-evgam-95-ts.Rdata")
 # preds <- predict(quant.fit)
-preds <- predict(fit_evgam)$location
+# preds <- predict(fit_evgam)$location
 excess.index <- which(as.vector(y.origin)>preds)
 u <- preds[excess.index]
 # u <- quantile(y.origin, threshold)

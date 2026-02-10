@@ -91,14 +91,14 @@ fwi.origin[,c(1:7)] <- as.data.frame(sapply(fwi.origin[,c(1:7)], FUN = range01))
 #                   s(FFMC, bs = "ts", k = 30) + 
 #                   s(DMC, bs = "ts", k = 30) + 
 #                   s(DC, bs = "ts", k = 30)
-ald.cov.fit <- evgam(BA ~ s(BUI, bs = "ts", k = 30) + 
-                          s(ISI, bs = "ts", k = 30) + 
-                          s(FFMC, bs = "ts", k = 30) + 
-                          s(DMC, bs = "ts", k = 30) + 
-                          s(DC, bs = "ts", k = 30), 
-                    data = fwi.origin, family = "ald", ald.args=list(tau = 0.975))
+# ald.cov.fit <- evgam(log(BA) ~ s(BUI, bs = "ts", k = 10) + 
+#                           s(ISI, bs = "ts", k = 10) + 
+#                           s(FFMC, bs = "ts", k = 10) + 
+#                           s(DMC, bs = "ts", k = 10) + 
+#                           s(DC, bs = "ts", k = 10), 
+#                     data = fwi.origin, family = "ald", ald.args=list(tau = 0.975))
 # save(ald.time.fit, ald.cov.fit, file="quant-evgam.Rdata")
-save(ald.cov.fit, file="evgam-975-30-ts.Rdata")
+# save(ald.cov.fit, file="./BLAST/application/evgam-975-30-ts-log.Rdata")
 # load("./BLAST/application/quant-evgam-scaled.Rdata")
 # evgam.cov.pred <- predict(ald.cov.fit, type = "response")$location
 # evgam.time.pred <- predict(ald.time.fit, type = "response")$location
@@ -185,15 +185,17 @@ ggplot(plot_data, aes(x = Label, y = Q975, group = 1)) +
 
 
 df_seasonal$fitted_975 <- predict(quant.fit)
-load("./BLAST/application/qgam_96_30_ts.Rdata")
-df_seasonal$fitted_cov <- predict(quant.fit)
+# load("./BLAST/application/qgam_96_30_ts.Rdata")
+# df_seasonal$fitted_cov <- predict(quant.fit)
+load("./BLAST/application/evgam-95-30-ts-log.Rdata")
+df_seasonal$fitted_cov <- exp(predict(ald.cov.fit)$location)
 
 block_summary <- df_seasonal %>%
   group_by(Label, Season) %>%
   summarise(
     Empirical = (quantile(BA, probs = 0.975, na.rm = TRUE)),
-    Model_Smooth = median(fitted_975),#(quantile(fitted_975, probs = 0.975, na.rm = TRUE)), # Average smooth value for that block
-    Model_cov = median(fitted_cov), #(quantile(fitted_cov, probs = 0.95, na.rm = TRUE)),
+    Model_Smooth = median(fitted_975), #(quantile(fitted_975, probs = 0.975, na.rm = TRUE)), # Average smooth value for that block
+    Model_cov = median(fitted_cov), #(quantile(fitted_cov, probs = 0.975, na.rm = TRUE)),
     Exceedance_Count = sum(BA > Model_cov, na.rm = TRUE),
     .groups = 'drop'
 )%>%
@@ -208,7 +210,7 @@ ggplot(block_summary, aes(x = Label, group = 1)) +
            alpha = 0.3, width = 0.7) +
   geom_hline(aes(yintercept=(quantile(Y, 0.975))), linetype="dashed") +
   geom_line(aes(y = Model_Smooth), color = "steelblue", linewidth = 1.2) +
-  geom_line(aes(y = Model_cov), color = "darkgreen", linewidth = 1, linetype = 2) +
+  geom_line(aes(y = Model_cov), color = "darkgreen", linewidth = 0.7, linetype = 2) +
   geom_point(aes(y = Empirical, color = Season), size = 3) +
   scale_y_log10(
     name = "Burnt Area (Log10)",
