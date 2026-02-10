@@ -40,7 +40,7 @@ eta_lin <-  f2.l + f3.l
 eta_nonlin <- f2.nl + f3.nl
 psi <- psi - 2
 
-alp.origin <- exp(rep(theta.origin[1],n) + x.origin%*%theta.origin[-1] + f2(x.origin[,2]) + f3(x.origin[,3]))
+alp.origin <- as.vector(exp(rep(theta.origin[1],n) + x.origin%*%theta.origin[-1] + f2(x.origin[,2]) + f3(x.origin[,3])))
 y.origin <- rPareto(n, rep(1,n), alpha = alp.origin)
 
 A.df <- data.frame(y = y.origin, x.origin)
@@ -53,10 +53,19 @@ A.df <- data.frame(y = y.origin, x.origin)
 #                       s(X4, bs="tp", k=10) +
 #                       s(X5, bs="tp", k=10), data = A.df, qu = 0.95,
 #                       cluster = cl, ncores = n.core)
+# fit_evgam <- evgam::evgam(y ~ s(X1, bs="ts", k=10) +
+#                       s(X2, bs="ts", k=10) +
+#                       s(X3, bs="ts", k=10) +
+#                       s(X4, bs="ts", k=10) +
+#                       s(X5, bs="ts", k=10), 
+#                    data = A.df, family = "ald", ald.args = list(tau = 0.95))
 # stopCluster(cl)
-# save(quant.fit, file="./simulation/results/scA-qgam-95-tp.Rdata")
-load(file="./simulation/results/scA-qgam-95-tp.Rdata")
-preds <- predict(quant.fit)
+# save(quant.fit, file="./simulation/results/scA-qgam-95-ts.Rdata")
+# save(fit_evgam, file="./simulation/results/scA-evgam-95-ts.Rdata")
+# load(file="./simulation/results/scA-qgam-95-ts.Rdata")
+load(file="./simulation/results/scA-evgam-95-ts.Rdata")
+# preds <- predict(quant.fit)
+preds <- predict(fit_evgam)$location
 excess.index <- which(as.vector(y.origin)>preds)
 u <- preds[excess.index]
 # u <- quantile(y.origin, threshold)
@@ -419,7 +428,7 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
   geom_line(aes(y=true, colour = "True"), linewidth=2, linetype=2) + 
   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1.5) + 
   # geom_line(aes(y=post.mean, colour = "Posterior Median"), linewidth=1.8) + 
-  ylab("") + xlab(expression(c)) + ylim(-3,3) +
+  ylab("") + xlab(expression(c)) +
   facet_grid(covariates ~ ., scales = "free_x", switch = "y", 
               labeller = label_parsed) + 
   scale_fill_manual(values=c("steelblue"), name = "") +
@@ -453,7 +462,7 @@ ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) +
   geom_line(aes(y=true, colour = "True"), linewidth=2, linetype=2) + 
   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1.5) + 
   # geom_line(aes(y=post.mean, colour = "Posterior Median"), linewidth=1) + 
-  ylab("") + xlab(expression(c)) + ylim(-2.5, 2.5) + 
+  ylab("") + xlab(expression(c)) +
   facet_grid(covariates ~ ., scales = "free_x", switch = "y",
               labeller = label_parsed) +  
   scale_fill_manual(values=c("steelblue"), name = "") +
@@ -485,7 +494,7 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   geom_line(aes(y=true, colour = "True"), linewidth=2, linetype=2) + 
   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1.5) + 
-  ylab("") + xlab(expression(c)) + ylim(-2.5, 2.5) + 
+  ylab("") + xlab(expression(c)) +  
   facet_grid(covariates ~ ., scales = "free_x", switch = "y",
               labeller = label_parsed) +  
   scale_fill_manual(values=c("steelblue"), name = "") +
@@ -511,7 +520,7 @@ data.scenario <- data.frame("x" = newx,
 ggplot(data.scenario, aes(x=x)) + 
   ylab(expression(alpha(c,...,c))) + xlab(expression(c)) + labs(col = "") +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
-  geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2, linetype=2) + ylim(0, 20) + 
+  geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2, linetype=2) + #ylim(0, 20) + 
   geom_line(aes(y=q2, col = "Posterior Median"), linewidth=1.5) +
   # geom_line(aes(y=post.mean, col = "Posterior Mean"), linewidth=1.5) +
   scale_color_manual(values=c("steelblue", "red")) + 
@@ -520,7 +529,7 @@ ggplot(data.scenario, aes(x=x)) +
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 30))
-ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_scA.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_scA.pdf"), width=10, height = 7.78)
 
 mcmc.alpha <- posterior$alpha
 len <- dim(mcmc.alpha)[1]
@@ -528,7 +537,7 @@ r <- matrix(, nrow = n, ncol = 30)
 T <- 30
 for(i in 1:n){
   for(t in 1:T){
-    r[i, t] <- qnorm(pPareto(y.origin[i], u, alpha = mcmc.alpha[round(runif(1,1,len)),i]))
+    r[i, t] <- qnorm(pPareto(y.origin[i], u[i], alpha = mcmc.alpha[round(runif(1,1,len)),i]))
   }
 }
 lgrid <- n

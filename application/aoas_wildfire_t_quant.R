@@ -76,7 +76,8 @@ fwi.origin <- fwi.scaled
 
 fwi.origin <- data.frame(fwi.origin, time = c(1:length(Y)), BA=Y)
 
-
+range01 <- function(x){(x-min(x))/(max(x)-min(x))}
+fwi.origin[,c(1:7)] <- as.data.frame(sapply(fwi.origin[,c(1:7)], FUN = range01))
 # fit.qr <- brm(bf(BA ~ s(time), quantile = 0.975),
 #                 data = fwi.origin,
 #                 cores = 3,
@@ -85,9 +86,19 @@ fwi.origin <- data.frame(fwi.origin, time = c(1:length(Y)), BA=Y)
 
 # evgam.time <- BA ~ s(time, k = 30)
 # ald.time.fit <- evgam(evgam.time, data = fwi.origin, family = "ald", ald.args=list(tau = 0.975))
-# evgam.cov <- BA ~ s(BUI, k = 30) + s(ISI, k = 30) + s(FFMC, k = 30) + s(DMC, k = 30) + s(DC, k = 30)
-# ald.cov.fit <- evgam(evgam.cov, data = fwi.origin, family = "ald", ald.args=list(tau = 0.975))
+# evgam.cov <- BA ~ s(BUI, bs = "ts", k = 30) + 
+#                   s(ISI, bs = "ts", k = 30) + 
+#                   s(FFMC, bs = "ts", k = 30) + 
+#                   s(DMC, bs = "ts", k = 30) + 
+#                   s(DC, bs = "ts", k = 30)
+ald.cov.fit <- evgam(BA ~ s(BUI, bs = "ts", k = 30) + 
+                          s(ISI, bs = "ts", k = 30) + 
+                          s(FFMC, bs = "ts", k = 30) + 
+                          s(DMC, bs = "ts", k = 30) + 
+                          s(DC, bs = "ts", k = 30), 
+                    data = fwi.origin, family = "ald", ald.args=list(tau = 0.975))
 # save(ald.time.fit, ald.cov.fit, file="quant-evgam.Rdata")
+save(ald.cov.fit, file="evgam-975-30-ts.Rdata")
 # load("./BLAST/application/quant-evgam-scaled.Rdata")
 # evgam.cov.pred <- predict(ald.cov.fit, type = "response")$location
 # evgam.time.pred <- predict(ald.time.fit, type = "response")$location

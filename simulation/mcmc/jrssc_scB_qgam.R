@@ -9,17 +9,17 @@ library(qgam)
 
 # set.seed(829)
 set.seed(10001)
-n <- 15000
+n <- 5000
 psi <- 10
 threshold <- 0.95
 p <- 5
 
 # Function to generate Gaussian copula
-C <- matrix(c(1, 0.3, 0.5, 0.3, 0.3,
-            0.3, 1, 0.95, 0.4, 0.4,
-            0.5, 0.95, 1, 0.5, 0.1,
-            0.3, 0.4, 0.5 , 1, 0.5,
-            0.3, 0.4, 0.5, 0.5, 1), nrow = p)
+C <- matrix(c(1,  0.3,  0.5, 0.3, 0.3,
+            0.3,    1, 0.95, 0.4, 0.4,
+            0.5,  0.4,    1, 0.5, 0.1,
+            0.3, 0.95,  0.5,   1, 0.5,
+            0.3,  0.4,  0.5, 0.5,   1), nrow = p)
 x.origin <- pnorm(matrix(rnorm(n*p), ncol = p) %*% chol(C))
 
 f2 <- function(x) {1.5 * sin(2 * pi * x^2)*x^3}
@@ -49,19 +49,28 @@ y.origin <- rPareto(n, rep(1,n), alpha = alp.origin)
 
 A.df <- data.frame(y = y.origin, x.origin)
 
-n.core <- 10
-cl <- makeCluster(n.core)
-quant.fit <- qgam(y ~ s(X1, bs="ts", k=10) +
-                      s(X2, bs="ts", k=10) +
-                      s(X3, bs="ts", k=10) +
-                      s(X4, bs="ts", k=10) +
-                      s(X5, bs="ts", k=10), data = A.df, qu = 0.95,
-                      cluster = cl, ncores = n.core)
-stopCluster(cl)
-save(quant.fit, file="./BLAST/simulation/results/scB-qgam-95.Rdata")
-# load(file="./BLAST/simulation/results/scB-qgam-95.Rdata")
-preds <- predict(quant.fit)
-excess.index <- which(Y>preds)
+# n.core <- 10
+# cl <- makeCluster(n.core)
+# quant.fit <- qgam(y ~ s(X1, bs="ts", k=10) +
+#                       s(X2, bs="ts", k=10) +
+#                       s(X3, bs="ts", k=10) +
+#                       s(X4, bs="ts", k=10) +
+#                       s(X5, bs="ts", k=10), data = A.df, qu = 0.95,
+#                       cluster = cl, ncores = n.core)
+fit_evgam <- evgam::evgam(y ~ s(X1, bs="tp", k=10) +
+                      s(X2, bs="tp", k=10) +
+                      s(X3, bs="tp", k=10) +
+                      s(X4, bs="tp", k=10) +
+                      s(X5, bs="tp", k=10), 
+                   data = A.df, family = "ald", ald.args = list(tau = 0.95))
+# stopCluster(cl)
+# save(quant.fit, file="./simulation/results/scB-qgam-95-ts.Rdata")
+# save(fit_evgam, file="./simulation/results/scB2-evgam-95-tp.Rdata")
+# load(file="./simulation/results/scB-qgam-95.Rdata")
+# load(file="./simulation/results/scB2-evgam-95-tp.Rdata")
+# preds <- predict(quant.fit)
+preds <- predict(fit_evgam)$location
+excess.index <- which(as.vector(y.origin)>preds)
 u <- preds[excess.index]
 # u <- quantile(y.origin, threshold)
 # excess.index <- which(y.origin>u)
@@ -309,7 +318,7 @@ posterior <- extract(fit1)
 
 # plot(fit1, plotfun = "trace", pars = c("lp__"), nrow = 3)
 bayesplot::color_scheme_set("mix-blue-red")
-bayesplot::mcmc_trace(fit1, pars="lp__") + ylab("Scenario A") +
+bayesplot::mcmc_trace(fit1, pars="lp__") + ylab("Scenario B") +
   theme_minimal(base_size = 30) +
   theme(legend.position = "none",
         strip.text = element_blank(),
@@ -423,7 +432,7 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
   geom_line(aes(y=true, colour = "True"), linewidth=2, linetype=2) + 
   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1.5) + 
   # geom_line(aes(y=post.mean, colour = "Posterior Median"), linewidth=1.8) + 
-  ylab("") + xlab(expression(c)) + ylim(-3,3) +
+  ylab("") + xlab(expression(c)) + #ylim(-3,3) +
   facet_grid(covariates ~ ., scales = "free_x", switch = "y", 
               labeller = label_parsed) + 
   scale_fill_manual(values=c("steelblue"), name = "") +
@@ -457,7 +466,7 @@ ggplot(data.linear, aes(x=x, group=interaction(covariates, replicate))) +
   geom_line(aes(y=true, colour = "True"), linewidth=2, linetype=2) + 
   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1.5) + 
   # geom_line(aes(y=post.mean, colour = "Posterior Median"), linewidth=1) + 
-  ylab("") + xlab(expression(c)) + ylim(-2.5, 2.5) + 
+  ylab("") + xlab(expression(c)) + 
   facet_grid(covariates ~ ., scales = "free_x", switch = "y",
               labeller = label_parsed) +  
   scale_fill_manual(values=c("steelblue"), name = "") +
@@ -489,7 +498,7 @@ ggplot(data.nonlinear, aes(x=x, group=interaction(covariates, replicate))) +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   geom_line(aes(y=true, colour = "True"), linewidth=2, linetype=2) + 
   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1.5) + 
-  ylab("") + xlab(expression(c)) + ylim(-2.5, 2.5) + 
+  ylab("") + xlab(expression(c)) + 
   facet_grid(covariates ~ ., scales = "free_x", switch = "y",
               labeller = label_parsed) +  
   scale_fill_manual(values=c("steelblue"), name = "") +
@@ -515,7 +524,7 @@ data.scenario <- data.frame("x" = newx,
 ggplot(data.scenario, aes(x=x)) + 
   ylab(expression(alpha(c,...,c))) + xlab(expression(c)) + labs(col = "") +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
-  geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2, linetype=2) + ylim(0, 20) + 
+  geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2, linetype=2) +
   geom_line(aes(y=q2, col = "Posterior Median"), linewidth=1.5) +
   # geom_line(aes(y=post.mean, col = "Posterior Mean"), linewidth=1.5) +
   scale_color_manual(values=c("steelblue", "red")) + 
@@ -524,7 +533,7 @@ ggplot(data.scenario, aes(x=x)) +
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 30))
-ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_scA.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_scA.pdf"), width=10, height = 7.78)
 
 mcmc.alpha <- posterior$alpha
 len <- dim(mcmc.alpha)[1]
@@ -532,7 +541,7 @@ r <- matrix(, nrow = n, ncol = 30)
 T <- 30
 for(i in 1:n){
   for(t in 1:T){
-    r[i, t] <- qnorm(pPareto(y.origin[i], u, alpha = mcmc.alpha[round(runif(1,1,len)),i]))
+    r[i, t] <- qnorm(pPareto(y.origin[i], u[i], alpha = mcmc.alpha[round(runif(1,1,len)),i]))
   }
 }
 lgrid <- n
