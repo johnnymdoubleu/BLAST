@@ -1,10 +1,10 @@
 setwd("../BLAST/simulation/results")
 iter <- 2
-n <- 5000
-EV <- 0
-
+n <- 15000
+EV <- 1
+threshold <- 0.95
 if(EV==TRUE){
-  file_pattern <- paste0("evgam_mc_scD2_",n,"_.*.Rdata")
+  file_pattern <- paste0("evgam_mc_scA_",n,"_.*.Rdata")
   # file_pattern <- paste0("evgam_mc_scA_.*.Rdata")
 }else if(EV==FALSE){
   file_pattern <- paste0("2026-02-09_",iter,"_MC_scC_",n,"_.*.Rdata")
@@ -19,17 +19,17 @@ if (length(file_list) == 0) {
 
 # 2. Initialize the 4 final containers
 # We use lists initially because they are faster to append to than dataframes
-alpha.container <- matrix(, nrow=n*0.05, ncol=0)
-newgsmooth.container <- matrix(, nrow=n*0.05, ncol=0)
-gridgsmooth.container <- matrix(, nrow=n*0.05, ncol=0)
-gridgl.container <- matrix(, nrow=n*0.05, ncol=0)
-gridgnl.container <- matrix(, nrow=n*0.05, ncol=0)
-evgam.1.container <- matrix(, nrow=n*0.05, ncol=0)
-evgam.scale.container <- matrix(, nrow=n*0.05, ncol=0)
-vgam.1.container <- matrix(, nrow=n*0.05, ncol=0)
-vgam.scale.container <- matrix(, nrow=n*0.05, ncol=0)
+alpha.container <- matrix(, nrow=ceiling(n*(1-threshold)), ncol=0)
+newgsmooth.container <- matrix(, nrow=ceiling(n*(1-threshold)), ncol=0)
+gridgsmooth.container <- matrix(, nrow=ceiling(n*(1-threshold)), ncol=0)
+gridgl.container <- matrix(, nrow=ceiling(n*(1-threshold)), ncol=0)
+gridgnl.container <- matrix(, nrow=ceiling(n*(1-threshold)), ncol=0)
+evgam.1.container <- matrix(, nrow=ceiling(n*(1-threshold)), ncol=0)
+evgam.scale.container <- matrix(, nrow=ceiling(n*(1-threshold)), ncol=0)
+vgam.1.container <- matrix(, nrow=ceiling(n*(1-threshold)), ncol=0)
+vgam.scale.container <- matrix(, nrow=ceiling(n*(1-threshold)), ncol=0)
 mise.container <- mise.evgam.1.container <- mise.evgam.scale.container <- mise.vgam.1.container <- mise.vgam.scale.container <- c()
-qqplot.container <- matrix(, nrow=n*0.05, ncol=0)
+qqplot.container <- matrix(, nrow=ceiling(n*(1-threshold)), ncol=0)
 
 # 3. Iterate through the files
 for (f in file_list) {
@@ -129,5 +129,5 @@ if(EV==FALSE){
     "VGAM:   ", mean(mise.vgam.1.container, na.rm=TRUE), "±", sd(mise.vgam.1.container, na.rm=TRUE)/sqrt(sum(!is.na(mise.vgam.1.container))), "\n",
     "VGAM-σ: ", mean(mise.vgam.scale.container, na.rm=TRUE), "±", sd(mise.vgam.scale.container, na.rm=TRUE)/sqrt(sum(!is.na(mise.vgam.scale.container))), "\n")
 
-  # save(alpha.container, gridgsmooth.container, vgam.1.container, vgam.scale.container, evgam.1.container, evgam.scale.container, mise.container, mise.evgam.1.container, mise.evgam.scale.container, mise.vgam.1.container, mise.vgam.scale.container, file = paste0(Sys.Date(),"_evgam_mc_scD2_",(n*0.05),".Rdata"))  
+  # save(alpha.container, gridgsmooth.container, vgam.1.container, vgam.scale.container, evgam.1.container, evgam.scale.container, mise.container, mise.evgam.1.container, mise.evgam.scale.container, mise.vgam.1.container, mise.vgam.scale.container, file = paste0(Sys.Date(),"_evgam_mc_scA_",(n*0.05),".Rdata"))  
 }

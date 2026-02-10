@@ -187,15 +187,30 @@ ggplot(plot_data, aes(x = Label, y = Q975, group = 1)) +
 df_seasonal$fitted_975 <- predict(quant.fit)
 # load("./BLAST/application/qgam_96_30_ts.Rdata")
 # df_seasonal$fitted_cov <- predict(quant.fit)
-load("./BLAST/application/evgam-95-30-ts-log.Rdata")
-df_seasonal$fitted_cov <- exp(predict(ald.cov.fit)$location)
+load("./BLAST/application/evgam-975-10-ts-log.Rdata")
+V_total <- ald.cov.fit$Vp 
+n_loc <- dim(V_total)[[1]]/2
+V_loc <- V_total[1:n_loc, 1:n_loc]
+X_loc <- ald.cov.fit$location$X
+var_link <- rowSums((X_loc %*% V_loc) * X_loc)
+se_link <- sqrt(var_link)
+mu_link <- ald.cov.fit$location$fitted
+quantile_preds <- exp(mu_link)-0.001
+quantile_se <- quantile_preds * se_link
+lower_95 <- exp(mu_link - 1.96 * se_link) - 0.001
+upper_95 <- exp(mu_link + 1.96 * se_link) - 0.001
+df_seasonal$fitted_cov <- quantile_preds
+df_seasonal$fitted_upper <- upper_95
+df_seasonal$fitted_lower <- lower_95
 
 block_summary <- df_seasonal %>%
   group_by(Label, Season) %>%
   summarise(
     Empirical = (quantile(BA, probs = 0.975, na.rm = TRUE)),
-    Model_Smooth = median(fitted_975), #(quantile(fitted_975, probs = 0.975, na.rm = TRUE)), # Average smooth value for that block
-    Model_cov = median(fitted_cov), #(quantile(fitted_cov, probs = 0.975, na.rm = TRUE)),
+    Model_Smooth = (quantile(fitted_975, probs = 0.975, na.rm = TRUE)), # Average smooth value for that block
+    Model_cov = (quantile(fitted_cov, probs = 0.975, na.rm = TRUE)),
+    Model_upper = (quantile(fitted_upper, probs = 0.975, na.rm = TRUE)),
+    Model_lower = (quantile(fitted_lower, probs = 0.975, na.rm = TRUE)),
     Exceedance_Count = sum(BA > Model_cov, na.rm = TRUE),
     .groups = 'drop'
 )%>%
@@ -209,9 +224,11 @@ ggplot(block_summary, aes(x = Label, group = 1)) +
   geom_col(aes(y = 10^(Exceedance_Count * count_scale), fill = Season), 
            alpha = 0.3, width = 0.7) +
   geom_hline(aes(yintercept=(quantile(Y, 0.975))), linetype="dashed") +
-  geom_line(aes(y = Model_Smooth), color = "steelblue", linewidth = 1.2) +
+  # geom_line(aes(y = Model_Smooth), color = "steelblue", linewidth = 1.2) +
   geom_line(aes(y = Model_cov), color = "darkgreen", linewidth = 0.7, linetype = 2) +
-  geom_point(aes(y = Empirical, color = Season), size = 3) +
+  # geom_point(aes(y = Empirical, color = Season), size = 3) +
+  geom_errorbar(aes(y = Empirical, ymin = Empirical, ymax = Empirical), 
+              color = "black", width = 1, linewidth = 1.2) +
   scale_y_log10(
     name = "Burnt Area (Log10)",
     sec.axis = sec_axis(~ log10(.) / count_scale, 
@@ -229,11 +246,14 @@ ggplot(block_summary, aes(x = Label, group = 1)) +
 
 
 ggplot(block_summary, aes(x = Label, group = 1)) +
-  geom_point(aes(y = Empirical, color = Season), size = 3) +
+  # geom_point(aes(y = Empirical, color = Season), size = 3) +
   # geom_line(aes(y = Empirical), color = "grey80", linetype = "dashed") +
   geom_hline(aes(yintercept=(quantile(Y, 0.975))), linetype="dashed") +
-  geom_line(aes(y = Model_Smooth), color = "steelblue", linewidth = 1.2) +
-  geom_line(aes(y = Model_cov), color = "darkgreen", linewidth = 0.7, linetype=2) + scale_y_log10() +
+  # geom_line(aes(y = Model_Smooth), color = "steelblue", linewidth = 1.2) +
+  geom_errorbar(aes(y = Empirical, ymin = Empirical, ymax = Empirical), width = 1, linewidth = 1.2, color = "black") +
+  geom_line(aes(y = Model_cov), color = "steelblue", linewidth = 0.7, linetype=1) + 
+  geom_ribbon(aes(ymin=Model_lower, ymax = Model_upper), fill = "steelblue", alpha = 0.1) +
+  scale_y_log10() +
   scale_color_manual(values = c(
     "Summer" = "orange", 
     "Winter" = "red", 
