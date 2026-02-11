@@ -78,7 +78,7 @@ fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 # load("./BLAST/application/quant-t.Rdata")
 # load("./BLAST/application/quant-t_10.Rdata")
 # load("./BLAST/application/qgam_975_30.Rdata")
-load("./BLAST/application/evgam-975-30-ts.Rdata")
+load("./BLAST/application/evgam-975-10-ts-log.Rdata")
 # load("./BLAST/application/qgam_975_30_ts.Rdata")
 # load("./BLAST/application/quant-evgam-scaled.Rdata")
 # con_mat <- concurvity(quant.fit, full = FALSE)$worst
@@ -97,7 +97,7 @@ load("./BLAST/application/evgam-975-30-ts.Rdata")
 
 # preds <- predict(quant.fit)
 # preds <- exp(predict(ald.cov.fit)$location)-0.001
-preds <- (predict(ald.cov.fit)$location)
+preds <- exp(predict(ald.cov.fit)$location)-0.001
 preds <- pmax(preds, 0) # Forces any negative value to be 0
 # u <- rep(quantile(Y, threshold),ceiling(nrow(fwi.index)*(1-threshold)))
 # excess <- which(Y>u)
@@ -304,7 +304,7 @@ data {
   matrix[n, (psi*p)] xholderNonlinear; // thin plate splines basis    
   matrix[n, p] gridL; // fwi dataset
   matrix[n, (psi*p)] gridNL; // thin plate splines basis      
-  array[n] real <lower=u> y; // extreme response
+  array[n] real <lower=0> y; // extreme response
   real <lower=0> atau;
   vector[(psi*p)] Z_scales;
   vector[p] X_minmax;
