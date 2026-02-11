@@ -8,10 +8,10 @@ library(MESS)
 
 
 
-# Scenario C
-total.iter <- 2
+# Scenario C2
+total.iter <- 250
 # array.id <- commandArgs(trailingOnly=TRUE)
-n <- n.origin <- 5000
+n <- n.origin <- 15000
 psi.origin <- psi <- 10
 threshold <- 0.95
 p <- 5
@@ -382,7 +382,7 @@ alpha.container$vgam.scale <- rowMeans(vgam.scale.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
 # save(newgsmooth.container, alpha.container, mise.container, evgam.1.container, evgam.scale.container, mise.evgam.1.container, mise.evgam.scale.container, vgam.1.container, vgam.scale.container, mise.vgam.1.container, mise.vgam.scale.container, file=paste0("evgam_mc_scC2_",n.origin,"_",array.id ,".Rdata"))
-# load(paste0("./simulation/results/2026-02-07_evgam_mc_scC2_",(n.origin*0.05),".Rdata"))
+load(paste0("./simulation/results/2026-02-10_evgam_mc_scC2_",(n.origin*0.05),".Rdata"))
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab("")
 if(total.iter <= 50){
@@ -406,7 +406,7 @@ print(plt +
         scale_color_manual(values = c("steelblue", "red"))+
         guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) +
-        theme_minimal(base_size = 40) + ylim(-1.3, 2.5)+
+        theme_minimal(base_size = 40) + ylim(-0.65, 3.55)+
         theme(legend.position = "none",
                 strip.text = element_blank(),
                 axis.text.y = element_blank(),

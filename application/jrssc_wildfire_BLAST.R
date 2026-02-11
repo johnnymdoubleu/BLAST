@@ -74,11 +74,13 @@ fwi.index$date <- as.numeric(fwi.index$date)
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 
 
-
+above.0 <- which(Y>0)
+Y <- Y[above.0]
+fwi.scaled <- fwi.scaled[above.0,]
 # load("./BLAST/application/quant-t.Rdata")
 # load("./BLAST/application/quant-t_10.Rdata")
 # load("./BLAST/application/qgam_975_30.Rdata")
-load("./BLAST/application/evgam-975-10-ts-log.Rdata")
+load("./BLAST/application/evgam-975-30-ts-log.Rdata")
 # load("./BLAST/application/qgam_975_30_ts.Rdata")
 # load("./BLAST/application/quant-evgam-scaled.Rdata")
 # con_mat <- concurvity(quant.fit, full = FALSE)$worst
@@ -98,7 +100,20 @@ load("./BLAST/application/evgam-975-10-ts-log.Rdata")
 # preds <- predict(quant.fit)
 # preds <- exp(predict(ald.cov.fit)$location)-0.001
 preds <- exp(predict(ald.cov.fit)$location)-0.001
+preds.sigma <- exp(predict(ald.cov.fit)$logscale)
 preds <- pmax(preds, 0) # Forces any negative value to be 0
+pald <- function(q, mu, sigma, tau) {
+  ifelse(q < mu, 
+         tau * exp((1 - tau) * (q - mu) / sigma), 
+         1 - (1 - tau) * exp(-tau * (q - mu) / sigma))
+}
+
+# Generate PIT values
+pit_values <- pald(log(Y+0.001), preds, preds.sigma, rep(0.975, nrow(fwi.scaled)))
+hist(pit_values, main="PIT Histogram (Should be flat)")
+qqplot(qunif(ppoints(length(pit_values))), pit_values)
+
+
 # u <- rep(quantile(Y, threshold),ceiling(nrow(fwi.index)*(1-threshold)))
 # excess <- which(Y>u)
 # pos.idx <- which(preds > 0)
@@ -129,6 +144,9 @@ max.fwi <- fwi.origin[which.max(y),]
 fwi.grid <- data.frame(lapply(fwi.origin[,c(1:p)], function(x) seq(min(x), max(x), length.out = nrow(fwi.scaled))))
 fwi.minmax <- sapply(fwi.origin[,c(1:p)], function(x) max(x)-min(x))
 fwi.min <- sapply(fwi.origin[,c(1:p)], function(x) min(x))
+
+
+
 # ggplot(fwi.origin, aes(x=DSR, y=FFMC)) + 
 #   geom_point(aes(colour = BA), size= 2.5) + 
 #   scale_colour_stepsn(colours = c("slategray1", "red"), labels=function(x) format(x, big.mark = ",", scientific = TRUE), breaks=c(0.1e5, 0.5e5, 1e5, 2e5)) +
