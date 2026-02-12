@@ -78,6 +78,12 @@ fwi.origin <- data.frame(fwi.origin, time = c(1:length(Y)), BA=Y)
 
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 fwi.origin[,c(1:7)] <- as.data.frame(sapply(fwi.origin[,c(1:7)], FUN = range01))
+
+above.0 <- which(Y>0.00001)
+Y <- Y[above.0]
+fwi.scaled <- fwi.scaled[above.0,]
+fwi.origin <- fwi.origin[above.0,]
+fwi.index <- fwi.index[above.0,]
 # fit.qr <- brm(bf(BA ~ s(time), quantile = 0.975),
 #                 data = fwi.origin,
 #                 cores = 3,
@@ -113,15 +119,17 @@ fwi.origin[,c(1:7)] <- as.data.frame(sapply(fwi.origin[,c(1:7)], FUN = range01))
 # save(quant.fit, file = './BLAST/application/qgam_95_10_ts.Rdata')
 # load("./BLAST/application/quant-time.Rdata")
 # load("./BLAST/application/qgam_5_none.Rdata")
-load("./BLAST/application/quant-t_30.Rdata")
-# load("./BLAST/application/qgam_96_30_ts.Rdata")
+# load("./BLAST/application/quant-t_30.Rdata")
+# load("./BLAST/application/qgam_975_30_ts.Rdata")
+# load("./BLAST/application/qgam-95-30-ts-log.Rdata")
+load("./BLAST/application/evgam-90-30-t.Rdata")
 # print(plot(quant.fit, allTerms = TRUE), pages = 1)
-check(quant.fit)
-quant.viz <- getViz(quant.fit, nsim = 20)
-print(plot(quant.viz, allTerms = TRUE), pages = 1)
+# check(quant.fit)
+# quant.viz <- getViz(quant.fit, nsim = 20)
+# print(plot(quant.viz, allTerms = TRUE), pages = 1)
 # check1D(quant.viz, fwi.origin[,4]) + l_gridQCheck1D(qu = 0.975)
 
-preds <- predict(quant.fit)
+# preds <- predict(quant.fit)
 # save(preds, quant.fit, file="./BLAST/application/quant-time.Rdata")
 empirical_qu <- mean(fwi.origin$BA < preds)
 print(paste("Empirical Quantile:", empirical_qu))
@@ -132,6 +140,7 @@ print(paste("Empirical Quantile:", empirical_qu))
 vars <- colnames(fwi.origin)[1:7]
 seq_list <- lapply(vars, function(var) seq(min(fwi.origin[[var]]), max(fwi.origin[[var]]), length.out = length(Y)))
 grid.df <- as.data.frame(setNames(seq_list, vars))
+
 
 library(tidyverse)
 fwi.index$BA <- fwi.origin$BA
@@ -153,7 +162,7 @@ df_seasonal <- fwi.index %>%
 plot_data <- df_seasonal %>%
   group_by(SeasonYear, Season) %>%
   summarise(
-    Q975 = quantile(BA, 0.975, na.rm = TRUE), 
+    Q975 = quantile(BA, 0.90, na.rm = TRUE), 
     .groups = "drop"
   ) %>%
   mutate(Season = factor(Season, levels = c("Winter", "Spring", "Summer", "Autumn"))) %>%
@@ -184,33 +193,40 @@ ggplot(plot_data, aes(x = Label, y = Q975, group = 1)) +
   )
 
 
-df_seasonal$fitted_975 <- predict(quant.fit)
+# df_seasonal$fitted_975 <- predict(quant.fit)
+df_seasonal$fitted_975 <- predict(ald.cov.fit)$location
+# df_seasonal$fitted_975 <- preds
 # load("./BLAST/application/qgam_96_30_ts.Rdata")
 # df_seasonal$fitted_cov <- predict(quant.fit)
-load("./BLAST/application/evgam-975-10-ts-log.Rdata")
-V_total <- ald.cov.fit$Vp 
-n_loc <- dim(V_total)[[1]]/2
-V_loc <- V_total[1:n_loc, 1:n_loc]
-X_loc <- ald.cov.fit$location$X
-var_link <- rowSums((X_loc %*% V_loc) * X_loc)
-se_link <- sqrt(var_link)
-mu_link <- ald.cov.fit$location$fitted
-quantile_preds <- exp(mu_link)-0.001
-quantile_se <- quantile_preds * se_link
-lower_95 <- exp(mu_link - 1.96 * se_link) - 0.001
-upper_95 <- exp(mu_link + 1.96 * se_link) - 0.001
-df_seasonal$fitted_cov <- quantile_preds
-df_seasonal$fitted_upper <- upper_95
-df_seasonal$fitted_lower <- lower_95
+# load("./BLAST/application/evgam-975-10-ts-log.Rdata")
+# V_total <- ald.cov.fit$Vp 
+# n_loc <- dim(V_total)[[1]]/2
+# V_loc <- V_total[1:n_loc, 1:n_loc]
+# X_loc <- ald.cov.fit$location$X
+# var_link <- rowSums((X_loc %*% V_loc) * X_loc)
+# se_link <- sqrt(var_link)
+# mu_link <- ald.cov.fit$location$fitted
+# quantile_preds <- exp(mu_link)-0.001
+# quantile_se <- quantile_preds * se_link
+# lower_95 <- exp(mu_link - 1.96 * se_link) - 0.001
+# upper_95 <- exp(mu_link + 1.96 * se_link) - 0.001
+# df_seasonal$fitted_cov <- quantile_preds
+# df_seasonal$fitted_upper <- upper_95
+# df_seasonal$fitted_lower <- lower_95
+df_seasonal$fitted_cov <- exp(predict(ald.cov.fit)$location) #preds
+
+ggplot(data = data.frame(BA = fwi.origin$BA, time = fwi.origin$time, quantile = df_seasonal$fitted_cov)) +
+  geom_line(aes(x = time, y=quantile), colour = "steelblue") + scale_y_log10() +
+  geom_point(aes(x= time, y = BA), alpha = 0.15)
 
 block_summary <- df_seasonal %>%
   group_by(Label, Season) %>%
   summarise(
-    Empirical = (quantile(BA, probs = 0.975, na.rm = TRUE)),
-    Model_Smooth = (quantile(fitted_975, probs = 0.975, na.rm = TRUE)), # Average smooth value for that block
-    Model_cov = (quantile(fitted_cov, probs = 0.975, na.rm = TRUE)),
-    Model_upper = (quantile(fitted_upper, probs = 0.975, na.rm = TRUE)),
-    Model_lower = (quantile(fitted_lower, probs = 0.975, na.rm = TRUE)),
+    Empirical = (quantile(BA, probs = 0.95, na.rm = TRUE)),
+    Model_Smooth = (quantile(fitted_975, probs = 0.95, na.rm = TRUE)), # Average smooth value for that block
+    Model_cov = (quantile(fitted_cov, probs = 0.95, na.rm = TRUE)),
+    # Model_upper = (quantile(fitted_upper, probs = 0.975, na.rm = TRUE)),
+    # Model_lower = (quantile(fitted_lower, probs = 0.975, na.rm = TRUE)),
     Exceedance_Count = sum(BA > Model_cov, na.rm = TRUE),
     .groups = 'drop'
 )%>%
@@ -225,10 +241,11 @@ ggplot(block_summary, aes(x = Label, group = 1)) +
            alpha = 0.3, width = 0.7) +
   geom_hline(aes(yintercept=(quantile(Y, 0.975))), linetype="dashed") +
   # geom_line(aes(y = Model_Smooth), color = "steelblue", linewidth = 1.2) +
-  geom_line(aes(y = Model_cov), color = "darkgreen", linewidth = 0.7, linetype = 2) +
+  geom_line(aes(y = Model_cov), color = "steelblue", linewidth = 0.7, linetype = 1) +
   # geom_point(aes(y = Empirical, color = Season), size = 3) +
-  geom_errorbar(aes(y = Empirical, ymin = Empirical, ymax = Empirical), 
-              color = "black", width = 1, linewidth = 1.2) +
+  # geom_errorbar(aes(y = Empirical, ymin = Empirical, ymax = Empirical), 
+              # color = "black", width = 1, linewidth = 1.2) +
+  geom_point(data=df_seasonal, aes(y = fwi.origin$BA), alpha=0.15) + #fwi.origin$time, fwi.origin$BA)
   scale_y_log10(
     name = "Burnt Area (Log10)",
     sec.axis = sec_axis(~ log10(.) / count_scale, 
@@ -252,7 +269,7 @@ ggplot(block_summary, aes(x = Label, group = 1)) +
   # geom_line(aes(y = Model_Smooth), color = "steelblue", linewidth = 1.2) +
   geom_errorbar(aes(y = Empirical, ymin = Empirical, ymax = Empirical), width = 1, linewidth = 1.2, color = "black") +
   geom_line(aes(y = Model_cov), color = "steelblue", linewidth = 0.7, linetype=1) + 
-  geom_ribbon(aes(ymin=Model_lower, ymax = Model_upper), fill = "steelblue", alpha = 0.1) +
+  # geom_ribbon(aes(ymin=Model_lower, ymax = Model_upper), fill = "steelblue", alpha = 0.1) +
   scale_y_log10() +
   scale_color_manual(values = c(
     "Summer" = "orange", 

@@ -14,11 +14,11 @@ psi.origin <- psi <- 10
 threshold <- 0.95
 p <- 5
 newx.length <- ceiling(n*(1-threshold))
-C <- matrix(c(1,  0.61,  0.94, 0.9, 0.0,
+C <- matrix(c(1,  0.61,  0.94,   0.9,  0.0,
             0.61,    1,  0.64,  0.69, 0.16,
             0.94,  0.64,    1,  0.99, 0.28,
-            0.90, 0.69,  0.99,    1, 0.35,
-            0.0,  0.16,  0.28,  0.35,   1), nrow = p)
+            0.90, 0.69,  0.99,    1,  0.35,
+            0.0,  0.16,  0.28,  0.35,    1), nrow = p)
 ## Generate sample
 f4 <- function(x) {-1.5 * sin(2 * pi * (x-1.1)^2)*(x-1.1)^3}
 f3 <- function(x) {0.5 * cos(3 * pi * (x)^2)*(x)^2}
@@ -390,7 +390,7 @@ alpha.container$vgam.scale <- rowMeans(vgam.scale.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
 # save(newgsmooth.container, alpha.container, mise.container, evgam.1.container, evgam.scale.container, mise.evgam.1.container, mise.evgam.scale.container, vgam.1.container, vgam.scale.container, mise.vgam.1.container, mise.vgam.scale.container, file=paste0("evgam_mc_scD2_",n.origin,"_",array.id ,".Rdata"))
-load(paste0("./simulation/results/2026-02-10_evgam_mc_scD2_",(n.origin*0.05),".Rdata"))
+# load(paste0("./simulation/results/2026-02-10_evgam_mc_scD2_",(n.origin*0.05),".Rdata"))
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab("")
 if(total.iter <= 50){
@@ -420,7 +420,7 @@ print(plt +
                 axis.text.y = element_blank(),
                 axis.text = element_text(size = 30)))
 
-ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_evgam_scD2_",n.origin, ".pdf"), width=9.5, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_evgam_scD2_",n.origin, ".pdf"), width=9.5, height = 7.78)
 
 
 # newgsmooth.container$x <- seq(0,1, length.out = n)

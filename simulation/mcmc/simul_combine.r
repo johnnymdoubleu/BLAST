@@ -4,7 +4,7 @@ n <- 15000
 EV <- 1
 threshold <- 0.95
 if(EV==TRUE){
-  file_pattern <- paste0("evgam_mc_scC2_",n,"_.*.Rdata")
+  file_pattern <- paste0("evgam_mc_scD2_",n,"_.*.Rdata")
   # file_pattern <- paste0("evgam_mc_scA_.*.Rdata")
 }else if(EV==FALSE){
   file_pattern <- paste0("2026-02-09_",iter,"_MC_scC_",n,"_.*.Rdata")
@@ -129,5 +129,5 @@ if(EV==FALSE){
     "VGAM:   ", mean(mise.vgam.1.container, na.rm=TRUE), "±", sd(mise.vgam.1.container, na.rm=TRUE)/sqrt(sum(!is.na(mise.vgam.1.container))), "\n",
     "VGAM-σ: ", mean(mise.vgam.scale.container, na.rm=TRUE), "±", sd(mise.vgam.scale.container, na.rm=TRUE)/sqrt(sum(!is.na(mise.vgam.scale.container))), "\n")
 
-  # save(alpha.container, gridgsmooth.container, vgam.1.container, vgam.scale.container, evgam.1.container, evgam.scale.container, mise.container, mise.evgam.1.container, mise.evgam.scale.container, mise.vgam.1.container, mise.vgam.scale.container, file = paste0(Sys.Date(),"_evgam_mc_scC2_",(n*0.05),".Rdata"))  
+  # save(alpha.container, gridgsmooth.container, vgam.1.container, vgam.scale.container, evgam.1.container, evgam.scale.container, mise.container, mise.evgam.1.container, mise.evgam.scale.container, mise.vgam.1.container, mise.vgam.scale.container, file = paste0(Sys.Date(),"_evgam_mc_scD2_",(n*0.05),".Rdata"))  
 }

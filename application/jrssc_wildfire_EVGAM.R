@@ -140,7 +140,11 @@ for(j in 1:p){
 # plot(evgam.fit.1)
 
 simul.data <- data.frame(BA = y, fwi.scaled[,c(1:p)])
-vgam.fit.scale <- vgam(y ~ sm.ps(BUI, ps.int = 28, outer.ok = TRUE) + sm.ps(ISI, ps.int = 28, outer.ok = TRUE) + sm.ps(FFMC, ps.int = 28, outer.ok = TRUE) + sm.ps(DMC, ps.int = 28, outer.ok = TRUE) + sm.ps(DC, ps.int = 28, outer.ok = TRUE),
+vgam.fit.scale <- vgam(BA ~ sm.ps(BUI, ps.int = 28, outer.ok = TRUE) + 
+                            sm.ps(ISI, ps.int = 28, outer.ok = TRUE) + 
+                            sm.ps(FFMC, ps.int = 28, outer.ok = TRUE) + 
+                            sm.ps(DMC, ps.int = 28, outer.ok = TRUE) + 
+                            sm.ps(DC, ps.int = 28, outer.ok = TRUE),
                       data = simul.data,
                       family = gpd(threshold= u,
                                     lshape="loglink",
@@ -152,7 +156,11 @@ fitted.terms <- predict(vgam.fit.scale, newdata = data.frame(xholder), type = "t
 vgam.xi.scale <- exp(fitted.linear[,2])
 vgam.sigma.scale <- exp(fitted.linear[,1])
 
-vgam.fit.1 <- vgam(y ~ sm.ps(BUI, ps.int = 28, outer.ok = TRUE) + sm.ps(ISI, ps.int = 28, outer.ok = TRUE) + sm.ps(FFMC, ps.int = 28, outer.ok = TRUE) + sm.ps(DMC, ps.int = 28, outer.ok = TRUE) + sm.ps(DC, ps.int = 28, outer.ok = TRUE),
+vgam.fit.1 <- vgam(BA ~ sm.ps(BUI, ps.int = 28, outer.ok = TRUE) + 
+                        sm.ps(ISI, ps.int = 28, outer.ok = TRUE) + 
+                        sm.ps(FFMC, ps.int = 28, outer.ok = TRUE) + 
+                        sm.ps(DMC, ps.int = 28, outer.ok = TRUE) + 
+                        sm.ps(DC, ps.int = 28, outer.ok = TRUE),
                       data = simul.data,
                       family = gpd(threshold= u,
                                     lshape="loglink",

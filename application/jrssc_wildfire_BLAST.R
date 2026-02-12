@@ -11,6 +11,7 @@ library(qqboxplot)
 library(ggdensity)
 library(ggforce)
 library(ggdist)
+library(mboost)
 options(mc.cores = parallel::detectCores())
 
 # Structure of the FWI System
@@ -74,14 +75,18 @@ fwi.index$date <- as.numeric(fwi.index$date)
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 
 
-above.0 <- which(Y>0)
+
+above.0 <- which(Y>0.00001)
 Y <- Y[above.0]
 fwi.scaled <- fwi.scaled[above.0,]
 # load("./BLAST/application/quant-t.Rdata")
 # load("./BLAST/application/quant-t_10.Rdata")
-# load("./BLAST/application/qgam_975_30.Rdata")
-load("./BLAST/application/evgam-975-30-ts-log.Rdata")
 # load("./BLAST/application/qgam_975_30_ts.Rdata")
+load("./BLAST/application/qgam-97-30-ts-t-log.Rdata")
+# load("./BLAST/application/evgam-975-30-ts-log.Rdata")
+# load("./BLAST/application/evgam-95-30-ts-sqrt.Rdata")
+# load("./BLAST/application/evgam-975-30-t.Rdata")
+# load("./BLAST/application/gamboost-975-20-log.Rdata")
 # load("./BLAST/application/quant-evgam-scaled.Rdata")
 # con_mat <- concurvity(quant.fit, full = FALSE)$worst
 # con_long <- reshape2::melt(con_mat)
@@ -98,10 +103,11 @@ load("./BLAST/application/evgam-975-30-ts-log.Rdata")
 #   coord_fixed()
 
 # preds <- predict(quant.fit)
-# preds <- exp(predict(ald.cov.fit)$location)-0.001
-preds <- exp(predict(ald.cov.fit)$location)-0.001
-preds.sigma <- exp(predict(ald.cov.fit)$logscale)
-preds <- pmax(preds, 0) # Forces any negative value to be 0
+# preds <- (predict(ald.cov.fit)$location)^2
+# preds <- exp(predict(ald.cov.fit)$location)
+# preds <- predict(gamboost_model)
+# preds <- predict(ald.cov.fit)$location
+# preds.sigma <- exp(predict(ald.cov.fit)$logscale)
 pald <- function(q, mu, sigma, tau) {
   ifelse(q < mu, 
          tau * exp((1 - tau) * (q - mu) / sigma), 
@@ -109,10 +115,10 @@ pald <- function(q, mu, sigma, tau) {
 }
 
 # Generate PIT values
-pit_values <- pald(log(Y+0.001), preds, preds.sigma, rep(0.975, nrow(fwi.scaled)))
-hist(pit_values, main="PIT Histogram (Should be flat)")
-qqplot(qunif(ppoints(length(pit_values))), pit_values)
-
+# pit_values <- pald(log(Y), preds, preds.sigma, rep(0.975, nrow(fwi.scaled)))
+# hist(pit_values, main="PIT Histogram (Should be flat)")
+# qqplot(qunif(ppoints(length(pit_values))), pit_values)
+# preds <- pmax(preds, 0.001) # Forces any negative value to be 0
 
 # u <- rep(quantile(Y, threshold),ceiling(nrow(fwi.index)*(1-threshold)))
 # excess <- which(Y>u)
@@ -122,6 +128,7 @@ qqplot(qunif(ppoints(length(pit_values))), pit_values)
 # preds <- preds[pos.idx]
 excess <- which(Y>preds)
 u <- preds[excess]
+
 # excess <- which(fwi.dd$excess==TRUE)
 # u <- fwi.dd$origin_Model_cov[excess]
 # excess <- which(Y>evgam.cov.pred)
@@ -130,6 +137,7 @@ u <- preds[excess]
 # u <- evgam.time.pred[excess]
 y <- Y[excess]
 
+# extRemes::mrlplot(y, main = "Mean Residual Life Plot")
 # fwi.scaled <- data.frame(fwi.scaled[which(Y>u),])
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 # range01 <- function(x){(x)/max(x)}
@@ -628,6 +636,38 @@ alpha.pred.1 <- 1/xi.pred.1
 #   xi.nonlinear.1[,j] <- bs.nonlinear.1[,(((j-1)*(psi-1))+1):(((j-1)*(psi-1))+(psi-1))] %*% gamma.xi.1[,j]
 #   alpha.nonlinear.1[,j] <- 1/(xi.nonlinear.1[,j])
 # }
+# simul.data <- data.frame(BA = y, fwi.scaled[,c(1:p)])
+# vgam.fit.scale <- vgam(BA ~ sm.ps(BUI, ps.int = 28) + 
+#                            sm.ps(ISI, ps.int = 28) + 
+#                            sm.ps(FFMC, ps.int = 28) + 
+#                            sm.ps(DMC, ps.int = 28) + 
+#                            sm.ps(DC, ps.int = 28),
+#                         data = simul.data,
+#                         family = gpd(threshold= u,
+#                                       lshape="loglink",
+#                                       zero = NULL),
+#                         trace = TRUE,
+#                         control = vgam.control(maxit = 200))
+# fitted.linear <- predict(vgam.fit.scale, newdata = data.frame(xholder), type = "link")
+# fitted.terms <- predict(vgam.fit.scale, newdata = data.frame(xholder), type = "terms")
+# vgam.xi.scale <- exp(fitted.linear[,2])
+# vgam.sigma.scale <- exp(fitted.linear[,1])
+
+# vgam.fit.1 <- vgam(BA ~ sm.ps(BUI, ps.int = 28) + 
+#                        sm.ps(ISI, ps.int = 28) + 
+#                        sm.ps(FFMC, ps.int = 28) + 
+#                        sm.ps(DMC, ps.int = 28) + 
+#                        sm.ps(DC, ps.int = 28),
+#                       data = simul.data,
+#                       family = gpd(threshold= u,
+#                                     lshape="loglink",
+#                                     zero = 1),
+#                       trace = TRUE,
+#                       control = vgam.control(maxit = 200))
+# fitted.linear <- predict(vgam.fit.1, newdata = data.frame(xholder), type = "link")
+# fitted.terms <- predict(vgam.fit.1, newdata = data.frame(xholder), type = "terms")
+# vgam.xi.1 <- exp(fitted.linear[,2])
+# vgam.sigma.1 <- exp(fitted.linear[,1])
 
 
 data.scenario <- data.frame("x" = newx,
@@ -671,9 +711,9 @@ ggplot(xi.scenario, aes(x=x)) +
   geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
   geom_ribbon(aes(ymin = evgam.scale.q1, ymax = evgam.scale.q3), fill= "orange", alpha = 0.2) +
   geom_line(aes(y=evgam.scale), colour = "orange", linewidth=1, linetype=3) +
-  # geom_line(aes(y=vgam.scale), colour = "orange", linewidth=1, linetype=4) +
   geom_ribbon(aes(ymin = evgam.1.q1, ymax = evgam.1.q3), fill= "purple", alpha = 0.2) +
   geom_line(aes(y=evgam.1), colour = "purple", linewidth=1, linetype=3) +
+  # geom_line(aes(y=vgam.scale), colour = "orange", linewidth=1, linetype=4) +
   # geom_line(aes(y=vgam.1), colour = "purple", linewidth=1, linetype=4) +  
   scale_fill_manual(values=c("steelblue"), name = "") +
   scale_color_manual(values = c("steelblue")) + 
