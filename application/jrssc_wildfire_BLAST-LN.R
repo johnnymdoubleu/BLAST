@@ -72,13 +72,34 @@ fwi.index$month <- factor(format(as.Date(substr(cov.long$...1[missing.values],1,
 fwi.index$date <- as.numeric(fwi.index$date)
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 
+above.0 <- which(Y>0)
+Y <- Y[above.0]
+fwi.scaled <- fwi.scaled[above.0,]
+fwi.index <- fwi.index[above.0,]
+load("./BLAST/application/qgam-975-season.Rdata")
+load("./BLAST/application/wildfire_season.Rdata")
 
-
+fwi.origin <- df_seasonal[,c(1:7)]
+fwi.origin$time <- df_seasonal$time
+fwi.origin$season <- df_seasonal$Season
+fwi.origin$indic <- factor(ifelse(fwi.origin$season == "Winter-Spring", 0, 1))
+fwi.origin$BA <- df_seasonal$BA
+fwi.origin$log.BA <- log(df_seasonal$BA)
+fwi.origin$cos.time <- cos(2*pi*fwi.origin$time / 365)
+fwi.origin$sin.time <- sin(2*pi*fwi.origin$time / 365)
+fwi.winter <- fwi.origin[which(fwi.origin$season=="Winter-Spring"),]
+fwi.summer <- fwi.origin[which(fwi.origin$season=="Summer-Fall"),]
+Y <- fwi.winter$BA
+fwi.scaled <- fwi.winter[,c(3,4,5,6,7)]
+preds <- preds.winter
+# Y <- fwi.summer$BA
+# fwi.scaled <- fwi.summer[,c(3,4,5,6,7)]
+# preds <- preds.summer
 # fwi.index <- fwi.index[which(Y>1),]
 # load("./BLAST/application/quant-t.Rdata")
-load("./BLAST/application/quant-t_10.Rdata")
+# load("./BLAST/application/quant-t_10.Rdata")
 # load("./BLAST/application/qgam_5_10.Rdata")
-preds <- predict(quant.fit)
+# preds <- predict(quant.fit)
 # u <- rep(quantile(Y, threshold),ceiling(nrow(fwi.index)*(1-threshold)))
 # excess <- which(Y>u)
 excess <- which(Y>preds)
@@ -453,4 +474,4 @@ fit.log.lik <- extract_log_lik(fit1)
 loo(fit.log.lik, is_method = "sis", cores = 4)
 elpd.loo <- loo(fit.log.lik, is_method = "sis", cores = 4)
 elpd.loo
-save(elpd.loo, file = (paste0("./BLAST/application/BRIT_linear_",Sys.Date(),"_",psi,"_",floor(threshold*100),"quantile_IC.Rdata")))
+# save(elpd.loo, file = (paste0("./BLAST/application/BRIT_linear_",Sys.Date(),"_",psi,"_",floor(threshold*100),"quantile_IC.Rdata")))

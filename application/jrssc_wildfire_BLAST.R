@@ -67,7 +67,7 @@ for(i in 1:length(cov)){
 # era5 <- era5[era5$year>1979,]
 # era5 <- era5[!(era5$year == 1999 & era5$month == 2 & era5$day == 14), ]
 # fwi.index$ERA5 <- fwi.scaled$ERA5 <- as.numeric(era5$ERA_5)
-
+# fwi.scaled$time <- fwi.index$time <- seq(1,length(Y), length.out=length(Y))
 fwi.index$date <- substr(cov.long$...1[missing.values],9,10)
 fwi.index$month <- factor(format(as.Date(substr(cov.long$...1[missing.values],1,10), "%Y-%m-%d"),"%b"),
                             levels = c("Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"))
@@ -76,18 +76,40 @@ fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 
 
 
-above.0 <- which(Y>0.00001)
+above.0 <- which(Y>0)
 Y <- Y[above.0]
 fwi.scaled <- fwi.scaled[above.0,]
+fwi.index <- fwi.index[above.0,]
 # load("./BLAST/application/quant-t.Rdata")
 # load("./BLAST/application/quant-t_10.Rdata")
 # load("./BLAST/application/qgam_975_30_ts.Rdata")
-load("./BLAST/application/qgam-97-30-ts-t-log.Rdata")
+# load("./BLAST/application/qgam-97-30-ts-t-log.Rdata")
 # load("./BLAST/application/evgam-975-30-ts-log.Rdata")
 # load("./BLAST/application/evgam-95-30-ts-sqrt.Rdata")
 # load("./BLAST/application/evgam-975-30-t.Rdata")
 # load("./BLAST/application/gamboost-975-20-log.Rdata")
-# load("./BLAST/application/quant-evgam-scaled.Rdata")
+load("./BLAST/application/qgam-95-season.Rdata")
+load("./BLAST/application/wildfire_season.Rdata")
+# fwi.scaled <- fwi.scaled[,c(-1,-2)]
+# fwi.index <- fwi.index[,c(-1,-2)]
+# preds <- preds.indic
+fwi.origin <- df_seasonal[,c(1:7)]
+fwi.origin$time <- df_seasonal$time
+fwi.origin$season <- df_seasonal$Season
+fwi.origin$indic <- factor(ifelse(fwi.origin$season == "Winter-Spring", 0, 1))
+fwi.origin$BA <- df_seasonal$BA
+fwi.origin$log.BA <- log(df_seasonal$BA)
+fwi.origin$cos.time <- cos(2*pi*fwi.origin$time / 365)
+fwi.origin$sin.time <- sin(2*pi*fwi.origin$time / 365)
+fwi.winter <- fwi.origin[which(fwi.origin$season=="Winter-Spring"),]
+fwi.summer <- fwi.origin[which(fwi.origin$season=="Summer-Fall"),]
+# Y <- fwi.winter$BA
+# fwi.scaled <- fwi.winter[,c(3,4,5,6,7)]
+# preds <- preds.winter
+Y <- fwi.summer$BA
+fwi.scaled <- fwi.summer[,c(3,4,5,6,7)]
+preds <- preds.summer
+
 # con_mat <- concurvity(quant.fit, full = FALSE)$worst
 # con_long <- reshape2::melt(con_mat)
 # ggplot(con_long, aes(x = Var1, y = Var2, fill = value)) +
@@ -141,13 +163,13 @@ y <- Y[excess]
 # fwi.scaled <- data.frame(fwi.scaled[which(Y>u),])
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 # range01 <- function(x){(x)/max(x)}
-fwi.scaled <- as.data.frame(sapply(fwi.scaled[excess,c(-1,-2)], FUN = range01))
+fwi.scaled <- as.data.frame(sapply(fwi.scaled[excess,], FUN = range01))
 
 n <- dim(fwi.scaled)[[1]]
 p <- dim(fwi.scaled)[[2]]
 
 
-fwi.origin <- data.frame(fwi.index[excess,c(-1,-2)], BA=y)
+fwi.origin <- data.frame(fwi.index[excess,], BA=y)
 max.fwi <- fwi.origin[which.max(y),]
 fwi.grid <- data.frame(lapply(fwi.origin[,c(1:p)], function(x) seq(min(x), max(x), length.out = nrow(fwi.scaled))))
 fwi.minmax <- sapply(fwi.origin[,c(1:p)], function(x) max(x)-min(x))
@@ -455,12 +477,12 @@ fit1 <- stan(
 # saveRDS(fit1, file=paste0("./BLAST/application/",Sys.Date(),"_stanfit.rds"))
 # readRDS(file=paste0("./BLAST/application/2024-11-27","_stanfit.rds"))
 posterior <- rstan::extract(fit1)
-# bayesplot::color_scheme_set("mix-blue-red")
-# bayesplot::mcmc_trace(fit1, pars="lp__") + ylab("") +
-#   theme_minimal(base_size = 30) +
-#   theme(legend.position = "none",
-#         strip.text = element_blank(),
-#         axis.text = element_text(size = 18))
+bayesplot::color_scheme_set("mix-blue-red")
+bayesplot::mcmc_trace(fit1, pars="lp__") + ylab("") +
+  theme_minimal(base_size = 30) +
+  theme(legend.position = "none",
+        strip.text = element_blank(),
+        axis.text = element_text(size = 18))
 
 theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
@@ -733,6 +755,7 @@ r <- sapply(1:T, function(t) {
   alpha_t <- posterior$alpha[posterior_idx[t], ]  # Extract vector of length n
   qnorm(pPareto(y, u, alpha = alpha_t))           # Vectorized across all y
 })
+
 quantile.prob <- ppoints(n)
 grid <- qnorm(quantile.prob)
 traj <- t(apply(r, 2, quantile, probs = quantile.prob, type = 2))
@@ -753,7 +776,8 @@ trajhat <- apply(traj, 2, quantile, prob = 0.5)
 u.band <- apply(traj, 2, quantile, prob = 0.975)
 qqplot.df <- data.frame(grid = grid, 
                         l.band = l.band, 
-                        trajhat = trajhat, 
+                        trajhat = trajhat,
+                        # evgam.traj = evgam.traj, 
                         u.band = u.band)
 ggplot(data = ) + 
   geom_ribbon(aes(x = grid, ymin = l.band, ymax = u.band), 
@@ -905,13 +929,13 @@ for(i in 1:p){
                   ylab("") + xlab(names(fwi.scaled)[i]) +
                   scale_fill_manual(values=c("steelblue"), name = "") + 
                   scale_color_manual(values=c("steelblue")) +
-                  # ylim(fwi.min.samples[i], 7) +
+                  ylim(min(fwi.min.samples), 7) +
                   theme_minimal(base_size = 30) +
                   theme(legend.position = "none",
                           plot.margin = margin(0,0,0,-20),
                           axis.text = element_text(size = 35),
                           axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.grid[which.max(y),i], y=fwi.min.samples[i], color = "red", size = 7)
+  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.grid[which.max(y),i], y=min(fwi.min.samples), color = "red", size = 7)
 }
 
 grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)

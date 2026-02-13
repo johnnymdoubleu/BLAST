@@ -73,13 +73,13 @@ fwi.index$month <- factor(format(as.Date(substr(cov.long$...1[missing.values],1,
 fwi.index$date <- as.numeric(fwi.index$date)
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 fwi.origin <- fwi.scaled
-
+fwi.index$time <- c(1:length(Y))
 fwi.origin <- data.frame(fwi.origin, time = c(1:length(Y)), BA=Y)
 
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 fwi.origin[,c(1:7)] <- as.data.frame(sapply(fwi.origin[,c(1:7)], FUN = range01))
 
-above.0 <- which(Y>0.00001)
+above.0 <- which(Y>0)
 Y <- Y[above.0]
 fwi.scaled <- fwi.scaled[above.0,]
 fwi.origin <- fwi.origin[above.0,]
@@ -119,10 +119,10 @@ fwi.index <- fwi.index[above.0,]
 # save(quant.fit, file = './BLAST/application/qgam_95_10_ts.Rdata')
 # load("./BLAST/application/quant-time.Rdata")
 # load("./BLAST/application/qgam_5_none.Rdata")
-# load("./BLAST/application/quant-t_30.Rdata")
-# load("./BLAST/application/qgam_975_30_ts.Rdata")
+# load("./BLAST/application/qgam-975-t-0.Rdata")
+load("./BLAST/application/qgam-975-season.Rdata")
 # load("./BLAST/application/qgam-95-30-ts-log.Rdata")
-load("./BLAST/application/evgam-90-30-t.Rdata")
+# load("./BLAST/application/evgam-90-30-t.Rdata")
 # print(plot(quant.fit, allTerms = TRUE), pages = 1)
 # check(quant.fit)
 # quant.viz <- getViz(quant.fit, nsim = 20)
@@ -131,6 +131,7 @@ load("./BLAST/application/evgam-90-30-t.Rdata")
 
 # preds <- predict(quant.fit)
 # save(preds, quant.fit, file="./BLAST/application/quant-time.Rdata")
+preds <- preds.indic
 empirical_qu <- mean(fwi.origin$BA < preds)
 print(paste("Empirical Quantile:", empirical_qu))
 
@@ -150,10 +151,10 @@ df_seasonal <- fwi.index %>%
     Month_Num = match(month, month.abb), 
     
     Season = case_when(
-      Month_Num %in% c(12, 1, 2) ~ "Winter",
-      Month_Num %in% c(3, 4, 5) ~ "Spring",
-      Month_Num %in% c(6, 7, 8) ~ "Summer",
-      Month_Num %in% c(9, 10, 11) ~ "Autumn"
+      Month_Num %in% c(11, 12, 1, 2, 3, 4) ~ "Winter-Spring",
+      # Month_Num %in% c(3, 4, 5) ~ "Spring",
+      Month_Num %in% c(5, 6, 7, 8, 9, 10) ~ "Summer-Fall",
+      # Month_Num %in% c(9, 10, 11) ~ "Autumn"
     ),
 
     SeasonYear = ifelse(Month_Num == 12, year + 1, year)
@@ -162,10 +163,10 @@ df_seasonal <- fwi.index %>%
 plot_data <- df_seasonal %>%
   group_by(SeasonYear, Season) %>%
   summarise(
-    Q975 = quantile(BA, 0.90, na.rm = TRUE), 
+    Q975 = quantile(BA, 0.975, na.rm = TRUE), 
     .groups = "drop"
   ) %>%
-  mutate(Season = factor(Season, levels = c("Winter", "Spring", "Summer", "Autumn"))) %>%
+  mutate(Season = factor(Season, levels = c("Winter-Spring", "Summer-Fall"))) %>%
   arrange(SeasonYear, Season) %>%
   mutate(Label = paste(SeasonYear, Season)) %>%
   mutate(Label = factor(Label, levels = unique(Label)))
@@ -173,6 +174,7 @@ plot_data <- df_seasonal %>%
 df_seasonal <- df_seasonal %>% 
   mutate(Label = paste(SeasonYear, Season)) %>%
   mutate(Label = factor(Label, levels = unique(Label)))
+df_seasonal$time <- c(1:length(Y))
 # 3. Plot
 ggplot(plot_data, aes(x = Label, y = Q975, group = 1)) +
 # ggplot(df_seasonal, aes(x = Label, y = BA, group = 1)) +
@@ -180,10 +182,10 @@ ggplot(plot_data, aes(x = Label, y = Q975, group = 1)) +
   geom_hline(aes(yintercept=quantile(Y,0.975)), linetype="dashed") +
   geom_point(aes(color = Season), size = 3) +
   scale_color_manual(values = c(
-    "Summer" = "orange", 
-    "Winter" = "red", 
-    "Spring" = "red", 
-    "Autumn" = "red"
+    "Summer-Fall" = "orange", 
+    "Winter-Spring" = "red"
+    # "Spring" = "red", 
+    # "Autumn" = "red"
   )) +
   labs(y = "BA", x = "Season", color = "Season") +
   theme_minimal() +
@@ -192,10 +194,37 @@ ggplot(plot_data, aes(x = Label, y = Q975, group = 1)) +
     legend.position = "none"
   )
 
+# save(df_seasonal, file="./BLAST/application/wildfire_season.Rdata")
+df.winter <- df_seasonal[which(df_seasonal$Season=="Winter-Spring"),]
+df.winter$preds <- preds.winter
+df.summer <- df_seasonal[which(df_seasonal$Season=="Summer-Fall"),]
+df.summer$preds <- preds.summer
+ggplot(data = df.winter) +
+  geom_line(aes(x = time, y=preds), colour = "steelblue") + 
+  geom_hline(aes(yintercept=quantile(BA, 0.975)), linetype=2) +
+  scale_y_log10() +
+  geom_point(aes(x= time, y = BA), alpha = 0.15) + 
+  theme_minimal() + ylab("Burnt Area") +
+  theme(
+    # axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "none"
+  )
+
+ggplot(data = df.summer) +
+  geom_line(aes(x = time, y=preds), colour = "steelblue") + 
+  geom_hline(aes(yintercept=quantile(BA, 0.975)), linetype=2) +
+  scale_y_log10() +
+  geom_point(aes(x= time, y = BA), alpha = 0.15) + 
+  theme_minimal() + ylab("Burnt Area") +
+  theme(
+    # axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "none"
+  )
+
 
 # df_seasonal$fitted_975 <- predict(quant.fit)
-df_seasonal$fitted_975 <- predict(ald.cov.fit)$location
-# df_seasonal$fitted_975 <- preds
+# df_seasonal$fitted_975 <- predict(ald.cov.fit)$location
+df_seasonal$fitted_975 <- preds
 # load("./BLAST/application/qgam_96_30_ts.Rdata")
 # df_seasonal$fitted_cov <- predict(quant.fit)
 # load("./BLAST/application/evgam-975-10-ts-log.Rdata")
@@ -213,18 +242,25 @@ df_seasonal$fitted_975 <- predict(ald.cov.fit)$location
 # df_seasonal$fitted_cov <- quantile_preds
 # df_seasonal$fitted_upper <- upper_95
 # df_seasonal$fitted_lower <- lower_95
-df_seasonal$fitted_cov <- exp(predict(ald.cov.fit)$location) #preds
+df_seasonal$fitted_cov <- preds
 
 ggplot(data = data.frame(BA = fwi.origin$BA, time = fwi.origin$time, quantile = df_seasonal$fitted_cov)) +
-  geom_line(aes(x = time, y=quantile), colour = "steelblue") + scale_y_log10() +
-  geom_point(aes(x= time, y = BA), alpha = 0.15)
+  geom_line(aes(x = time, y=quantile), colour = "steelblue") + 
+  geom_hline(aes(yintercept=quantile(fwi.origin$BA, 0.975)), linetype=2) +
+  scale_y_log10() +
+  geom_point(aes(x= time, y = BA), alpha = 0.15) + 
+  theme_minimal() + ylab("Burnt Area") +
+  theme(
+    # axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "none"
+  )
 
 block_summary <- df_seasonal %>%
   group_by(Label, Season) %>%
   summarise(
-    Empirical = (quantile(BA, probs = 0.95, na.rm = TRUE)),
-    Model_Smooth = (quantile(fitted_975, probs = 0.95, na.rm = TRUE)), # Average smooth value for that block
-    Model_cov = (quantile(fitted_cov, probs = 0.95, na.rm = TRUE)),
+    Empirical = (quantile(BA, probs = 0.975, na.rm = TRUE)),
+    Model_Smooth = (quantile(fitted_975, probs = 0.975, na.rm = TRUE)), # Average smooth value for that block
+    Model_cov = (quantile(fitted_cov, probs = 0.975, na.rm = TRUE)),
     # Model_upper = (quantile(fitted_upper, probs = 0.975, na.rm = TRUE)),
     # Model_lower = (quantile(fitted_lower, probs = 0.975, na.rm = TRUE)),
     Exceedance_Count = sum(BA > Model_cov, na.rm = TRUE),
@@ -243,17 +279,17 @@ ggplot(block_summary, aes(x = Label, group = 1)) +
   # geom_line(aes(y = Model_Smooth), color = "steelblue", linewidth = 1.2) +
   geom_line(aes(y = Model_cov), color = "steelblue", linewidth = 0.7, linetype = 1) +
   # geom_point(aes(y = Empirical, color = Season), size = 3) +
-  # geom_errorbar(aes(y = Empirical, ymin = Empirical, ymax = Empirical), 
-              # color = "black", width = 1, linewidth = 1.2) +
-  geom_point(data=df_seasonal, aes(y = fwi.origin$BA), alpha=0.15) + #fwi.origin$time, fwi.origin$BA)
+  geom_errorbar(aes(y = Empirical, ymin = Empirical, ymax = Empirical), 
+              color = "black", width = 1, linewidth = 1.2) +
+  geom_point(data=df_seasonal, aes(y = fwi.origin$BA), alpha=0.1) + 
   scale_y_log10(
     name = "Burnt Area (Log10)",
     sec.axis = sec_axis(~ log10(.) / count_scale, 
                         name = "Exceedance Count",
                         breaks = seq(0, max_count, by = 1))
   ) +
-  scale_color_manual(values = c("Summer" = "orange", "Winter" = "red", "Spring" = "red", "Autumn" = "red")) +
-  scale_fill_manual(values = c("Summer" = "orange", "Winter" = "red", "Spring" = "red", "Autumn" = "red")) +
+  scale_color_manual(values = c("Summer-Fall" = "orange", "Winter-Spring" = "red")) +
+  scale_fill_manual(values = c("Summer-Fall" = "orange", "Winter-Spring" = "red")) +
   labs(x = "Season Year") +
   theme_minimal() +
   theme(
@@ -272,10 +308,10 @@ ggplot(block_summary, aes(x = Label, group = 1)) +
   # geom_ribbon(aes(ymin=Model_lower, ymax = Model_upper), fill = "steelblue", alpha = 0.1) +
   scale_y_log10() +
   scale_color_manual(values = c(
-    "Summer" = "orange", 
-    "Winter" = "red", 
-    "Spring" = "red", 
-    "Autumn" = "red"
+    "Summer-Autumn" = "orange", 
+    "Winter-Spring" = "red" 
+    # "Spring" = "red", 
+    # "Autumn" = "red"
   )) +
   labs(
     y = "Burnt Area", 
