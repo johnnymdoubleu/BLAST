@@ -67,7 +67,7 @@ for(i in 1:length(cov)){
 # era5 <- era5[era5$year>1979,]
 # era5 <- era5[!(era5$year == 1999 & era5$month == 2 & era5$day == 14), ]
 # fwi.index$ERA5 <- fwi.scaled$ERA5 <- as.numeric(era5$ERA_5)
-# fwi.scaled$time <- fwi.index$time <- seq(1,length(Y), length.out=length(Y))
+fwi.scaled$time <- fwi.index$time <- c(1:length(Y))
 fwi.index$date <- substr(cov.long$...1[missing.values],9,10)
 fwi.index$month <- factor(format(as.Date(substr(cov.long$...1[missing.values],1,10), "%Y-%m-%d"),"%b"),
                             levels = c("Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"))
@@ -80,84 +80,43 @@ above.0 <- which(Y>0)
 Y <- Y[above.0]
 fwi.scaled <- fwi.scaled[above.0,]
 fwi.index <- fwi.index[above.0,]
-# load("./BLAST/application/quant-t.Rdata")
-# load("./BLAST/application/quant-t_10.Rdata")
-# load("./BLAST/application/qgam_975_30_ts.Rdata")
-# load("./BLAST/application/qgam-97-30-ts-t-log.Rdata")
-# load("./BLAST/application/evgam-975-30-ts-log.Rdata")
-# load("./BLAST/application/evgam-95-30-ts-sqrt.Rdata")
-# load("./BLAST/application/evgam-975-30-t.Rdata")
-# load("./BLAST/application/gamboost-975-20-log.Rdata")
-load("./BLAST/application/qgam-95-season.Rdata")
-load("./BLAST/application/wildfire_season.Rdata")
-# fwi.scaled <- fwi.scaled[,c(-1,-2)]
-# fwi.index <- fwi.index[,c(-1,-2)]
-# preds <- preds.indic
-fwi.origin <- df_seasonal[,c(1:7)]
-fwi.origin$time <- df_seasonal$time
-fwi.origin$season <- df_seasonal$Season
-fwi.origin$indic <- factor(ifelse(fwi.origin$season == "Summer", 0, 1))
-fwi.origin$BA <- df_seasonal$BA
-fwi.origin$log.BA <- log(df_seasonal$BA)
-fwi.origin$cos.time <- cos(2*pi*fwi.origin$time / 365)
-fwi.origin$sin.time <- sin(2*pi*fwi.origin$time / 365)
-fwi.winter <- fwi.origin[which(fwi.origin$season=="Winter"),]
-fwi.summer <- fwi.origin[which(fwi.origin$season=="Spring"),]
-# Y <- fwi.winter$BA
-# fwi.scaled <- fwi.winter
-# preds <- preds.winter
-fwi.index <- fwi.origin
-Y <- fwi.summer$BA
-fwi.scaled <- fwi.summer
-preds <- preds.summer
 
-# con_mat <- concurvity(quant.fit, full = FALSE)$worst
-# con_long <- reshape2::melt(con_mat)
-# ggplot(con_long, aes(x = Var1, y = Var2, fill = value)) +
-#   geom_tile(color = "white") +
-#   scale_fill_gradientn(colors = c("darkgreen", "yellow", "red"), 
-#                        values = c(0, 0.5, 1),
-#                        limits = c(0, 1), 
-#                        name = "Concurvity") +
-#   theme_minimal() +
-#   labs(x = "Basis Functions",
-#        y = "Basis Functions") +
-#   theme(axis.text = element_text(size=15)) +
-#   coord_fixed()
+fwi.season <- fwi.index %>%
+  mutate(
+    year = as.numeric(as.character(year)), 
+    Month_Num = match(month, month.abb), 
+    
+    season = case_when(
+      Month_Num %in% c(12, 1, 2) ~ "Winter",
+      Month_Num %in% c(3, 4, 5) ~ "Spring",
+      Month_Num %in% c(6, 7, 8) ~ "Summer",
+      Month_Num %in% c(9, 10, 11) ~ "Autumn"
+    ),
 
-# preds <- predict(quant.fit)
-# preds <- (predict(ald.cov.fit)$location)^2
-# preds <- exp(predict(ald.cov.fit)$location)
-# preds <- predict(gamboost_model)
-# preds <- predict(ald.cov.fit)$location
-# preds.sigma <- exp(predict(ald.cov.fit)$logscale)
-pald <- function(q, mu, sigma, tau) {
-  ifelse(q < mu, 
-         tau * exp((1 - tau) * (q - mu) / sigma), 
-         1 - (1 - tau) * exp(-tau * (q - mu) / sigma))
-}
+    SeasonYear = ifelse(Month_Num == 12, year + 1, year)
+  )
+fwi.season <- fwi.season %>% 
+  mutate(Label = paste(SeasonYear, season)) %>%
+  mutate(Label = factor(Label, levels = unique(Label)))
 
-# Generate PIT values
-# pit_values <- pald(log(Y), preds, preds.sigma, rep(0.975, nrow(fwi.scaled)))
-# hist(pit_values, main="PIT Histogram (Should be flat)")
-# qqplot(qunif(ppoints(length(pit_values))), pit_values)
-# preds <- pmax(preds, 0.001) # Forces any negative value to be 0
+fwi.season$winter <- factor(ifelse(fwi.season$season == "Winter", 0, 1))
+fwi.season$spring <- factor(ifelse(fwi.season$season == "Spring", 0, 1))
+fwi.season$summer <- factor(ifelse(fwi.season$season == "Summer", 0, 1))
+fwi.season$autumn <- factor(ifelse(fwi.season$season == "Autumn", 0, 1))
+fwi.season$BA <- Y
+fwi.season$log.BA <- log(fwi.season$BA)
+fwi.season$cos.time <- cos(2*pi*fwi.season$time / 365)
+fwi.season$sin.time <- sin(2*pi*fwi.season$time / 365)
+save(fwi.season, file="./BLAST/application/wildfire_season.Rdata")
 
-u <- quantile(Y, threshold)
-excess <- which(Y>u)
-# pos.idx <- which(preds > 0)
-# Y <- Y[pos.idx]
-# fwi.scaled <- fwi.scaled[pos.idx,]
-# preds <- preds[pos.idx]
-# excess <- which(Y>preds)
-# u <- preds[excess]
+load(paste-("./BLAST/application/qr-",threshold*100,"-t.Rdata"))
 
-# excess <- which(fwi.dd$excess==TRUE)
-# u <- fwi.dd$origin_Model_cov[excess]
-# excess <- which(Y>evgam.cov.pred)
-# u <- evgam.cov.pred[excess]
-# excess <- which(Y>evgam.time.pred)
-# u <- evgam.time.pred[excess]
+# u <- quantile(Y, threshold)
+# excess <- which(Y>u)
+preds <- preds.qgam
+excess <- which(Y>preds)
+u <- preds[excess]
+
 y <- Y[excess]
 u <- rep(quantile(Y, threshold),length(y))
 # extRemes::mrlplot(y, main = "Mean Residual Life Plot")
