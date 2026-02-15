@@ -151,10 +151,10 @@ df_seasonal <- fwi.index %>%
     Month_Num = match(month, month.abb), 
     
     Season = case_when(
-      Month_Num %in% c(11, 12, 1, 2, 3, 4) ~ "Winter-Spring",
-      # Month_Num %in% c(3, 4, 5) ~ "Spring",
-      Month_Num %in% c(5, 6, 7, 8, 9, 10) ~ "Summer-Fall",
-      # Month_Num %in% c(9, 10, 11) ~ "Autumn"
+      Month_Num %in% c(12, 1, 2) ~ "Winter",
+      Month_Num %in% c(3, 4, 5) ~ "Spring",
+      Month_Num %in% c(6, 7, 8) ~ "Summer",
+      Month_Num %in% c(9, 10, 11) ~ "Autumn"
     ),
 
     SeasonYear = ifelse(Month_Num == 12, year + 1, year)
@@ -166,7 +166,7 @@ plot_data <- df_seasonal %>%
     Q975 = quantile(BA, 0.975, na.rm = TRUE), 
     .groups = "drop"
   ) %>%
-  mutate(Season = factor(Season, levels = c("Winter-Spring", "Summer-Fall"))) %>%
+  mutate(Season = factor(Season, levels = c("Winter","Spring", "Summer", "Fall"))) %>%
   arrange(SeasonYear, Season) %>%
   mutate(Label = paste(SeasonYear, Season)) %>%
   mutate(Label = factor(Label, levels = unique(Label)))

@@ -33,7 +33,7 @@ missing.values <- which(!is.na(df.long$measurement))
 #Thus, each year consist of 366 data with either 1 or 0 missing value.
 Y <- df.long$measurement[!is.na(df.long$measurement)]
 psi.origin <- psi <- 30
-threshold <- 0.975
+threshold <- 0.95
 
 multiplesheets <- function(fname) {
     setwd("C:/Users/Johnny Lee/Documents/GitHub")
@@ -96,18 +96,19 @@ load("./BLAST/application/wildfire_season.Rdata")
 fwi.origin <- df_seasonal[,c(1:7)]
 fwi.origin$time <- df_seasonal$time
 fwi.origin$season <- df_seasonal$Season
-fwi.origin$indic <- factor(ifelse(fwi.origin$season == "Winter-Spring", 0, 1))
+fwi.origin$indic <- factor(ifelse(fwi.origin$season == "Summer", 0, 1))
 fwi.origin$BA <- df_seasonal$BA
 fwi.origin$log.BA <- log(df_seasonal$BA)
 fwi.origin$cos.time <- cos(2*pi*fwi.origin$time / 365)
 fwi.origin$sin.time <- sin(2*pi*fwi.origin$time / 365)
-fwi.winter <- fwi.origin[which(fwi.origin$season=="Winter-Spring"),]
-fwi.summer <- fwi.origin[which(fwi.origin$season=="Summer-Fall"),]
+fwi.winter <- fwi.origin[which(fwi.origin$season=="Winter"),]
+fwi.summer <- fwi.origin[which(fwi.origin$season=="Spring"),]
 # Y <- fwi.winter$BA
-# fwi.scaled <- fwi.winter[,c(3,4,5,6,7)]
+# fwi.scaled <- fwi.winter
 # preds <- preds.winter
+fwi.index <- fwi.origin
 Y <- fwi.summer$BA
-fwi.scaled <- fwi.summer[,c(3,4,5,6,7)]
+fwi.scaled <- fwi.summer
 preds <- preds.summer
 
 # con_mat <- concurvity(quant.fit, full = FALSE)$worst
@@ -142,14 +143,14 @@ pald <- function(q, mu, sigma, tau) {
 # qqplot(qunif(ppoints(length(pit_values))), pit_values)
 # preds <- pmax(preds, 0.001) # Forces any negative value to be 0
 
-# u <- rep(quantile(Y, threshold),ceiling(nrow(fwi.index)*(1-threshold)))
-# excess <- which(Y>u)
+u <- quantile(Y, threshold)
+excess <- which(Y>u)
 # pos.idx <- which(preds > 0)
 # Y <- Y[pos.idx]
 # fwi.scaled <- fwi.scaled[pos.idx,]
 # preds <- preds[pos.idx]
-excess <- which(Y>preds)
-u <- preds[excess]
+# excess <- which(Y>preds)
+# u <- preds[excess]
 
 # excess <- which(fwi.dd$excess==TRUE)
 # u <- fwi.dd$origin_Model_cov[excess]
@@ -158,18 +159,18 @@ u <- preds[excess]
 # excess <- which(Y>evgam.time.pred)
 # u <- evgam.time.pred[excess]
 y <- Y[excess]
-
+u <- rep(quantile(Y, threshold),length(y))
 # extRemes::mrlplot(y, main = "Mean Residual Life Plot")
 # fwi.scaled <- data.frame(fwi.scaled[which(Y>u),])
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 # range01 <- function(x){(x)/max(x)}
-fwi.scaled <- as.data.frame(sapply(fwi.scaled[excess,], FUN = range01))
+fwi.scaled <- as.data.frame(sapply(fwi.scaled[excess,c(3,4,5,6,7)], FUN = range01))
 
 n <- dim(fwi.scaled)[[1]]
 p <- dim(fwi.scaled)[[2]]
 
 
-fwi.origin <- data.frame(fwi.index[excess,], BA=y)
+fwi.origin <- data.frame(fwi.index[excess,c(3,4,5,6,7)], BA=y)
 max.fwi <- fwi.origin[which.max(y),]
 fwi.grid <- data.frame(lapply(fwi.origin[,c(1:p)], function(x) seq(min(x), max(x), length.out = nrow(fwi.scaled))))
 fwi.minmax <- sapply(fwi.origin[,c(1:p)], function(x) max(x)-min(x))
@@ -597,23 +598,23 @@ simul.data <- data.frame(BA = y-u, fwi.scaled[,c(1:p)])#fwi.origin[c(1:p)])
 #                       s(FFMC, bs = "tp", k = 30) +
 #                       s(DMC, bs = "tp", k = 30) +
 #                       s(DC, bs = "tp", k = 30))
-gam.scale <- list(BA ~ s(BUI, bs = "ts", k = 30) + 
-                      s(ISI, bs = "ts", k = 30) + 
-                      s(FFMC, bs = "ts", k = 30) +
-                      s(DMC, bs = "ts", k = 30) + 
-                      s(DC, bs = "ts", k = 30),
-                    ~ s(BUI, bs = "ts", k = 30) + 
-                      s(ISI, bs = "ts", k = 30) + 
-                      s(FFMC, bs = "ts", k = 30) +
-                      s(DMC, bs = "ts", k = 30) +
-                      s(DC, bs = "ts", k = 30))
-evgam.fit.scale <- evgam::evgam(gam.scale, data = simul.data, family = "gpd")
-pred.scale <- predict(evgam.fit.scale, newdata = xholder, type="response", se.fit = TRUE)
-xi.pred.scale <-pred.scale$fitted$shape
-xi.se.scale <- pred.scale$se.fit$shape
-xi.low.scale <- xi.pred.scale - (1.96 * xi.se.scale)
-xi.high.scale <- xi.pred.scale + (1.96 * xi.se.scale)
-alpha.pred.scale <- 1/xi.pred.scale
+# gam.scale <- list(BA ~ s(BUI, bs = "ts", k = 30) + 
+#                       s(ISI, bs = "ts", k = 30) + 
+#                       s(FFMC, bs = "ts", k = 30) +
+#                       s(DMC, bs = "ts", k = 30) + 
+#                       s(DC, bs = "ts", k = 30),
+#                     ~ s(BUI, bs = "ts", k = 30) + 
+#                       s(ISI, bs = "ts", k = 30) + 
+#                       s(FFMC, bs = "ts", k = 30) +
+#                       s(DMC, bs = "ts", k = 30) +
+#                       s(DC, bs = "ts", k = 30))
+# evgam.fit.scale <- evgam::evgam(gam.scale, data = simul.data, family = "gpd")
+# pred.scale <- predict(evgam.fit.scale, newdata = xholder, type="response", se.fit = TRUE)
+# xi.pred.scale <-pred.scale$fitted$shape
+# xi.se.scale <- pred.scale$se.fit$shape
+# xi.low.scale <- xi.pred.scale - (1.96 * xi.se.scale)
+# xi.high.scale <- xi.pred.scale + (1.96 * xi.se.scale)
+# alpha.pred.scale <- 1/xi.pred.scale
 
 # xholder.basis.scale <- predict(evgam.fit.scale, newdata = xholder, type= "lpmatrix")$shape
 # psi <- 15
@@ -635,19 +636,19 @@ alpha.pred.scale <- 1/xi.pred.scale
 #                     s(DMC, bs = "tp", k = 30) + 
 #                     s(DC, bs = "tp", k = 30)) 
 
-gam.1 <- list(BA ~ 1,
-                ~ s(BUI, bs = "ts", k = 30) + 
-                  s(ISI, bs = "ts", k = 30) + 
-                  s(FFMC, bs = "ts", k = 30) +
-                  s(DMC, bs = "ts", k = 30) +
-                  s(DC, bs = "ts", k = 30))
-evgam.fit.1 <- evgam::evgam(gam.1, data = simul.data, family = "gpd")
-pred.1 <- predict(evgam.fit.1, newdata = xholder, type="response", se.fit = TRUE)
-xi.pred.1 <-pred.1$fitted$shape
-xi.se.1 <- pred.1$se.fit$shape
-xi.low.1 <- xi.pred.1 - (1.96 * xi.se.1)
-xi.high.1 <- xi.pred.1 + (1.96 * xi.se.1)
-alpha.pred.1 <- 1/xi.pred.1
+# gam.1 <- list(BA ~ 1,
+#                 ~ s(BUI, bs = "ts", k = 30) + 
+#                   s(ISI, bs = "ts", k = 30) + 
+#                   s(FFMC, bs = "ts", k = 30) +
+#                   s(DMC, bs = "ts", k = 30) +
+#                   s(DC, bs = "ts", k = 30))
+# evgam.fit.1 <- evgam::evgam(gam.1, data = simul.data, family = "gpd")
+# pred.1 <- predict(evgam.fit.1, newdata = xholder, type="response", se.fit = TRUE)
+# xi.pred.1 <-pred.1$fitted$shape
+# xi.se.1 <- pred.1$se.fit$shape
+# xi.low.1 <- xi.pred.1 - (1.96 * xi.se.1)
+# xi.high.1 <- xi.pred.1 + (1.96 * xi.se.1)
+# alpha.pred.1 <- 1/xi.pred.1
 
 # xholder.basis.1 <- predict(evgam.fit.1, newdata = xholder, type= "lpmatrix")$shape
 # xi.coef.1 <- tail(evgam.fit.1$coefficients, (psi-1)*p)
@@ -717,24 +718,24 @@ xi.scenario <- data.frame("x" = newx,
                             "post.mean" = (1/alpha.samples[,1]),
                             "post.median" = (1/alpha.samples[,5]),
                             "q1" = (1/alpha.samples[,4]),
-                            "q3" = (1/alpha.samples[,6]),
-                            "evgam.1" = xi.pred.1,
-                            "evgam.1.q1" = xi.low.1,
-                            "evgam.1.q3" = xi.high.1,
+                            "q3" = (1/alpha.samples[,6]))
+                            # "evgam.1" = xi.pred.1,
+                            # "evgam.1.q1" = xi.low.1,
+                            # "evgam.1.q3" = xi.high.1,
                             # "vgam.1" = vgam.xi.1,
                             # "vgam.scale" = vgam.xi.scale,
-                            "evgam.scale.q1" = xi.low.scale,
-                            "evgam.scale.q3" = xi.high.scale,
-                            "evgam.scale" = xi.pred.scale)
+                            # "evgam.scale.q1" = xi.low.scale,
+                            # "evgam.scale.q3" = xi.high.scale,
+                            # "evgam.scale" = xi.pred.scale)
 
 ggplot(xi.scenario, aes(x=x)) + 
   ylab(expression(xi(c,...,c))) + xlab(expression(c)) + labs(col = "") +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
   geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
-  geom_ribbon(aes(ymin = evgam.scale.q1, ymax = evgam.scale.q3), fill= "orange", alpha = 0.2) +
-  geom_line(aes(y=evgam.scale), colour = "orange", linewidth=1, linetype=3) +
-  geom_ribbon(aes(ymin = evgam.1.q1, ymax = evgam.1.q3), fill= "purple", alpha = 0.2) +
-  geom_line(aes(y=evgam.1), colour = "purple", linewidth=1, linetype=3) +
+  # geom_ribbon(aes(ymin = evgam.scale.q1, ymax = evgam.scale.q3), fill= "orange", alpha = 0.2) +
+  # geom_line(aes(y=evgam.scale), colour = "orange", linewidth=1, linetype=3) +
+  # geom_ribbon(aes(ymin = evgam.1.q1, ymax = evgam.1.q3), fill= "purple", alpha = 0.2) +
+  # geom_line(aes(y=evgam.1), colour = "purple", linewidth=1, linetype=3) +
   # geom_line(aes(y=vgam.scale), colour = "orange", linewidth=1, linetype=4) +
   # geom_line(aes(y=vgam.1), colour = "purple", linewidth=1, linetype=4) +  
   scale_fill_manual(values=c("steelblue"), name = "") +
