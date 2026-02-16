@@ -334,7 +334,6 @@ for (i in seq_along(covariates)) {
 }
 
 xgrid.nonlinear <- do.call(cbind, grid_Z_list)
-# fwi.grid <- as.data.frame(sapply(fwi.grid, FUN = range01))
 xgrid.linear <- model.matrix(~ ., data = data.frame(fwi.grid))
 xgrid.linear[,-1] <- sweep(xgrid.linear[, -1], 2, fwi.min, "-")
 X_means <- colMeans(bs.linear[,-1])
