@@ -126,7 +126,7 @@ n <- dim(fwi.df[excess,])[[1]]
 p <- dim(fwi.df[excess,])[[2]]-1
 
 fwi.scaled <- fwi.scaled[excess,]
-fwi.scaled[,c(1:5)] <- as.data.frame(sapply(fwi.scaled[,c(1:p)], FUN = range01))
+fwi.scaled[,c(1:p)] <- as.data.frame(sapply(fwi.scaled[,c(1:p)], FUN = range01))
 
 fwi.origin <- data.frame(fwi.df[excess,], BA=y)
 max.fwi <- fwi.origin[which.max(y),]
@@ -241,23 +241,57 @@ cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear[,c(1,18,19,20,
 newx <- seq(0, 1, length.out = n)
 xholder <- do.call(cbind, lapply(1:p, function(j) {newx}))
 colnames(xholder) <- covariates
+
+# Note: 'n' must match the row dimension expected by your Stan data block.
+# We no longer define a global 'newx' here because every season gets its own grid.
+
 grid_linear_list <- list()
 grid_nonlinear_list <- list()
 
 for (i in seq_along(covariates)) {
   var_name <- covariates[i]
-  grid_vals <- xholder[, i]
+  
+  # 1. Retrieve Global Constants for this variable
+  # (Required to scale the seasonal grid back to the model's 0-1 scale)
+  global_min <- fwi.min[i]
+  global_range <- fwi.minmax[i]
   
   if (is.null(model_data[[var_name]])) next
+  
   for (season_label in names(model_data[[var_name]])) {
     params <- model_data[[var_name]][[season_label]]
     lin_col_name <- paste(var_name, "S", season_label, sep="_")
+    
+    # --- NEW LOGIC START ---
+    
+    # A. Find the indices for this specific season
+    season_idx <- which(season_code_full == season_label)
+    
+    # B. Extract the RAW data for this season (to find observed bounds)
+    raw_season_vals <- fwi.origin[season_idx, i]
+    season_min <- min(raw_season_vals, na.rm = TRUE)
+    season_max <- max(raw_season_vals, na.rm = TRUE)
+    
+    # C. Create a grid covering ONLY the observed seasonal range
+    # We create a sequence of length 'n' between the seasonal min and max
+    raw_grid <- seq(season_min, season_max, length.out = n)
+    
+    # D. Scale this grid to the Global [0, 1] domain
+    # This is crucial: The model coefficients 'theta' and 'gamma' were trained 
+    # on data scaled globally. We must provide inputs on that same scale.
+    grid_vals <- (raw_grid - global_min) / global_range
+    
+    # --- NEW LOGIC END ---
+
+    # Store the grid values (on 0-1 scale) for plotting x-axis later
     grid_linear_list[[lin_col_name]] <- matrix(grid_vals, ncol=1, dimnames=list(NULL, lin_col_name))
+    
     pred_df <- data.frame(
       x_vec = grid_vals,
       season_code_full = factor(season_label, levels = levels(season_code_full))
     )
     
+    # Projection (unchanged)
     X_raw_grid <- PredictMat(params$sm_spec, pred_df)
     Z_spectral_grid <- X_raw_grid %*% params$U_pen %*% params$Lambda_sqrt_inv
     intercept_grid <- rep(1, length(grid_vals))
@@ -272,8 +306,42 @@ for (i in seq_along(covariates)) {
   }
 }
 
-grid.linear <- do.call(cbind, grid_linear_list)
-grid.nonlinear <- do.call(cbind, grid_nonlinear_list)
+xholder.linear <- do.call(cbind, grid_linear_list)
+xholder.nonlinear <- do.call(cbind, grid_nonlinear_list)
+
+# grid_linear_list <- list()
+# grid_nonlinear_list <- list()
+
+# for (i in seq_along(covariates)) {
+#   var_name <- covariates[i]
+#   grid_vals <- xholder[, i]
+  
+#   if (is.null(model_data[[var_name]])) next
+#   for (season_label in names(model_data[[var_name]])) {
+#     params <- model_data[[var_name]][[season_label]]
+#     lin_col_name <- paste(var_name, "S", season_label, sep="_")
+#     grid_linear_list[[lin_col_name]] <- matrix(grid_vals, ncol=1, dimnames=list(NULL, lin_col_name))
+#     pred_df <- data.frame(
+#       x_vec = grid_vals,
+#       season_code_full = factor(season_label, levels = levels(season_code_full))
+#     )
+    
+#     X_raw_grid <- PredictMat(params$sm_spec, pred_df)
+#     Z_spectral_grid <- X_raw_grid %*% params$U_pen %*% params$Lambda_sqrt_inv
+#     intercept_grid <- rep(1, length(grid_vals))
+#     slope_grid     <- grid_vals
+#     X_lin_grid_local <- cbind(intercept_grid, slope_grid)
+#     Z_orth_grid <- Z_spectral_grid - X_lin_grid_local %*% params$projection_coefs
+#     Z_final_grid <- Z_orth_grid[, params$keep_cols, drop = FALSE]
+#     Z_final_grid <- scale(Z_final_grid, center = FALSE, scale = params$scale_stats)
+#     col_names <- paste(var_name, "S", season_label, 1:ncol(Z_final_grid), sep="_")
+#     colnames(Z_final_grid) <- col_names
+#     grid_nonlinear_list[[paste(var_name, season_label, sep="_")]] <- Z_final_grid
+#   }
+# }
+
+# xholder.linear <- do.call(cbind, grid_linear_list)
+# xholder.nonlinear <- do.call(cbind, grid_nonlinear_list)
 
 scale_stats_list <- list()
 for (var_name in names(model_data)) {
@@ -284,36 +352,68 @@ for (var_name in names(model_data)) {
 }
 
 Z_scales <- unlist(scale_stats_list)
-
-
-
-# scaled_fwi_grid <- as.data.frame(scaled_fwi_grid)
-# colnames(scaled_fwi_grid) <- covariates
-
 grid_nonlinear_flat <- list()
 grid_linear_flat <- list()
+
 for (i in seq_along(covariates)) {
   var_name <- covariates[i]
   
   if (is.null(model_data[[var_name]])) next
-  x_vals_raw <- fwi.grid[, i]
-  x_vals_scaled <- (x_vals_raw - fwi.min[i]) / fwi.minmax[i]
-  X_lin_grid_local <- cbind(rep(1, length(x_vals_scaled)), x_vals_scaled)
+  
+  # 1. Global Constants (for scaling back to model units)
+  global_min <- fwi.min[i]
+  global_range <- fwi.minmax[i]
+  
+  # Determine how many points you want in your grid (matching original fwi.grid size)
+  grid_len <- nrow(fwi.grid)
+  
+  # Note: We do NOT calculate x_vals_raw here anymore because it must be season-specific.
+
   for (season_label in names(model_data[[var_name]])) {
     params <- model_data[[var_name]][[season_label]]
     lin_col_name <- paste(var_name, "S", season_label, sep="_")
-    grid_linear_flat[[lin_col_name]] <- matrix((x_vals_raw - fwi.min[i]), ncol=1, dimnames=list(NULL, lin_col_name))
+    
+    # --- NEW LOGIC START ---
+    
+    # A. Identify the season indices in the ORIGINAL data
+    season_idx <- which(season_code_full == season_label)
+    
+    # B. Get the observed range for this specific season
+    raw_season_vals <- fwi.origin[season_idx, i]
+    season_min <- min(raw_season_vals, na.rm = TRUE)
+    season_max <- max(raw_season_vals, na.rm = TRUE)
+    
+    # C. Generate a sequence specifically for this season
+    x_vals_raw <- seq(season_min, season_max, length.out = grid_len)
+    
+    # D. Scale to Global [0, 1] (Model Space)
+    x_vals_scaled <- (x_vals_raw - global_min) / global_range
+    
+    # --- NEW LOGIC END ---
+    
+    # 2. Re-create the Linear Basis Matrix for Orthogonalization 
+    # (Must be done INSIDE the loop now, as x_vals_scaled changes)
+    X_lin_grid_local <- cbind(rep(1, length(x_vals_scaled)), x_vals_scaled)
+
+    # 3. Store Linear Part (Raw Value - Global Min)
+    # This aligns with your 'sweep' logic later
+    grid_linear_flat[[lin_col_name]] <- matrix((x_vals_raw - global_min), ncol=1, dimnames=list(NULL, lin_col_name))
     
     grid_df <- data.frame(
       x_vec = x_vals_scaled,
       season_code_full = factor(season_label, levels = levels(season_code_full))
     )
     
+    # 4. Projection & Orthogonalization
     X_raw_grid <- PredictMat(params$sm_spec, grid_df)
     Z_spectral_grid <- X_raw_grid %*% params$U_pen %*% params$Lambda_sqrt_inv
+    
+    # Use the local linear matrix for projection
     Z_orth_grid <- Z_spectral_grid - X_lin_grid_local %*% params$projection_coefs
+    
     Z_final_grid <- Z_orth_grid[, params$keep_cols, drop = FALSE]
     Z_final_grid <- scale(Z_final_grid, center = FALSE, scale = params$scale_stats)
+    
     col_names <- paste(var_name, "S", season_label, 1:ncol(Z_final_grid), sep="_")
     colnames(Z_final_grid) <- col_names
     grid_nonlinear_flat[[paste(var_name, season_label, sep="_")]] <- Z_final_grid
@@ -323,6 +423,39 @@ for (i in seq_along(covariates)) {
 xgrid.linear <- do.call(cbind, grid_linear_flat)
 fwi.true <- sweep(xgrid.linear, 2, rep(fwi.min, each=4), "+")
 xgrid.nonlinear <- do.call(cbind, grid_nonlinear_flat)
+# grid_nonlinear_flat <- list()
+# grid_linear_flat <- list()
+# for (i in seq_along(covariates)) {
+#   var_name <- covariates[i]
+  
+#   if (is.null(model_data[[var_name]])) next
+#   x_vals_raw <- fwi.grid[, i]
+#   x_vals_scaled <- (x_vals_raw - fwi.min[i]) / fwi.minmax[i]
+#   X_lin_grid_local <- cbind(rep(1, length(x_vals_scaled)), x_vals_scaled)
+#   for (season_label in names(model_data[[var_name]])) {
+#     params <- model_data[[var_name]][[season_label]]
+#     lin_col_name <- paste(var_name, "S", season_label, sep="_")
+#     grid_linear_flat[[lin_col_name]] <- matrix((x_vals_raw - fwi.min[i]), ncol=1, dimnames=list(NULL, lin_col_name))
+    
+#     grid_df <- data.frame(
+#       x_vec = x_vals_scaled,
+#       season_code_full = factor(season_label, levels = levels(season_code_full))
+#     )
+    
+#     X_raw_grid <- PredictMat(params$sm_spec, grid_df)
+#     Z_spectral_grid <- X_raw_grid %*% params$U_pen %*% params$Lambda_sqrt_inv
+#     Z_orth_grid <- Z_spectral_grid - X_lin_grid_local %*% params$projection_coefs
+#     Z_final_grid <- Z_orth_grid[, params$keep_cols, drop = FALSE]
+#     Z_final_grid <- scale(Z_final_grid, center = FALSE, scale = params$scale_stats)
+#     col_names <- paste(var_name, "S", season_label, 1:ncol(Z_final_grid), sep="_")
+#     colnames(Z_final_grid) <- col_names
+#     grid_nonlinear_flat[[paste(var_name, season_label, sep="_")]] <- Z_final_grid
+#   }
+# }
+
+# xgrid.linear <- do.call(cbind, grid_linear_flat)
+# fwi.true <- sweep(xgrid.linear, 2, rep(fwi.min, each=4), "+")
+# xgrid.nonlinear <- do.call(cbind, grid_nonlinear_flat)
 
 X_sd   <- apply(bs.linear[,-1], 2, sd)
 bs.linear[,-1] <- scale(bs.linear[,-1], center = FALSE, scale = X_sd)
@@ -400,19 +533,15 @@ model {
 }
 
 generated quantities {
-  matrix[n, n_seasons] gridalpha; 
+  matrix[n, n_seasons] alphaseason;
   vector[n] log_lik;
   matrix[n, p * n_seasons] gridgl;  // Linear component
   matrix[n, p * n_seasons] gridgnl; // Non-linear component
   matrix[n, p * n_seasons] gridgsmooth; // Non-linear component
   matrix[n, p * n_seasons] fwismooth; // Total smooth effect
-  vector[p * n_seasons] theta_origin; // Slopes on min-max scale
-  vector[p * n_seasons] theta_fwi; // Slopes on original X scale
 
-  for (k in 1:(p * n_seasons)) {
-    theta_origin[k] = theta[k] / X_sd[k];
-    theta_fwi[k] = theta_origin[k] / X_minmax[k];
-  }
+  vector[p * n_seasons] theta_origin = theta ./ X_sd;
+  vector[p * n_seasons] theta_fwi = theta_origin ./ X_minmax;
 
   for (j in 1:p){
     for (s in 1:n_seasons){
@@ -426,11 +555,8 @@ generated quantities {
                             + col(gridL, lin_idx) * theta_fwi[lin_idx]; 
     }
   }
-
-  for(k in 1:(p * n_seasons)) {
-    gridgsmooth[,k] = gridgl[, k] + gridgnl[, k];
-  }
-
+  gridgsmooth = gridgl + gridgnl;
+  
   {
     for (s in 1:n_seasons) {
       vector[n] current_season_pred = rep_vector(theta0, n);     
@@ -438,7 +564,7 @@ generated quantities {
         int lin_idx = (j-1) * n_seasons + s;
         current_season_pred += gridgsmooth[, lin_idx];
       }
-      gridalpha[, s] = exp(current_season_pred);
+      alphaseason[, s] = exp(current_season_pred);
     }
   }
   
@@ -483,8 +609,8 @@ data.stan <- list(
   psi = psi, 
   bsLinear = bs.linear[,-1], 
   bsNonlinear = bs.nonlinear,
-  xholderLinear = grid.linear, 
-  xholderNonlinear = grid.nonlinear, 
+  xholderLinear = xholder.linear, 
+  xholderNonlinear = xholder.nonlinear, 
   gridL = xgrid.linear,
   gridNL = xgrid.nonlinear,
   atau = ((psi+1)/2), 
@@ -526,9 +652,9 @@ fit1 <- stan(
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value 
     chains = 3,             # number of Markov chains
-    iter = 8000,            # total number of iterations per chain
+    iter = 3000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
-    refresh = 2000           # no progress shown
+    refresh = 1500           # no progress shown
 )
 
 posterior <- rstan::extract(fit1)
@@ -547,7 +673,8 @@ fwismooth.samples <- summary(fit1, par=c("fwismooth"), probs = c(0.05, 0.5, 0.95
 gridgl.samples <- summary(fit1, par=c("gridgl"), probs = c(0.05, 0.5, 0.95))$summary
 gridgnl.samples <- summary(fit1, par=c("gridgnl"), probs = c(0.05, 0.5, 0.95))$summary
 origin.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
-alpha.samples <- summary(fit1, par=c("gridalpha"), probs = c(0.05,0.5, 0.95))$summary
+# alpha.samples <- summary(fit1, par=c("gridalpha"), probs = c(0.05,0.5, 0.95))$summary
+season.samples <- summary(fit1, par=c("alphaseason"), probs = c(0.05,0.5, 0.95))$summary
 loglik.samples <- summary(fit1, par=c("log_lik"), probs = c(0.05,0.5, 0.95))$summary
 
 # MCMCvis::MCMCplot(fit1, params = 'theta')
@@ -607,31 +734,30 @@ fwi.max.samples <- sapply(fwi.smooth.max, max)
 #           axis.text = element_text(size = 20))
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=12.5, height = 15)
 
-xholder.evgam <- data.frame(xholder, fwi.season[excess,c(17,18,19,20)])
-# colnames(xholder.evgam) <- colnames(fwi.scaled)[1:p]
+# xholder.evgam <- data.frame(xholder, fwi.season[excess,c(17,18,19,20)])
+# simul.data <- data.frame(BA = y-u, fwi.scaled[,c(1:p)], 
+                          # fwi.season[excess,c(17,18,19,20)])
+xholder.evgam <- data.frame(xholder, code = fwi.season[excess,16])
 simul.data <- data.frame(BA = y-u, fwi.scaled[,c(1:p)], 
-                          fwi.season[excess,c(17,18,19,20)])
+                          code = fwi.season[excess,16])
 
-gam.scale <- list(BA ~ s(BUI, bs = "ts", k = 30) + 
-                      s(ISI, bs = "ts", k = 30) + 
-                      s(FFMC, bs = "ts", k = 30) +
-                      s(DMC, bs = "ts", k = 30) + 
-                      s(DC, bs = "ts", k = 30) + 
-                      winter + spring + summer + autumn,
-                    ~ s(BUI, bs = "ts", k = 30) + 
-                      s(ISI, bs = "ts", k = 30) + 
-                      s(FFMC, bs = "ts", k = 30) +
-                      s(DMC, bs = "ts", k = 30) +
-                      s(DC, bs = "ts", k = 30) + 
-                      winter + spring + summer + autumn)
-evgam.fit.scale <- evgam::evgam(gam.scale, data = simul.data, family = "gpd")
-pred.scale <- predict(evgam.fit.scale, newdata = xholder.evgam, type="response", se.fit = TRUE)
-xi.pred.scale <-pred.scale$fitted$shape
+gam.scale <- list(BA ~ s(BUI, by=code, bs = "ts", k = 30) + 
+                      s(ISI, by=code, bs = "ts", k = 30) + 
+                      s(FFMC, by=code, bs = "ts", k = 30) +
+                      s(DMC, by=code, bs = "ts", k = 30) + 
+                      s(DC, by=code, bs = "ts", k = 30),
+                    ~ s(BUI, by=code, bs = "ts", k = 30) + 
+                      s(ISI, by=code, bs = "ts", k = 30) + 
+                      s(FFMC, by=code, bs = "ts", k = 30) +
+                      s(DMC, by=code, bs = "ts", k = 30) +
+                      s(DC, by=code, bs = "ts", k = 30))
+# evgam.fit.scale <- evgam::evgam(gam.scale, data = simul.data, family = "gpd")
+# pred.scale <- predict(evgam.fit.scale, newdata = xholder.evgam, type="response", se.fit = TRUE)
+# xi.pred.scale <-pred.scale$fitted$shape
 # xi.se.scale <- pred.scale$se.fit$shape
 # xi.low.scale <- xi.pred.scale - (1.96 * xi.se.scale)
 # xi.high.scale <- xi.pred.scale + (1.96 * xi.se.scale)
 # alpha.pred.scale <- 1/xi.pred.scale
-
 # xholder.basis.scale <- predict(evgam.fit.scale, newdata = xholder, type= "lpmatrix")$shape
 # psi <- 15
 # xi.coef.scale <- tail(evgam.fit.scale$coefficients, (psi-1)*p)
@@ -643,13 +769,39 @@ xi.pred.scale <-pred.scale$fitted$shape
 #   alpha.nonlinear.scale[,j] <- 1/(xi.nonlinear.scale[,j])
 # }
 
+n_grid <- nrow(bs.linear)
+season_levels <- levels(simul.data$code) 
+covariate_names <- c("BUI", "ISI", "FFMC", "DMC", "DC")
+plot_data_list <- list()
+
+for(var in covariate_names) {
+  var_seq <- seq(min(simul.data[[var]]), max(simul.data[[var]]), length.out = n_grid)
+  base_df <- simul.data %>% 
+    summarise(across(all_of(covariate_names), median)) %>% 
+    slice(rep(1, n_grid))
+  base_df[[var]] <- var_seq
+  expanded_df <- expand_grid(
+    base_df, 
+    code = factor(season_levels, levels = season_levels)
+  )
+  preds <- predict(evgam.fit.scale, newdata = expanded_df, type = "response")
+  expanded_df$fitted_xi <- preds$fitted$shape
+  expanded_df$covariate_name <- var
+  expanded_df$x_value <- expanded_df[[var]] # Generic x-column for faceting
+  
+  plot_data_list[[var]] <- expanded_df
+}
+
+# Combine all into one big plotting dataframe
+final_plot_data <- bind_rows(plot_data_list)
+
 
 gam.1 <- list(BA ~ 1,
-                ~ s(BUI, bs = "ts", k = 30) + 
-                  s(ISI, bs = "ts", k = 30) + 
-                  s(FFMC, bs = "ts", k = 30) +
-                  s(DMC, bs = "ts", k = 30) +
-                  s(DC, bs = "ts", k = 30) + 
+                ~ s(BUI, by=code, bs = "ts", k = 30) + 
+                  s(ISI, by=code, bs = "ts", k = 30) + 
+                  s(FFMC, by=code, bs = "ts", k = 30) +
+                  s(DMC, by=code, bs = "ts", k = 30) +
+                  s(DC, by=code, bs = "ts", k = 30) + 
                   winter + spring + summer + autumn)
 evgam.fit.1 <- evgam::evgam(gam.1, data = simul.data, family = "gpd")
 pred.1 <- predict(evgam.fit.1, newdata = xholder.evgam, type="response", se.fit = TRUE)
@@ -658,6 +810,8 @@ xi.pred.1 <-pred.1$fitted$shape
 # xi.low.1 <- xi.pred.1 - (1.96 * xi.se.1)
 # xi.high.1 <- xi.pred.1 + (1.96 * xi.se.1)
 # alpha.pred.1 <- 1/xi.pred.1
+
+
 
 # xholder.basis.1 <- predict(evgam.fit.1, newdata = xholder, type= "lpmatrix")$shape
 # xi.coef.1 <- tail(evgam.fit.1$coefficients, (psi-1)*p)
@@ -702,19 +856,17 @@ xi.pred.1 <-pred.1$fitted$shape
 # vgam.sigma.1 <- exp(fitted.linear[,1])
 
 
-alpha.mean <- as.vector(matrix(alpha.samples[,1], nrow = n, byrow=TRUE))
-alpha.q1 <- as.vector(matrix(alpha.samples[,4], nrow = n, byrow=TRUE))
-alpha.q2 <- as.vector(matrix(alpha.samples[,5], nrow = n, byrow=TRUE))
-alpha.q3 <- as.vector(matrix(alpha.samples[,6], nrow = n, byrow=TRUE))
+alpha.mean <- as.vector(matrix(season.samples[,1], nrow = n, byrow=TRUE))
+alpha.q1 <- as.vector(matrix(season.samples[,4], nrow = n, byrow=TRUE))
+alpha.q2 <- as.vector(matrix(season.samples[,5], nrow = n, byrow=TRUE))
+alpha.q3 <- as.vector(matrix(season.samples[,6], nrow = n, byrow=TRUE))
 
-
-tail(matrix(alpha.samples[,5], nrow = n, byrow=TRUE))
 data.alpha <- data.frame("x" = newx,
                           "post.mean" = alpha.mean,
                           "q1" = alpha.q1,
                           "q2" = alpha.q2,
                           "q3" = alpha.q3)
-
+seasons <- c("Winter", "Spring", "Summer", "Autumn")
 
 grid.plts <- list()
 for(i in 1:4){
@@ -722,14 +874,15 @@ for(i in 1:4){
                   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
                   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
                   # geom_rug(aes(x=true, y=q2), sides = "b") +
-                  ylab(expression(alpha(c,...,c))) + xlab(colnames(xholder.evgam)[i+p]) +
+                  ylab(expression(alpha(c,...,c))) + xlab(seasons[i]) +
                   scale_fill_manual(values=c("steelblue"), name = "") + 
                   scale_color_manual(values=c("steelblue")) +
-                  theme_minimal(base_size = 30) + ylim(0,20) +
+                  theme_minimal(base_size = 20) +
                   theme(legend.position = "none",
-                          plot.margin = margin(0,0,0,-20),
-                          axis.text = element_text(size = 35),
-                          axis.title.x = element_text(size = 45))
+                        plot.margin = margin(5, 5, 5, 5),
+                        plot.title = element_text(hjust = 0.5, face = "bold"),
+                        axis.text = element_text(size = 18),
+                        axis.title.x = element_text(size = 22))
   grid.plts[[i]] <- grid.plt
 }
 
@@ -790,8 +943,6 @@ summary(fit1, par=c("theta_fwi"), probs = c(0.05,0.5, 0.95))$summary
 #   theme(legend.position = "none",
 #         strip.text = element_blank(),
 #         axis.text = element_text(size = 20))
-
-
 
 T <- 100
 len <- dim(posterior$alpha)[1]
@@ -868,129 +1019,208 @@ data.smooth <- data.frame("x" = newx,
                           "post.mean" = as.vector(g.smooth.mean),
                           "q1" = as.vector(g.smooth.q1),
                           "q2" = as.vector(g.smooth.q2),
-                          "q3" = as.vector(g.smooth.q3),
-                          "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)))
+                          "q3" = as.vector(g.smooth.q3))
 
 
-grid.plts <- list()
-for(i in 1:(p*4)){
-  grid.plt <- ggplot(data = data.frame(data.smooth[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + 
-                  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-                  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
-                  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
-                  geom_rug(aes(x=true, y=q2), sides = "b") +
-                  ylab("") + xlab(colnames(bs.linear[,-1])[i]) +
-                  scale_fill_manual(values=c("steelblue"), name = "") + 
-                  scale_color_manual(values=c("steelblue")) +
-                  ylim(g.min.samples[i], g.max.samples[i]) +
-                  theme_minimal(base_size = 30) +
-                  theme(legend.position = "none",
-                          plot.margin = margin(0,0,0,-20),
-                          axis.text = element_text(size = 35),
-                          axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.linear[which.max(y),i], y=g.min.samples[i], color = "red", size = 7)
+# grid.plts <- list()
+# for(i in 1:(p*4)){
+#   grid.plt <- ggplot(data = data.frame(data.smooth[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + 
+#                   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+#                   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
+#                   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
+#                   geom_rug(data = subset(data.frame(data.smooth[((((i-1)*n)+1):(i*n)),]), true>0), aes(x=true, y=q2), sides = "b") +
+#                   geom_rug(aes(x=true, y=q2), sides = "b") +
+#                   ylab("") + xlab(colnames(bs.linear[,-1])[i]) +
+#                   scale_fill_manual(values=c("steelblue"), name = "") + 
+#                   scale_color_manual(values=c("steelblue")) +
+#                   ylim(g.min.samples[i], g.max.samples[i]) +
+#                   theme_minimal(base_size = 30) +
+#                   theme(legend.position = "none",
+#                           plot.margin = margin(0,0,0,-20),
+#                           axis.text = element_text(size = 35),
+#                           axis.title.x = element_text(size = 45))
+#   grid.plts[[i]] <- grid.plt #+ annotate("point", x= fwi.linear[which.max(y),i], y=g.min.samples[i], color = "red", size = 7)
+# }
+
+# marrangeGrob(grobs = grid.plts, nrow = 1, ncol = 4)
+
+# # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_DC.pdf"), grid.plts[[7]], width=10, height = 7.78)
+
+
+# data.linear <- data.frame("x" = newx,
+#                           "true" = as.vector(as.matrix(fwi.linear)),
+#                           "post.mean" = as.vector(g.linear.mean),
+#                           "q1" = as.vector(g.linear.q1),
+#                           "q2" = as.vector(g.linear.q2),
+#                           "q3" = as.vector(g.linear.q3),
+#                           "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)))
+
+
+# grid.plts <- list()
+# for(i in 1:(p*4)){
+#   grid.plt <- ggplot(data = data.frame(data.linear[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + 
+#                   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+#                   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
+#                   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
+#                   geom_rug(data = subset(data.frame(data.linear[((((i-1)*n)+1):(i*n)),]), true>0), aes(x=true, y=q2), sides = "b") +
+#                   # geom_rug(aes(x=true, y=q2), sides = "b") +
+#                   ylab("") + xlab(colnames(bs.linear[,-1])[i]) +
+#                   scale_fill_manual(values=c("steelblue"), name = "") + 
+#                   scale_color_manual(values=c("steelblue")) +
+#                   ylim(g.min.samples[i], g.max.samples[i]) +
+#                   theme_minimal(base_size = 30) +
+#                   theme(legend.position = "none",
+#                           plot.margin = margin(0,0,0,-20),
+#                           axis.text = element_text(size = 35),
+#                           axis.title.x = element_text(size = 45))
+#   grid.plts[[i]] <- grid.plt #+ annotate("point", x= fwi.linear[which.max(y),i], y=g.min.samples[i], color = "red", size = 7)
+# }
+
+# # grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
+# marrangeGrob(grobs = grid.plts, nrow = 1, ncol = 4)
+
+
+# data.nonlinear <- data.frame("x" = newx,
+#                             "true" = as.vector(as.matrix(fwi.linear)),
+#                             "post.mean" = as.vector(g.nonlinear.mean),
+#                             "q1" = as.vector(g.nonlinear.q1),
+#                             "q2" = as.vector(g.nonlinear.q2),
+#                             "q3" = as.vector(g.nonlinear.q3),
+#                             "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)))
+
+
+# grid.plts <- list()
+# for(i in 1:(p*4)){
+#   grid.plt <- ggplot(data = data.frame(data.nonlinear[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + 
+#                   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+#                   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
+#                   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
+#                   geom_rug(data = subset(data.frame(data.nonlinear[((((i-1)*n)+1):(i*n)),]), true>0), aes(x=true, y=q2), sides = "b") +
+#                   ylab("") + xlab(colnames(bs.linear[,-1])[i]) +
+#                   scale_fill_manual(values=c("steelblue"), name = "") + 
+#                   scale_color_manual(values=c("steelblue")) +
+#                   ylim(g.min.samples[i], g.max.samples[i]) +
+#                   theme_minimal(base_size = 30) +
+#                   theme(legend.position = "none",
+#                           plot.margin = margin(0,0,0,-20),
+#                           axis.text = element_text(size = 35),
+#                           axis.title.x = element_text(size = 45))
+#   grid.plts[[i]] <- grid.plt #+ annotate("point", x= fwi.linear[which.max(y),i], y=g.min.samples[i], color = "red", size = 7)
+# }
+# marrangeGrob(grobs = grid.plts, nrow = 1, ncol = 4)
+
+data.fwi <- data.frame("x" = as.vector(as.matrix(fwi.true)),
+                        "true" = as.vector(as.matrix(true.linear)),
+                        "post.mean" = as.vector(fwi.smooth.mean),
+                        "q1" = as.vector(fwi.smooth.q1),
+                        "q2" = as.vector(fwi.smooth.q2),
+                        "q3" = as.vector(fwi.smooth.q3))
+
+
+# grid.plts <- list()
+# for(i in 1:(p*4)){
+#   grid.plt <- ggplot(data = data.frame(data.smooth[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + 
+#                   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+#                   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
+#                   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
+#                   geom_rug(data = subset(data.frame(data.smooth[((((i-1)*n)+1):(i*n)),]), true>0), aes(x=true, y=q2), sides = "b") +
+#                   ylab("") + xlab(colnames(bs.linear[,-1])[i]) +
+#                   scale_fill_manual(values=c("steelblue"), name = "") + 
+#                   scale_color_manual(values=c("steelblue")) +
+#                   ylim(fwi.min.samples[i], fwi.max.samples[i]) +
+#                   theme_minimal(base_size = 30) +
+#                   theme(legend.position = "none",
+#                           plot.margin = margin(0,0,0,-20),
+#                           axis.text = element_text(size = 35),
+#                           axis.title.x = element_text(size = 45))
+#   grid.plts[[i]] <- grid.plt #+ annotate("point", x= fwi.true[which.max(y),i], y=fwi.min.samples[i], color = "red", size = 7)
+# }
+
+# marrangeGrob(grobs = grid.plts, nrow = 1, ncol = 4)
+
+# summary(fit1, par=c("theta_fwi"), probs = c(0.05,0.5, 0.95))$summary
+
+# 1. Configuration
+global_y_min <- min(data.fwi$q1, na.rm = TRUE)
+global_y_max <- max(data.fwi$q3, na.rm = TRUE)
+seasons <- c("Winter", "Spring", "Summer", "Autumn")
+n_seasons <- 4
+sorted_plots <- list()
+plot_counter <- 1
+
+for(s in 1:n_seasons) {
+  for(j in 1:p) {
+    stan_idx <- (j - 1) * n_seasons + s
+    start_row <- (stan_idx - 1) * n + 1
+    end_row   <- stan_idx * n
+    df_slice <- data.smooth[start_row:end_row, ]
+    current_var <- covariates[j]
+    current_season <- seasons[s]
+    x_min <- min(df_slice$x, na.rm = TRUE)
+    x_max <- max(df_slice$x, na.rm = TRUE)    
+    my_breaks <- pretty(c(x_min, x_max), n = 5)
+    p_plot <- ggplot(data = df_slice, aes(x = x)) + 
+      geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 1.2) + 
+      geom_ribbon(aes(ymin = q1, ymax = q3), fill = "steelblue", alpha = 0.2) +
+      geom_line(aes(y = q2), color="steelblue", linewidth = 1) + 
+      geom_rug(data = subset(df_slice, true > 1e-6), 
+               aes(x = true, y = q2), sides = "b", alpha = 0.6) +
+      ylim(global_y_min, global_y_max) +
+      ylab("") + xlab(paste(current_var, "-", current_season)) +
+      # scale_fill_manual(values = c("steelblue"), name = "") + 
+      # scale_color_manual(values = c("steelblue")) +
+      scale_x_continuous(breaks = my_breaks, limits = range(my_breaks)) +
+      # ylim(fwi.min.samples[stan_idx], fwi.max.samples[stan_idx]) +
+      
+      theme_minimal(base_size = 20) +
+      theme(legend.position = "none",
+            plot.margin = margin(5, 5, 5, 5),
+            plot.title = element_text(hjust = 0.5, face = "bold"),
+            axis.text = element_text(size = 18),
+            axis.title.x = element_text(size = 22))
+    sorted_plots[[plot_counter]] <- p_plot
+    plot_counter <- plot_counter + 1
+  }
+}
+marrangeGrob(grobs = sorted_plots, nrow = 1, ncol = 5, top = NULL)
+
+
+sorted_plots <- list()
+plot_counter <- 1
+for(s in 1:n_seasons) {
+  for(j in 1:p) {
+    stan_idx <- (j - 1) * n_seasons + s
+    start_row <- (stan_idx - 1) * n + 1
+    end_row   <- stan_idx * n
+    df_slice <- data.fwi[start_row:end_row, ]
+    current_var <- covariates[j]
+    current_season <- seasons[s]
+    x_min <- min(df_slice$x, na.rm = TRUE)
+    x_max <- max(df_slice$x, na.rm = TRUE)
+    my_breaks <- floor(seq(from = x_min, to = x_max, length.out = 5))
+    p_plot <- ggplot(data = df_slice, aes(x = x)) + 
+      geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 1.2) + 
+      geom_ribbon(aes(ymin = q1, ymax = q3), fill = "steelblue", alpha = 0.2) +
+      geom_line(aes(y = q2), color="steelblue", linewidth = 1) + 
+      geom_rug(data = subset(df_slice, true > 0), 
+               aes(x = true, y = q2), sides = "b", alpha = 0.6) +
+      ylim(global_y_min, global_y_max) +
+      ylab("") + xlab(paste(current_var, "-", current_season)) +
+      scale_x_continuous(breaks = my_breaks, limits = range(my_breaks)) +
+      # ylim(fwi.min.samples[stan_idx], fwi.max.samples[stan_idx]) +
+      
+      theme_minimal(base_size = 20) +
+      theme(legend.position = "none",
+            plot.margin = margin(5, 5, 5, 5),
+            plot.title = element_text(hjust = 0.5, face = "bold"),
+            axis.text = element_text(size = 18),
+            axis.title.x = element_text(size = 22))
+    sorted_plots[[plot_counter]] <- p_plot
+    plot_counter <- plot_counter + 1
+  }
 }
 
-# grid.arrange(grobs = grid.plts, ncol = 4, nrow = 1)
-marrangeGrob(grobs = grid.plts, nrow = 1, ncol = 4)
-
-# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_DC.pdf"), grid.plts[[7]], width=10, height = 7.78)
-
-
-data.linear <- data.frame("x" = newx,
-                          "true" = as.vector(as.matrix(fwi.linear)),
-                          "post.mean" = as.vector(g.linear.mean),
-                          "q1" = as.vector(g.linear.q1),
-                          "q2" = as.vector(g.linear.q2),
-                          "q3" = as.vector(g.linear.q3),
-                          "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)))
-
-
-grid.plts <- list()
-for(i in 1:(p*4)){
-  grid.plt <- ggplot(data = data.frame(data.linear[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + 
-                  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-                  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
-                  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
-                  geom_rug(aes(x=true, y=q2), sides = "b") +
-                  ylab("") + xlab(colnames(bs.linear[,-1])[i]) +
-                  scale_fill_manual(values=c("steelblue"), name = "") + 
-                  scale_color_manual(values=c("steelblue")) +
-                  ylim(g.min.samples[i], g.max.samples[i]) +
-                  theme_minimal(base_size = 30) +
-                  theme(legend.position = "none",
-                          plot.margin = margin(0,0,0,-20),
-                          axis.text = element_text(size = 35),
-                          axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.linear[which.max(y),i], y=g.min.samples[i], color = "red", size = 7)
-}
-
-# grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
-marrangeGrob(grobs = grid.plts, nrow = 1, ncol = 4)
-
-
-data.nonlinear <- data.frame("x" = newx,
-                            "true" = as.vector(as.matrix(fwi.linear)),
-                            "post.mean" = as.vector(g.nonlinear.mean),
-                            "q1" = as.vector(g.nonlinear.q1),
-                            "q2" = as.vector(g.nonlinear.q2),
-                            "q3" = as.vector(g.nonlinear.q3),
-                            "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)))
-
-
-grid.plts <- list()
-for(i in 1:(p*4)){
-  grid.plt <- ggplot(data = data.frame(data.nonlinear[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + 
-                  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-                  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
-                  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
-                  geom_rug(aes(x=true, y=q2), sides = "b") +
-                  ylab("") + xlab(colnames(bs.linear[,-1])[i]) +
-                  scale_fill_manual(values=c("steelblue"), name = "") + 
-                  scale_color_manual(values=c("steelblue")) +
-                  ylim(g.min.samples[i], g.max.samples[i]) +
-                  theme_minimal(base_size = 30) +
-                  theme(legend.position = "none",
-                          plot.margin = margin(0,0,0,-20),
-                          axis.text = element_text(size = 35),
-                          axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.linear[which.max(y),i], y=g.min.samples[i], color = "red", size = 7)
-}
-
-marrangeGrob(grobs = grid.plts, nrow = 1, ncol = 4)
-
-data.smooth <- data.frame("x" = as.vector(as.matrix(fwi.true)),
-                          "true" = as.vector(as.matrix(true.linear)),
-                          "post.mean" = as.vector(fwi.smooth.mean),
-                          "q1" = as.vector(fwi.smooth.q1),
-                          "q2" = as.vector(fwi.smooth.q2),
-                          "q3" = as.vector(fwi.smooth.q3),
-                          "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)))
-
-
-grid.plts <- list()
-for(i in 1:(p*4)){
-  grid.plt <- ggplot(data = data.frame(data.smooth[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + 
-                  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-                  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
-                  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
-                  geom_rug(aes(x=true, y=q2), sides = "b") +
-                  ylab("") + xlab(colnames(bs.linear[,-1])[i]) +
-                  scale_fill_manual(values=c("steelblue"), name = "") + 
-                  scale_color_manual(values=c("steelblue")) +
-                  ylim(fwi.min.samples[i], fwi.max.samples[i]) +
-                  theme_minimal(base_size = 30) +
-                  theme(legend.position = "none",
-                          plot.margin = margin(0,0,0,-20),
-                          axis.text = element_text(size = 35),
-                          axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt #+ annotate("point", x= fwi.true[which.max(y),i], y=fwi.min.samples[i], color = "red", size = 7)
-}
-
-marrangeGrob(grobs = grid.plts, nrow = 1, ncol = 4)
-
-summary(fit1, par=c("theta_fwi"), probs = c(0.05,0.5, 0.95))$summary
-# saveRDS(data.smooth, file="./BLAST/application/figures/comparison/full_stanfit.rds")
+marrangeGrob(grobs = sorted_plots, nrow = 1, ncol = 5, top = NULL)
 
 #Predictive Distribution check
 # y.container <- as.data.frame(matrix(, nrow = n, ncol = 0))  

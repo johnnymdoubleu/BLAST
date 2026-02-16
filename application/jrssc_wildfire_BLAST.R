@@ -84,32 +84,32 @@ fwi.index <- fwi.index[above.0,]
 # load("./BLAST/application/quant-t_10.Rdata")
 # load("./BLAST/application/qgam_975_30_ts.Rdata")
 # load("./BLAST/application/qgam-97-30-ts-t-log.Rdata")
-# load("./BLAST/application/evgam-975-30-ts-log.Rdata")
+load("./BLAST/application/evgam-975-30-ts-log.Rdata")
 # load("./BLAST/application/evgam-95-30-ts-sqrt.Rdata")
 # load("./BLAST/application/evgam-975-30-t.Rdata")
 # load("./BLAST/application/gamboost-975-20-log.Rdata")
-load("./BLAST/application/qgam-95-season.Rdata")
-load("./BLAST/application/wildfire_season.Rdata")
+# load("./BLAST/application/qgam-95-season.Rdata")
+# load("./BLAST/application/wildfire_season.Rdata")
 # fwi.scaled <- fwi.scaled[,c(-1,-2)]
 # fwi.index <- fwi.index[,c(-1,-2)]
 # preds <- preds.indic
-fwi.origin <- df_seasonal[,c(1:7)]
-fwi.origin$time <- df_seasonal$time
-fwi.origin$season <- df_seasonal$Season
-fwi.origin$indic <- factor(ifelse(fwi.origin$season == "Summer", 0, 1))
-fwi.origin$BA <- df_seasonal$BA
-fwi.origin$log.BA <- log(df_seasonal$BA)
-fwi.origin$cos.time <- cos(2*pi*fwi.origin$time / 365)
-fwi.origin$sin.time <- sin(2*pi*fwi.origin$time / 365)
-fwi.winter <- fwi.origin[which(fwi.origin$season=="Winter"),]
-fwi.summer <- fwi.origin[which(fwi.origin$season=="Spring"),]
+# fwi.origin <- df_seasonal[,c(1:7)]
+# fwi.origin$time <- df_seasonal$time
+# fwi.origin$season <- df_seasonal$Season
+# fwi.origin$indic <- factor(ifelse(fwi.origin$season == "Summer", 0, 1))
+# fwi.origin$BA <- df_seasonal$BA
+# fwi.origin$log.BA <- log(df_seasonal$BA)
+# fwi.origin$cos.time <- cos(2*pi*fwi.origin$time / 365)
+# fwi.origin$sin.time <- sin(2*pi*fwi.origin$time / 365)
+# fwi.winter <- fwi.origin[which(fwi.origin$season=="Winter"),]
+# fwi.summer <- fwi.origin[which(fwi.origin$season=="Spring"),]
 # Y <- fwi.winter$BA
 # fwi.scaled <- fwi.winter
 # preds <- preds.winter
-fwi.index <- fwi.origin
-Y <- fwi.summer$BA
-fwi.scaled <- fwi.summer
-preds <- preds.summer
+# fwi.index <- fwi.origin
+# Y <- fwi.summer$BA
+# fwi.scaled <- fwi.summer
+# preds <- preds.summer
 
 # con_mat <- concurvity(quant.fit, full = FALSE)$worst
 # con_long <- reshape2::melt(con_mat)
@@ -370,22 +370,19 @@ parameters {
 }
 
 transformed parameters {
-  array[n] real <lower=0> alpha; // covariate-adjusted tail index
+  vector[n] alpha; // covariate-adjusted tail index
   
   array[p] vector[psi] gamma;
   {
-    matrix[n, p] gsmooth; // linear component
+    vector[n] eta = rep_vector(theta[1],n);
     for (j in 1:p){
       for (k in 1:psi){
         int idx = (j-1)*psi + k;
         gamma[j][k] = gamma_raw[j][k] * sqrt(tau[j]) * Z_scales[idx];
       }; 
-      gsmooth[,j] = bsLinear[,j] * theta[j+1] + bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
+      eta += bsLinear[,j] * theta[j+1] + bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
     };
-    
-    for (i in 1:n){
-      alpha[i] = exp(theta[1] + sum(gsmooth[i,]));
-    };
+    alpha = exp(eta);
   }
 }
 
@@ -404,7 +401,7 @@ model {
 
 generated quantities {
   // Used in Posterior predictive check
-  array[n] real <lower=0> gridalpha; // new tail index
+  vector[n] gridalpha; // new tail index
   matrix[n, p] gridgnl; // nonlinear component
   matrix[n, p] gridgl; // linear component
   matrix[n, p] gridgsmooth; // linear component 
@@ -421,12 +418,19 @@ generated quantities {
   for (j in 1:p){
     gridgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
     gridgl[,j] = xholderLinear[,j] * theta_origin[j+1];
-    gridgsmooth[,j] = gridgl[,j] + gridgnl[,j];
     fwismooth[,j] = gridNL[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j] + gridL[,j] * theta_fwi[j];
   };
+  gridgsmooth = gridgl + gridgnl;
+  {
+  vector[n] pred = rep_vector(theta_origin[1], n);
+    for(j in 1:p){
+      pred += gridgsmooth[,j];      
+    }
+    gridalpha = exp(pred);
+  }
+
 
   for (i in 1:n){
-    gridalpha[i] = exp(theta_origin[1] + sum(gridgsmooth[i,]));
     log_lik[i] = pareto_lpdf(y[i] | u[i], alpha[i]);
   };
 }
@@ -469,9 +473,9 @@ fit1 <- stan(
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value 
     chains = 3,             # number of Markov chains
-    iter = 8000,            # total number of iterations per chain
+    iter = 3000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
-    refresh = 2000           # no progress shown
+    refresh = 1500           # no progress shown
 )
 
 # saveRDS(fit1, file=paste0("./BLAST/application/",Sys.Date(),"_stanfit.rds"))
