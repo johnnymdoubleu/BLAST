@@ -108,9 +108,9 @@ fwi.season$BA <- Y
 fwi.season$log.BA <- log(fwi.season$BA)
 fwi.season$cos.time <- cos(2*pi*fwi.season$time / 365)
 fwi.season$sin.time <- sin(2*pi*fwi.season$time / 365)
-# save(fwi.season, file="./BLAST/application/wildfire_season.Rdata")
-fwi.scaled <- fwi.df <- fwi.season[,c(3,4,5,6,7,16)]
 
+fwi.scaled <- fwi.df <- fwi.season[,c(3,4,5,6,7,16)]
+# save(fwi.season, fwi.scaled, file="./BLAST/application/wildfire_season.Rdata")
 load(paste0("./BLAST/application/qr-",threshold*1000,"-t.Rdata"))
 
 # u <- quantile(Y, threshold)
