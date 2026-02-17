@@ -33,7 +33,7 @@ missing.values <- which(!is.na(df.long$measurement))
 #Thus, each year consist of 366 data with either 1 or 0 missing value.
 Y <- df.long$measurement[!is.na(df.long$measurement)]
 psi.origin <- psi <- 30
-threshold <- 0.95
+threshold <- 0.975
 
 multiplesheets <- function(fname) {
     setwd("C:/Users/Johnny Lee/Documents/GitHub")
@@ -115,7 +115,7 @@ load(paste0("./BLAST/application/qr-",threshold*1000,"-t.Rdata"))
 
 # u <- quantile(Y, threshold)
 # excess <- which(Y>u)
-preds <- preds.qgam
+preds <- preds.evgam
 excess <- which(Y>preds)
 u <- preds[excess]
 
@@ -633,8 +633,8 @@ init.alpha <- list(
     theta = rep(0.05, p * 4),
     gamma_raw = array(rep(-0.1, p * 4 * psi), dim = c(p, 4, psi)),
     tau = array(rep(0.2, p * 4), dim = c(p, 4)),
-    lambda1 = array(rep(2, p * 4), dim = c(p, 4)), 
-    lambda2 = array(rep(5, p * 4), dim = c(p, 4))
+    lambda1 = array(rep(0.2, p * 4), dim = c(p, 4)), 
+    lambda2 = array(rep(0.5, p * 4), dim = c(p, 4))
   ),
   list(
     theta0 = -0.1,
@@ -737,20 +737,20 @@ fwi.max.samples <- sapply(fwi.smooth.max, max)
 # xholder.evgam <- data.frame(xholder, fwi.season[excess,c(17,18,19,20)])
 # simul.data <- data.frame(BA = y-u, fwi.scaled[,c(1:p)], 
                           # fwi.season[excess,c(17,18,19,20)])
-xholder.evgam <- data.frame(xholder, code = fwi.season[excess,16])
+# xholder.evgam <- data.frame(xholder, code = fwi.season[excess,16])
 simul.data <- data.frame(BA = y-u, fwi.scaled[,c(1:p)], 
                           code = fwi.season[excess,16])
 
-gam.scale <- list(BA ~ s(BUI, by=code, bs = "ts", k = 30) + 
-                      s(ISI, by=code, bs = "ts", k = 30) + 
-                      s(FFMC, by=code, bs = "ts", k = 30) +
-                      s(DMC, by=code, bs = "ts", k = 30) + 
-                      s(DC, by=code, bs = "ts", k = 30),
-                    ~ s(BUI, by=code, bs = "ts", k = 30) + 
-                      s(ISI, by=code, bs = "ts", k = 30) + 
-                      s(FFMC, by=code, bs = "ts", k = 30) +
-                      s(DMC, by=code, bs = "ts", k = 30) +
-                      s(DC, by=code, bs = "ts", k = 30))
+# gam.scale <- list(BA ~ s(BUI, by=code, bs = "ts", k = 30) + 
+#                       s(ISI, by=code, bs = "ts", k = 30) + 
+#                       s(FFMC, by=code, bs = "ts", k = 30) +
+#                       s(DMC, by=code, bs = "ts", k = 30) + 
+#                       s(DC, by=code, bs = "ts", k = 30),
+#                     ~ s(BUI, by=code, bs = "ts", k = 30) + 
+#                       s(ISI, by=code, bs = "ts", k = 30) + 
+#                       s(FFMC, by=code, bs = "ts", k = 30) +
+#                       s(DMC, by=code, bs = "ts", k = 30) +
+#                       s(DC, by=code, bs = "ts", k = 30))
 # evgam.fit.scale <- evgam::evgam(gam.scale, data = simul.data, family = "gpd")
 # pred.scale <- predict(evgam.fit.scale, newdata = xholder.evgam, type="response", se.fit = TRUE)
 # xi.pred.scale <-pred.scale$fitted$shape
@@ -769,43 +769,19 @@ gam.scale <- list(BA ~ s(BUI, by=code, bs = "ts", k = 30) +
 #   alpha.nonlinear.scale[,j] <- 1/(xi.nonlinear.scale[,j])
 # }
 
-n_grid <- nrow(bs.linear)
-season_levels <- levels(simul.data$code) 
-covariate_names <- c("BUI", "ISI", "FFMC", "DMC", "DC")
-plot_data_list <- list()
-
-for(var in covariate_names) {
-  var_seq <- seq(min(simul.data[[var]]), max(simul.data[[var]]), length.out = n_grid)
-  base_df <- simul.data %>% 
-    summarise(across(all_of(covariate_names), median)) %>% 
-    slice(rep(1, n_grid))
-  base_df[[var]] <- var_seq
-  expanded_df <- expand_grid(
-    base_df, 
-    code = factor(season_levels, levels = season_levels)
-  )
-  preds <- predict(evgam.fit.scale, newdata = expanded_df, type = "response")
-  expanded_df$fitted_xi <- preds$fitted$shape
-  expanded_df$covariate_name <- var
-  expanded_df$x_value <- expanded_df[[var]] # Generic x-column for faceting
-  
-  plot_data_list[[var]] <- expanded_df
-}
-
-# Combine all into one big plotting dataframe
-final_plot_data <- bind_rows(plot_data_list)
 
 
-gam.1 <- list(BA ~ 1,
-                ~ s(BUI, by=code, bs = "ts", k = 30) + 
-                  s(ISI, by=code, bs = "ts", k = 30) + 
-                  s(FFMC, by=code, bs = "ts", k = 30) +
-                  s(DMC, by=code, bs = "ts", k = 30) +
-                  s(DC, by=code, bs = "ts", k = 30) + 
-                  winter + spring + summer + autumn)
-evgam.fit.1 <- evgam::evgam(gam.1, data = simul.data, family = "gpd")
-pred.1 <- predict(evgam.fit.1, newdata = xholder.evgam, type="response", se.fit = TRUE)
-xi.pred.1 <-pred.1$fitted$shape
+
+# gam.1 <- list(BA ~ 1,
+#                 ~ s(BUI, by=code, bs = "ts", k = 30) + 
+#                   s(ISI, by=code, bs = "ts", k = 30) + 
+#                   s(FFMC, by=code, bs = "ts", k = 30) +
+#                   s(DMC, by=code, bs = "ts", k = 30) +
+#                   s(DC, by=code, bs = "ts", k = 30) + 
+#                   winter + spring + summer + autumn)
+# evgam.fit.1 <- evgam::evgam(gam.1, data = simul.data, family = "gpd")
+# pred.1 <- predict(evgam.fit.1, newdata = xholder.evgam, type="response", se.fit = TRUE)
+# xi.pred.1 <-pred.1$fitted$shape
 # xi.se.1 <- pred.1$se.fit$shape
 # xi.low.1 <- xi.pred.1 - (1.96 * xi.se.1)
 # xi.high.1 <- xi.pred.1 + (1.96 * xi.se.1)
@@ -888,117 +864,151 @@ for(i in 1:4){
 
 marrangeGrob(grobs = grid.plts, nrow = 2, ncol = 2)
 
+
+n_traj <- 500
+len <- dim(posterior$alphaseason)[1]
+traj_idx <- sample(1:len, n_traj)
+get_season_traj <- function(s_idx) {
+  out <- t(posterior$alphaseason[traj_idx, , s_idx])
+  out <- as.data.frame(out)
+  colnames(out) <- paste0("draw_", 1:n_traj)
+  out$x <- newx # Add your x-axis grid
+  return(out)
+}
+
+grid.plts <- list()
+seasons <- c("Winter", "Spring", "Summer", "Autumn")
+
+for(i in 1:4){
+  season_summary <- data.alpha[(((i-1)*n)+1):(i*n), ]
+  season_traj_wide <- get_season_traj(i)
+  season_traj_long <- tidyr::pivot_longer(
+    season_traj_wide, 
+    cols = starts_with("draw_"), 
+    names_to = "draw_id", 
+    values_to = "alpha_val"
+  )
+
+  grid.plt <- ggplot() +
+    geom_ribbon(data = season_summary, 
+                aes(x = x, ymin = q1, ymax = q3), 
+                fill = "steelblue", alpha = 0.2) +
+    geom_line(data = season_traj_long, 
+              aes(x = x, y = alpha_val, group = draw_id), 
+              color = "gray30", alpha = 0.1, linewidth = 0.3) +
+    geom_line(data = season_summary, 
+              aes(x = x, y = q2), 
+              color = "steelblue", linewidth = 1) + 
+    labs(y = expression(alpha(c,...,c)), x = seasons[i]) +
+    theme_minimal(base_size = 20) +
+    theme(legend.position = "none")
+
+  grid.plts[[i]] <- grid.plt
+}
+
+marrangeGrob(grobs = grid.plts, nrow = 2, ncol = 2)               
+
+load(paste0("./BLAST/application/evgam2-",threshold*1000,"-s.Rdata"))
+
+data.xi <- data.frame("x" = newx,
+                      "post.mean" = 1/alpha.mean,
+                      "evgam.scale" = xi.preds.scale,
+                      "evgam.1" = xi.preds.1,
+                      "q1" = 1/alpha.q1,
+                      "q2" = 1/alpha.q2,
+                      "q3" = 1/alpha.q3)
+
+grid.plts <- list()
+for(i in 1:4){
+  grid.plt <- ggplot(data = data.frame(data.xi[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + 
+                  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
+                  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
+                  geom_line(aes(y=evgam.scale), linewidth=1, color = "orange", linetype = 2) + 
+                  geom_line(aes(y=evgam.1), linewidth=1, color = "purple", linetype = 2) +
+                  ylab(expression(xi(c,...,c))) + xlab(seasons[i]) +
+                  scale_fill_manual(values=c("steelblue"), name = "") + 
+                  scale_color_manual(values=c("steelblue")) +
+                  theme_minimal(base_size = 20) +
+                  theme(legend.position = "none",
+                        plot.margin = margin(5, 5, 5, 5),
+                        plot.title = element_text(hjust = 0.5, face = "bold"),
+                        axis.text = element_text(size = 18),
+                        axis.title.x = element_text(size = 22))
+  grid.plts[[i]] <- grid.plt
+}
+
+marrangeGrob(grobs = grid.plts, nrow = 2, ncol = 2)
+
+data.sigma <- data.frame("x" = newx,
+                      "evgam.scale" = sigma.preds.scale,
+                      "evgam.1" = sigma.preds.1)
+
+grid.plts <- list()
+for(i in 1:4){
+  grid.plt <- ggplot(data = data.frame(data.sigma[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + 
+              geom_line(aes(y=evgam.scale), linewidth=1, color = "orange", linetype = 2) + 
+              geom_line(aes(y=evgam.1), linewidth=1, color = "purple", linetype = 2) +
+              ylab(expression(sigma(c,ldots,c))) + xlab(seasons[i]) +
+              scale_fill_manual(values=c("steelblue"), name = "") + 
+              scale_color_manual(values=c("steelblue")) +
+              theme_minimal(base_size = 20) +
+              theme(legend.position = "none",
+                    plot.margin = margin(5, 5, 5, 5),
+                    plot.title = element_text(hjust = 0.5, face = "bold"),
+                    axis.text = element_text(size = 18),
+                    axis.title.x = element_text(size = 22))
+  grid.plts[[i]] <- grid.plt
+}
+
+marrangeGrob(grobs = grid.plts, nrow = 2, ncol = 2)
+
+
+
 summary(fit1, par=c("theta_fwi"), probs = c(0.05,0.5, 0.95))$summary
 
-# data.scenario <- data.frame("x" = newx,
-#                             "post.mean" = (alpha.samples[,1]),
-#                             "post.median" = (alpha.samples[,5]),
-#                             "q1" = (alpha.samples[,4]),
-#                             "q3" = (alpha.samples[,6]))
 
-# ggplot(data.scenario, aes(x=x)) + 
-#   ylab(expression(alpha(c,...,c))) + xlab(expression(c)) + labs(col = "") +
-#   geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
-#   geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
-#   scale_fill_manual(values=c("steelblue"), name = "") +
-#   scale_color_manual(values = c("steelblue")) + 
-#   guides(color = guide_legend(order = 2), 
-#           fill = guide_legend(order = 1)) +
-#   theme_minimal(base_size = 30) +
-#   theme(legend.position = "none",
-#         strip.text = element_blank(),
-#         axis.text = element_text(size = 20))
+T <- n
+len    <- nrow(posterior$alpha)
+posterior_idx <- sample(len, T, replace = TRUE)
+alpha_sub <- posterior$alpha[posterior_idx, ] 
+y.matrix <- matrix(y, nrow = T, ncol = n, byrow = TRUE)
+u.matrix <- matrix(u, nrow = T, ncol = n, byrow = TRUE)
+r_vec <- qnorm(pPareto(y.matrix, u.matrix, alpha = alpha_sub))
+r_mat <- matrix(r_vec, nrow = T, ncol = n)
+quantile_prob <- ppoints(n)
+grid          <- qnorm(quantile_prob)
+traj <- t(apply(r_mat, 1, sort))
+bands <- matrixStats::colQuantiles(traj, probs = c(0.05, 0.5, 0.95))
 
-# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_alpha.pdf"), width=10, height = 7.78)
+qqplot_df <- data.frame(
+  grid    = grid, 
+  l_band  = bands[, 1], 
+  trajhat = bands[, 2], 
+  u_band  = bands[, 3]
+)
 
-# xi.scenario <- data.frame("x" = newx,
-#                             "post.mean" = (1/alpha.samples[,1]),
-#                             "post.median" = (1/alpha.samples[,5]),
-#                             "q1" = (1/alpha.samples[,4]),
-#                             "q3" = (1/alpha.samples[,6]),
-#                             "evgam.1" = xi.pred.1,
-#                             # "evgam.1.q1" = xi.low.1,
-#                             # "evgam.1.q3" = xi.high.1,
-#                             # "vgam.1" = vgam.xi.1,
-#                             # "vgam.scale" = vgam.xi.scale,
-#                             # "evgam.scale.q1" = xi.low.scale,
-#                             # "evgam.scale.q3" = xi.high.scale,
-#                             "evgam.scale" = xi.pred.scale)
-
-# ggplot(xi.scenario, aes(x=x)) + 
-#   ylab(expression(xi(c,...,c))) + xlab(expression(c)) + labs(col = "") +
-#   geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
-#   geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
-#   # geom_ribbon(aes(ymin = evgam.scale.q1, ymax = evgam.scale.q3), fill= "orange", alpha = 0.2) +
-#   geom_line(aes(y=evgam.scale), colour = "orange", linewidth=1, linetype=3) +
-#   # geom_ribbon(aes(ymin = evgam.1.q1, ymax = evgam.1.q3), fill= "purple", alpha = 0.2) +
-#   geom_line(aes(y=evgam.1), colour = "purple", linewidth=1, linetype=3) +
-#   # geom_line(aes(y=vgam.scale), colour = "orange", linewidth=1, linetype=4) +
-#   # geom_line(aes(y=vgam.1), colour = "purple", linewidth=1, linetype=4) +  
-#   scale_fill_manual(values=c("steelblue"), name = "") +
-#   scale_color_manual(values = c("steelblue")) + 
-#   guides(color = guide_legend(order = 2), 
-#           fill = guide_legend(order = 1)) +
-#   theme_minimal(base_size = 30) +
-#   theme(legend.position = "none",
-#         strip.text = element_blank(),
-#         axis.text = element_text(size = 20))
-
-T <- 100
-len <- dim(posterior$alpha)[1]
-posterior_idx <- sample(1:len, T, replace = TRUE)
-r <- sapply(1:T, function(t) {
-  alpha_t <- posterior$alpha[posterior_idx[t], ]  # Extract vector of length n
-  qnorm(pPareto(y, u, alpha = alpha_t))           # Vectorized across all y
-})
-
-quantile.prob <- ppoints(n)
-grid <- qnorm(quantile.prob)
-traj <- t(apply(r, 2, quantile, probs = quantile.prob, type = 2))
-# r <- matrix(, nrow = n, ncol = T)
-# for(i in 1:n){
-#   for(t in 1:T){
-#     r[i, t] <- qnorm(pPareto(y[i], u, alpha = posterior$alpha[round(runif(1,1,len)),i]))
-#   }
-# }
-
-# traj <- matrix(NA, nrow = T, ncol = lgrid)
-# for (t in 1:T){
-#   traj[t, ] <- quantile(r[, t], quantile.prob, type = 2)
-# }
-
-l.band <- apply(traj, 2, quantile, prob = 0.025)
-trajhat <- apply(traj, 2, quantile, prob = 0.5)
-u.band <- apply(traj, 2, quantile, prob = 0.975)
-qqplot.df <- data.frame(grid = grid, 
-                        l.band = l.band, 
-                        trajhat = trajhat,
-                        # evgam.traj = evgam.traj, 
-                        u.band = u.band)
-ggplot(data = ) + 
-  geom_ribbon(aes(x = grid, ymin = l.band, ymax = u.band), 
-              fill = "steelblue",
-              alpha = 0.4, linetype = "dashed") + 
-  geom_line(aes(x = grid, y = trajhat), colour = "steelblue", linetype = "dashed", linewidth = 1.2) + 
-  geom_abline(intercept = 0, slope = 1, linewidth = 1.2) + 
-  labs(x = "Theoretical quantiles", y = "Sample quantiles") + 
+ggplot(qqplot_df, aes(x = grid)) + 
+  geom_ribbon(aes(ymin = l_band, ymax = u_band), 
+              fill = "steelblue", alpha = 0.3) + 
+  geom_line(aes(y = trajhat), 
+            color = "steelblue", linetype = "dashed", linewidth = 1.2) + 
+  geom_abline(slope = 1, intercept = 0, linewidth = 1) + 
+  coord_fixed(xlim = c(-3, 3), ylim = c(-3, 3)) +
+  labs(x = "Theoretical Quantiles", y = "Sample Quantiles") +
   theme_minimal(base_size = 30) +
-  theme(axis.text = element_text(size = 20)) + 
-  coord_fixed(xlim = c(-3, 3),
-              ylim = c(-3, 3))
+  theme(axis.text = element_text(size = 20))
+
 
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_qqplot.pdf"), width=10, height = 7.78)
-# save(loglik.samples, data.smooth, data.scenario, qqplot.df, file="./BLAST/application/blast_1.Rdata")
+
 
 rp <-c()
 for(i in 1:n){
-  # rp[i] <- rPareto(y[i], u, alpha = posterior$alpha[round(runif(1,1,len)),i])
-  rp[i] <- qnorm(pPareto(y[i], u, alpha = posterior$alpha[round(runif(1,1,len)),i]))
+  rp[i] <- qnorm(pPareto(y[i], u[i], alpha = posterior$alpha[round(runif(1,1,len)),i]))
 }
 rp <- data.frame(rp, group = rep("residuals", n))
 
 ggplot(data = rp) + 
-  # geom_qqboxplot(aes(factor(group, levels=c("residuals")), y=rp), notch=FALSE, varwidth=TRUE, reference_dist="norm")+ 
   geom_qqboxplot(aes(y=rp), notch=FALSE, varwidth=FALSE, reference_dist="norm", width = 0.15, qq.colour = "steelblue")+
   labs(x = "", y = "Residuals") + ylim(-4,4) + xlim(-.2,.2)+
   theme_minimal(base_size = 20) +
@@ -1014,100 +1024,12 @@ cat("Finished Running")
 # scaled_fwi_grid <- sweep(bs.linear[,-1]*X_sd, 2, fwi.min, "-")
 # scaled_fwi_grid <- sweep(scaled_fwi_grid, 2, fwi.minmax, "/")
 
-data.smooth <- data.frame("x" = newx,
+data.smooth <- data.frame("x" = as.vector(as.matrix(xholder.linear)),
                           "true" = as.vector(as.matrix(fwi.linear)),
                           "post.mean" = as.vector(g.smooth.mean),
                           "q1" = as.vector(g.smooth.q1),
                           "q2" = as.vector(g.smooth.q2),
                           "q3" = as.vector(g.smooth.q3))
-
-
-# grid.plts <- list()
-# for(i in 1:(p*4)){
-#   grid.plt <- ggplot(data = data.frame(data.smooth[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + 
-#                   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-#                   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
-#                   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
-#                   geom_rug(data = subset(data.frame(data.smooth[((((i-1)*n)+1):(i*n)),]), true>0), aes(x=true, y=q2), sides = "b") +
-#                   geom_rug(aes(x=true, y=q2), sides = "b") +
-#                   ylab("") + xlab(colnames(bs.linear[,-1])[i]) +
-#                   scale_fill_manual(values=c("steelblue"), name = "") + 
-#                   scale_color_manual(values=c("steelblue")) +
-#                   ylim(g.min.samples[i], g.max.samples[i]) +
-#                   theme_minimal(base_size = 30) +
-#                   theme(legend.position = "none",
-#                           plot.margin = margin(0,0,0,-20),
-#                           axis.text = element_text(size = 35),
-#                           axis.title.x = element_text(size = 45))
-#   grid.plts[[i]] <- grid.plt #+ annotate("point", x= fwi.linear[which.max(y),i], y=g.min.samples[i], color = "red", size = 7)
-# }
-
-# marrangeGrob(grobs = grid.plts, nrow = 1, ncol = 4)
-
-# # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_DC.pdf"), grid.plts[[7]], width=10, height = 7.78)
-
-
-# data.linear <- data.frame("x" = newx,
-#                           "true" = as.vector(as.matrix(fwi.linear)),
-#                           "post.mean" = as.vector(g.linear.mean),
-#                           "q1" = as.vector(g.linear.q1),
-#                           "q2" = as.vector(g.linear.q2),
-#                           "q3" = as.vector(g.linear.q3),
-#                           "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)))
-
-
-# grid.plts <- list()
-# for(i in 1:(p*4)){
-#   grid.plt <- ggplot(data = data.frame(data.linear[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + 
-#                   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-#                   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
-#                   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
-#                   geom_rug(data = subset(data.frame(data.linear[((((i-1)*n)+1):(i*n)),]), true>0), aes(x=true, y=q2), sides = "b") +
-#                   # geom_rug(aes(x=true, y=q2), sides = "b") +
-#                   ylab("") + xlab(colnames(bs.linear[,-1])[i]) +
-#                   scale_fill_manual(values=c("steelblue"), name = "") + 
-#                   scale_color_manual(values=c("steelblue")) +
-#                   ylim(g.min.samples[i], g.max.samples[i]) +
-#                   theme_minimal(base_size = 30) +
-#                   theme(legend.position = "none",
-#                           plot.margin = margin(0,0,0,-20),
-#                           axis.text = element_text(size = 35),
-#                           axis.title.x = element_text(size = 45))
-#   grid.plts[[i]] <- grid.plt #+ annotate("point", x= fwi.linear[which.max(y),i], y=g.min.samples[i], color = "red", size = 7)
-# }
-
-# # grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
-# marrangeGrob(grobs = grid.plts, nrow = 1, ncol = 4)
-
-
-# data.nonlinear <- data.frame("x" = newx,
-#                             "true" = as.vector(as.matrix(fwi.linear)),
-#                             "post.mean" = as.vector(g.nonlinear.mean),
-#                             "q1" = as.vector(g.nonlinear.q1),
-#                             "q2" = as.vector(g.nonlinear.q2),
-#                             "q3" = as.vector(g.nonlinear.q3),
-#                             "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)))
-
-
-# grid.plts <- list()
-# for(i in 1:(p*4)){
-#   grid.plt <- ggplot(data = data.frame(data.nonlinear[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + 
-#                   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-#                   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
-#                   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
-#                   geom_rug(data = subset(data.frame(data.nonlinear[((((i-1)*n)+1):(i*n)),]), true>0), aes(x=true, y=q2), sides = "b") +
-#                   ylab("") + xlab(colnames(bs.linear[,-1])[i]) +
-#                   scale_fill_manual(values=c("steelblue"), name = "") + 
-#                   scale_color_manual(values=c("steelblue")) +
-#                   ylim(g.min.samples[i], g.max.samples[i]) +
-#                   theme_minimal(base_size = 30) +
-#                   theme(legend.position = "none",
-#                           plot.margin = margin(0,0,0,-20),
-#                           axis.text = element_text(size = 35),
-#                           axis.title.x = element_text(size = 45))
-#   grid.plts[[i]] <- grid.plt #+ annotate("point", x= fwi.linear[which.max(y),i], y=g.min.samples[i], color = "red", size = 7)
-# }
-# marrangeGrob(grobs = grid.plts, nrow = 1, ncol = 4)
 
 data.fwi <- data.frame("x" = as.vector(as.matrix(fwi.true)),
                         "true" = as.vector(as.matrix(true.linear)),
@@ -1117,30 +1039,6 @@ data.fwi <- data.frame("x" = as.vector(as.matrix(fwi.true)),
                         "q3" = as.vector(fwi.smooth.q3))
 
 
-# grid.plts <- list()
-# for(i in 1:(p*4)){
-#   grid.plt <- ggplot(data = data.frame(data.smooth[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + 
-#                   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-#                   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
-#                   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
-#                   geom_rug(data = subset(data.frame(data.smooth[((((i-1)*n)+1):(i*n)),]), true>0), aes(x=true, y=q2), sides = "b") +
-#                   ylab("") + xlab(colnames(bs.linear[,-1])[i]) +
-#                   scale_fill_manual(values=c("steelblue"), name = "") + 
-#                   scale_color_manual(values=c("steelblue")) +
-#                   ylim(fwi.min.samples[i], fwi.max.samples[i]) +
-#                   theme_minimal(base_size = 30) +
-#                   theme(legend.position = "none",
-#                           plot.margin = margin(0,0,0,-20),
-#                           axis.text = element_text(size = 35),
-#                           axis.title.x = element_text(size = 45))
-#   grid.plts[[i]] <- grid.plt #+ annotate("point", x= fwi.true[which.max(y),i], y=fwi.min.samples[i], color = "red", size = 7)
-# }
-
-# marrangeGrob(grobs = grid.plts, nrow = 1, ncol = 4)
-
-# summary(fit1, par=c("theta_fwi"), probs = c(0.05,0.5, 0.95))$summary
-
-# 1. Configuration
 global_y_min <- min(data.fwi$q1, na.rm = TRUE)
 global_y_max <- max(data.fwi$q3, na.rm = TRUE)
 seasons <- c("Winter", "Spring", "Summer", "Autumn")
@@ -1158,7 +1056,10 @@ for(s in 1:n_seasons) {
     current_season <- seasons[s]
     x_min <- min(df_slice$x, na.rm = TRUE)
     x_max <- max(df_slice$x, na.rm = TRUE)    
-    my_breaks <- pretty(c(x_min, x_max), n = 5)
+    # my_breaks <- pretty(c(x_min, x_max), n = 5)
+    my_breaks <- seq(from = x_min, to = x_max, length.out = 5)
+    # my_breaks[1] <- floor(my_breaks[1])
+    my_breaks <- round(my_breaks, digits = 2)
     p_plot <- ggplot(data = df_slice, aes(x = x)) + 
       geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 1.2) + 
       geom_ribbon(aes(ymin = q1, ymax = q3), fill = "steelblue", alpha = 0.2) +
@@ -1197,12 +1098,14 @@ for(s in 1:n_seasons) {
     current_season <- seasons[s]
     x_min <- min(df_slice$x, na.rm = TRUE)
     x_max <- max(df_slice$x, na.rm = TRUE)
-    my_breaks <- floor(seq(from = x_min, to = x_max, length.out = 5))
+    my_breaks <- seq(from = x_min, to = x_max, length.out = 5)
+    my_breaks[1] <- floor(my_breaks[1])
+    my_breaks[-1] <- ceiling(my_breaks[-1])
     p_plot <- ggplot(data = df_slice, aes(x = x)) + 
       geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 1.2) + 
       geom_ribbon(aes(ymin = q1, ymax = q3), fill = "steelblue", alpha = 0.2) +
       geom_line(aes(y = q2), color="steelblue", linewidth = 1) + 
-      geom_rug(data = subset(df_slice, true > 0), 
+      geom_rug(data = df_slice, 
                aes(x = true, y = q2), sides = "b", alpha = 0.6) +
       ylim(global_y_min, global_y_max) +
       ylab("") + xlab(paste(current_var, "-", current_season)) +
@@ -1222,196 +1125,6 @@ for(s in 1:n_seasons) {
 
 marrangeGrob(grobs = sorted_plots, nrow = 1, ncol = 5, top = NULL)
 
-#Predictive Distribution check
-# y.container <- as.data.frame(matrix(, nrow = n, ncol = 0))  
-# random.alpha.idx <- floor(runif(100, 1, ncol(t(posterior$f))))
-# for(i in random.alpha.idx){
-#   y.container <- cbind(y.container, log(t(posterior$f)[,i]))
-# }
-# colnames(y.container) <- paste("col", 1:100, sep="")
-# y.container$x <- seq(1,n)
-# y.container$logy <- log(y)
-# plt <- ggplot(data = y.container, aes(x = logy)) + ylab("Density") + xlab("log(Burned Area)") + labs(col = "")
-
-# for(i in names(y.container)){
-#   plt <- plt + geom_density(aes(x=.data[[i]]), color = "slategray1", alpha = 0.1, linewidht = 0.7)
-# }
-
-# print(plt + geom_density(aes(x=logy), color = "steelblue", linewidth = 2) +
-#         theme_minimal(base_size = 30) + ylim(0, 1.25) + xlim(7.5,30) +
-#         theme(legend.position = "none",
-#                 axis.text = element_text(size = 35)))
-# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_BLAST_predictive_distribution.pdf"), width=10, height = 7.78)
-
-
-# extreme.container <- as.data.frame(matrix(, nrow = n, ncol = 3000))
-# for(i in 1:3000){
-#   extreme.container[,i] <- density(log(posterior$f[i,]), n=n)$y
-# }
-# extreme.container <- cbind(extreme.container, t(apply(extreme.container[,1:3000], 1, quantile, c(0.05, .5, .95))))
-# colnames(extreme.container)[(dim(extreme.container)[2]-2):(dim(extreme.container)[2])] <- c("q1","q2","q3")
-# colnames(extreme.container)[1:3000] <- as.character(1:3000)
-# extreme.container$mean <- rowMeans(extreme.container[,1:3000])
-# extreme.container$y <- seq(0, 30, length.out = n)
-# extreme.container <- as.data.frame(extreme.container)
-
-
-# plt <- ggplot(data = extreme.container, aes(x = y)) + xlab("log(Burned Area)") + ylab("Density")+
-#         geom_line(aes(y=mean), colour = "steelblue", linewidth = 1.5) +
-#         geom_ribbon(aes(ymin = q1, ymax = q3), fill = "steelblue", alpha = 0.2) + 
-#         theme_minimal(base_size = 30) + 
-#         theme(legend.position = "none",
-#               axis.title = element_text(size = 30))
-# d <- ggplot_build(plt)$data[[1]]
-# print(plt + 
-#         geom_segment(x=12.44009, xend=12.44009, 
-#               y=0, yend=approx(x = d$x, y = d$y, xout = 12.4409)$y,
-#               colour="red", linewidth=1.2, linetype = "dotted"))
-# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_post_generative.pdf"), width = 10, height = 7.78)
-
-# random.alpha.idx <- floor(runif(1000, 1, ncol(t(posterior$alpha))))
-# ev.y1 <- ev.y2 <- as.data.frame(matrix(, nrow = 1, ncol = 0))
-# ev.alpha.single <- c()  
-# for(i in random.alpha.idx){
-#   ev.y1 <- rbind(ev.y1, as.numeric(posterior$yrep[i]))
-# }
-# ev.y1 <- as.data.frame(log(ev.y1))
-# ev.y1$logy <- max(log(y))
-# colnames(ev.y1) <- c("yrep", "logy")
-# ev.y1$group <- rep("15th Oct 2017",1000)
-# ggplot(data=ev.y, aes(x=yrep, y = group)) +
-#   ylab("") + 
-#   xlab("log(Burnt Area)") + labs(col = "") +  
-#   stat_slab(scale = 0.6, colour = "steelblue", fill=NA, slab_linewidth = 1.5, trim = FALSE, expand = TRUE, density = "unbounded", subguide="outside", justification = -0.01) +
-#   # stat_spike(aes(linetype = after_stat(at)), at = c("median"), scale=0.7)+
-#   stat_dotsinterval(subguide = 'integer', side = "bottom", scale = 0.6, slab_linewidth = NA, position = "dodge") +
-#   # geom_point(position = position_jitter(seed = 1, height = 0.05), alpha = 0.1) +  
-#   # geom_boxplot(width = 0.2, notch = TRUE, alpha = 0.25, outlier.color = NA) +
-#   geom_vline(xintercept = log(max(y)), linetype="dashed", color = "red",) +
-#   # geom_label(aes(log(max(y)), 1), label = "Target Length", show.legend = FALSE)+
-#   geom_vline(xintercept = log(y[133]), linetype="dashed", color = "black",) +
-#   # geom_label(aes(log(y[133]), 1), label = "Target Length", show.legend = FALSE)+
-#   theme_minimal(base_size = 30) +  
-#   theme(legend.position = "none",
-#         plot.margin = margin(0,0,0,25),
-#         axis.text.y = element_text(angle = 90, size = 15, vjust = 15, hjust = 0.5),
-#         axis.title = element_text(size = 30)) +
-#         annotate(x=(log(max(y))+2), y= 0.1, label = "15th Oct 2017", geom="label") +
-#         annotate(x=(log(y[133])-2), y= 0.1, label = "18th Jun 2017", geom="label")
-# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_BLAST_two_generative.pdf"), width = 10, height = 7.78)
-
-# plt <- ggplot(data = ev.y1, aes(x = yrep)) + ylab("Density") + xlab("log(Burned Area)") + labs(col = "") +
-#   geom_density(color = "steelblue", linewidth = 1.2) + 
-#   geom_rug(alpha = 0.1) + 
-#   xlim(5.5, 40) +
-#   theme_minimal(base_size = 30) +  
-#   theme(legend.position = "none",
-#         axis.title = element_text(size = 30))
-
-# d <- ggplot_build(plt)$data[[1]]
-# print(plt + geom_area(data = subset(d, x>12.44009), aes(x=x,y=y), fill = "slategray1", alpha = 0.5) +
-#         geom_segment(x=12.44009, xend=12.44009, 
-#               y=0, yend=approx(x = d$x, y = d$y, xout = 12.4409)$y,
-#               colour="red", linewidth=1.2, linetype = "dotted"))
-# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_BLAST_generative.pdf"), width = 10, height = 7.78)
-
-# library(ismev)
-# gpd.fit(y-u, u)
-
-# fit.log.lik <- extract_log_lik(fit1)
-# constraint.elpd.loo <- loo(fit.log.lik, is_method = "sis", cores = 2)
-# save(constraint.elpd.loo, constraint.waic, file = (paste0("./BLAST/application/BLAST_constraint_",Sys.Date(),"_",psi,"_",floor(threshold*100),"quantile_IC.Rdata")))
-
-
-# x_data <- sort(Y[Y > 0], decreasing = TRUE)
-# n <- length(x_data)
-# k_range_pick <- 15:500
-# pick_res <- data.frame(k = k_range_pick, xi = NA, lower = NA, upper = NA)
-
-# for(i in seq_along(k_range_pick)) {
-#   k <- k_range_pick[i]
-  
-#   # Quantiles: X_{n-k+1}, X_{n-2k+1}, X_{n-4k+1}
-#   q1 <- x_data[k]
-#   q2 <- x_data[2*k]
-#   q3 <- x_data[4*k]
-  
-#   # 1. Point Estimate
-#   # Formula: (1/ln2) * ln( (q1-q2) / (q2-q3) )
-#   xi_hat <- (1/log(2)) * log((q1 - q2) / (q2 - q3))
-  
-#   # 2. Asymptotic Variance Formula for Pickands
-#   # Var = [ xi^2 * (2^(2xi+1) + 1) ] / [ (2 * (2^xi - 1) * ln2)^2 ]
-#   # Handle the xi=0 case to prevent division by zero (limit is approx 3.24)
-#   if(abs(xi_hat) < 1e-6) {
-#     asy_var <- 3.24 # Approx limit
-#   } else {
-#     num <- (xi_hat^2) * ((2^(2*xi_hat + 1)) + 1)
-#     den <- (2 * (2^xi_hat - 1) * log(2))^2
-#     asy_var <- num / den
-#   }
-  
-#   # Standard Error = sqrt(Var / k)
-#   se <- sqrt(asy_var / k)
-  
-#   pick_res$xi[i] <- xi_hat
-#   pick_res$lower[i] <- xi_hat - 1.96 * se
-#   pick_res$upper[i] <- xi_hat + 1.96 * se
-# }
-
-# # --- 3. MOMENT (DedH) ESTIMATOR ---
-# # Constraint: Uses all k up to n-1
-# k_range_mom <- 15:500
-# mom_res <- data.frame(k = k_range_mom, xi = NA, lower = NA, upper = NA)
-
-# for(i in seq_along(k_range_mom)) {
-#   k <- k_range_mom[i]
-#   y_k <- x_data[1:k]
-  
-#   # 1. Point Estimate
-#   log_excess <- log(y_k) - log(x_data[k+1])
-#   M1 <- mean(log_excess)
-#   M2 <- mean(log_excess^2)
-  
-#   xi_hat <- M1 + 1 - 0.5 * (1 - (M1^2 / M2))^(-1)
-  
-#   # 2. Asymptotic Variance (for xi > 0)
-#   # Var = 1 + xi^2
-#   asy_var <- 1 + xi_hat^2
-#   se <- sqrt(asy_var / k)
-  
-#   mom_res$xi[i] <- xi_hat
-#   mom_res$lower[i] <- xi_hat - 1.96 * se
-#   mom_res$upper[i] <- xi_hat + 1.96 * se
-# }
-
-
-# p1 <- ggplot(pick_res, aes(x=k, y=xi)) +
-#   geom_ribbon(aes(ymin=lower, ymax=upper), fill="darkgreen", alpha=0.2) +
-#   geom_line(color="darkgreen", linewidth=1) +
-#   geom_hline(yintercept = 0, linetype="dashed") +
-#   coord_cartesian(ylim=c(-0.15, 1.5)) + # Zoom to relevant range
-#   labs(title="Pickands Estimator", 
-#        y="Extreme Value Index") +
-#   theme_minimal(base_size = 30) + ylim(-10,10) +
-#   theme(legend.position = "none",
-#           axis.text = element_text(size = 35),
-#           axis.title.x = element_text(size = 45))
-
-# p2 <- ggplot(mom_res, aes(x=k, y=xi)) +
-#   geom_ribbon(aes(ymin=lower, ymax=upper), fill="purple", alpha=0.2) +
-#   geom_line(color="purple", linewidth=1) +
-#   geom_hline(yintercept = 0, linetype="dashed") +
-#   coord_cartesian(ylim=c(-0.15, 1.5)) + 
-#   labs(title="Moment Estimator", y="") +
-#   theme_minimal(base_size = 30) + ylim(0, 2) +
-#   theme(legend.position = "none",
-#           axis.text = element_text(size = 35),
-#           axis.text.y = element_blank(),
-#           axis.title.x = element_text(size = 45))
-
-# grid.plt <- grid.arrange(p1, p2, nrow=1)
-# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_heavytail.pdf"), grid.plt, width=22, height = 7.78)
 fit.log.lik <- extract_log_lik(fit1)
 elpd.loo <- loo(fit.log.lik, is_method = "sis", cores = 4)
 elpd.loo

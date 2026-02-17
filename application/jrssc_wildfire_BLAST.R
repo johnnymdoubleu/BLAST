@@ -436,19 +436,6 @@ generated quantities {
 }
 "
 
-  # for (j in 1:p){
-  #   theta_origin[j+1] = theta[j+1] / (X_max[j]-X_min[j]);
-  # }
-  # theta_origin[1] = theta[1] - dot_product(X_means, theta_origin[2:(p+1)]);
-
-
-# cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear[,c(1,2)]) %*% bs.nonlinear[,c((1):(psi))]), "\n")
-# cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear[,c(1,3)]) %*% bs.nonlinear[,c((psi+1):(psi*2))]), "\n")
-# cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear[,c(1,4)]) %*% bs.nonlinear[,c((psi*2+1):(psi*3))]), "\n")
-# cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear[,c(1,5)]) %*% bs.nonlinear[,c((psi*3+1):(psi*4))]), "\n")
-# cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear[,c(1,6)]) %*% bs.nonlinear[,c((psi*4+1):(psi*5))]), "\n")
-# cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear[,c(1,7)]) %*% bs.nonlinear[,c((psi*5+1):(psi*6))]), "\n")
-# cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear[,c(1,8)]) %*% bs.nonlinear[,c((psi*6+1):(psi*7))]), "\n")
 
 data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, Z_scales= Z_scales,
                   atau = ((psi+1)/2), xholderNonlinear = xholder.nonlinear, 
@@ -457,14 +444,14 @@ data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, Z_scales= Z_s
                   X_means = X_means, X_sd = X_sd,
                   gridL = xgrid.linear[,-1], gridNL = xgrid.nonlinear)
 
-init.alpha <- list(list(gamma_raw= array(rep(0.2, (psi*p)), dim=c(p, psi)), #rho = 1, 
-                        theta = rep(-0.1, (p+1)), tau = rep(0.1, p), #sigma_ridge = rep(0.1, p),
+init.alpha <- list(list(gamma_raw= array(rep(0.2, (psi*p)), dim=c(p, psi)), 
+                        theta = rep(-0.1, (p+1)), tau = rep(0.1, p), 
                         lambda1 = rep(0.1,p), lambda2 = rep(1, p)),
-                   list(gamma_raw = array(rep(-0.15, (psi*p)), dim=c(p, psi)),# rho = 1,
-                        theta = rep(0.05, (p+1)), tau = rep(0.2, p), #sigma_ridge = rep(0.2, p), 
+                   list(gamma_raw = array(rep(-0.15, (psi*p)), dim=c(p, psi)),
+                        theta = rep(0.05, (p+1)), tau = rep(0.2, p),
                         lambda1 = rep(2,p), lambda2 = rep(5, p)),
-                   list(gamma_raw= array(rep(0.1, (psi*p)), dim=c(p, psi)), #rho = 1,
-                        theta = rep(0.1, (p+1)), tau = rep(0.1, p), #sigma_ridge = rep(0.1, p),
+                   list(gamma_raw= array(rep(0.1, (psi*p)), dim=c(p, psi)),
+                        theta = rep(0.1, (p+1)), tau = rep(0.1, p), 
                         lambda1 = rep(0.1,p), lambda2 = rep(0.1, p)))
 
 fit1 <- stan(
@@ -630,24 +617,24 @@ simul.data <- data.frame(BA = y-u, fwi.scaled[,c(1:p)])#fwi.origin[c(1:p)])
 #   alpha.nonlinear.scale[,j] <- 1/(xi.nonlinear.scale[,j])
 # }
 
-# gam.1 <- list(BA ~ 1,
-#                 ~ s(DSR, bs = "tp", k = 30) + 
-#                     s(FWI, bs = "tp", k = 30) + 
-#                     s(BUI, bs = "tp", k = 30) + 
-#                     s(ISI, bs = "tp", k = 30) + 
-#                     s(FFMC, bs = "tp", k = 30) +
-#                     s(DMC, bs = "tp", k = 30) + 
-#                     s(DC, bs = "tp", k = 30)) 
+gam.1 <- list(BA ~ 1,
+                ~ s(DSR, bs = "tp", k = 30) + 
+                    s(FWI, bs = "tp", k = 30) + 
+                    s(BUI, bs = "tp", k = 30) + 
+                    s(ISI, bs = "tp", k = 30) + 
+                    s(FFMC, bs = "tp", k = 30) +
+                    s(DMC, bs = "tp", k = 30) + 
+                    s(DC, bs = "tp", k = 30)) 
 
-# gam.1 <- list(BA ~ 1,
-#                 ~ s(BUI, bs = "ts", k = 30) + 
-#                   s(ISI, bs = "ts", k = 30) + 
-#                   s(FFMC, bs = "ts", k = 30) +
-#                   s(DMC, bs = "ts", k = 30) +
-#                   s(DC, bs = "ts", k = 30))
-# evgam.fit.1 <- evgam::evgam(gam.1, data = simul.data, family = "gpd")
-# pred.1 <- predict(evgam.fit.1, newdata = xholder, type="response", se.fit = TRUE)
-# xi.pred.1 <-pred.1$fitted$shape
+gam.1 <- list(BA ~ 1,
+                ~ s(BUI, bs = "ts", k = 30) + 
+                  s(ISI, bs = "ts", k = 30) + 
+                  s(FFMC, bs = "ts", k = 30) +
+                  s(DMC, bs = "ts", k = 30) +
+                  s(DC, bs = "ts", k = 30))
+evgam.fit.1 <- evgam::evgam(gam.1, data = simul.data, family = "gpd")
+pred.1 <- predict(evgam.fit.1, newdata = xholder, type="response", se.fit = TRUE)
+xi.pred.1 <-pred.1$fitted$shape
 # xi.se.1 <- pred.1$se.fit$shape
 # xi.low.1 <- xi.pred.1 - (1.96 * xi.se.1)
 # xi.high.1 <- xi.pred.1 + (1.96 * xi.se.1)
@@ -779,9 +766,8 @@ l.band <- apply(traj, 2, quantile, prob = 0.025)
 trajhat <- apply(traj, 2, quantile, prob = 0.5)
 u.band <- apply(traj, 2, quantile, prob = 0.975)
 qqplot.df <- data.frame(grid = grid, 
-                        l.band = l.band, 
+                        l.band = l.band,  
                         trajhat = trajhat,
-                        # evgam.traj = evgam.traj, 
                         u.band = u.band)
 ggplot(data = ) + 
   geom_ribbon(aes(x = grid, ymin = l.band, ymax = u.band), 
@@ -801,7 +787,7 @@ ggplot(data = ) +
 rp <-c()
 for(i in 1:n){
   # rp[i] <- rPareto(y[i], u, alpha = posterior$alpha[round(runif(1,1,len)),i])
-  rp[i] <- qnorm(pPareto(y[i], u, alpha = posterior$alpha[round(runif(1,1,len)),i]))
+  rp[i] <- qnorm(pPareto(y[i], u[i], alpha = posterior$alpha[round(runif(1,1,len)),i]))
 }
 rp <- data.frame(rp, group = rep("residuals", n))
 
