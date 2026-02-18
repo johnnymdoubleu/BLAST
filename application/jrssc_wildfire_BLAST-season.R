@@ -134,6 +134,11 @@ fwi.grid <- data.frame(lapply(fwi.origin[,c(1:p)], function(x) seq(min(x), max(x
 fwi.minmax <- sapply(fwi.origin[,c(1:p)], function(x) max(x)-min(x))
 fwi.min <- sapply(fwi.origin[,c(1:p)], function(x) min(x))
 
+# exceeded.year <- fwi.season[excess, c(14, 16)]
+# plot(exceeded.year$SeasonYear[which(exceeded.year$code==1)])
+# plot(exceeded.year$SeasonYear[which(exceeded.year$code==2)])
+# plot(exceeded.year$SeasonYear[which(exceeded.year$code==3)])
+# plot(exceeded.year$SeasonYear[which(exceeded.year$code==4)])
 psi <- psi - 2
 model_data <- list()       # Stores parameters (U, Lambda, Coefs) for later
 train_basis_flat <- list() # Stores actual Training Matrices for cbind
@@ -242,17 +247,11 @@ newx <- seq(0, 1, length.out = n)
 xholder <- do.call(cbind, lapply(1:p, function(j) {newx}))
 colnames(xholder) <- covariates
 
-# Note: 'n' must match the row dimension expected by your Stan data block.
-# We no longer define a global 'newx' here because every season gets its own grid.
-
 grid_linear_list <- list()
 grid_nonlinear_list <- list()
 
 for (i in seq_along(covariates)) {
   var_name <- covariates[i]
-  
-  # 1. Retrieve Global Constants for this variable
-  # (Required to scale the seasonal grid back to the model's 0-1 scale)
   global_min <- fwi.min[i]
   global_range <- fwi.minmax[i]
   
@@ -261,29 +260,13 @@ for (i in seq_along(covariates)) {
   for (season_label in names(model_data[[var_name]])) {
     params <- model_data[[var_name]][[season_label]]
     lin_col_name <- paste(var_name, "S", season_label, sep="_")
-    
-    # --- NEW LOGIC START ---
-    
-    # A. Find the indices for this specific season
     season_idx <- which(season_code_full == season_label)
-    
-    # B. Extract the RAW data for this season (to find observed bounds)
     raw_season_vals <- fwi.origin[season_idx, i]
     season_min <- min(raw_season_vals, na.rm = TRUE)
     season_max <- max(raw_season_vals, na.rm = TRUE)
-    
-    # C. Create a grid covering ONLY the observed seasonal range
-    # We create a sequence of length 'n' between the seasonal min and max
     raw_grid <- seq(season_min, season_max, length.out = n)
     
-    # D. Scale this grid to the Global [0, 1] domain
-    # This is crucial: The model coefficients 'theta' and 'gamma' were trained 
-    # on data scaled globally. We must provide inputs on that same scale.
     grid_vals <- (raw_grid - global_min) / global_range
-    
-    # --- NEW LOGIC END ---
-
-    # Store the grid values (on 0-1 scale) for plotting x-axis later
     grid_linear_list[[lin_col_name]] <- matrix(grid_vals, ncol=1, dimnames=list(NULL, lin_col_name))
     
     pred_df <- data.frame(
@@ -291,7 +274,6 @@ for (i in seq_along(covariates)) {
       season_code_full = factor(season_label, levels = levels(season_code_full))
     )
     
-    # Projection (unchanged)
     X_raw_grid <- PredictMat(params$sm_spec, pred_df)
     Z_spectral_grid <- X_raw_grid %*% params$U_pen %*% params$Lambda_sqrt_inv
     intercept_grid <- rep(1, length(grid_vals))
@@ -309,39 +291,6 @@ for (i in seq_along(covariates)) {
 xholder.linear <- do.call(cbind, grid_linear_list)
 xholder.nonlinear <- do.call(cbind, grid_nonlinear_list)
 
-# grid_linear_list <- list()
-# grid_nonlinear_list <- list()
-
-# for (i in seq_along(covariates)) {
-#   var_name <- covariates[i]
-#   grid_vals <- xholder[, i]
-  
-#   if (is.null(model_data[[var_name]])) next
-#   for (season_label in names(model_data[[var_name]])) {
-#     params <- model_data[[var_name]][[season_label]]
-#     lin_col_name <- paste(var_name, "S", season_label, sep="_")
-#     grid_linear_list[[lin_col_name]] <- matrix(grid_vals, ncol=1, dimnames=list(NULL, lin_col_name))
-#     pred_df <- data.frame(
-#       x_vec = grid_vals,
-#       season_code_full = factor(season_label, levels = levels(season_code_full))
-#     )
-    
-#     X_raw_grid <- PredictMat(params$sm_spec, pred_df)
-#     Z_spectral_grid <- X_raw_grid %*% params$U_pen %*% params$Lambda_sqrt_inv
-#     intercept_grid <- rep(1, length(grid_vals))
-#     slope_grid     <- grid_vals
-#     X_lin_grid_local <- cbind(intercept_grid, slope_grid)
-#     Z_orth_grid <- Z_spectral_grid - X_lin_grid_local %*% params$projection_coefs
-#     Z_final_grid <- Z_orth_grid[, params$keep_cols, drop = FALSE]
-#     Z_final_grid <- scale(Z_final_grid, center = FALSE, scale = params$scale_stats)
-#     col_names <- paste(var_name, "S", season_label, 1:ncol(Z_final_grid), sep="_")
-#     colnames(Z_final_grid) <- col_names
-#     grid_nonlinear_list[[paste(var_name, season_label, sep="_")]] <- Z_final_grid
-#   }
-# }
-
-# xholder.linear <- do.call(cbind, grid_linear_list)
-# xholder.nonlinear <- do.call(cbind, grid_nonlinear_list)
 
 scale_stats_list <- list()
 for (var_name in names(model_data)) {
@@ -534,6 +483,7 @@ model {
 
 generated quantities {
   matrix[n, n_seasons] alphaseason;
+  // matrix[n, n_seasons] gridalpha;
   vector[n] log_lik;
   matrix[n, p * n_seasons] gridgl;  // Linear component
   matrix[n, p * n_seasons] gridgnl; // Non-linear component
@@ -559,11 +509,14 @@ generated quantities {
   
   {
     for (s in 1:n_seasons) {
-      vector[n] current_season_pred = rep_vector(theta0, n);     
+      vector[n] current_season_pred = rep_vector(theta0, n);
+      // vector[n] grid_pred = rep_vector(theta0, n);
       for (j in 1:p) {
         int lin_idx = (j-1) * n_seasons + s;
         current_season_pred += gridgsmooth[, lin_idx];
+        // grid_pred += fwismooth[, lin_idx];
       }
+      // gridalpha[, s] = exp(grid_pred);
       alphaseason[, s] = exp(current_season_pred);
     }
   }
@@ -831,6 +784,58 @@ simul.data <- data.frame(BA = y-u, fwi.scaled[,c(1:p)],
 # vgam.xi.1 <- exp(fitted.linear[,2])
 # vgam.sigma.1 <- exp(fitted.linear[,1])
 
+calc_bounds <- function(dat) {
+  c_min <- max(apply(dat, 2, min)) # Highest of the minimums
+  c_max <- min(apply(dat, 2, max)) # Lowest of the maximums
+  return(c(c_min, c_max))
+}
+x.winter <- fwi.scaled[fwi.scaled$code == 1, -6]
+x.spring <- fwi.scaled[fwi.scaled$code == 2, -6]
+x.summer <- fwi.scaled[fwi.scaled$code == 3, -6]
+x.autumn <- fwi.scaled[fwi.scaled$code == 4, -6]
+
+obs_data_list <- list(x.winter, x.spring, x.summer, x.autumn) 
+bounds_list <- lapply(obs_data_list, calc_bounds)
+
+alpha.mean <- as.vector(matrix(season.samples[,1], nrow = n, byrow=TRUE))
+alpha.q1 <- as.vector(matrix(season.samples[,4], nrow = n, byrow=TRUE))
+alpha.q2 <- as.vector(matrix(season.samples[,5], nrow = n, byrow=TRUE))
+alpha.q3 <- as.vector(matrix(season.samples[,6], nrow = n, byrow=TRUE))
+
+data.alpha <- data.frame("x" = newx,
+                          "post.mean" = alpha.mean,
+                          "q1" = alpha.q1,
+                          "q2" = alpha.q2,
+                          "q3" = alpha.q3)
+seasons <- c("Winter", "Spring", "Summer", "Autumn")
+
+
+grid.plts <- list()
+for(i in 1:4){
+  season.df <- data.frame(data.alpha[((((i-1)*n)+1):(i*n)),])
+  current_bounds <- bounds_list[[i]]
+  # season_df_filtered <- season.df[season.df$x >= current_bounds[1] & 
+  #                                 season.df$x <= current_bounds[2], ]  
+  season.df$is_valid <- season.df$x >= current_bounds[1] & season.df$x <= current_bounds[2]
+
+  grid.plt <- ggplot(data = season.df, aes(x=x)) + 
+                geom_ribbon(data = subset(season.df, is_valid), 
+                            aes(ymin = q1, ymax = q3), alpha = 0.2, fill = "steelblue") +
+                geom_line(data = subset(season.df, is_valid), 
+                          aes(y=q2), color = "steelblue", linewidth=1) +
+                geom_line(data = subset(season.df, !is_valid), 
+                          aes(y=q2), color = "steelblue", linetype = "dotted", alpha = 0.5)  +
+                theme_minimal(base_size = 20) +
+                theme(legend.position = "none",
+                      plot.margin = margin(5, 5, 5, 5),
+                      plot.title = element_text(hjust = 0.5, face = "bold"),
+                      axis.text = element_text(size = 18),
+                      axis.title.x = element_text(size = 22))
+  grid.plts[[i]] <- grid.plt
+}
+
+marrangeGrob(grobs = grid.plts, nrow = 2, ncol = 2)
+
 
 alpha.mean <- as.vector(matrix(season.samples[,1], nrow = n, byrow=TRUE))
 alpha.q1 <- as.vector(matrix(season.samples[,4], nrow = n, byrow=TRUE))
@@ -967,7 +972,7 @@ marrangeGrob(grobs = grid.plts, nrow = 2, ncol = 2)
 summary(fit1, par=c("theta_fwi"), probs = c(0.05,0.5, 0.95))$summary
 
 
-T <- n
+T <- 100
 len    <- nrow(posterior$alpha)
 posterior_idx <- sample(len, T, replace = TRUE)
 alpha_sub <- posterior$alpha[posterior_idx, ] 
@@ -984,7 +989,8 @@ qqplot_df <- data.frame(
   grid    = grid, 
   l_band  = bands[, 1], 
   trajhat = bands[, 2], 
-  u_band  = bands[, 3]
+  u_band  = bands[, 3],
+  season = factor(fwi.scaled$code, label=seasons)
 )
 
 ggplot(qqplot_df, aes(x = grid)) + 
@@ -993,6 +999,7 @@ ggplot(qqplot_df, aes(x = grid)) +
   geom_line(aes(y = trajhat), 
             color = "steelblue", linetype = "dashed", linewidth = 1.2) + 
   geom_abline(slope = 1, intercept = 0, linewidth = 1) + 
+  facet_wrap(~season) + 
   coord_fixed(xlim = c(-3, 3), ylim = c(-3, 3)) +
   labs(x = "Theoretical Quantiles", y = "Sample Quantiles") +
   theme_minimal(base_size = 30) +
@@ -1000,29 +1007,65 @@ ggplot(qqplot_df, aes(x = grid)) +
 
 
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_qqplot.pdf"), width=10, height = 7.78)
+posterior_idx <- sample(len, T, replace = TRUE)
+y.matrix <- matrix(y, nrow = T, ncol = n, byrow = TRUE)
+u.matrix <- matrix(u, nrow = T, ncol = n, byrow = TRUE)
+p_matrix <- 1 - (u.matrix/ y.matrix)^(posterior$alpha[posterior_idx,])
+p_mean <- colMeans(p_matrix)
+rp_integrated <- qnorm(p_mean)
+p_q1 <- apply(p_matrix, 2, quantile, probs = 0.25)
+p_q3 <- apply(p_matrix, 2, quantile, probs = 0.75)
+rp_q1 <- qnorm(p_q1)
+rp_q3 <- qnorm(p_q3)
 
+rp <- data.frame(rp=as.numeric(rp_integrated), rp_q1 = rp_q1, rp_q3 = rp_q3, group = factor("residuals"), season = factor(fwi.scaled$code, label=seasons))
+# ggplot(data = rp) + 
+#   geom_qqboxplot(aes(y=rp, group = group), notch=FALSE, varwidth=FALSE, reference_dist="norm", width = 0.15, qq.colour = "steelblue")+
+#   labs(x = "", y = "Residuals") + 
+#   # coord_cartesian(ylim = c(-4, 4)) +
+#   ylim(-4,4) + xlim(-.2,.2)+
+#   theme_minimal(base_size = 20) +
+#   theme(axis.text = element_text(size = 25),
+#         axis.title = element_text(size = 30))
 
-rp <-c()
-for(i in 1:n){
-  rp[i] <- qnorm(pPareto(y[i], u[i], alpha = posterior$alpha[round(runif(1,1,len)),i]))
-}
-rp <- data.frame(rp, group = rep("residuals", n))
-
-ggplot(data = rp) + 
-  geom_qqboxplot(aes(y=rp), notch=FALSE, varwidth=FALSE, reference_dist="norm", width = 0.15, qq.colour = "steelblue")+
-  labs(x = "", y = "Residuals") + ylim(-4,4) + xlim(-.2,.2)+
+ggplot(data = rp, aes(x = season, y = rp, group = season)) + 
+  geom_qqboxplot(
+    notch = FALSE, 
+    varwidth = TRUE, 
+    reference_dist = "norm", 
+    width = 0.5, 
+    qq.colour = "steelblue",
+    fatten = 1
+  ) +
+  coord_cartesian(ylim = c(-4, 4)) + 
+  labs(
+    x = "Season", 
+    y = "Residuals"
+  ) +
   theme_minimal(base_size = 20) +
-  theme(axis.text = element_text(size = 25),
-        axis.title = element_text(size = 30))
+  theme(
+    axis.text = element_text(size = 20),
+    legend.position = "none"
+  )
+
+
+# ggplot(data = rp) + 
+#   stat_qq(aes(sample = rp)) + 
+#   stat_qq_line(aes(sample = rp)) + 
+#   facet_wrap(~season) + 
+#   ylim(-3,3) + xlim(-3,3)+
+#   theme_minimal(base_size = 20) +
+#   theme(legend.position = "none",
+#         axis.text = element_text(size = 25),
+#         axis.title = element_text(size = 30)) +
+#   labs(x = "Theoretical Quantiles",
+#        y = "Sample Quantiles")
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_qqboxplot.pdf"), width = 10, height = 7.78)
-             
+
 cat("Finished Running")
 
 # relative_eff(exp(fit.log.lik))
 #https://discourse.mc-staqan.org/t/four-questions-about-information-criteria-cross-validation-and-hmc-in-relation-to-a-manuscript-review/13841/3
-
-# scaled_fwi_grid <- sweep(bs.linear[,-1]*X_sd, 2, fwi.min, "-")
-# scaled_fwi_grid <- sweep(scaled_fwi_grid, 2, fwi.minmax, "/")
 
 data.smooth <- data.frame("x" = as.vector(as.matrix(xholder.linear)),
                           "true" = as.vector(as.matrix(fwi.linear)),
