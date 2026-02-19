@@ -84,7 +84,7 @@ fwi.index <- fwi.index[above.0,]
 # load("./BLAST/application/quant-t_10.Rdata")
 # load("./BLAST/application/qgam_975_30_ts.Rdata")
 # load("./BLAST/application/qgam-97-30-ts-t-log.Rdata")
-load("./BLAST/application/evgam-975-30-ts-log.Rdata")
+# load("./BLAST/application/evgam-975-30-ts-log.Rdata")
 # load("./BLAST/application/evgam-95-30-ts-sqrt.Rdata")
 # load("./BLAST/application/evgam-975-30-t.Rdata")
 # load("./BLAST/application/gamboost-975-20-log.Rdata")
@@ -661,10 +661,10 @@ xi.pred.1 <-pred.1$fitted$shape
 #                                       zero = NULL),
 #                         trace = TRUE,
 #                         control = vgam.control(maxit = 200))
-# fitted.linear <- predict(vgam.fit.scale, newdata = data.frame(xholder), type = "link")
-# fitted.terms <- predict(vgam.fit.scale, newdata = data.frame(xholder), type = "terms")
-# vgam.xi.scale <- exp(fitted.linear[,2])
-# vgam.sigma.scale <- exp(fitted.linear[,1])
+  # fitted.linear <- predict(vgam.fit.scale, newdata = data.frame(xholder), type = "link")
+  # fitted.terms <- predict(vgam.fit.scale, newdata = data.frame(xholder), type = "terms")
+  # vgam.xi.scale <- exp(fitted.linear[,2])
+  # vgam.sigma.scale <- exp(fitted.linear[,1])
 
 # vgam.fit.1 <- vgam(BA ~ sm.ps(BUI, ps.int = 28) + 
 #                        sm.ps(ISI, ps.int = 28) + 
@@ -825,16 +825,23 @@ for(i in 1:p){
                   ylab("") + xlab(names(fwi.scaled)[i]) +
                   scale_fill_manual(values=c("steelblue"), name = "") + 
                   scale_color_manual(values=c("steelblue")) +
-                  ylim(g.min.samples, g.max.samples) +
-                  theme_minimal(base_size = 30) +
+                  # ylim(g.min.samples, g.max.samples) +
+                  ylim(-10, 10) +
+                  theme_minimal(base_size = 20) +
                   theme(legend.position = "none",
-                          plot.margin = margin(0,0,0,-20),
-                          axis.text = element_text(size = 35),
-                          axis.title.x = element_text(size = 45))
+                        plot.margin = margin(5, 5, 5, 5),
+                        plot.title = element_text(hjust = 0.5, face = "bold"),
+                        axis.text = element_text(size = 18),
+                        axis.title.x = element_text(size = 22))
+                  # theme_minimal(base_size = 30) +
+                  # theme(legend.position = "none",
+                  #         plot.margin = margin(0,0,0,-20),
+                  #         axis.text = element_text(size = 35),
+                  #         axis.title.x = element_text(size = 45))
   grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=g.min.samples, color = "red", size = 7)
 }
-
-grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
+marrangeGrob(grobs = grid.plts, nrow = 1, ncol = 5, top = NULL)
+# grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
 
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_DC.pdf"), grid.plts[[7]], width=10, height = 7.78)
 

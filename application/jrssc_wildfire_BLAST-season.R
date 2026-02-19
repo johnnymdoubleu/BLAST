@@ -33,7 +33,7 @@ missing.values <- which(!is.na(df.long$measurement))
 #Thus, each year consist of 366 data with either 1 or 0 missing value.
 Y <- df.long$measurement[!is.na(df.long$measurement)]
 psi.origin <- psi <- 30
-threshold <- 0.975
+threshold <- 0.950
 
 multiplesheets <- function(fname) {
     setwd("C:/Users/Johnny Lee/Documents/GitHub")
@@ -785,8 +785,13 @@ simul.data <- data.frame(BA = y-u, fwi.scaled[,c(1:p)],
 # vgam.sigma.1 <- exp(fitted.linear[,1])
 
 calc_bounds <- function(dat) {
-  c_min <- max(apply(dat, 2, min)) # Highest of the minimums
-  c_max <- min(apply(dat, 2, max)) # Lowest of the maximums
+  c_min <- max(apply(dat, 2, min))
+  c_max <- min(apply(dat, 2, max))
+  
+  if (c_min > c_max) {
+    warning("No common intersection found. Defaulting to full observed range.")
+    return(c(min(dat), max(dat))) 
+  }
   return(c(c_min, c_max))
 }
 x.winter <- fwi.scaled[fwi.scaled$code == 1, -6]
@@ -809,33 +814,47 @@ data.alpha <- data.frame("x" = newx,
                           "q3" = alpha.q3)
 seasons <- c("Winter", "Spring", "Summer", "Autumn")
 
+# The tail index $\alpha(\bmx)$ was evaluated over the multivariate intersection of observed covariate support. By constraining the interpolation to the region where all FWI sub-indices are within their seasonal climatological ranges, we avoid biased tail estimates resulting from high-dimensional extrapolation. Regions where the evaluation grid exceeded these joint bounds are indicated by dotted lines, representing the model's projected behavior in unprecedented fire weather states.
+
+#To account for the multivariate nature of the FWI system, we calculated a covariate coverage score for each point on the evaluation grid. This score represents the number of FWI sub-indices (FFMC, DMC, DC, etc.) that remain within their observed seasonal climatological bounds. The transition from solid to dotted lines identifies regions where the model moves from joint interpolation to partial extrapolation, providing a transparent assessment of the tail index's reliability across disjoint seasonal supports.
 
 grid.plts <- list()
+
 for(i in 1:4){
   season.df <- data.frame(data.alpha[((((i-1)*n)+1):(i*n)),])
-  current_bounds <- bounds_list[[i]]
-  # season_df_filtered <- season.df[season.df$x >= current_bounds[1] & 
-  #                                 season.df$x <= current_bounds[2], ]  
-  season.df$is_valid <- season.df$x >= current_bounds[1] & season.df$x <= current_bounds[2]
-
+  raw_obs <- obs_data_list[[i]]
+  raw_obs_long <- raw_obs %>% 
+                    pivot_longer(cols = everything(), names_to = "covariate", values_to = "val")
+  y_max <- max(season.df$q3, na.rm = TRUE)
+  y_min <- min(season.df$q1, na.rm = TRUE)
+  gap <- (y_max - y_min) * 0.08
   grid.plt <- ggplot(data = season.df, aes(x=x)) + 
-                geom_ribbon(data = subset(season.df, is_valid), 
-                            aes(ymin = q1, ymax = q3), alpha = 0.2, fill = "steelblue") +
-                geom_line(data = subset(season.df, is_valid), 
-                          aes(y=q2), color = "steelblue", linewidth=1) +
-                geom_line(data = subset(season.df, !is_valid), 
-                          aes(y=q2), color = "steelblue", linetype = "dotted", alpha = 0.5)  +
-                theme_minimal(base_size = 20) +
-                theme(legend.position = "none",
-                      plot.margin = margin(5, 5, 5, 5),
-                      plot.title = element_text(hjust = 0.5, face = "bold"),
-                      axis.text = element_text(size = 18),
-                      axis.title.x = element_text(size = 22))
+    geom_ribbon(aes(ymin = q1, ymax = q3), fill = "steelblue", alpha = 0.2) +
+    geom_line(aes(y = q2), color = "steelblue") +
+    geom_linerange(data = raw_obs_long, 
+                   aes(x = val, 
+                       ymin = y_min - (as.numeric(factor(covariate)) * gap),
+                       ymax = y_min - (as.numeric(factor(covariate)) * gap) + (gap * 0.7),
+                       color = covariate),
+                   alpha = 0.8, linewidth = 1) +
+    coord_cartesian(ylim = c(-2.5, 25)) +
+    labs(x = seasons[i], y = expression(alpha(c,ldots,c))) +
+    theme_minimal(base_size = 20) +
+    theme(plot.margin = margin(5, 5, 5, 5),
+          plot.title = element_text(hjust = 0.5, face = "bold"),
+          axis.text = element_text(size = 18),
+          axis.title.x = element_text(size = 22))
+    
   grid.plts[[i]] <- grid.plt
 }
+# marrangeGrob(grobs = grid.plts, nrow = 2, ncol = 2)
 
-marrangeGrob(grobs = grid.plts, nrow = 2, ncol = 2)
-
+library(patchwork)
+grid.plts <- lapply(grid.plts, function(p) p + theme(legend.position = "bottom", legend.title = element_blank()))
+final_plot <- wrap_plots(grid.plts, nrow = 2, ncol = 2) +
+  plot_layout(guides = "collect") + 
+  plot_annotation(theme = theme(legend.position = "bottom"))
+print(final_plot)
 
 alpha.mean <- as.vector(matrix(season.samples[,1], nrow = n, byrow=TRUE))
 alpha.q1 <- as.vector(matrix(season.samples[,4], nrow = n, byrow=TRUE))
@@ -867,8 +886,9 @@ for(i in 1:4){
   grid.plts[[i]] <- grid.plt
 }
 
-marrangeGrob(grobs = grid.plts, nrow = 2, ncol = 2)
-
+# marrangeGrob(grobs = grid.plts, nrow = 2, ncol = 2)
+final_plot <- wrap_plots(grid.plts, nrow = 2, ncol = 2)
+print(final_plot)
 
 n_traj <- 500
 len <- dim(posterior$alphaseason)[1]
@@ -911,7 +931,9 @@ for(i in 1:4){
   grid.plts[[i]] <- grid.plt
 }
 
-marrangeGrob(grobs = grid.plts, nrow = 2, ncol = 2)               
+# marrangeGrob(grobs = grid.plts, nrow = 2, ncol = 2) 
+final_plot <- wrap_plots(grid.plts, nrow = 2, ncol = 2)
+print(final_plot)            
 
 load(paste0("./BLAST/application/evgam2-",threshold*1000,"-s.Rdata"))
 
@@ -942,7 +964,9 @@ for(i in 1:4){
   grid.plts[[i]] <- grid.plt
 }
 
-marrangeGrob(grobs = grid.plts, nrow = 2, ncol = 2)
+# marrangeGrob(grobs = grid.plts, nrow = 2, ncol = 2)
+final_plot <- wrap_plots(grid.plts, nrow = 2, ncol = 2)
+print(final_plot)
 
 data.sigma <- data.frame("x" = newx,
                       "evgam.scale" = sigma.preds.scale,
@@ -965,8 +989,9 @@ for(i in 1:4){
   grid.plts[[i]] <- grid.plt
 }
 
-marrangeGrob(grobs = grid.plts, nrow = 2, ncol = 2)
-
+# marrangeGrob(grobs = grid.plts, nrow = 2, ncol = 2)
+final_plot <- wrap_plots(grid.plts, nrow = 2, ncol = 2)
+print(final_plot)
 
 
 summary(fit1, par=c("theta_fwi"), probs = c(0.05,0.5, 0.95))$summary
@@ -1000,8 +1025,9 @@ ggplot(qqplot_df, aes(x = grid)) +
             color = "steelblue", linetype = "dashed", linewidth = 1.2) + 
   geom_abline(slope = 1, intercept = 0, linewidth = 1) + 
   facet_wrap(~season) + 
+  # coord_fixed(xlim = c(0, 4), ylim = c(0, 4)) +
   coord_fixed(xlim = c(-3, 3), ylim = c(-3, 3)) +
-  labs(x = "Theoretical Quantiles", y = "Sample Quantiles") +
+  labs(x = "Exponential QQ plot", y = "Sample Quantiles") +
   theme_minimal(base_size = 30) +
   theme(axis.text = element_text(size = 20))
 
@@ -1039,7 +1065,7 @@ ggplot(data = rp, aes(x = season, y = rp, group = season)) +
   ) +
   coord_cartesian(ylim = c(-4, 4)) + 
   labs(
-    x = "Season", 
+    x = "QQ boxplot", 
     y = "Residuals"
   ) +
   theme_minimal(base_size = 20) +
