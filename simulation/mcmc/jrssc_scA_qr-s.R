@@ -11,41 +11,41 @@ library(evgam)
 set.seed(1001)
 n <- 10000
 psi <- 10
-threshold_prob <- 0.95
+threshold <- 0.95
 p <- 5
 C <- diag(p)
-x.random <- pnorm(matrix(rnorm(n*p), ncol = p) %*% chol(C))
+
 time.seq <- 1:n
 period <- 365 
-x.season <- (time.seq %% period) / period 
+x.season <- time.seq / period 
 
 # Convert continuous season to Factor for the 'by' argument
-season_code_full <- cut(x.season, breaks = c(-0.1, 0.25, 0.5, 0.75, 1.1), labels = c("1","2","3","4"))
-
-
+season_code_full <- cut((time.seq%% period / period), breaks = c(-0.1, 0.25, 0.5, 0.75, 1.1), labels = c("1","2","3","4"))
 
 f.season.scale <- function(x) {
-  return(1 + 0.6 * sin(2 * pi * x) + 0.4 * cos(2 * pi * x)) 
+  return(1.5 + 0.8 * sin(2 * pi * x) + 1.2 * cos(2 * pi * x)) 
 }
 
+x.random <- pnorm(matrix(rnorm(n*p), ncol = p) %*% chol(C) + f.season.scale(x.season))
 x.origin <- cbind(x.random, x.season)
+plot(x.origin[,1])
 covariates <- colnames(data.frame(x.origin))[1:p] 
 
 # True Functions
 f2 <- function(x) {1.5 * sin(2 * pi * x^2)*x^3}
 f3 <- function(x) {-1.5 * cos(3 * pi * x^2)*x^2}
 
-theta.origin <- c(1, 0, 0.8, -0.4, 0, 0) # Coefs for 5 random vars + intercept
+theta.origin <- c(1, 0, 0.8, -0.6, 0, 0) # Coefs for 5 random vars + intercept
 alp.origin <- as.vector(exp(
   rep(theta.origin[1],n) + 
-  x.origin[,1:5] %*% theta.origin[-1] + 
+  x.origin[,1:p] %*% theta.origin[-1] + 
   f2(x.origin[,2]) + 
-  f3(x.origin[,3]) 
+  f3(x.origin[,3])
   # f.season.shape(x.origin[,6]) is removed
 ))
 
 y.noise <- rPareto(n, rep(1,n), alpha = alp.origin)
-y.origin <- y.noise + f.season.scale(x.origin[,6])
+y.origin <- y.noise + f.season.scale(x.season)
 
 # Dynamic Thresholding
 evgam.df <- data.frame(
@@ -54,7 +54,7 @@ evgam.df <- data.frame(
   cos.time = cos(2 * pi * x.season)
 )
 evgam.cov <- y ~ 1 + cos.time + sin.time
-ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold_prob))
+ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
 u.vec <- (predict(ald.cov.fit)$location)
 
 excess.index <- which(y.origin > u.vec)
@@ -80,15 +80,10 @@ xholder <- do.call(cbind, lapply(1:p, function(j) {newx}))
 season_levels <- c("1", "2", "3", "4")
 true_alpha_list <- list()
 true_smooth_list <- list()
-
 f2.hidden <- make.nl(x.origin[,2], f2(x.origin[,2]))
 f3.hidden <- make.nl(x.origin[,3], f3(x.origin[,3]))
-
-# --- MODIFIED: Ground Truth Reconstruction (Constant across seasons) ---
-grid_n <- n
-grid_x <- seq(0, 1, length.out = grid_n)
-raw_f2 <- f2(grid_x)
-raw_f3 <- f3(grid_x)
+raw_f2 <- f2(newx)
+raw_f3 <- f3(newx)
 theta.adjusted <- c(theta.origin[1] + f2.hidden$intercept + f3.hidden$intercept,
                     theta.origin[2], # Theta for X1 (0)
                     theta.origin[3] + f2.hidden$slope, # Theta for X2
@@ -96,34 +91,34 @@ theta.adjusted <- c(theta.origin[1] + f2.hidden$intercept + f3.hidden$intercept,
                     theta.origin[5], # Theta for X4 (0)
                     theta.origin[6]) # Theta for X5 (0)
 
-g1.total <- theta.adjusted[2] * grid_x 
+g1.total <- theta.adjusted[2] * newx 
 
-g2.nl <- raw_f2 - (f2.hidden$intercept + f2.hidden$slope * grid_x)
-g2.l  <- theta.adjusted[3] * grid_x
+g2.nl <- raw_f2 - (f2.hidden$intercept + f2.hidden$slope * newx)
+g2.l  <- theta.adjusted[3] * newx
 g2.total <- g2.l + g2.nl
 
-g3.nl <- raw_f3 - (f3.hidden$intercept + f3.hidden$slope * grid_x)
-g3.l  <- theta.adjusted[4] * grid_x
+g3.nl <- raw_f3 - (f3.hidden$intercept + f3.hidden$slope * newx)
+g3.l  <- theta.adjusted[4] * newx
 g3.total <- g3.l + g3.nl
 
-g4.total <- theta.adjusted[5] * grid_x
-g5.total <- theta.adjusted[6] * grid_x
+g4.total <- theta.adjusted[5] * newx
+g5.total <- theta.adjusted[6] * newx
 
 true_alpha <- exp(theta.adjusted[1] + g2.total + g3.total)
 
 for(s_label in season_levels) {
   true_alpha_list[[s_label]] <- data.frame(
-    x = grid_x, 
-    alpha = true_alpha, 
+    x = newx[which(season_code_full==s_label)], 
+    alpha = exp(theta.adjusted[1] + g2.total[which(season_code_full==s_label)] + g3.total[which(season_code_full==s_label)]), 
     season = s_label
   )
   
   true_smooth_list[[s_label]] <- rbind(
-    data.frame(x=grid_x, y=g1.total, variable="g1", season=s_label),
-    data.frame(x=grid_x, y=g2.total, variable="g2", season=s_label),
-    data.frame(x=grid_x, y=g3.total, variable="g3", season=s_label),
-    data.frame(x=grid_x, y=g4.total, variable="g4", season=s_label),
-    data.frame(x=grid_x, y=g5.total, variable="g5", season=s_label)
+    data.frame(x=newx[which(season_code_full==s_label)], y=g1.total[which(season_code_full==s_label)], variable="g1", season=s_label),
+    data.frame(x=newx[which(season_code_full==s_label)], y=g2.total[which(season_code_full==s_label)], variable="g2", season=s_label),
+    data.frame(x=newx[which(season_code_full==s_label)], y=g3.total[which(season_code_full==s_label)], variable="g3", season=s_label),
+    data.frame(x=newx[which(season_code_full==s_label)], y=g4.total[which(season_code_full==s_label)], variable="g4", season=s_label),
+    data.frame(x=newx[which(season_code_full==s_label)], y=g5.total[which(season_code_full==s_label)], variable="g5", season=s_label)
   )
 }
 
@@ -135,14 +130,11 @@ fwi.basis_list <- list()
 linear_basis_list <- list()
 nonlinear_basis_list <- list()
 model_data <- list() 
-
-fwi.scaled <- x.origin 
-fwi.origin <- x.origin 
-
+Z_scales <- c()
+psi <- psi - 2
 for (i in seq_along(covariates)) {
   var_name <- covariates[i]
-  x_vec <- fwi.scaled[, i]
-  x_true <- fwi.origin[,i]
+  x_vec <- x.origin[, i]
   
   model_data[[var_name]] <- list() 
   sm_list <- smoothCon(mgcv::s(x_vec, by=season_code_full, bs = "tp", k = psi + 2), 
@@ -159,14 +151,12 @@ for (i in seq_along(covariates)) {
     lin_col_name <- paste(var_name, "S", season_label, sep="_")
     linear_basis_list[[lin_col_name]] <- matrix(vec_slope, ncol=1, dimnames=list(NULL, lin_col_name))
     
-    fwi.basis_list[[lin_col_name]] <- matrix(x_true*mask, ncol=1, dimnames=list(NULL, lin_col_name))
+    fwi.basis_list[[lin_col_name]] <- matrix(vec_slope, ncol=1, dimnames=list(NULL, lin_col_name))
     X_lin_local <- cbind(vec_intercept, vec_slope)
     
     qr_lin <- qr(X_lin_local)
     Q_lin <- qr.Q(qr_lin)
     R_lin <- qr.R(qr_lin)
-    
-    # 2. Spectral Decomposition
     X_raw <- sm_spec$X
     S     <- sm_spec$S[[1]] 
     
@@ -189,7 +179,7 @@ for (i in seq_along(covariates)) {
     train_scale[train_scale < 1e-12] <- 1 
     Z_final <- scale(Z_final, center = FALSE, scale = train_scale)
     Z_final <- Z_final * mask
-    
+    Z_scales <- c(Z_scales, train_scale)
     col_names <- paste(var_name, "S", season_label, 1:ncol(Z_final), sep="_")
     colnames(Z_final) <- col_names
     nonlinear_basis_list[[paste(var_name, season_label, sep="_")]] <- Z_final
@@ -299,11 +289,10 @@ transformed parameters {
       for (s in 1:n_seasons){
         int lin_idx = (j-1) * n_seasons + s;
         int nl_start = (lin_idx-1) * psi + 1; 
-        int nl_end   = lin_idx * psi;
         
         for (k in 1:psi){
            int flat_idx = nl_start + k - 1;
-           gamma[j,s][k] = gamma_raw[j,s][k] * sqrt(tau[j,s]);
+           gamma[j,s][k] = gamma_raw[j,s][k] * sqrt(tau[j,s]); // * Z_scales[flat_idx]
         }
         
         lin_predictor += col(bsLinear, lin_idx) * theta[lin_idx] 
@@ -417,9 +406,9 @@ fit1 <- stan(
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value 
     chains = 3,             # number of Markov chains
-    iter = 3000,            # total number of iterations per chain
+    iter = 2000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
-    refresh = 1500           # no progress shown
+    refresh = 1000           # no progress shown
 )
 
 posterior <- extract(fit1)
@@ -568,12 +557,62 @@ for(s in season_levels) {
   print(plt)
 }
 
+season_counts <- table(season_code_full)
+season_names <- levels(season_code_full)
+labels_pretty <- c("Winter", "Spring", "Summer", "Autumn")
 
-
+# 2. Extract summary from Stan (already contains all seasons concatenated)
+# Stan orders these by Season 1, then Season 2, etc., based on your alphaseason matrix
+alpha_sum <- as.data.frame(season.samples)
 alpha.mean <- as.vector(matrix(season.samples[,1], nrow = n, byrow=TRUE))
 alpha.q1 <- as.vector(matrix(season.samples[,4], nrow = n, byrow=TRUE))
 alpha.q2 <- as.vector(matrix(season.samples[,5], nrow = n, byrow=TRUE))
 alpha.q3 <- as.vector(matrix(season.samples[,6], nrow = n, byrow=TRUE))
+grid.plts <- list()
+current_start <- 1
+
+for(i in 1:length(season_names)){
+  # Determine the number of observations for this specific season
+  n_seas <- season_counts[i]
+  current_end <- current_start + n_seas - 1
+  
+  # Slice the summary and true values for this specific season
+  # Note: newx must be sliced to match the actual observations in that season
+  # or use the specific x-values from that season if available.
+  
+  plot_df <- data.frame(
+    x = df_true_alpha$x[current_start:current_end], # Mapping to a 0-1 grid for the plot
+    true = df_true_alpha$alpha[current_start:current_end],
+    q2 = alpha.q2[current_start:current_end],
+    q1 = alpha.q1[current_start:current_end],
+    q3 = alpha.q3[current_start:current_end]
+  )
+  
+  grid.plt <- ggplot(plot_df, aes(x=x)) + 
+    geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
+    geom_line(aes(y=true), color = "red", linewidth=1, linetype=2) + 
+    geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
+    ylab(expression(alpha(c,ldots,c))) + 
+    xlab(labels_pretty[i]) +
+    scale_fill_manual(values=c("steelblue"), name = "") + 
+    scale_color_manual(values=c("steelblue")) +
+    theme_minimal(base_size = 20) +
+    theme(legend.position = "none",
+          plot.title = element_text(hjust = 0.5, face = "bold"),
+          axis.text = element_text(size = 18),
+          axis.title.x = element_text(size = 22))
+  
+  grid.plts[[i]] <- grid.plt
+  
+  # Update pointer for the next season
+  current_start <- current_end + 1
+}
+
+final_plot <- patchwork::wrap_plots(grid.plts, nrow = 2, ncol = 2)
+print(final_plot)
+
+
+
 
 data.alpha <- data.frame("x" = newx,
                           "true" = df_true_alpha$alpha,
@@ -606,34 +645,41 @@ for(i in 1:4){
 final_plot <- patchwork::wrap_plots(grid.plts, nrow = 2, ncol = 2)
 print(final_plot)
 
-g_post <- posterior$gridgsmooth 
-n_iter <- dim(g_post)[1]
-n_grid <- dim(g_post)[2]
-# g_global_post <- array(NA, dim = c(n_iter, n_grid, p))
-# for(v in 1:p) {
-#   col_indices <- ((v - 1) * n_seasons + 1):(v * n_seasons)
-#   g_global_post[, , v] <- apply(g_post[, , col_indices], c(1, 2), mean)
-# }
-
-g_4d <- array(g_post, dim = c(n_iter, n_grid, n_seasons, p))
-g_permuted <- aperm(g_4d, c(3, 1, 2, 4))
-g_global_post <- colMeans(g_permuted, dims = 1)
-global.mean <- apply(g_global_post, c(2, 3), mean)
-global.q1   <- apply(g_global_post, c(2, 3), quantile, prob=0.05)
-global.q2   <- apply(g_global_post, c(2, 3), median)
-global.q3   <- apply(g_global_post, c(2, 3), quantile, prob=0.95)
 
 
+
+
+gsmooth_samples <- posterior$gridgsmooth 
+summed_effects_list <- list()
+
+for (j in 1:p) {
+  col_indices <- ((j-1) * 4 + 1) : (j * 4)
+  if(length(col_indices) > 1) {
+    var_j_summed <- apply(gsmooth_samples[, , col_indices], c(1, 2), sum)
+  } else {
+    var_j_summed <- gsmooth_samples[, , col_indices]
+  }
+  
+  # Calculate summary statistics for the summed effect
+  summed_effects_list[[j]] <- data.frame(
+    x = newx,
+    covariate = paste0("g", j),
+    q2 = apply(var_j_summed, 2, median),
+    q1 = apply(var_j_summed, 2, quantile, probs = 0.05),
+    q3 = apply(var_j_summed, 2, quantile, probs = 0.95)
+  )
+}
+
+# 3. Concatenate them in order
+df.smooth <- do.call(rbind, summed_effects_list)
 
 
 data.smooth <- data.frame("x"=newx,
-                          "true" =df_true_smooth$global,
-                          "post.mean" = as.vector(g.smooth.mean),
-                          "q1" = as.vector(g.smooth.q1),
-                          "q2" = as.vector(g.smooth.q2),
-                          "q3" = as.vector(g.smooth.q3),
+                          "true" =df_true_smooth$global[1:(n*p)],
+                          "q2"        = df.smooth$q2,
+                          "q1"        = df.smooth$q1,
+                          "q3"        = df.smooth$q3,
                           "covariates" = gl(p, n, (p*n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]")),
-                          "fakelab" = rep(1, (p*n)),
                           "replicate" = gl(p, n, (p*n), labels = c("x[1]", "x[2]", "x[3]", "x[4]", "x[5]")))
 
 ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) + 
@@ -641,7 +687,6 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
   geom_line(aes(y=true, colour = "True"), linewidth=2, linetype=2) + 
   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1.5) + 
-  # geom_line(aes(y=post.mean, colour = "Posterior Median"), linewidth=1.8) + 
   ylab("") + xlab(expression(c)) +
   facet_grid(covariates ~ ., scales = "free_x", switch = "y", 
               labeller = label_parsed) + 
