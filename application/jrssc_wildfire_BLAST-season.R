@@ -483,6 +483,51 @@ model {
 
 generated quantities {
   matrix[n, n_seasons] alphaseason;
+  vector[n] gridalpha;
+  vector[n] log_lik;
+  
+  // New dimensions based on your request
+  matrix[n, p] gridgsmooth;               // Combined seasonal effects per covariate
+  matrix[n, p * n_seasons] gsmoothseason; // Individual season-specific smooths
+  
+  vector[p * n_seasons] theta_origin = theta ./ X_sd;
+  gridgsmooth = rep_matrix(0.0, n, p);
+  for (j in 1:p) {
+    for (s in 1:n_seasons) {
+      int lin_idx = (j-1) * n_seasons + s;
+      int nl_start = (lin_idx-1) * psi + 1;
+      
+      // Compute the specific seasonal effect (linear + non-linear)
+      gsmoothseason[, lin_idx] = col(xholderLinear, lin_idx) * theta_origin[lin_idx] 
+                               + block(xholderNonlinear, 1, nl_start, n, psi) * gamma[j,s];
+      
+      // Aggregate the seasonal effect into the global covariate matrix
+      gridgsmooth[, j] += gsmoothseason[, lin_idx];
+    }
+  }
+
+  vector[n] grid_vec = rep_vector(theta0, n);
+  
+  for (s in 1:n_seasons) {
+    vector[n] current_season_pred = rep_vector(theta0, n);
+    for (j in 1:p) {
+      int lin_idx = (j-1) * n_seasons + s;
+      current_season_pred += gsmoothseason[, lin_idx];
+    }
+    alphaseason[, s] = exp(current_season_pred);
+  }
+
+  for (j in 1:p) {
+    grid_vec += gridgsmooth[, j];
+  }
+  gridalpha = exp(grid_vec);
+  for (i in 1:n) {
+    log_lik[i] = pareto_lpdf(y[i] | u[i], alpha[i]);
+  }
+}
+
+generated quantities {
+  matrix[n, n_seasons] alphaseason;
   // matrix[n, n_seasons] gridalpha;
   vector[n] log_lik;
   matrix[n, p * n_seasons] gridgl;  // Linear component

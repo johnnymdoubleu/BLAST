@@ -23,35 +23,49 @@ x.season <- time.seq / period
 
 # Convert continuous season to Factor for the 'by' argument
 season_code_full <- cut((time.seq%% period / period), breaks = c(-0.1, 0.25, 0.5, 0.75, 1.1), labels = c(1,2,3,4))
-
+seasons <- c("Winter", "Spring", "Summer", "Autumn")
 f.season.scale <- function(x) {
   return(1.5  - 0.8 * sin(2 * pi * x) - .6 * cos(2 * pi * x)) 
 }
 
-x.random <- exp(matrix(rnorm(n*p, sd=0.5), ncol = p) %*% chol(C))
-x.origin <- cbind(x.random + f.season.scale(x.season), x.season)
+x.random <- pnorm(matrix(rnorm(n*p, sd=0.5), ncol = p) %*% chol(C) + f.season.scale(x.season))
+x.origin <- cbind(x.random, season_code_full)
 # plot(x.origin[,1])
 covariates <- colnames(data.frame(x.origin))[1:p] 
 
-theta0.origin <- 0.4 # Global Intercept
+x.linear <- matrix(0, nrow = n, ncol = p * 4)
+col_names <- c()
+
+for (j in 1:p) {
+  for (s in 1:4) {
+    idx <- (j - 1) * 4 + s
+    # Only keep the covariate value for the active season
+    mask <- as.numeric(season_code_full == s)
+    x.linear[, idx] <- x.origin[, j] * mask
+    col_names <- c(col_names, paste0("V", j, "_S", s))
+  }
+}
+colnames(x.linear) <- col_names
+
+theta0.origin <- 0.2 # Global Intercept
 
 theta.linear.origin <- matrix(c(
   # S1,   S2,   S3,   S4
-   0.0,  0.0,  0.0,  0.0,  # X1: Linear effect gets stronger throughout the year
-   0.2,  0.4,  0.6,  0.8,  # X2: Linear base is 0 (will have non-linear effects)
-   0.3,  0.3,  0.3,  0.3,  # X3: Constant negative effect across all seasons
-   0.0,  0.5,  0.0,  0.0,  # X4: Only active in Season 2 (Spring)
+   0.0,  0.0,  0.0,  0.0,  # X1: Pure noise, completely 0 everywhere
+   0.2,  0.2,  0.2,  0.2,  # X2: Linear effect gets stronger throughout the year
+   0.3,  0.3,  -0.3,  -0.3,  # X3: Constant negative effect across all seasons
+   0.0,  0.0,  -0.5,  -0.5,  # X4: Only active in Summer & Autumn in linear base
    0.0,  0.0,  0.0,  0.0   # X5: Pure noise, completely 0 everywhere
 ), nrow = p, ncol = 4, byrow = TRUE)
 
-f2 <- function(x) { 0.5 * sin(2 * pi * x^2) * x }
-f3 <- function(x) { -0.6 * cos(3 * pi * x^2) * x }
+f2 <- function(x) { .2 * sin(2 * pi * x^2) * x }
+f3 <- function(x) { -.2 * cos(3 * pi * x^2) * x}
 alp.linear.predictor <- rep(theta0.origin, n)
 
 for (i in 1:n) {
   s <- as.numeric(season_code_full[i])
-  x_vec <- x.origin[i, 1:p]
-  alp.linear.predictor[i] <- alp.linear.predictor[i] + sum(x_vec * theta.linear.origin[, s])
+  x_vec <- x.origin[,c(1:p)]  
+  alp.linear.predictor[i] <- alp.linear.predictor[i] + sum(x.linear[i, ] * theta.linear.origin[, s])
   alp.linear.predictor[i] <- alp.linear.predictor[i] + f2(x_vec[2])
   alp.linear.predictor[i] <- alp.linear.predictor[i] + f3(x_vec[3])
 }
@@ -82,6 +96,8 @@ u.vec <- (predict(ald.cov.fit)$location)
 
 excess.index <- which(y.origin > u.vec)
 x.origin <- x.origin[excess.index,]
+
+
 y.origin <- y.origin[excess.index]
 u <- u.vec[excess.index]
 season_code_full <- season_code_full[excess.index]
@@ -102,6 +118,19 @@ xholder <- do.call(cbind, lapply(1:p, function(j) {newx}))
 x.origin <- data.frame(x.origin)
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 x.scaled <- sapply(x.origin[,c(1:p)], FUN = range01)
+# x.scaled <- x.origin
+x.linear <- matrix(0, nrow = n, ncol = p * 4)
+col_names <- c()
+for (j in 1:p) {
+  for (s in 1:4) {
+    idx <- (j - 1) * 4 + s
+    mask <- as.numeric(season_code_full == s)
+    x.linear[, idx] <- x.scaled[, j] * mask
+    col_names <- c(col_names, paste0("V", j, "_S", s))
+  }
+}
+colnames(x.linear) <- col_names
+
 x.minmax <- sapply(x.origin[,c(1:p)], function(x) max(x)-min(x))
 x.min <- sapply(x.origin[,c(1:p)], function(x) min(x))
 
@@ -171,8 +200,6 @@ for (i in seq_along(covariates)) {
 
 bs.linear <- do.call(cbind, linear_basis_list) 
 bs.nonlinear <- do.call(cbind, nonlinear_basis_list)
-
-# Z_scales <- rep(1, ncol(bs.nonlinear)) 
 # bs.linear_check <- cbind(rep(1,n), bs.linear)
 # cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear_check[,c(1,2,3,4,5)]) %*% bs.nonlinear[,c((1):(4*psi))]), "\n")
 # cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear_check[,c(1,6,7,8,9)]) %*% bs.nonlinear[,c((4*(psi+1)):(4*(psi*2)))]), "\n")
@@ -205,8 +232,8 @@ for (i in seq_along(covariates)) {
       season_code_full = factor(season_label, levels = levels(season_code_full))
     )
     
-    X_raw_grid <- PredictMat(params$sm_spec, pred_df)
-    Z_spectral_grid <- X_raw_grid %*% params$U_pen %*% params$Lambda_sqrt_inv
+    X_grid.vals <- PredictMat(params$sm_spec, pred_df)
+    Z_spectral_grid <- X_grid.vals %*% params$U_pen %*% params$Lambda_sqrt_inv
     intercept_grid <- rep(1, length(grid.vals))
     slope_grid     <- grid.vals
     X_lin_grid_local <- cbind(intercept_grid, slope_grid)
@@ -248,7 +275,6 @@ for (j in 1:p) {
     lin_idx <- (j - 1) * 4 + s
     col_name <- paste0("V", j, "_S_", s)
     x_grid <- raw_grid_list[[col_name]]
-    # print(c(lin_idx, j, s))
     g_l <- theta.adjusted.mat[j, s] * x_grid
     g_nl <- rep(0, n)
     if (j == 2) {
@@ -263,6 +289,7 @@ for (j in 1:p) {
 }
 
 true_gridalpha <- exp(theta0.adjusted + rowSums(true_gridgsmooth))
+plot(true_gridalpha)
 df_true_gridgsmooth <- do.call(rbind, lapply(1:p, function(j) {
   data.frame(
     x_index = seq(0, 1, length.out = n), 
@@ -644,7 +671,7 @@ data.alpha <- data.frame("x" = newx,
                           "q1" = alpha.q1,
                           "q2" = alpha.q2,
                           "q3" = alpha.q3)
-seasons <- c("Winter", "Spring", "Summer", "Autumn")
+
 
 grid.plts <- list()
 for(i in 1:4){
