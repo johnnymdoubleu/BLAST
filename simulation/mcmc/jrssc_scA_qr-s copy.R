@@ -9,7 +9,7 @@ library(qqboxplot)
 library(evgam)
 
 # set.seed(1001)
-n <- 10000
+n <- 5000
 psi <- 10
 threshold <- 0.95
 p <- 5
@@ -28,9 +28,15 @@ f.season.scale <- function(x) {
   return(1.5  - 0.8 * sin(2 * pi * x) - .6 * cos(2 * pi * x)) 
 }
 
-x.random <- pnorm(matrix(rnorm(n*p, sd=0.5), ncol = p) %*% chol(C) + f.season.scale(x.season))
+# x.random <- pnorm(matrix(rnorm(n*p, sd=0.5), ncol = p) %*% chol(C) + f.season.scale(x.season))
+x_raw <- matrix(rnorm(n*p, sd=0.5), ncol = p) %*% chol(C)
+for(j in 1:p) {
+  # Phase shift each covariate slightly so they aren't identical
+  x_raw[,j] <- x_raw[,j] + 0.8 - 0.8 * sin(2 * pi * x.season + (j*0.2)) 
+}
+x.random <- 1-pnorm(x_raw)
 x.origin <- cbind(x.random, season_code_full)
-# plot(x.origin[,1])
+plot(x.origin[,3])
 covariates <- colnames(data.frame(x.origin))[1:p] 
 
 x.linear <- matrix(0, nrow = n, ncol = p * 4)
@@ -39,7 +45,6 @@ col_names <- c()
 for (j in 1:p) {
   for (s in 1:4) {
     idx <- (j - 1) * 4 + s
-    # Only keep the covariate value for the active season
     mask <- as.numeric(season_code_full == s)
     x.linear[, idx] <- x.origin[, j] * mask
     col_names <- c(col_names, paste0("V", j, "_S", s))
@@ -52,24 +57,32 @@ theta0.origin <- 0.2 # Global Intercept
 theta.linear.origin <- matrix(c(
   # S1,   S2,   S3,   S4
    0.0,  0.0,  0.0,  0.0,  # X1: Pure noise, completely 0 everywhere
-   0.2,  0.2,  0.2,  0.2,  # X2: Linear effect gets stronger throughout the year
+   0.8,  0.6,  0.2,  0.4,  # X2: Linear effect gets stronger throughout the year
    0.3,  0.3,  -0.3,  -0.3,  # X3: Constant negative effect across all seasons
    0.0,  0.0,  -0.5,  -0.5,  # X4: Only active in Summer & Autumn in linear base
    0.0,  0.0,  0.0,  0.0   # X5: Pure noise, completely 0 everywhere
 ), nrow = p, ncol = 4, byrow = TRUE)
 
-f2 <- function(x) { .2 * sin(2 * pi * x^2) * x }
-f3 <- function(x) { -.2 * cos(3 * pi * x^2) * x}
-alp.linear.predictor <- rep(theta0.origin, n)
+f2 <- function(x) { .5 * sin(2 * pi * x^2) * x }
+f3 <- function(x) { -.5 * cos(3 * pi * x^2) * x}
+# alp.linear.predictor <- rep(theta0.origin, n)
 
-for (i in 1:n) {
-  s <- as.numeric(season_code_full[i])
-  x_vec <- x.origin[,c(1:p)]  
-  alp.linear.predictor[i] <- alp.linear.predictor[i] + sum(x.linear[i, ] * theta.linear.origin[, s])
-  alp.linear.predictor[i] <- alp.linear.predictor[i] + f2(x_vec[2])
-  alp.linear.predictor[i] <- alp.linear.predictor[i] + f3(x_vec[3])
-}
+# for (i in 1:n) {
+#   # s <- as.numeric(season_code_full[i])
+#   x_vec <- x.origin[i,c(1:p)]  
+#   alp.linear.predictor[i] <- alp.linear.predictor[i] + sum(x.linear[i, ] * c(t(theta.linear.origin)))
+#   alp.linear.predictor[i] <- alp.linear.predictor[i] + f2(x_vec[2])
+#   alp.linear.predictor[i] <- alp.linear.predictor[i] + f3(x_vec[3])
+# }
 
+# Flatten the coefficients exactly as you did
+# theta_flat <- c(t(theta.linear.origin))
+
+# Vectorized DGP (No loop needed!)
+alp.linear.predictor <- (rep(theta0.origin, n) + 
+                        as.vector(x.linear %*% c(t(theta.linear.origin))) + 
+                        f2(x.origin[, 2]) + 
+                        f3(x.origin[, 3]))
 alp.origin <- exp(alp.linear.predictor)
 
 # theta.origin <- c(0.4, 0, 0.1, 0.8, 0, 0) # Coefs for 5 random vars + intercept
@@ -210,7 +223,7 @@ bs.nonlinear <- do.call(cbind, nonlinear_basis_list)
 grid_linear_list <- list()
 grid_nonlinear_list <- list()
 raw_grid_list <- list()
-
+grid_n <- 200
 for (i in seq_along(covariates)) {
   var_name <- covariates[i]
   global.min <- x.min[i]
@@ -222,7 +235,7 @@ for (i in seq_along(covariates)) {
     raw_season_vals <- x.origin[season_idx, i]
     season_min <- min(raw_season_vals, na.rm = TRUE)
     season_max <- max(raw_season_vals, na.rm = TRUE)
-    raw_grid <- seq(season_min, season_max, length.out = n)
+    raw_grid <- seq(season_min, season_max, length.out = grid_n)
     raw_grid_list[[lin_col_name]] <- raw_grid
     grid.vals <- (raw_grid - global.min) / global.range
     grid_linear_list[[lin_col_name]] <- matrix(grid.vals, ncol=1, dimnames=list(NULL, lin_col_name))
@@ -267,8 +280,8 @@ for (s in 1:4) {
 }
 theta0.adjusted <- theta0.origin + (hidden_intercept_sum / n)
 
-true_gridgsmooth <- matrix(0, nrow = n, ncol = p)
-true_gsmoothseason <- matrix(0, nrow = n, ncol = p * 4)
+true_gridgsmooth <- matrix(0, nrow = grid_n, ncol = p)
+true_gsmoothseason <- matrix(0, nrow = grid_n, ncol = p * 4)
 
 for (j in 1:p) {
   for (s in 1:4) {
@@ -276,7 +289,7 @@ for (j in 1:p) {
     col_name <- paste0("V", j, "_S_", s)
     x_grid <- raw_grid_list[[col_name]]
     g_l <- theta.adjusted.mat[j, s] * x_grid
-    g_nl <- rep(0, n)
+    g_nl <- rep(0, grid_n)
     if (j == 2) {
       g_nl <- f2(x_grid) - (hidden_funcs[[s]]$f2$intercept + hidden_funcs[[s]]$f2$slope * x_grid)
     } 
@@ -292,16 +305,16 @@ true_gridalpha <- exp(theta0.adjusted + rowSums(true_gridgsmooth))
 plot(true_gridalpha)
 df_true_gridgsmooth <- do.call(rbind, lapply(1:p, function(j) {
   data.frame(
-    x_index = seq(0, 1, length.out = n), 
+    x_index = seq(0, 1, length.out = grid_n), 
     y = true_gridgsmooth[, j],
     variable = paste0("Covariate_", j)
   )
 }))
 
-true_alphaseason <- matrix(0, nrow = n, ncol = 4)
+true_alphaseason <- matrix(0, nrow = grid_n, ncol = 4)
 
 for (s in 1:4) {
-  current_season_pred <- rep(theta0.adjusted, n)
+  current_season_pred <- rep(theta0.adjusted, grid_n)
   for (j in 1:p) {
     lin_idx <- (j - 1) * 4 + s
     current_season_pred <- current_season_pred + true_gsmoothseason[, lin_idx]
@@ -312,7 +325,7 @@ for (s in 1:4) {
 
 df_true_alphaseason <- do.call(rbind, lapply(1:4, function(s) {
   data.frame(
-    x_index = seq(0, 1, length.out = n), 
+    x_index = seq(0, 1, length.out = grid_n), 
     alpha = true_alphaseason[, s],
     season = seasons[s]
   )
@@ -324,13 +337,14 @@ bs.linear <- scale(bs.linear, center = FALSE, scale = X_sd)
 model.stan <- "// Stan model for BLAST Pareto Samples
 data {
   int <lower=1> n; // Sample size
+  int <lower=1> grid_n;
   int <lower=1> p; // regression coefficient size
   int <lower=1> psi; // splines coefficient size
   int <lower=1> n_seasons;
   matrix[n, (p*n_seasons)] bsLinear; // fwi dataset
   matrix[n, (psi*p*n_seasons)] bsNonlinear; // thin plate splines basis
-  matrix[n, (p*n_seasons)] xholderLinear; // fwi dataset
-  matrix[n, (psi*p*n_seasons)] xholderNonlinear; // thin plate splines basis
+  matrix[grid_n, (p*n_seasons)] xholderLinear; // fwi dataset
+  matrix[grid_n, (psi*p*n_seasons)] xholderNonlinear; // thin plate splines basis
   vector[n] u; // large threshold value
   vector[n] y; // extreme response
   real <lower=0> atau;
@@ -361,7 +375,7 @@ transformed parameters {
         
         for (k in 1:psi){
           int flat_idx = nl_start + k - 1;
-          gamma[j,s][k] = gamma_raw[j,s][k] * sqrt(tau[j,s]) * Z_scales[flat_idx];
+          gamma[j,s][k] = gamma_raw[j,s][k] * sqrt(tau[j,s]); // * Z_scales[flat_idx]
         }
         alpha += col(bsLinear, lin_idx) * theta[lin_idx];
         alpha += block(bsNonlinear, 1, nl_start, n, psi) * gamma[j,s];
@@ -388,36 +402,39 @@ model {
 }
 
 generated quantities {
-  matrix[n, n_seasons] alphaseason;
-  // vector[n] gridalpha;
+  matrix[grid_n, n_seasons] alphaseason;
+  vector[grid_n] gridalpha;
   vector[n] log_lik;
-  // matrix[n, p] gridgsmooth;               // Combined seasonal effects per covariate
-  matrix[n, p * n_seasons] gsmoothseason; // Individual season-specific smooths
+  matrix[grid_n, p] gridgsmooth;               // Combined seasonal effects per covariate
+  matrix[grid_n, p * n_seasons] gsmoothseason; // Individual season-specific smooths
 
   vector[p * n_seasons] theta_origin = theta ./ X_sd;
-  // gridgsmooth = rep_matrix(0.0, n, p);
-  // vector[n] grid_vec = rep_vector(theta0, n);
-  for (j in 1:p) {
-    for (s in 1:n_seasons) {
-      int lin_idx = (j-1) * n_seasons + s;
-      int nl_start = (lin_idx-1) * psi + 1;
-      gsmoothseason[, lin_idx] = col(xholderLinear, lin_idx) * theta_origin[lin_idx] 
-                               + block(xholderNonlinear, 1, nl_start, n, psi) * gamma[j,s];
-      // gridgsmooth[, j] += gsmoothseason[, lin_idx];
-    }
-    // grid_vec += gridgsmooth[, j];
-  }
-  // gridalpha = exp(grid_vec);
+  gridgsmooth = rep_matrix(0.0, grid_n, p);
 
-  for (s in 1:n_seasons) {
-    vector[n] current_season_pred = rep_vector(theta0, n);
+  {
+    vector[grid_n] grid_vec = rep_vector(theta0, grid_n);
     for (j in 1:p) {
-      int lin_idx = (j-1) * n_seasons + s;
-      current_season_pred += gsmoothseason[, lin_idx];
+      for (s in 1:n_seasons) {
+        int lin_idx = (j-1) * n_seasons + s;
+        int nl_start = (lin_idx-1) * psi + 1;
+        gsmoothseason[, lin_idx] = col(xholderLinear, lin_idx) * theta_origin[lin_idx] 
+                                + block(xholderNonlinear, 1, nl_start, grid_n, psi) * gamma[j,s];
+        gridgsmooth[, j] += gsmoothseason[, lin_idx];
+      }
+      grid_vec += gridgsmooth[, j];
     }
-    alphaseason[, s] = exp(current_season_pred);
+    gridalpha = exp(grid_vec);
   }
-
+  {
+    for (s in 1:n_seasons) {
+      vector[grid_n] current_season_pred = rep_vector(theta0, grid_n);
+      for (j in 1:p) {
+        int lin_idx = (j-1) * n_seasons + s;
+        current_season_pred += gsmoothseason[, lin_idx];
+      }
+      alphaseason[, s] = exp(current_season_pred);
+    }
+  }
   for (i in 1:n) {
     log_lik[i] = pareto_lpdf(y[i] | u[i], alpha[i]);
   }
@@ -572,10 +589,10 @@ theta.q3 <- theta.samples[,6]
 # g.nonlinear.q1 <- as.vector(matrix(newgnl.samples[,4], nrow = n, byrow=TRUE))
 # g.nonlinear.q2 <- as.vector(matrix(newgnl.samples[,5], nrow = n, byrow=TRUE))
 # g.nonlinear.q3 <- as.vector(matrix(newgnl.samples[,6], nrow = n, byrow=TRUE))
-g.smooth.mean <- as.vector(matrix(newgsmooth.samples[,1], nrow = n, byrow=TRUE))
-g.smooth.q1 <- as.vector(matrix(newgsmooth.samples[,4], nrow = n, byrow=TRUE))
-g.smooth.q2 <- as.vector(matrix(newgsmooth.samples[,5], nrow = n, byrow=TRUE))
-g.smooth.q3 <- as.vector(matrix(newgsmooth.samples[,6], nrow = n, byrow=TRUE))
+# g.smooth.mean <- as.vector(matrix(newgsmooth.samples[,1], nrow = n, byrow=TRUE))
+# g.smooth.q1 <- as.vector(matrix(newgsmooth.samples[,4], nrow = n, byrow=TRUE))
+# g.smooth.q2 <- as.vector(matrix(newgsmooth.samples[,5], nrow = n, byrow=TRUE))
+# g.smooth.q3 <- as.vector(matrix(newgsmooth.samples[,6], nrow = n, byrow=TRUE))
 
 
 est_alphaseason_median  <- apply(posterior$alphaseason, c(2, 3), median)
@@ -585,7 +602,7 @@ est_alphaseason_upper <- apply(posterior$alphaseason, c(2, 3), quantile, probs =
 # Format into a plotting dataframe
 df_est_alphaseason <- do.call(rbind, lapply(1:4, function(s) {
   data.frame(
-    x_index = seq(0, 1, length.out = n),
+    x_index = seq(0, 1, length.out = grid_n),
     alpha_est = est_alphaseason_median[, s],
     lower_ci = est_alphaseason_lower[, s],
     upper_ci = est_alphaseason_upper[, s],
@@ -596,11 +613,10 @@ plot_data_alphaseason <- merge(df_est_alphaseason, df_true_alphaseason, by = c("
 
 grid.plts <- list()
 for(i in 1:4){
-  grid.plt <- ggplot(plot_data_alphaseason[((((i-1)*n)+1):(i*n)),], aes(x = x_index)) +
+  grid.plt <- ggplot(plot_data_alphaseason[((((i-1)*grid_n)+1):(i*grid_n)),], aes(x = x_index)) +
           geom_ribbon(aes(ymin = lower_ci, ymax = upper_ci), fill = "steelblue", alpha = 0.3) +
-          geom_line(aes(y = alpha_est, color = "Estimated (Posterior Mean)"), linewidth = 1) +
-          geom_line(aes(y = alpha, color = "True (DGP)"), linewidth = 1, linetype = "dashed") +
-          scale_color_manual(values = c("Estimated (Posterior Mean)" = "steelblue", "True (DGP)" = "red")) +
+          geom_line(aes(y = alpha_est), color = "steelblue", linewidth = 1) +
+          geom_line(aes(y = alpha), color = "red", linewidth = 1, linetype = "dashed") +
           labs(
             x = seasons[i],
             y = expression(alpha(c,ldots,c))
@@ -618,87 +634,6 @@ for(i in 1:4){
 final_plot <- patchwork::wrap_plots(grid.plts, nrow = 2, ncol = 2)
 print(final_plot)
 
-
-# 2. Extract summary from Stan (already contains all seasons concatenated)
-# Stan orders these by Season 1, then Season 2, etc., based on your alphaseason matrix
-alpha_sum <- as.data.frame(season.samples)
-alpha.mean <- as.vector(matrix(season.samples[,1], nrow = n, byrow=TRUE))
-alpha.q1 <- as.vector(matrix(season.samples[,4], nrow = n, byrow=TRUE))
-alpha.q2 <- as.vector(matrix(season.samples[,5], nrow = n, byrow=TRUE))
-alpha.q3 <- as.vector(matrix(season.samples[,6], nrow = n, byrow=TRUE))
-grid.plts <- list()
-current_start <- 1
-
-for(i in 1:length(season_names)){
-  n_seas <- season_counts[i]
-  current_end <- current_start + n_seas - 1
-  
-  plot_df <- data.frame(
-    x = newx, # Mapping to a 0-1 grid for the plot
-    true = true_gridalpha[((((i-1)*n)+1):(i*n))],
-    q2 = alpha.q2[((((i-1)*n)+1):(i*n))],
-    q1 = alpha.q1[((((i-1)*n)+1):(i*n))],
-    q3 = alpha.q3[((((i-1)*n)+1):(i*n))]
-  )
-  
-  grid.plt <- ggplot(plot_df, aes(x=x)) + 
-    geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
-    geom_line(aes(y=true), color = "red", linewidth=1, linetype=2) + 
-    geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
-    ylab(expression(alpha(c,ldots,c))) + 
-    xlab(labels_pretty[i]) +
-    scale_fill_manual(values=c("steelblue"), name = "") + 
-    scale_color_manual(values=c("steelblue")) +
-    theme_minimal(base_size = 20) +
-    theme(legend.position = "none",
-          plot.title = element_text(hjust = 0.5, face = "bold"),
-          axis.text = element_text(size = 18),
-          axis.title.x = element_text(size = 22))
-  grid.plts <- list()
-  grid.plts[[i]] <- grid.plt
-  current_start <- current_end + 1
-}
-
-final_plot <- patchwork::wrap_plots(grid.plts, nrow = 2, ncol = 2)
-print(final_plot)
-
-
-
-
-data.alpha <- data.frame("x" = newx,
-                          "true" = df_true_alphaseason$alpha,
-                          "post.mean" = alpha.mean,
-                          "q1" = alpha.q1,
-                          "q2" = alpha.q2,
-                          "q3" = alpha.q3)
-
-
-grid.plts <- list()
-for(i in 1:4){
-  grid.plt <- ggplot(data = data.frame(data.alpha[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + 
-                  # geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
-                  geom_line(aes(y=true), color = "red", linewidth=1, linetype=2) + 
-                  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
-                  ylab(expression(alpha(c,ldots,c))) + xlab(seasons[i]) +
-                  scale_fill_manual(values=c("steelblue"), name = "") + 
-                  scale_color_manual(values=c("steelblue")) +
-                  theme_minimal(base_size = 20) +
-                  theme(legend.position = "none",
-                        plot.margin = margin(5, 5, 5, 5),
-                        plot.title = element_text(hjust = 0.5, face = "bold"),
-                        axis.text = element_text(size = 18),
-                        axis.title.x = element_text(size = 22))
-  grid.plts[[i]] <- grid.plt
-}
-
-# marrangeGrob(grobs = grid.plts, nrow = 2, ncol = 2)
-final_plot <- patchwork::wrap_plots(grid.plts, nrow = 2, ncol = 2)
-print(final_plot)
-
-
-
-
-
 gsmooth_samples <- posterior$gridgsmooth 
 summed_effects_list <- list()
 
@@ -709,8 +644,7 @@ for (j in 1:p) {
   } else {
     var_j_summed <- gsmooth_samples[, , col_indices]
   }
-  
-  # Calculate summary statistics for the summed effect
+
   summed_effects_list[[j]] <- data.frame(
     x = newx,
     covariate = paste0("g", j),
@@ -725,7 +659,7 @@ df.smooth <- do.call(rbind, summed_effects_list)
 
 
 data.smooth <- data.frame("x"=newx,
-                          "true" =df_true_smooth$global[1:(n*p)],
+                          "true" =df_true_smooth$global[1:(grid_n*p)],
                           "q2"        = df.smooth$q2,
                           "q1"        = df.smooth$q1,
                           "q3"        = df.smooth$q3,

@@ -312,40 +312,20 @@ for (i in seq_along(covariates)) {
   # 1. Global Constants (for scaling back to model units)
   global_min <- fwi.min[i]
   global_range <- fwi.minmax[i]
-  
-  # Determine how many points you want in your grid (matching original fwi.grid size)
   grid_len <- nrow(fwi.grid)
-  
-  # Note: We do NOT calculate x_vals_raw here anymore because it must be season-specific.
 
   for (season_label in names(model_data[[var_name]])) {
     params <- model_data[[var_name]][[season_label]]
     lin_col_name <- paste(var_name, "S", season_label, sep="_")
-    
-    # --- NEW LOGIC START ---
-    
-    # A. Identify the season indices in the ORIGINAL data
     season_idx <- which(season_code_full == season_label)
-    
-    # B. Get the observed range for this specific season
     raw_season_vals <- fwi.origin[season_idx, i]
     season_min <- min(raw_season_vals, na.rm = TRUE)
     season_max <- max(raw_season_vals, na.rm = TRUE)
-    
-    # C. Generate a sequence specifically for this season
     x_vals_raw <- seq(season_min, season_max, length.out = grid_len)
     
-    # D. Scale to Global [0, 1] (Model Space)
     x_vals_scaled <- (x_vals_raw - global_min) / global_range
-    
-    # --- NEW LOGIC END ---
-    
-    # 2. Re-create the Linear Basis Matrix for Orthogonalization 
-    # (Must be done INSIDE the loop now, as x_vals_scaled changes)
     X_lin_grid_local <- cbind(rep(1, length(x_vals_scaled)), x_vals_scaled)
 
-    # 3. Store Linear Part (Raw Value - Global Min)
-    # This aligns with your 'sweep' logic later
     grid_linear_flat[[lin_col_name]] <- matrix((x_vals_raw - global_min), ncol=1, dimnames=list(NULL, lin_col_name))
     
     grid_df <- data.frame(
@@ -353,7 +333,6 @@ for (i in seq_along(covariates)) {
       season_code_full = factor(season_label, levels = levels(season_code_full))
     )
     
-    # 4. Projection & Orthogonalization
     X_raw_grid <- PredictMat(params$sm_spec, grid_df)
     Z_spectral_grid <- X_raw_grid %*% params$U_pen %*% params$Lambda_sqrt_inv
     
