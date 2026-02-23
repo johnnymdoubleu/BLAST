@@ -8,14 +8,12 @@ library(qqboxplot)
 # library(qgam)
 library(evgam)
 
-# set.seed(1001)
-n <- 10000
+n <- 5000
 psi <- 10
 threshold <- 0.95
 p <- 5
-# C <- matrix(0.2, nrow = p, ncol = p)
-# diag(C) <- 1
 C <- diag(p)
+psi <- psi - 2
 
 time.seq <- 1:n
 period <- 365 
@@ -24,12 +22,8 @@ x.season <- time.seq / period
 # Convert continuous season to Factor for the 'by' argument
 season_code_full <- cut((time.seq%% period / period), breaks = c(-0.1, 0.25, 0.5, 0.75, 1.1), labels = c(1,2,3,4))
 seasons <- c("Winter", "Spring", "Summer", "Autumn")
-f.season.scale <- function(x) {
-  return(1.5  - 0.8 * sin(2 * pi * x) - .6 * cos(2 * pi * x)) 
-}
 
-# x.random <- pnorm(matrix(rnorm(n*p, sd=0.5), ncol = p) %*% chol(C) + f.season.scale(x.season))
-x_raw <- matrix(rnorm(n*p, sd=0.5), ncol = p) %*% chol(C)
+x_raw <- matrix(rnorm(n*p), ncol = p) %*% chol(C)
 for(j in 1:p) {
   x_raw[,j] <- x_raw[,j] + 0.8 - 0.8 * sin(2 * pi * x.season) + (j*0.2) 
 }
@@ -37,52 +31,67 @@ x.random <- 1-pnorm(x_raw)
 x.origin <- cbind(x.random, season_code_full)
 plot(x.origin[,3])
 covariates <- colnames(data.frame(x.origin))[1:p] 
-
-x.linear <- matrix(0, nrow = n, ncol = p * 4)
-col_names <- c()
-
-for (j in 1:p) {
-  for (s in 1:4) {
-    idx <- (j - 1) * 4 + s
-    mask <- as.numeric(season_code_full == s)
-    x.linear[, idx] <- x.origin[, j] * mask
-    col_names <- c(col_names, paste0("V", j, "_S", s))
+x.linear <- c()
+for (i in seq_along(covariates)) {
+  x_vec <- x.origin[, i]
+  for (j in 1:4) {
+    season_label <- levels(season_code_full)[j]
+    mask <- as.numeric(season_code_full == season_label)
+    vec_intercept <- mask
+    vec_slope <- x_vec * mask
+    x.linear <- cbind(x.linear, matrix(vec_slope, ncol = 1))
   }
 }
-colnames(x.linear) <- col_names
 
-theta0.origin <- 0.7 # Global Intercept
+# x.linear <- do.call(cbind, linear_basis_list)
 
+set.seed(7071)
+true.theta0 <- 0.7          # Increased baseline (was 0.7)
 theta.linear.origin <- matrix(c(
-  # S1,   S2,   S3,   S4
-   0.0,  0.0,  0.0,  0.0,  # X1: Pure noise, completely 0 everywhere
-   0.8,  0.6,  0.2,  0.4,  # X2: Linear effect gets stronger throughout the year
-   0.3,  0.3,  -0.3,  -0.3,  # X3: Constant negative effect across all seasons
-   0.0,  0.0,  -0.5,  -0.5,  # X4: Only active in Summer & Autumn in linear base
-   0.0,  0.0,  0.0,  0.0   # X5: Pure noise, completely 0 everywhere
+  # S1,    S2,    S3,    S4
+   0.0,   0.0,   0.0,   0.0,   # X1: Noise
+   0.8,   0.6,   0.4,   0.3,   # X2: Stronger slopes (was 0.2,0.15,0.05,0.1)
+   0.4,   0.4,  -0.2,  -0.2,   # X3: Stronger effects (was 0.1,0.1,-0.05,-0.05)
+   0.0,   0.0,  -0.6,  -0.6,   # X4: Stronger Summer drop (was -0.15)
+   0.0,   0.0,   0.0,   0.0    # X5: Noise
 ), nrow = p, ncol = 4, byrow = TRUE)
 
-f2 <- function(x) { 3 * sin(2 * pi * x^2) * x^3}
-f3 <- function(x) { -3 * cos(3 * pi * x^2) * x^2}
+true.theta <- c(t(theta.linear.origin))
 
-alp.linear.predictor <- (rep(theta0.origin, n) + 
-                        as.vector(x.linear %*% c(t(theta.linear.origin))) + 
-                        f2(x.origin[, 2]) + 
-                        f3(x.origin[, 3]))
-alp.origin <- exp(alp.linear.predictor)
+# =====================================================
+# SCALED NONLINEAR FUNCTIONS (reduced amplitude)
+# =====================================================
+nl_func_X2 <- function(x) { 0.8 * sin(2 * pi * x) + 0.6 * (x - 0.5)^2 }  # Amplified (was 0.3,0.2)
+nl_func_X3 <- function(x) {-0.5 * cos(3 * pi * x) - 0.3 * x^3 }          # Amplified (was 0.15,0.1)
+true.theta <- c(t(theta.linear.origin))  # Keep linear parts
+eta <- rep(true.theta0, n) + as.vector(x.linear %*% true.theta)
+eta <- eta + nl_func_X2(x.origin[,2])
+eta <- eta + nl_func_X3(x.origin[,3])
+# mask_X2 <- gamma.mask[((2-1)*4*psi + 1) : (2*4*psi)] == 1  # Only X2 seasons 2,3
+# mask_X3 <- gamma.mask[((3-1)*4*psi + 1) : (3*4*psi)] == 1  # Only X3 seasons 2,3
 
-y.noise <- rPareto(n, rep(1,n), alpha = alp.origin)
+# # Apply nonlinear to relevant seasons (S2,S3 for X2/X3)
+# for(season in 2:3) {
+#   eta[mask_season] <- eta[mask_season] + nl_func_X2(x.origin[mask_season, 2])
+#   eta[mask_season] <- eta[mask_season] + nl_func_X3(x.origin[mask_season, 3])
+# }
+
+alp.origin <- exp(eta)
+y.noise <- rPareto(n, rep(1, n), alpha = alp.origin)
+f.season.scale <- function(x) {
+  return(1.5 - 0.8 * sin(2 * pi * x) - .6 * cos(2 * pi * x)) 
+}
 y.origin <- y.noise * f.season.scale(x.season)
 plot(y.origin)
 
 evgam.df <- data.frame(
-  y = log(y.origin),
+  y = (y.origin),
   sin.time = sin(2 * pi * time.seq / 365),
   cos.time = cos(2 * pi * time.seq / 365)
 )
 evgam.cov <- y ~ 1 + cos.time + sin.time
 ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
-u.vec <- exp(predict(ald.cov.fit)$location)
+u.vec <- (predict(ald.cov.fit)$location)
 
 excess.index <- which(y.origin > u.vec)
 x.origin <- x.origin[excess.index,]
@@ -91,226 +100,226 @@ u <- u.vec[excess.index]
 season_code_full <- season_code_full[excess.index]
 n <- length(y.origin)
 
-make.nl <- function(x, raw_y) {
-  fit <- lm(raw_y ~ x)
-  
-  return(list(
-    nl = residuals(fit), 
-    slope = coef(fit)[["x"]],
-    intercept = coef(fit)[["(Intercept)"]]
-  ))
-}
-
-newx <- seq(0,1,length.out = n)
-xholder <- do.call(cbind, lapply(1:p, function(j) {newx}))
 x.origin <- data.frame(x.origin)
-range01 <- function(x){(x-min(x))/(max(x)-min(x))}
-# x.scaled <- sapply(x.origin[,c(1:p)], FUN = range01)
-x.scaled <- x.origin
-x.linear <- matrix(0, nrow = n, ncol = p * 4)
-col_names <- c()
-for (j in 1:p) {
-  for (s in 1:4) {
-    idx <- (j - 1) * 4 + s
-    mask <- as.numeric(season_code_full == s)
-    x.linear[, idx] <- x.scaled[, j] * mask
-    col_names <- c(col_names, paste0("V", j, "_S", s))
-  }
-}
-colnames(x.linear) <- col_names
-
-x.minmax <- sapply(x.origin[,c(1:p)], function(x) max(x)-min(x))
-x.min <- sapply(x.origin[,c(1:p)], function(x) min(x))
 
 linear_basis_list <- list()
 nonlinear_basis_list <- list()
 model_data <- list() 
-Z_scales <- c()
-psi <- psi - 2
+
 for (i in seq_along(covariates)) {
   var_name <- covariates[i]
-  x_vec <- x.scaled[, i]
+  x_vec <- x.origin[, i]  # or full data for generation
   
   model_data[[var_name]] <- list() 
   sm_list <- smoothCon(mgcv::s(x_vec, by=season_code_full, bs = "tp", k = psi + 2), 
-                       data = data.frame(x_vec = x_vec, season_code_full = season_code_full), 
-                       knots = NULL)
+                       data = data.frame(x_vec = x_vec, season_code_full = season_code_full))
   
   for (j in 1:length(sm_list)) {
     season_label <- levels(season_code_full)[j]
     sm_spec <- sm_list[[j]] 
     mask <- as.numeric(season_code_full == season_label)
-    vec_intercept <- mask
-    vec_slope <- x_vec * mask
     
-    lin_col_name <- paste(var_name, "S", season_label, sep="_")
-    linear_basis_list[[lin_col_name]] <- matrix(vec_slope, ncol=1, dimnames=list(NULL, lin_col_name))
-    X_lin_local <- cbind(vec_intercept, vec_slope)
+    # FIXED QR: Subset to ACTIVE season rows only
+    mask_idx <- which(mask == 1)
+    x_vec_season <- x_vec[mask_idx]
+    X_lin_season <- cbind(rep(1, length(mask_idx)), x_vec_season)
     
-    qr_lin <- qr(X_lin_local)
-    Q_lin <- qr.Q(qr_lin)
-    R_lin <- qr.R(qr_lin)
+    qr_lin <- qr(X_lin_season)
+    
+    # Full matrices for spectral basis
     X_raw <- sm_spec$X
-    S     <- sm_spec$S[[1]] 
-    
+    S <- sm_spec$S[[1]] 
     eig <- eigen(S, symmetric = TRUE)
-    pos_idx <- which(eig$values > max(eig$values) * 1e-8)
+    pos_idx <- 1:psi  # Or adaptive for generation
     
-    if(length(pos_idx) == 0) next 
-    U_pen <- eig$vectors[, pos_idx]       
-    Lambda_pen <- diag(eig$values[pos_idx]) 
-    Lambda_sqrt_inv <- solve(sqrt(Lambda_pen))
+    U_pen <- eig$vectors[, pos_idx]      
+    Lambda_sqrt_inv <- diag(1/sqrt(eig$values[pos_idx]))
     Z_spectral <- X_raw %*% U_pen %*% Lambda_sqrt_inv
-    Gamma_Q <- t(Q_lin) %*% Z_spectral
-    Gamma_Original <- backsolve(R_lin, Gamma_Q)
-    Z_orth <- Z_spectral - X_lin_local %*% Gamma_Original
+    
+    # FIXED: Stable projection using SEASON-ONLY QR
+    Gamma_Original <- backsolve(qr.R(qr_lin), t(qr.Q(qr_lin)) %*% Z_spectral[mask_idx, , drop = FALSE])
+    
+    # Project back to FULL data
+    X_lin_full <- cbind(mask, x_vec * mask)
+    Z_orth <- Z_spectral - X_lin_full %*% Gamma_Original
+    
     keep_cols <- colSums(Z_orth^2) > 1e-9
     Z_final <- Z_orth[, keep_cols, drop = FALSE]
+
+    # Centering/scaling on season data
+    train_means <- apply(Z_final[mask == 1, , drop = FALSE], 2, mean)
+    Z_final <- sweep(Z_final, 2, train_means, "-")
     
-    train_scale <- apply(Z_final, 2, sd)
+    train_scale <- apply(Z_final[mask == 1, , drop = FALSE], 2, sd)
     train_scale[train_scale < 1e-12] <- 1 
-    Z_final <- scale(Z_final, center = FALSE, scale = train_scale)
-    Z_final <- Z_final * mask
-    Z_scales <- c(Z_scales, train_scale)
-    col_names <- paste(var_name, "S", season_label, 1:ncol(Z_final), sep="_")
-    colnames(Z_final) <- col_names
-    nonlinear_basis_list[[paste(var_name, season_label, sep="_")]] <- Z_final
+    Z_final <- scale(Z_final, center = FALSE, scale = train_scale) * mask
+    
+    # Store for grid prediction
     model_data[[var_name]][[season_label]] <- list(
-      sm_spec = sm_spec, 
-      U_pen = U_pen, 
-      Lambda_sqrt_inv = Lambda_sqrt_inv, 
-      projection_coefs = Gamma_Original, 
-      keep_cols = keep_cols, 
-      scale_stats = train_scale
+      sm_spec = sm_spec, U_pen = U_pen, Lambda_sqrt_inv = Lambda_sqrt_inv,
+      projection_coefs = Gamma_Original, keep_cols = keep_cols,
+      center_stats = train_means, scale_stats = train_scale
     )
+    
+    # STANDARDIZED names
+    lin_name <- paste0(var_name, "_S", season_label)
+    nl_name <- paste(var_name, season_label, sep = "_")
+    linear_basis_list[[lin_name]] <- matrix(x_vec * mask, ncol = 1)
+    nonlinear_basis_list[[nl_name]] <- Z_final
   }
 }
 
-bs.linear <- do.call(cbind, linear_basis_list) 
+bs.linear <- do.call(cbind, linear_basis_list)
 bs.nonlinear <- do.call(cbind, nonlinear_basis_list)
-# bs.linear_check <- cbind(rep(1,n), bs.linear)
-# cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear_check[,c(1,2,3,4,5)]) %*% bs.nonlinear[,c((1):(4*psi))]), "\n")
-# cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear_check[,c(1,6,7,8,9)]) %*% bs.nonlinear[,c((4*(psi+1)):(4*(psi*2)))]), "\n")
-# cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear_check[,c(1,10,11,12,13)]) %*% bs.nonlinear[,c((4*(psi*2+1)):(4*(psi*3)))]), "\n")
-# cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear_check[,c(1,14,15,16,17)]) %*% bs.nonlinear[,c((4*(psi*3+1)):(4*(psi*4)))]), "\n")
-# cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear_check[,c(1,18,19,20,21)]) %*% bs.nonlinear[,c((4*(psi*4+1)):(4*(psi*5)))]), "\n")
 
+# grid_linear_list <- list()
+# grid_nonlinear_list <- list()
+# grid_n <- 200
+
+# for (i in seq_along(covariates)) {
+#   var_name <- covariates[i]
+#   for (season_label in names(model_data[[var_name]])) {
+#     params <- model_data[[var_name]][[season_label]]
+#     lin_col_name <- paste(var_name, "S", season_label, sep="_")
+    
+#     season.idx <- which(season_code_full == season_label)
+#     raw.vals <- x.origin[season.idx, i]
+#     raw.grid <- seq(min(raw.vals), max(raw.vals), length.out = grid_n)
+#     # raw.grid <- seq(0,1,length.out = grid_n)
+#     grid_linear_list[[lin_col_name]] <- matrix(raw.grid, ncol=1, dimnames=list(NULL, lin_col_name))
+    
+#     pred_df <- data.frame(
+#       x_vec = raw.grid,
+#       season_code_full = factor(season_label, levels = levels(season_code_full))
+#     )
+    
+#     X_raw.grid <- PredictMat(params$sm_spec, pred_df)
+#     Z_spectral_grid <- X_raw.grid %*% params$U_pen %*% params$Lambda_sqrt_inv
+#     X_lin_grid_local <- cbind(rep(1, grid_n), raw.grid)
+#     Z_orth_grid <- Z_spectral_grid - X_lin_grid_local %*% params$projection_coefs
+    
+#     Z_final_grid <- Z_orth_grid[, params$keep_cols, drop = FALSE]
+#     Z_final_grid <- sweep(Z_final_grid, 2, params$center_stats, "-")
+#     Z_final_grid <- scale(Z_final_grid, center = FALSE, scale = params$scale_stats)    
+#     # Z_final_grid <- scale(Z_final_grid, center = FALSE, scale = params$scale_stats)
+    
+#     col_names <- paste(var_name, "S", season_label, 1:ncol(Z_final_grid), sep="_")
+#     colnames(Z_final_grid) <- col_names
+#     grid_nonlinear_list[[paste(var_name, season_label, sep="_")]] <- Z_final_grid
+#   }
+# }
+
+# xholder.linear <- do.call(cbind, grid_linear_list)
+# xholder.nonlinear <- do.call(cbind, grid_nonlinear_list)
 grid_linear_list <- list()
 grid_nonlinear_list <- list()
-raw_grid_list <- list()
 grid_n <- 200
+newx <- seq(0, 1, length.out = grid_n)
 for (i in seq_along(covariates)) {
   var_name <- covariates[i]
-  # global.min <- x.min[i]
-  # global.range <- x.minmax[i]
   for (season_label in names(model_data[[var_name]])) {
     params <- model_data[[var_name]][[season_label]]
-    lin_col_name <- paste(var_name, "S", season_label, sep="_")
-    season_idx <- which(season_code_full == season_label)
-    raw_season_vals <- x.origin[season_idx, i]
-    season_min <- min(raw_season_vals, na.rm = TRUE)
-    season_max <- max(raw_season_vals, na.rm = TRUE)
-    raw_grid <- seq(season_min, season_max, length.out = grid_n)
-    raw_grid_list[[lin_col_name]] <- raw_grid
-    # grid.vals <- (raw_grid - global.min) / global.range
-    grid_linear_list[[lin_col_name]] <- matrix(raw_grid, ncol=1, dimnames=list(NULL, lin_col_name))
+    lin_col_name <- paste(var_name, "S", season_label, sep = "_")
     
+    season.idx <- which(season_code_full == season_label)
+    raw.vals <- x.origin[season.idx, i]
+    raw.grid <- seq(min(raw.vals), max(raw.vals), length.out = grid_n)
+    grid_linear_list[[lin_col_name]] <- matrix(raw.grid, ncol = 1, dimnames = list(NULL, lin_col_name))
+    
+    # FIXED: Pure season prediction (NO mask)
     pred_df <- data.frame(
-      x_vec = raw_grid,
+      x_vec = raw.grid,
       season_code_full = factor(season_label, levels = levels(season_code_full))
     )
     
-    X_raw_grid <- PredictMat(params$sm_spec, pred_df)
-    Z_spectral_grid <- X_raw_grid %*% params$U_pen %*% params$Lambda_sqrt_inv
-    X_lin_grid_local <- cbind(rep(1, length(raw_grid)), raw_grid)
-    Z_orth_grid <- Z_spectral_grid - X_lin_grid_local %*% params$projection_coefs
+    X_raw.grid <- PredictMat(params$sm_spec, pred_df)
+    Z_spectral_grid <- X_raw.grid %*% params$U_pen %*% params$Lambda_sqrt_inv
+    
+    X_lin_grid <- cbind(rep(1, grid_n), raw.grid)  # Pure season linear space
+    Z_orth_grid <- Z_spectral_grid - X_lin_grid %*% params$projection_coefs
+    
     Z_final_grid <- Z_orth_grid[, params$keep_cols, drop = FALSE]
+    Z_final_grid <- sweep(Z_final_grid, 2, params$center_stats, "-")
     Z_final_grid <- scale(Z_final_grid, center = FALSE, scale = params$scale_stats)
-    col_names <- paste(var_name, "S", season_label, 1:ncol(Z_final_grid), sep="_")
-    colnames(Z_final_grid) <- col_names
-    grid_nonlinear_list[[paste(var_name, season_label, sep="_")]] <- Z_final_grid
+    # NO * mask - grid represents 100% season data!
+    
+    colnames(Z_final_grid) <- paste(var_name, season_label, 1:ncol(Z_final_grid), sep = "_")
+    grid_nonlinear_list[[paste(var_name, season_label, sep = "_")]] <- Z_final_grid
   }
 }
 
 xholder.linear <- do.call(cbind, grid_linear_list)
 xholder.nonlinear <- do.call(cbind, grid_nonlinear_list)
 
-raw.linear <- do.call(cbind, raw_grid_list)
 
-theta.adjusted.mat <- theta.linear.origin
-theta0_season <- rep(theta0.origin, 4)
-hidden_funcs <- list()
-for (s in 1:4) {
-  season_idx <- which(season_code_full == s)
-  x_season <- x.origin[season_idx, ]
-  hidden_funcs[[s]] <- list()
-  hidden_f2 <- make.nl(x_season[, 2], f2(x_season[, 2]))
-  theta.adjusted.mat[2, s] <- theta.adjusted.mat[2, s] + hidden_f2$slope
 
-  hidden_funcs[[s]]$f2 <- hidden_f2
-  hidden_f3 <- make.nl(x_season[, 3], f3(x_season[, 3]))
-  theta.adjusted.mat[3, s] <- theta.adjusted.mat[3, s] + hidden_f3$slope
-  hidden_funcs[[s]]$f3 <- hidden_f3
-  theta0_season[s] <- theta0_season[s] + hidden_f2$intercept + hidden_f3$intercept
-  # hidden_intercept_sum <- hidden_intercept_sum + (hidden_f2$intercept * length(season_idx))
-  # hidden_intercept_sum <- hidden_intercept_sum + (hidden_f3$intercept * length(season_idx))
-}
-# theta0.adjusted <- theta0.origin + (hidden_intercept_sum / n)
+bs.linear_check <- cbind(rep(1,n), bs.linear)
+cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear_check[,c(1,2,3,4,5)]) %*% bs.nonlinear[,c((1):(4*psi))]), "\n")
+cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear_check[,c(1,6,7,8,9)]) %*% bs.nonlinear[,c((4*(psi+1)):(4*(psi*2)))]), "\n")
+cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear_check[,c(1,10,11,12,13)]) %*% bs.nonlinear[,c((4*(psi*2+1)):(4*(psi*3)))]), "\n")
+cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear_check[,c(1,14,15,16,17)]) %*% bs.nonlinear[,c((4*(psi*3+1)):(4*(psi*4)))]), "\n")
+cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear_check[,c(1,18,19,20,21)]) %*% bs.nonlinear[,c((4*(psi*4+1)):(4*(psi*5)))]), "\n")
 
-true_gridgsmooth <- matrix(0, nrow = grid_n, ncol = p)
+true_alphaseason <- matrix(0, nrow = grid_n, ncol = 4)
 true_gsmoothseason <- matrix(0, nrow = grid_n, ncol = p * 4)
 
-for (j in 1:p) {
-  for (s in 1:4) {
-    lin_idx <- (j - 1) * 4 + s
-    col_name <- paste0("V", j, "_S_", s)
-    x_grid <- raw_grid_list[[col_name]]
-    g_l <- theta.adjusted.mat[j, s] * x_grid
-    g_nl <- rep(0, grid_n)
-    if (j == 2) {
-      g_nl <- f2(x_grid) - (hidden_funcs[[s]]$f2$intercept + hidden_funcs[[s]]$f2$slope * x_grid)
-    } 
-    if (j == 3) {
-      g_nl <- f3(x_grid) - (hidden_funcs[[s]]$f3$intercept + hidden_funcs[[s]]$f3$slope * x_grid)
-    }
-    true_gsmoothseason[, lin_idx] <- g_l + g_nl
-    true_gridgsmooth[, j] <- true_gridgsmooth[, j] + true_gsmoothseason[, lin_idx]
+for (s in 1:4) {
+  current_season_pred <- rep(true.theta0, grid_n)
+  for (j in 1:p) {
+    lin_col_name <- paste(covariates[j], "S", s, sep="_")
+    lin_idx <- (j-1)*4 + s
+    current_season_pred <- current_season_pred + xholder.linear[, lin_col_name] * true.theta[lin_idx]
   }
+  x_vals_X2 <- xholder.linear[, paste("V2_S", s, sep="_")]  # X2's OWN grid for this season
+  current_season_pred <- current_season_pred + nl_func_X2(x_vals_X2)
+  x_vals_X3 <- xholder.linear[, paste("V3_S", s, sep="_")]  # X3's OWN grid for this season
+  current_season_pred <- current_season_pred + nl_func_X3(x_vals_X3)  
+  true_alphaseason[, s] <- exp(current_season_pred)
+}
+
+
+
+true_gridgsmooth <- matrix(0, nrow = grid_n, ncol = p)
+
+for (j in 1:p) {
+  x_global <- newx  # Universal [0,1] grid
+  
+  # Linear average
+  season_cols <- ((j-1)*4 + 1):(j*4)
+  linear_avg <- rowMeans(xholder.linear[, season_cols, drop=FALSE] * true.theta[season_cols])
+  nl_avg <- rep(0, grid_n)
+  if (j == 2) nl_avg <- nl_func_X2(x_global)
+  if (j == 3) nl_avg <- nl_func_X3(x_global)
+  
+  true_gridgsmooth[, j] <- linear_avg + nl_avg
 }
 
 df_true_gridgsmooth <- do.call(rbind, lapply(1:p, function(j) {
   data.frame(
-    x_index = seq(0, 1, length.out = grid_n), 
+    x_index = xholder.linear[,(j-1)*4+1], 
     y = true_gridgsmooth[, j],
     variable = paste0("Covariate_", j)
   )
 }))
 
-true_alphaseason <- matrix(0, nrow = grid_n, ncol = 4)
+# true_alphaseason <- matrix(0, nrow = grid_n, ncol = 4)
 
-for (s in 1:4) {
-  current_season_pred <- rep(theta0_season[s], grid_n)
-  for (j in 1:p) {
-    lin_idx <- (j - 1) * 4 + s
-    current_season_pred <- current_season_pred + true_gsmoothseason[, lin_idx]
-  }
-  true_alphaseason[, s] <- exp(current_season_pred)
-}
-
-
-df_true_alphaseason <- do.call(rbind, lapply(1:4, function(s) {
-  data.frame(
-    x_index = raw_grid_list[[paste0("V", j, "_S_", s)]], #seq(0, 1, length.out = grid_n), 
-    alpha = true_alphaseason[, s],
-    season = seasons[s]
-  )
-}))
+# for (s in 1:4) {
+#   current_season_pred <- rep(true.theta0, grid_n)
+#   for (j in 1:p) {
+#     lin_idx <- (j - 1) * 4 + s
+#     current_season_pred <- current_season_pred + true_gsmoothseason[, lin_idx]
+#   }
+#   true_alphaseason[, s] <- exp(current_season_pred)
+# }
 
 true_gridalpha <- rowMeans(true_alphaseason)
 plot(true_gridalpha)
 
 X_sd   <- apply(bs.linear, 2, sd)
 bs.linear <- scale(bs.linear, center = FALSE, scale = X_sd)
+true.theta.scaled <- true.theta * X_sd
+
 
 model.stan <- "
 // Stan model for Seasonal Pareto Samples
@@ -320,21 +329,19 @@ data {
   int <lower=1> p; 
   int <lower=1> psi; 
   int <lower=1> n_seasons;
-  array[n] int<lower=1, upper=n_seasons> season_code;
-  matrix[n, (p*n_seasons)] bsLinear; 
-  matrix[n, (psi*p*n_seasons)] bsNonlinear; 
-  matrix[grid_n, (p*n_seasons)] xholderLinear; 
-  matrix[grid_n, (psi*p*n_seasons)] xholderNonlinear; 
+  matrix[n, (p * n_seasons)] bsLinear; 
+  matrix[n, (psi * p * n_seasons)] bsNonlinear; 
+  matrix[grid_n, (p * n_seasons)] xholderLinear; 
+  matrix[grid_n, (psi * p * n_seasons)] xholderNonlinear; 
   vector[n] u; 
   vector[n] y; 
   real <lower=0> atau;
-  // Note: We only use Z_scales if the basis wasn't already scaled in R
-  vector[(psi*p*n_seasons)] Z_scales;
+  // vector[(psi*p*n_seasons)] Z_scales;
   vector[p * n_seasons] X_sd;
 }
 
 parameters {
-  vector[n_seasons] theta0_seasonal; // Path B: Independent seasonal intercepts
+  real theta0; // Seasonal intercepts
   vector[p * n_seasons] theta; 
   array[p, n_seasons] vector[psi] gamma_raw;
   array[p, n_seasons] real <lower=0> lambda1; 
@@ -343,11 +350,11 @@ parameters {
 }
 
 transformed parameters {
-  vector[n] alpha;        
+  vector[n] alpha;         
   array[p, n_seasons] vector[psi] gamma; 
   
-  // 1. Initialize with seasonal intercepts
-  alpha = theta0_seasonal[season_code];
+  // 1. Initialize with seasonal intercepts based on the data index
+  alpha = rep_vector(theta0, n);
 
   // 2. Add linear and nonlinear effects
   for (j in 1:p) {
@@ -355,12 +362,7 @@ transformed parameters {
       int lin_idx = (j-1) * n_seasons + s;
       int nl_start = (lin_idx-1) * psi + 1; 
       
-      // Map raw gamma to penalised space
-      // REMOVED Z_scales multiplication here if already scaled in R
       gamma[j,s] = gamma_raw[j,s] * sqrt(tau[j,s]);
-      
-      // Only apply effect to the observations in the current season
-      // (Though bsLinear is already masked, this ensures clarity)
       alpha += col(bsLinear, lin_idx) * theta[lin_idx];
       alpha += block(bsNonlinear, 1, nl_start, n, psi) * gamma[j,s];
     }
@@ -372,16 +374,16 @@ model {
   // Likelihood
   target += pareto_lpdf(y | u, alpha);
 
-  theta0_seasonal ~ normal(0, 10); 
-  
-  for (j in 1:p) {
-    for (s in 1:n_seasons) {
+  // Priors
+  target += normal_lpdf(theta0 | 0, 10);
+  for (j in 1:p){
+    for (s in 1:n_seasons){
       int idx = (j-1) * n_seasons + s;
-      lambda1[j,s] ~ gamma(1, 1); 
-      lambda2[j,s] ~ gamma(1e-2, 1e-2);
-      theta[idx] ~ double_exponential(0, 1 / lambda1[j,s]);
-      tau[j,s] ~ gamma(atau, square(lambda2[j,s]) * 0.5);
-      gamma_raw[j,s] ~ std_normal();
+      target += gamma_lpdf(lambda1[j,s] | 1, 1); 
+      target += gamma_lpdf(lambda2[j,s] | 1e-2, 1e-2);
+      target += double_exponential_lpdf(theta[idx] | 0, 1 / lambda1[j,s]);
+      target += gamma_lpdf(tau[j,s] | atau, square(lambda2[j,s]) * 0.5);
+      target += std_normal_lpdf(gamma_raw[j,s]);
     }
   }
 }
@@ -389,26 +391,28 @@ model {
 generated quantities {
   matrix[grid_n, n_seasons] alphaseason;
   vector[grid_n] gridalpha; 
-  matrix[grid_n, p] gridgsmooth;               
+  matrix[grid_n, p] gridgsmooth; // Marginal smooths per covariate              
   matrix[grid_n, p * n_seasons] gsmoothseason; 
+  vector[p*n_seasons] theta_origin = theta ./ X_sd;
 
-  // Rescale theta back to original covariate scale for comparison
-  vector[p * n_seasons] theta_origin = theta ./ X_sd;
-
-  // 1. Calculate individual seasonal smooths (gsmooth = linear + nonlinear)
+  // Compute smooth effects per variable per season
   for (j in 1:p) {
+    gridgsmooth[, j] = rep_vector(0, grid_n);
     for (s in 1:n_seasons) {
       int lin_idx = (j-1) * n_seasons + s;
       int nl_start = (lin_idx-1) * psi + 1;
       
-      gsmoothseason[, lin_idx] = col(xholderLinear, lin_idx) * theta_origin[lin_idx] 
+      gsmoothseason[, lin_idx] = col(xholderLinear, lin_idx) * theta[lin_idx] 
                                 + block(xholderNonlinear, 1, nl_start, grid_n, psi) * gamma[j,s];
+      
+      // Accumulate for marginal plot (average effect of X_j)
+      gridgsmooth[, j] += gsmoothseason[, lin_idx] / n_seasons;
     }
   }
 
-  // 2. Calculate Seasonal Alphas (matches your R plot logic)
+  // Compute Seasonal Alphas
   for (s in 1:n_seasons) {
-    vector[grid_n] current_season_pred = rep_vector(theta0_seasonal[s], grid_n);
+    vector[grid_n] current_season_pred = rep_vector(theta0, grid_n);
     for (j in 1:p) {
       int lin_idx = (j-1) * n_seasons + s;
       current_season_pred += gsmoothseason[, lin_idx];
@@ -416,7 +420,7 @@ generated quantities {
     alphaseason[, s] = exp(current_season_pred);
   }
 
-  // 3. Average Alpha across seasons (Marginal)
+  // Marginal Alpha (Average alpha across the year)
   gridalpha = rep_vector(0.0, grid_n);
   for (s in 1:n_seasons) {
     gridalpha += alphaseason[, s] / n_seasons;
@@ -429,7 +433,7 @@ data.stan <- list(
   u = u, 
   n = n, 
   p = p, 
-  season_code = as.numeric(season_code_full),
+  # season_code = as.numeric(season_code_full),
   n_seasons = 4, 
   psi = psi, 
   bsLinear = bs.linear, 
@@ -437,7 +441,7 @@ data.stan <- list(
   xholderLinear = xholder.linear, 
   xholderNonlinear = xholder.nonlinear, 
   atau = ((psi+1)/2), 
-  Z_scales = Z_scales,
+  # Z_scales = Z_scales,
   X_sd = X_sd
 )
 
@@ -445,7 +449,7 @@ init.alpha <- list(
   list(
     theta0 = 0.1,
     theta = rep(-0.1, p * 4),
-    theta0_seasonal = rep(0.1, 4),
+    # theta0_seasonal = rep(0.1, 4),
     gamma_raw = array(rep(0.1, p * 4 * psi), dim = c(p, 4, psi)), 
     tau = array(rep(0.1, p * 4), dim = c(p, 4)),
     lambda1 = array(rep(0.1, p * 4), dim = c(p, 4)), 
@@ -454,16 +458,16 @@ init.alpha <- list(
   list(
     theta0 = 0.05,
     theta = rep(0.05, p * 4),
-    theta0_seasonal = rep(0.2, 4),
+    # theta0_seasonal = rep(0.2, 4),
     gamma_raw = array(rep(-0.1, p * 4 * psi), dim = c(p, 4, psi)),
     tau = array(rep(0.2, p * 4), dim = c(p, 4)),
     lambda1 = array(rep(0.2, p * 4), dim = c(p, 4)), 
     lambda2 = array(rep(0.5, p * 4), dim = c(p, 4))
   ),
   list(
-    theta0 = -0.1,
+    theta0 = 0.3,
     theta = rep(0.1, p * 4),
-    theta0_seasonal = rep(0.3, 4),
+    # theta0_seasonal = rep(0.3, 4),
     gamma_raw = array(rep(0.05, p * 4 * psi), dim = c(p, 4, psi)),
     tau = array(rep(0.1, p * 4), dim = c(p, 4)),
     lambda1 = array(rep(0.1, p * 4), dim = c(p, 4)), 
@@ -496,7 +500,7 @@ gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summar
 lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
 # newgl.samples <- summary(fit1, par=c("gridgl"), probs = c(0.05, 0.5, 0.95))$summary
 # newgnl.samples <- summary(fit1, par=c("gridgnl"), probs = c(0.05, 0.5, 0.95))$summary
-newgsmooth.samples <- summary(fit1, par=c("gridgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
+# newgsmooth.samples <- summary(fit1, par=c("gridgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
 season.samples <- summary(fit1, par=c("alphaseason"), probs = c(0.05,0.5, 0.95))$summary
 alpha.samples <- summary(fit1, par=c("gridalpha"), probs = c(0.05,0.5, 0.95))$summary
 
@@ -589,18 +593,19 @@ est_alphaseason_upper <- apply(posterior$alphaseason, c(2, 3), quantile, probs =
 # Format into a plotting dataframe
 df_est_alphaseason <- do.call(rbind, lapply(1:4, function(s) {
   data.frame(
-    x_index = raw_grid_list[[paste0("V", j, "_S_", s)]], #seq(0, 1, length.out = grid_n),
+    x_index = seq(0, 1, length.out = grid_n),
     alpha_est = est_alphaseason_median[, s],
     lower_ci = est_alphaseason_lower[, s],
     upper_ci = est_alphaseason_upper[, s],
+    alpha = true_alphaseason[,s],
     season = seasons[s]
   )
 }))
-plot_data_alphaseason <- merge(df_est_alphaseason, df_true_alphaseason, by = c("season", "x_index"))
+# plot_data_alphaseason <- merge(df_est_alphaseason, df_true_alphaseason, by = c("season", "x_index"))
 
 grid.plts <- list()
 for(i in 1:4){
-  grid.plt <- ggplot(plot_data_alphaseason[((((i-1)*grid_n)+1):(i*grid_n)),], aes(x = x_index)) +
+  grid.plt <- ggplot(df_est_alphaseason[((((i-1)*grid_n)+1):(i*grid_n)),], aes(x = x_index)) +
           geom_ribbon(aes(ymin = lower_ci, ymax = upper_ci), fill = "steelblue", alpha = 0.3) +
           geom_line(aes(y = alpha_est), color = "steelblue", linewidth = 1) +
           geom_line(aes(y = alpha), color = "red", linewidth = 1, linetype = "dashed") +
