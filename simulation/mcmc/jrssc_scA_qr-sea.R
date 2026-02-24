@@ -26,25 +26,25 @@ seasons <- c("Winter", "Spring", "Summer", "Autumn")
 # x.origin <- pnorm(matrix(rnorm(n * p), ncol = p) %*% C) # matrix(runif(n*p),ncol=p) 
 x.origin <- matrix(0, nrow = n, ncol = p)
 
-for (j in 1:p) {
-  phase_shift <- j * (2 * pi / p) 
-  seasonal_trend <- 0.5 + 0.44 * sin(2 * pi * time.seq / period + phase_shift) #+ 0.25 * cos(2 * pi * time.seq / period + phase_shift)
-  # sin_val <- sin(2 * pi * time.seq / period + phase_shift)
-  # amp_vector <- ifelse(sin_val > 0, 0.74, 0.14)
-  # seasonal_trend <- 0.2 + (amp_vector * sin_val)  
-  uniform_noise <- runif(n, min = -0.05, max = 0.05)
-  x.origin[, j] <- seasonal_trend + uniform_noise
-}
-
 # for (j in 1:p) {
 #   phase_shift <- j * (2 * pi / p) 
-#   base_wave <- cos(phase_shift) * cos(2 * pi * time.seq / period) + 
-#                sin(phase_shift) * sin(2 * pi * time.seq / period)
-#   asymmetric_wave <- ((base_wave + 1) / 2)^1.5
-#   seasonal_trend <- 0.01 + 0.98 * asymmetric_wave
-#   uniform_noise <- runif(n, min = -0.01, max = 0.01)
+#   # seasonal_trend <- 0.5 + 0.44 * sin(2 * pi * time.seq / period + phase_shift)
+#   sin_val <- sin(2 * pi * time.seq / period + phase_shift)
+#   amp_vector <- ifelse(sin_val > 0, 0.74, 0.14)
+#   seasonal_trend <- 0.2 + (amp_vector * sin_val)  
+#   uniform_noise <- runif(n, min = -0.05, max = 0.05)
 #   x.origin[, j] <- seasonal_trend + uniform_noise
 # }
+
+for (j in 1:p) {
+  phase_shift <- j * (2 * pi / p) 
+  base_wave <- cos(phase_shift) * cos(2 * pi * time.seq / period) + 
+               sin(phase_shift) * sin(2 * pi * time.seq / period)
+  asymmetric_wave <- ((base_wave + 1) / 2)^1.5
+  seasonal_trend <- 0.01 + 0.98 * asymmetric_wave
+  uniform_noise <- runif(n, min = -0.01, max = 0.01)
+  x.origin[, j] <- seasonal_trend + uniform_noise
+}
 
 # plot(x.origin[,3])
 covariates <- colnames(data.frame(x.origin))[1:p]
@@ -181,12 +181,12 @@ xholder.linear <- do.call(cbind, grid_linear_list)
 xholder.nonlinear <- do.call(cbind, grid_nonlinear_list)
 
 
-# bs.linear_check <- cbind(rep(1,n), bs.linear)
-# cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear_check[,c(1,2,3,4,5)]) %*% bs.nonlinear[,c((1):(4*psi))]), "\n")
-# cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear_check[,c(1,6,7,8,9)]) %*% bs.nonlinear[,c((4*(psi+1)):(4*(psi*2)))]), "\n")
-# cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear_check[,c(1,10,11,12,13)]) %*% bs.nonlinear[,c((4*(psi*2+1)):(4*(psi*3)))]), "\n")
-# cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear_check[,c(1,14,15,16,17)]) %*% bs.nonlinear[,c((4*(psi*3+1)):(4*(psi*4)))]), "\n")
-# cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear_check[,c(1,18,19,20,21)]) %*% bs.nonlinear[,c((4*(psi*4+1)):(4*(psi*5)))]), "\n")
+bs.linear_check <- cbind(rep(1,n), bs.linear)
+cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear_check[,c(1,2,3,4,5)]) %*% bs.nonlinear[,c((1):(4*psi))]), "\n")
+cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear_check[,c(1,6,7,8,9)]) %*% bs.nonlinear[,c((4*(psi+1)):(4*(psi*2)))]), "\n")
+cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear_check[,c(1,10,11,12,13)]) %*% bs.nonlinear[,c((4*(psi*2+1)):(4*(psi*3)))]), "\n")
+cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear_check[,c(1,14,15,16,17)]) %*% bs.nonlinear[,c((4*(psi*3+1)):(4*(psi*4)))]), "\n")
+cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear_check[,c(1,18,19,20,21)]) %*% bs.nonlinear[,c((4*(psi*4+1)):(4*(psi*5)))]), "\n")
 
 scale_stats_list <- list()
 for (var_name in names(model_data)) {
@@ -198,157 +198,6 @@ for (var_name in names(model_data)) {
 
 Z_scales <- unlist(scale_stats_list)
 
-
-# Set up a 2x2 plotting grid to see all 4 seasons at once
-# par(mfrow = c(2, 2), mar = c(1, 1, 3, 1))
-
-# # True parameter values based on your theta.origin = c(1, 0, 0.8, -0.8, 0, 0)
-# theta_0 <- 1
-# theta_2 <- 0.8
-# theta_3 <- -0.8
-# library(plotly)
-# plot_list <- list()
-# for (s in 1:4) {
-#   # 1. Extract the specific 200-length grid for X2 and X3 for this specific season
-#   x2_seq <- xholder.linear[, paste0("X2_S_", s)]
-#   x3_seq <- xholder.linear[, paste0("X3_S_", s)]
-  
-#   # 2. Create the 200x200 surface matrix using outer()
-#   # This calculates true alpha for every single combination of X2 and X3
-#   alpha_matrix <- outer(x2_seq, x3_seq, function(x2, x3) {
-#     # eta = intercept + linear X2 + nonlinear X2 + linear X3 + nonlinear X3
-#     eta <- theta_0 + (theta_2 * x2 + f2(x2)) + (theta_3 * x3 + f3(x3))
-#     exp(eta)
-#   })
-#   fig <- plot_ly(x = ~x2_seq, y = ~x3_seq)
-  
-#   # 1. Add the True Surface (Blue scale)
-#   # add_surface(z = ~alpha_matrix, 
-#   #             colorscale = "Blues", 
-#   #             opacity = 0.9, # Slightly transparent
-#   #             name = "True Alpha",
-#   #             colorbar = list(title = "True", x = 1.0)) %>%
-#   if (s == 1) {
-#     fig <- fig %>%
-#       add_surface(z = ~alpha_matrix, colorscale = "steelblue", opacity = 0.9, 
-#                   name = "True Alpha", 
-#                   colorbar = list(title = "True", x = 1.0)) #%>%
-#       # add_surface(z = ~alpha_post_matrix, colorscale = "Reds", opacity = 0.7, 
-#                   # name = "Posterior Median", 
-#                   # colorbar = list(title = "Posterior", x = 1.15))
-#   } else {
-#     fig <- fig %>%
-#       add_surface(z = ~alpha_matrix, colorscale = "steeblue", opacity = 0.9, 
-#                   name = "True Alpha", showscale = FALSE)# %>%
-#       # add_surface(z = ~alpha_post_matrix, colorscale = "Reds", opacity = 0.7, 
-#                   # name = "Posterior Median", showscale = FALSE)
-#   }
-#   # 2. Add the Posterior Median Surface (Red/Orange scale)
-#   # add_surface(z = ~alpha_post_matrix, 
-#   #             colorscale = "Reds", 
-#   #             opacity = 0.7, # More transparent so you can see the true surface beneath
-#   #             name = "Posterior Median",
-#   #             colorbar = list(title = "Posterior", x = 1.15)) %>%
-  
-#   # 3. Clean up the layout and axis labels
-#   fig <- fig %>% layout(
-#     title = seasons[s],
-#     scene = list(
-#       xaxis = list(title = "X2"),
-#       yaxis = list(title = "X3"),
-#       zaxis = list(title = "alpha(c,...,c)")
-#     ),
-#     annotations = list(
-#       list(
-#         text = seasons[s],
-#         x = 0.5, y = 1.05, # Position title slightly above the plot
-#         xref = "paper", yref = "paper",
-#         showarrow = FALSE,
-#         font = list(size = 16)
-#       )
-#     )
-#   )
-#   plot_list[[s]] <- fig
-# }
-
-# plot_list[[2]]
-# fig
-# final_dashboard <- subplot(plot_list, nrows = 2, margin = 0.05)
-# final_dashboard
-
-# Display the interactive plot
-
-
-# par(mfrow = c(1, 1))
-
-# true_alphaseason <- matrix(0, nrow = grid_n, ncol = 4)
-# true_gsmoothseason <- matrix(0, nrow = grid_n, ncol = p * 4)
-
-# for (s in 1:4) {
-#   current_season_pred <- rep(true.theta0, grid_n)
-#   for (j in 1:p) {
-#     lin_col_name <- paste(covariates[j], "S", s, sep="_")
-#     lin_idx <- (j-1)*4 + s
-#     current_season_pred <- current_season_pred + xholder.linear[, lin_col_name] * true.theta[lin_idx]
-#   }
-#   x_vals_X2 <- xholder.linear[, paste("V2_S", s, sep="_")]  # X2's OWN grid for this season
-#   current_season_pred <- current_season_pred + nl_func_X2(x_vals_X2)
-#   x_vals_X3 <- xholder.linear[, paste("V3_S", s, sep="_")]  # X3's OWN grid for this season
-#   current_season_pred <- current_season_pred + nl_func_X3(x_vals_X3)  
-#   true_alphaseason[, s] <- exp(current_season_pred)
-# }
-
-
-# true_gridgsmooth <- matrix(0, nrow = grid_n, ncol = p)
-
-# for (j in 1:p) {
-#   smooth_sum <- rep(0, grid_n)
-  
-#   for (s in 1:4) {
-#     lin_col <- paste(covariates[j], "S", s, sep = "_")
-#     x_s <- xholder.linear[, lin_col]  # Season-specific grid
-    
-#     # Linear: evaluated at season-specific grid
-#     smooth_sum <- smooth_sum + x_s * true.theta[(j-1)*4 + s]
-    
-#     # Nonlinear: evaluated at SAME season-specific grid
-#     if (j == 2) smooth_sum <- smooth_sum + nl_func_X2(x_s)
-#     if (j == 3) smooth_sum <- smooth_sum + nl_func_X3(x_s)
-#   }
-  
-#   # Average across seasons (matching Stan's / n_seasons)
-#   true_gridgsmooth[, j] <- smooth_sum / 4
-# }
-
-# df_true_gridgsmooth <- do.call(rbind, lapply(1:p, function(j) {
-#   data.frame(
-#     x_index = xholder.linear[, (j-1)*4 + 1], 
-#     y = true_gridgsmooth[, j],
-#     variable = paste0("Covariate_", j)
-#   )
-# }))
-
-# true_global_eta <- rep(true.theta0, grid_n)
-# for (j in 1:p) {
-#   true_global_eta <- true_global_eta + true_gridgsmooth[, j]
-# }
-
-# true_gridalpha <- exp(true_global_eta)
-# plot(true_gridalpha)
-
-# X_sd   <- apply(bs.linear, 2, sd)
-
-# X_sd <- numeric(ncol(bs.linear))
-# for(k in 1:ncol(bs.linear)) {
-#   mask_k <- bs.linear[,k] != 0
-#   X_sd[k] <- sd(bs.linear[mask_k, k])
-#   if(X_sd[k] < 1e-12) X_sd[k] <- 1
-# }
-# bs.linear <- scale(bs.linear, center = FALSE, scale = X_sd)
-# true.theta.scaled <- true.theta * X_sd
-# X_means <- colMeans(bs.linear)
-# X_sd   <- apply(bs.linear, 2, sd)
-# bs.linear <- scale(bs.linear, center = X_means, scale = X_sd)
 stats <- apply(bs.linear, 2, function(x) {
   vals <- x[x != 0]
   if(length(vals) > 1) {
@@ -359,11 +208,11 @@ stats <- apply(bs.linear, 2, function(x) {
 })
 
 X_means <- stats["mean", ]
-X_sds   <- stats["sd", ]
+X_sd   <- stats["sd", ]
 bs.linear_scaled <- as.data.frame(lapply(1:ncol(bs.linear), function(j) {
   col <- bs.linear[, j]
   mask <- col != 0
-  col[mask] <- (col[mask] - X_means[j]) / X_sds[j]
+  col[mask] <- (col[mask] - X_means[j]) / X_sd[j]
   return(col)
 })) %>% as.matrix()
 bs.linear <- bs.linear_scaled
@@ -427,8 +276,8 @@ model {
   // Priors
   target += normal_lpdf(theta0 | 0, 10);
   for (j in 1:p){
-    target += gamma_lpdf(lambda1[j] | 1e-2, 1e-2); 
-    target += gamma_lpdf(lambda2[j] | 1e-2, 1e-2);
+    target += gamma_lpdf(lambda1[j] | 1, 1); 
+    target += gamma_lpdf(lambda2[j] | 1e-1, 1e-1);      
     for (s in 1:n_seasons){
       int idx = (j-1) * n_seasons + s;
       target += double_exponential_lpdf(theta[idx] | 0, 1 / lambda1[j]);
@@ -504,8 +353,8 @@ init.alpha <- list(
     # theta0_seasonal = rep(0.1, 4),
     gamma_raw = array(rep(0.1, p * 4 * psi), dim = c(p, 4, psi)), 
     tau = array(rep(0.1, p * 4), dim = c(p, 4)),
-    lambda1 = rep(0.1, p), #array(rep(0.1, p * 4), dim = c(p, 4)), 
-    lambda2 = rep(1, p) #array(rep(1, p * 4), dim = c(p, 4))
+    lambda1 = rep(0.1,p), #array(rep(0.1, p * 4), dim = c(p, 4)), 
+    lambda2 = rep(1,p) #array(rep(1, p * 4), dim = c(p, 4))
   ),
   list(
     theta0 = 0.05,
@@ -514,7 +363,7 @@ init.alpha <- list(
     gamma_raw = array(rep(-0.1, p * 4 * psi), dim = c(p, 4, psi)),
     tau = array(rep(0.2, p * 4), dim = c(p, 4)),
     lambda1 = rep(0.2,p), #array(rep(0.2, p * 4), dim = c(p, 4)), 
-    lambda2 = rep(0.5,p)#array(rep(0.5, p * 4), dim = c(p, 4))
+    lambda2 = rep(0.5,p) #array(rep(0.5, p * 4), dim = c(p, 4))
   ),
   list(
     theta0 = 0.3,
@@ -639,9 +488,9 @@ theta.q3 <- theta.samples[,6]
 
 true_eta_season <- matrix(0, nrow = grid_n, ncol = 4)
 true_alphaseason <- matrix(0, nrow = grid_n, ncol = 4)
-theta_0 <- 1
-theta_2 <- 0.8
-theta_3 <- -0.8
+theta_0 <- theta.origin[1]
+theta_2 <- theta.origin[3]
+theta_3 <- theta.origin[4]
 
 for (s in 1:4) {
   x2_seq <- xholder.linear[, paste0("X2_S_", s)]
@@ -706,7 +555,7 @@ for(i in 1:4){
           labs(
             x = seasons[i],
             y = expression(alpha(c,ldots,c))
-          ) + ylim(0,5) +
+          ) + ylim(0,8) +
           theme_minimal(base_size = 20) +
           theme(legend.position = "none",
                 plot.margin = margin(5, 5, 5, 5),
@@ -898,3 +747,142 @@ ggplot(data = rp, aes(x = season, y = rp, group = season)) +
     axis.text = element_text(size = 20),
     legend.position = "none"
   )
+
+
+
+# Set up a 2x2 plotting grid to see all 4 seasons at once
+# par(mfrow = c(2, 2), mar = c(1, 1, 3, 1))
+
+# # True parameter values based on your theta.origin = c(1, 0, 0.8, -0.8, 0, 0)
+# theta_0 <- 1
+# theta_2 <- 0.8
+# theta_3 <- -0.8
+# library(plotly)
+# plot_list <- list()
+# for (s in 1:4) {
+#   # 1. Extract the specific 200-length grid for X2 and X3 for this specific season
+#   x2_seq <- xholder.linear[, paste0("X2_S_", s)]
+#   x3_seq <- xholder.linear[, paste0("X3_S_", s)]
+  
+#   # 2. Create the 200x200 surface matrix using outer()
+#   # This calculates true alpha for every single combination of X2 and X3
+#   alpha_matrix <- outer(x2_seq, x3_seq, function(x2, x3) {
+#     # eta = intercept + linear X2 + nonlinear X2 + linear X3 + nonlinear X3
+#     eta <- theta_0 + (theta_2 * x2 + f2(x2)) + (theta_3 * x3 + f3(x3))
+#     exp(eta)
+#   })
+#   fig <- plot_ly(x = ~x2_seq, y = ~x3_seq)
+  
+#   # 1. Add the True Surface (Blue scale)
+#   # add_surface(z = ~alpha_matrix, 
+#   #             colorscale = "Blues", 
+#   #             opacity = 0.9, # Slightly transparent
+#   #             name = "True Alpha",
+#   #             colorbar = list(title = "True", x = 1.0)) %>%
+#   if (s == 1) {
+#     fig <- fig %>%
+#       add_surface(z = ~alpha_matrix, colorscale = "steelblue", opacity = 0.9, 
+#                   name = "True Alpha", 
+#                   colorbar = list(title = "True", x = 1.0)) #%>%
+#       # add_surface(z = ~alpha_post_matrix, colorscale = "Reds", opacity = 0.7, 
+#                   # name = "Posterior Median", 
+#                   # colorbar = list(title = "Posterior", x = 1.15))
+#   } else {
+#     fig <- fig %>%
+#       add_surface(z = ~alpha_matrix, colorscale = "steeblue", opacity = 0.9, 
+#                   name = "True Alpha", showscale = FALSE)# %>%
+#       # add_surface(z = ~alpha_post_matrix, colorscale = "Reds", opacity = 0.7, 
+#                   # name = "Posterior Median", showscale = FALSE)
+#   }
+#   # 2. Add the Posterior Median Surface (Red/Orange scale)
+#   # add_surface(z = ~alpha_post_matrix, 
+#   #             colorscale = "Reds", 
+#   #             opacity = 0.7, # More transparent so you can see the true surface beneath
+#   #             name = "Posterior Median",
+#   #             colorbar = list(title = "Posterior", x = 1.15)) %>%
+  
+#   # 3. Clean up the layout and axis labels
+#   fig <- fig %>% layout(
+#     title = seasons[s],
+#     scene = list(
+#       xaxis = list(title = "X2"),
+#       yaxis = list(title = "X3"),
+#       zaxis = list(title = "alpha(c,...,c)")
+#     ),
+#     annotations = list(
+#       list(
+#         text = seasons[s],
+#         x = 0.5, y = 1.05, # Position title slightly above the plot
+#         xref = "paper", yref = "paper",
+#         showarrow = FALSE,
+#         font = list(size = 16)
+#       )
+#     )
+#   )
+#   plot_list[[s]] <- fig
+# }
+
+# plot_list[[2]]
+# fig
+# final_dashboard <- subplot(plot_list, nrows = 2, margin = 0.05)
+# final_dashboard
+
+# Display the interactive plot
+
+
+# par(mfrow = c(1, 1))
+
+# true_alphaseason <- matrix(0, nrow = grid_n, ncol = 4)
+# true_gsmoothseason <- matrix(0, nrow = grid_n, ncol = p * 4)
+
+# for (s in 1:4) {
+#   current_season_pred <- rep(true.theta0, grid_n)
+#   for (j in 1:p) {
+#     lin_col_name <- paste(covariates[j], "S", s, sep="_")
+#     lin_idx <- (j-1)*4 + s
+#     current_season_pred <- current_season_pred + xholder.linear[, lin_col_name] * true.theta[lin_idx]
+#   }
+#   x_vals_X2 <- xholder.linear[, paste("V2_S", s, sep="_")]  # X2's OWN grid for this season
+#   current_season_pred <- current_season_pred + nl_func_X2(x_vals_X2)
+#   x_vals_X3 <- xholder.linear[, paste("V3_S", s, sep="_")]  # X3's OWN grid for this season
+#   current_season_pred <- current_season_pred + nl_func_X3(x_vals_X3)  
+#   true_alphaseason[, s] <- exp(current_season_pred)
+# }
+
+
+# true_gridgsmooth <- matrix(0, nrow = grid_n, ncol = p)
+
+# for (j in 1:p) {
+#   smooth_sum <- rep(0, grid_n)
+  
+#   for (s in 1:4) {
+#     lin_col <- paste(covariates[j], "S", s, sep = "_")
+#     x_s <- xholder.linear[, lin_col]  # Season-specific grid
+    
+#     # Linear: evaluated at season-specific grid
+#     smooth_sum <- smooth_sum + x_s * true.theta[(j-1)*4 + s]
+    
+#     # Nonlinear: evaluated at SAME season-specific grid
+#     if (j == 2) smooth_sum <- smooth_sum + nl_func_X2(x_s)
+#     if (j == 3) smooth_sum <- smooth_sum + nl_func_X3(x_s)
+#   }
+  
+#   # Average across seasons (matching Stan's / n_seasons)
+#   true_gridgsmooth[, j] <- smooth_sum / 4
+# }
+
+# df_true_gridgsmooth <- do.call(rbind, lapply(1:p, function(j) {
+#   data.frame(
+#     x_index = xholder.linear[, (j-1)*4 + 1], 
+#     y = true_gridgsmooth[, j],
+#     variable = paste0("Covariate_", j)
+#   )
+# }))
+
+# true_global_eta <- rep(true.theta0, grid_n)
+# for (j in 1:p) {
+#   true_global_eta <- true_global_eta + true_gridgsmooth[, j]
+# }
+
+# true_gridalpha <- exp(true_global_eta)
+# plot(true_gridalpha)
