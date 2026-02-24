@@ -1054,7 +1054,7 @@ ggplot(qqplot_df, aes(x = grid)) +
   facet_wrap(~season) + 
   # coord_fixed(xlim = c(0, 4), ylim = c(0, 4)) +
   coord_fixed(xlim = c(-3, 3), ylim = c(-3, 3)) +
-  labs(x = "Exponential QQ plot", y = "Sample Quantiles") +
+  labs(x = "QQ plot", y = "Sample Quantiles") +
   theme_minimal(base_size = 30) +
   theme(axis.text = element_text(size = 20))
 

@@ -22,31 +22,32 @@ x.season <- time.seq / period
 season_code_full <- cut((time.seq%% period / period), breaks = c(-0.1, 0.25, 0.5, 0.75, 1.1), labels = c(1,2,3,4))
 seasons <- c("Winter", "Spring", "Summer", "Autumn")
 
-# x.origin <- pnorm(matrix(rnorm(n * p), ncol = p) %*% C) # matrix(runif(n*p),ncol=p) 
+# x.origin <- matrix(runif(n*p),ncol=p) # pnorm(matrix(rnorm(n * p), ncol = p) %*% C) 
 x.origin <- matrix(0, nrow = n, ncol = p)
+
+for (j in 1:p) {
+  phase_shift <- j * (2 * pi / p) 
+  seasonal_trend <- 0.5 + 0.1 * sin(2 * pi * time.seq / period + phase_shift) #+ 0.25 * cos(2 * pi * time.seq / period + phase_shift)
+  uniform_noise <- runif(n, min = -0.4, max = 0.4)
+  x.origin[, j] <- seasonal_trend + uniform_noise
+}
 
 # for (j in 1:p) {
 #   phase_shift <- j * (2 * pi / p) 
-#   seasonal_trend <- 0.5 + 0.25 * sin(2 * pi * time.seq / period + phase_shift)
-#   uniform_noise <- runif(n, min = -0.25, max = 0.25)
+#   base_wave <- cos(phase_shift) * cos(2 * pi * time.seq / period) + 
+#                sin(phase_shift) * sin(2 * pi * time.seq / period)
+#   asymmetric_wave <- ((base_wave + 1) / 2)^1.5
+#   seasonal_trend <- 0.01 + 0.98 * asymmetric_wave
+#   uniform_noise <- runif(n, min = -0.01, max = 0.01)
 #   x.origin[, j] <- seasonal_trend + uniform_noise
 # }
-for (j in 1:p) {
-  phase_shift <- j * (2 * pi / p) 
-  base_wave <- cos(phase_shift) * cos(2 * pi * time.seq / period) + 
-               sin(phase_shift) * sin(2 * pi * time.seq / period)
-  asymmetric_wave <- ((base_wave + 1) / 2)^1.5
-  seasonal_trend <- 0.009 + 0.99 * asymmetric_wave
-  uniform_noise <- runif(n, min = -0.01, max = 0.009)
-  x.origin[, j] <- seasonal_trend + uniform_noise
-}
 
 plot(x.origin[,3])
 covariates <- colnames(data.frame(x.origin))[1:p]
 
 f2 <- function(x) {.7 * sin(2 * pi * x^2)*x^3}
 f3 <- function(x) {-.7 * cos(3 * pi * x^2)*x^2}
-theta.origin <- c(1, 0, 0.8, -0.8, 0, 0) 
+theta.origin <- c(0.7, 0, 0.8, -0.8, 0, 0) 
 
 alp.origin <- exp(rep(theta.origin[1],n) + x.origin%*%theta.origin[-1] + f2(x.origin[,2]) + f3(x.origin[,3]))
 y.noise <- rPareto(n, rep(1, n), alpha = alp.origin)
@@ -154,8 +155,7 @@ Z_scales <- unlist(scale_stats_list)
 xholder.nonlinear <- do.call(cbind, grid_Z_list)
 xholder.linear <- model.matrix(~ ., data = data.frame(xholder))[,-1]
 alp.new <- as.vector(exp(theta.origin[1] + xholder %*% theta.origin[-1] + 
-                          f2(seq(min(x.origin[,2]), max(x.origin[,2]), length.out = grid.n)) + 
-                          f3(seq(min(x.origin[,3]), max(x.origin[,3]), length.out = grid.n))))
+                          f2(xholder[,2]) + f3(xholder[,3])))
 
 bs.linear_check <- cbind(rep(1,n), bs.linear)
 cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear_check[,c(1,2)]) %*% bs.nonlinear[,c((1):(psi))]), "\n")
@@ -277,9 +277,9 @@ system.time(fit1 <- stan(
   data = data.stan,    # named list of data
   init = init.alpha,      # initial value
   chains = 3,             # number of Markov chains
-  iter = 2000,            # total number of iterations per chain
+  iter = 3000,            # total number of iterations per chain
   cores = parallel::detectCores(), # number of cores (could use one per chain)
-  refresh = 1000             # no progress shown
+  refresh = 1500             # no progress shown
 ))
 
 posterior <- extract(fit1)
@@ -384,7 +384,6 @@ theta.q3 <- theta.samples[,6]
 newalpha.samples <- summary(fit1, par=c("gridalpha"), probs = c(0.05,0.5, 0.95))$summary
 data.scenario <- data.frame("x" = newx,
                             "true" = (alp.new),
-                            "post.mean" = (newalpha.samples[,1]),
                             "q2" = (newalpha.samples[,5]),
                             "q1" = (newalpha.samples[,4]),
                             "q3" = (newalpha.samples[,6]))
@@ -394,7 +393,7 @@ ggplot(data.scenario, aes(x=x)) +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   geom_line(aes(y = true, col = paste0("True Alpha:",n,"/",psi,"/",threshold)), linewidth = 2, linetype=2) + #ylim(0, 20) + 
   geom_line(aes(y=q2, col = "Posterior Median"), linewidth=1.5) +
-  ylim(0, 20) +
+  ylim(0, 10) +
   scale_color_manual(values=c("steelblue", "red")) + 
   scale_fill_manual(values=c("steelblue"), name = "") +
   theme_minimal(base_size = 40) + 
