@@ -28,8 +28,11 @@ x.origin <- matrix(0, nrow = n, ncol = p)
 
 for (j in 1:p) {
   phase_shift <- j * (2 * pi / p) 
-  seasonal_trend <- 0.5 + 0.1 * sin(2 * pi * time.seq / period + phase_shift) #+ 0.25 * cos(2 * pi * time.seq / period + phase_shift)
-  uniform_noise <- runif(n, min = -0.4, max = 0.4)
+  seasonal_trend <- 0.5 + 0.44 * sin(2 * pi * time.seq / period + phase_shift) #+ 0.25 * cos(2 * pi * time.seq / period + phase_shift)
+  # sin_val <- sin(2 * pi * time.seq / period + phase_shift)
+  # amp_vector <- ifelse(sin_val > 0, 0.74, 0.14)
+  # seasonal_trend <- 0.2 + (amp_vector * sin_val)  
+  uniform_noise <- runif(n, min = -0.05, max = 0.05)
   x.origin[, j] <- seasonal_trend + uniform_noise
 }
 
@@ -56,7 +59,7 @@ f.season.scale <- function(t){
   return(2.5 - .8 * sin(2 * pi * t / 365) - .6 * cos(2 * pi * t/365)) 
 }
 y.origin <- y.noise * f.season.scale(time.seq)
-plot(y.origin)
+# plot(y.origin)
 
 evgam.df <- data.frame(
   y = (y.origin),
@@ -73,7 +76,8 @@ y.origin <- y.origin[excess.index]
 u <- u.vec[excess.index]
 season_code_full <- season_code_full[excess.index]
 n <- length(y.origin)
-
+plot(x.origin[,1])
+plot(y.origin)
 x.origin <- data.frame(x.origin)
 
 linear_basis_list <- list()
@@ -332,7 +336,7 @@ Z_scales <- unlist(scale_stats_list)
 # true_gridalpha <- exp(true_global_eta)
 # plot(true_gridalpha)
 
-X_sd   <- apply(bs.linear, 2, sd)
+# X_sd   <- apply(bs.linear, 2, sd)
 
 # X_sd <- numeric(ncol(bs.linear))
 # for(k in 1:ncol(bs.linear)) {
@@ -340,9 +344,29 @@ X_sd   <- apply(bs.linear, 2, sd)
 #   X_sd[k] <- sd(bs.linear[mask_k, k])
 #   if(X_sd[k] < 1e-12) X_sd[k] <- 1
 # }
-bs.linear <- scale(bs.linear, center = FALSE, scale = X_sd)
+# bs.linear <- scale(bs.linear, center = FALSE, scale = X_sd)
 # true.theta.scaled <- true.theta * X_sd
+# X_means <- colMeans(bs.linear)
+# X_sd   <- apply(bs.linear, 2, sd)
+# bs.linear <- scale(bs.linear, center = X_means, scale = X_sd)
+stats <- apply(bs.linear, 2, function(x) {
+  vals <- x[x != 0]
+  if(length(vals) > 1) {
+    return(c(mean = mean(vals), sd = sd(vals)))
+  } else {
+    return(c(mean = 0, sd = 1))
+  }
+})
 
+X_means <- stats["mean", ]
+X_sds   <- stats["sd", ]
+bs.linear_scaled <- as.data.frame(lapply(1:ncol(bs.linear), function(j) {
+  col <- bs.linear[, j]
+  mask <- col != 0
+  col[mask] <- (col[mask] - X_means[j]) / X_sds[j]
+  return(col)
+})) %>% as.matrix()
+bs.linear <- bs.linear_scaled
 
 model.stan <- "
 // Stan model for Seasonal Pareto Samples
@@ -361,6 +385,7 @@ data {
   real <lower=0> atau;
   vector[(psi*p*n_seasons)] Z_scales;
   vector[p * n_seasons] X_sd;
+  vector[p * n_seasons] X_mean;
 }
 
 parameters {
@@ -402,12 +427,12 @@ model {
   // Priors
   target += normal_lpdf(theta0 | 0, 10);
   for (j in 1:p){
-    target += gamma_lpdf(lambda1[j] | 1, 1); 
+    target += gamma_lpdf(lambda1[j] | 1e-2, 1e-2); 
     target += gamma_lpdf(lambda2[j] | 1e-2, 1e-2);
     for (s in 1:n_seasons){
       int idx = (j-1) * n_seasons + s;
       target += double_exponential_lpdf(theta[idx] | 0, 1 / lambda1[j]);
-      target += gamma_lpdf(tau[j,s] | atau, square(lambda2[j]) * 0.5);
+      target += gamma_lpdf(tau[j, s] | atau, square(lambda2[j]) * 0.5);
       target += std_normal_lpdf(gamma_raw[j,s]);
     }
   }
@@ -419,7 +444,7 @@ generated quantities {
   matrix[grid_n, p] gridgsmooth; // Marginal smooths per covariate              
   matrix[grid_n, p * n_seasons] gsmoothseason; 
   vector[p*n_seasons] theta_origin = theta ./ X_sd;
-
+  real theta0_origin = theta0 - dot_product(X_mean, theta_origin);
   // Compute smooth effects per variable per season
   for (j in 1:p) {
     gridgsmooth[, j] = rep_vector(0, grid_n);
@@ -435,7 +460,7 @@ generated quantities {
 
   // Compute Seasonal Alphas
   for (s in 1:n_seasons) {
-    vector[grid_n] current_season_pred = rep_vector(theta0, grid_n);
+    vector[grid_n] current_season_pred = rep_vector(theta0_origin, grid_n);
     for (j in 1:p) {
       int lin_idx = (j-1) * n_seasons + s;
       current_season_pred += gsmoothseason[, lin_idx];
@@ -445,7 +470,7 @@ generated quantities {
 
   // Marginal Alpha (Average alpha across the year)
   {
-    vector[grid_n] global_eta = rep_vector(theta0,grid_n);
+    vector[grid_n] global_eta = rep_vector(theta0_origin, grid_n);
     for (j in 1:p) {
       global_eta += gridgsmooth[, j];
     }
@@ -460,6 +485,7 @@ data.stan <- list(
   n = n, 
   p = p, 
   # season_code = as.numeric(season_code_full),
+  X_mean = X_means,
   n_seasons = 4, 
   psi = psi, 
   bsLinear = bs.linear, 
@@ -507,9 +533,9 @@ fit1 <- stan(
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value 
     chains = 3,             # number of Markov chains
-    iter = 4000,            # total number of iterations per chain
+    iter = 2000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
-    refresh = 2000           # no progress shown
+    refresh = 1000           # no progress shown
 )
 
 posterior <- extract(fit1)
@@ -648,7 +674,7 @@ ggplot(data.scenario, aes(x=x)) +
   geom_ribbon(aes(ymin = q1, ymax = q3), fill="steelblue", alpha = 0.2) +
   geom_line(aes(y=true), color = "red", linewidth=1, linetype =2) +
   geom_line(aes(y=q2), color = "steelblue", linewidth=1) +
-  theme_minimal(base_size = 30) +
+  theme_minimal(base_size = 30) + ylim(0, 5)+
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 20))
@@ -680,7 +706,7 @@ for(i in 1:4){
           labs(
             x = seasons[i],
             y = expression(alpha(c,ldots,c))
-          ) +
+          ) + ylim(0,5) +
           theme_minimal(base_size = 20) +
           theme(legend.position = "none",
                 plot.margin = margin(5, 5, 5, 5),
@@ -743,23 +769,23 @@ long_df <- full_df %>%
     Model == "Post_Alpha" ~ "BLAST"
   ))
 
-ggplot(long_df, aes(x = X3, y = X2, z = Alpha)) +
-  geom_raster(aes(fill = Alpha)) +
-  geom_tile(aes(fill = Alpha)) +
-  geom_contour(color = "white", alpha = 0.4, bins = 25) +
-  facet_grid(Season ~ Model) +
-  # scale_fill_gradient(low="red", high="steelblue") +
-  scale_fill_viridis_c(option = "D") + 
-  theme_minimal() +
-  labs(
-    x = "X2",
-    y = "X3",
-    fill = expression(alpha(c,ldots,c))
-  ) +
-  theme(
-    strip.text = element_text(size = 12, face = "bold"),
-    panel.spacing = unit(1, "lines")
-  )
+# ggplot(long_df, aes(x = X3, y = X2, z = Alpha)) +
+#   geom_raster(aes(fill = Alpha)) +
+#   geom_tile(aes(fill = Alpha)) +
+#   geom_contour(color = "white", alpha = 0.4, bins = 25) +
+#   facet_grid(Season ~ Model) +
+#   # scale_fill_gradient(low="red", high="steelblue") +
+#   scale_fill_viridis_c(option = "D") + 
+#   theme_minimal() +
+#   labs(
+#     x = "X2",
+#     y = "X3",
+#     fill = expression(alpha(c,ldots,c))
+#   ) +
+#   theme(
+#     strip.text = element_text(size = 12, face = "bold"),
+#     panel.spacing = unit(1, "lines")
+#   )
 
 mcmc.alpha <- posterior$alpha
 len <- dim(mcmc.alpha)[1]
