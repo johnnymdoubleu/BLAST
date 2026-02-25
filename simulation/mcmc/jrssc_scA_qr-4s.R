@@ -49,11 +49,11 @@ for (j in 1:p) {
                sin(phase_shift) * sin(2 * pi * time.seq / period)
   asymmetric_wave <- ((base_wave + 1) / 2)^1.5
   seasonal_trend <- 0.5 + 0.1 * asymmetric_wave
-  uniform_noise <- runif(n, min = -0.4, max = 0.4)
+  uniform_noise <- runif(n, min = -0.5, max = 0.4)
   x.origin[, j] <- seasonal_trend + uniform_noise
 }
 
-# plot(x.origin[,3])
+plot(x.origin[,3])
 covariates <- colnames(data.frame(x.origin))[1:p]
 
 f2 <- function(x) {1.5 * sin(2 * pi * x^2)*x^3}
@@ -331,7 +331,7 @@ model {
   // Priors
   target += normal_lpdf(beta0 | 0, 10);
   for (j in 1:p) {
-    target += gamma_lpdf(lambda1[j] | 1, 1); 
+    target += gamma_lpdf(lambda1[j] | 1e-1, 1e-1); 
     target += gamma_lpdf(lambda2[j] | 1e-2, 1e-2);      
     for (s in 1:n_seasons) {
       int idx = (j-1) * n_seasons + s;
@@ -407,7 +407,7 @@ data.stan <- list(
 
 init.stan <- function(chain_id = 1) {
   # Chain-specific initialization for 3 chains
-  set.seed(1234 + chain_id)  # reproducible but different per chain
+  # set.seed(1234 + chain_id)  # reproducible but different per chain
   
   list(
     beta0     = rnorm(4, 0, 0.5),                           # season intercepts
@@ -658,7 +658,7 @@ for(i in 1:4){
           labs(
             x = seasons[i],
             y = expression(alpha(c,ldots,c))
-          ) + ylim(0,10) +
+          ) + #ylim(0,10) +
           theme_minimal(base_size = 20) +
           theme(legend.position = "none",
                 plot.margin = margin(5, 5, 5, 5),
@@ -678,8 +678,8 @@ print(final_plot)
 plot_data_list <- list()
 
 for (s in 1:4) {
-  x2_seq <- xholder.linear[, paste0("X2_S_", s)]
-  x3_seq <- xholder.linear[, paste0("X3_S_", s)]
+  x2_seq <- xholder.linear[, paste0("X2_S", s)]
+  x3_seq <- xholder.linear[, paste0("X3_S", s)]
   
   alpha_true <- outer(x2_seq, x3_seq, function(x2, x3) {
     eta <- 1 + (0.8 * x2 + f2(x2)) + (-0.8 * x3 + f3(x3))
@@ -691,7 +691,7 @@ for (s in 1:4) {
   
   g2_median <- apply(posterior$gsmoothseason[, , idx_X2], 2, median)
   g3_median <- apply(posterior$gsmoothseason[, , idx_X3], 2, median)
-  theta0_post <- median(posterior$theta0) # Or post$theta0_origin if centered
+  theta0_post <- median(posterior$beta0[,s]) # Or post$theta0_origin if centered
   
   alpha_post <- outer(1:grid_n, 1:grid_n, function(i, j) {
     exp(theta0_post + g2_median[i] + g3_median[j])
