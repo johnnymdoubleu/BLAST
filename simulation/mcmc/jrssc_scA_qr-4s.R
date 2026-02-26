@@ -27,12 +27,12 @@ seasons <- c("Winter", "Spring", "Summer", "Autumn")
 # x.origin <- pnorm(matrix(rnorm(n * p), ncol = p) %*% C) # matrix(runif(n*p),ncol=p) 
 x.origin <- matrix(0, nrow = n, ncol = p)
 
-# for (j in 1:p) {
-#   phase_shift <- j * (2 * pi / p) 
-#   seasonal_trend <- 0.5 + 0.1 * sin(2 * pi * time.seq / period + phase_shift) #+ 0.25 * cos(2 * pi * time.seq / period + phase_shift)
-#   uniform_noise <- runif(n, min = -0.4, max = 0.4)
-#   x.origin[, j] <- seasonal_trend + uniform_noise
-# }
+for (j in 1:p) {
+  phase_shift <- j * (2 * pi / p) 
+  seasonal_trend <- 0.5 + 0.1 * sin(2 * pi * time.seq / period + phase_shift) #+ 0.25 * cos(2 * pi * time.seq / period + phase_shift)
+  uniform_noise <- runif(n, min = -0.4, max = 0.4)
+  x.origin[, j] <- seasonal_trend + uniform_noise
+}
 
 # for (j in 1:p) {
 #   phase_shift <- j * (2 * pi / p)
@@ -43,15 +43,15 @@ x.origin <- matrix(0, nrow = n, ncol = p)
 #   x.origin[, j] <- pmax(pmin(seasonal_trend + uniform_noise, 1), 0)  # clip to [0,1]
 # }
 
-for (j in 1:p) {
-  phase_shift <- j * (2 * pi / p) 
-  base_wave <- cos(phase_shift) * cos(2 * pi * time.seq / period) + 
-               sin(phase_shift) * sin(2 * pi * time.seq / period)
-  asymmetric_wave <- ((base_wave + 1) / 2)^1.5
-  seasonal_trend <- 0.5 + 0.1 * asymmetric_wave
-  uniform_noise <- runif(n, min = -0.5, max = 0.4)
-  x.origin[, j] <- seasonal_trend + uniform_noise
-}
+# for (j in 1:p) {
+#   phase_shift <- j * (2 * pi / p) 
+#   base_wave <- cos(phase_shift) * cos(2 * pi * time.seq / period) + 
+#                sin(phase_shift) * sin(2 * pi * time.seq / period)
+#   asymmetric_wave <- ((base_wave + 1) / 2)^1.5
+#   seasonal_trend <- 0.5 + 0.1 * asymmetric_wave
+#   uniform_noise <- runif(n, min = -0.4, max = 0.4)
+#   x.origin[, j] <- seasonal_trend + uniform_noise
+# }
 
 plot(x.origin[,3])
 covariates <- colnames(data.frame(x.origin))[1:p]
@@ -69,13 +69,13 @@ y.origin <- y.noise * f.season.scale(time.seq)
 # plot(y.origin)
 
 evgam.df <- data.frame(
-  y = log(y.origin),
+  y = (y.origin),
   sin.time = sin(2 * pi * time.seq / 365),
   cos.time = cos(2 * pi * time.seq / 365)
 )
 evgam.cov <- y ~ 1 + cos.time + sin.time
 ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
-u.vec <- exp(predict(ald.cov.fit)$location)
+u.vec <- (predict(ald.cov.fit)$location)
 
 excess.index <- which(y.origin > u.vec)
 x.origin <- x.origin[excess.index,]
@@ -398,7 +398,7 @@ data.stan <- list(
   xholderNonlinear = xholder.nonlinear,              # grid_n × Σ|K^{j,s}|
   u              = u,
   y              = y.origin,
-  atau           = 1.0,                               # hyperparameter for tau prior
+  atau           = ((psi+1)/2),                               # hyperparameter for tau prior
   X_mean         = X_means,                           # 4p: linear slope centering stats
   X_sd           = X_sds,                             # 4p: linear slope scaling stats
   # Compute Z_scales dynamically from model_data
@@ -417,7 +417,7 @@ init.stan <- function(chain_id = 1) {
       dim = c(p, 4, psi)
     ),
     lambda1   = rep(runif(p, 0.5, 1.5), 1),          # linear shrinkage
-    lambda2   = rep(runif(p, 0.05, 0.2), 1),         # nonlinear shrinkage
+    lambda2   = rep(runif(p, 1, 5), 1),         # nonlinear shrinkage
     tau       = array(
       runif(p * 4, 0.5, 2.0),
       dim = c(p, 4)
@@ -440,9 +440,9 @@ fit1 <- stan(
     init = lapply(1:3, init.stan),
     # init = init.stan,      # initial value 
     chains = 3,             # number of Markov chains
-    iter = 2000,            # total number of iterations per chain
+    iter = 4000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
-    refresh = 1000           # no progress shown
+    refresh = 2000           # no progress shown
 )
 
 posterior <- extract(fit1)
@@ -673,6 +673,122 @@ final_plot <- patchwork::wrap_plots(grid.plts, nrow = 2, ncol = 2)
 print(final_plot)
 
 
+gsmooth_median <- apply(posterior$gridgsmooth, c(2, 3), median)
+gsmooth_lower  <- apply(posterior$gridgsmooth, c(2, 3), quantile, probs = 0.05)
+gsmooth_upper  <- apply(posterior$gridgsmooth, c(2, 3), quantile, probs = 0.95)
+true_gridgsmooth <- matrix(0, nrow = grid_n, ncol = p)
+
+true_gridgsmooth <- matrix(0, nrow = grid_n, ncol = p)
+x_global <- matrix(0, nrow = grid_n, ncol = p)
+for (j in 1:p) {
+  var_name  <- covariates[j]
+  cols_j    <- paste0(var_name, "_S", 1:4)
+  x_global[, j] <- rowMeans(xholder.linear[, cols_j, drop = FALSE])
+}
+nl_func <- list(
+  X1 = function(x) rep(0, length(x)),
+  X2 = f2,
+  X3 = f3,
+  X4 = function(x) rep(0, length(x)),
+  X5 = function(x) rep(0, length(x))
+)
+# for (j in 1:p) {
+#   xg <- x_global[, j]
+#   nl <- if (j == 2) {
+#     f2(xg)
+#   } else if (j == 3) {
+#     f3(xg)
+#   } else {
+#     rep(0, grid_n)
+#   }
+#   true_gridgsmooth[, j] <- theta.origin[j+1] * xg + nl
+# }
+true_gsmoothseason <- matrix(0, nrow = grid_n, ncol = p * 4)
+
+for (j in 1:p) {
+  var_name <- covariates[j]
+  fj       <- nl_func[[var_name]]
+  
+  for (s in 1:4) {
+    col_key    <- paste0(var_name, "_S", s)
+    col_idx    <- (j - 1) * 4 + s
+    raw_grid <- xholder.linear[, col_key]
+  
+    season_idx     <- which(season_code_full == levels(season_code_full)[s])
+    x_train_season <- x.origin[season_idx, j]
+    
+    # f_train <- fj(x_train_season)
+    # X_lin_train <- cbind(1, x_train_season)
+    f_grid      <- fj(raw_grid)
+    X_lin_grid  <- cbind(1, raw_grid)
+    ab_hat_grid <- lm.fit(X_lin_grid, f_grid)$coefficients  # fit on grid, not exceedances
+
+    f_proj_grid  <- ab_hat_grid[1] + ab_hat_grid[2] * raw_grid
+    f_resid_grid <- f_grid - f_proj_grid        
+    # ab_hat <- lm.fit(X_lin_train, f_train)$coefficients  
+    
+    # true_linear_on_grid <- theta.origin[j+1] * raw_grid
+    
+    # f_grid        <- fj(raw_grid)
+    # f_proj_grid   <- ab_hat[1] + ab_hat[2] * raw_grid
+    # f_resid_grid  <- f_grid - f_proj_grid
+
+    true_gsmoothseason[, col_idx] <- (theta.origin[j+1] + ab_hat_grid[2]) * raw_grid + f_resid_grid
+  }
+}
+
+true_gridgsmooth_adj <- matrix(0, nrow = grid_n, ncol = p)
+
+x_global <- matrix(0, nrow = grid_n, ncol = p)
+for (j in 1:p) {
+  var_name <- covariates[j]
+  for (s in 1:4) {
+    col_key <- paste0(var_name, "_S", s)
+    x_global[, j] <- x_global[, j] + xholder.linear[, col_key] / 4
+    col_idx <- (j - 1) * 4 + s
+    true_gridgsmooth_adj[, j] <- true_gridgsmooth_adj[, j] + true_gsmoothseason[, col_idx] / 4
+  }
+}
+
+true_beta0 <- rep(theta.origin[1] / 4, 4)
+for (s in 1:4) {
+  season_idx <- which(season_code_full == levels(season_code_full)[s])
+  for (j in 1:p) {
+    var_name <- covariates[j]
+    fj <- nl_func[[var_name]]
+    x_train_season <- x.origin[season_idx, j]
+    f_train <- fj(x_train_season)
+    X_lin_train <- cbind(1, x_train_season)
+    ab_hat <- lm.fit(X_lin_train, f_train)$coefficients
+    true_beta0[s] <- true_beta0[s] + ab_hat[1]   # absorb intercept of f_j
+  }
+}
+
+df_gsmooth_compare <- do.call(rbind, lapply(1:p, function(j) {
+  data.frame(
+    x         = x_global[, j],
+    true      = true_gridgsmooth_adj[, j],
+    est       = gsmooth_median[, j],
+    lower     = gsmooth_lower[, j],
+    upper     = gsmooth_upper[, j],
+    covariate = paste0("X", j)
+  )
+}))
+
+ggplot(df_gsmooth_compare, aes(x = x)) +
+  geom_ribbon(aes(ymin = lower, ymax = upper),
+              fill = "steelblue", alpha = 0.25) +
+  geom_line(aes(y = est),  color = "steelblue", linewidth = 1,   linetype = "solid") +
+  geom_line(aes(y = true), color = "red",       linewidth = 0.9, linetype = "dashed") +
+  geom_hline(yintercept = 0, linetype = "dotted", color = "grey50") +
+  facet_grid(~ covariate, scales = "free") +
+  labs(x="", y=expression(g[j](x[j]))) +
+  theme_minimal(base_size = 22) +
+  theme(
+    strip.text  = element_text(face = "bold", size = 18),
+    axis.text   = element_text(size = 16),
+    plot.title  = element_text(hjust = 0.5, size = 20)
+  )
 
 
 plot_data_list <- list()
@@ -721,23 +837,23 @@ long_df <- full_df %>%
     Model == "Post_Alpha" ~ "BLAST"
   ))
 
-ggplot(long_df, aes(x = X3, y = X2, z = Alpha)) +
-  geom_raster(aes(fill = Alpha)) +
-  geom_tile(aes(fill = Alpha)) +
-  geom_contour(color = "white", alpha = 0.4, bins = 25) +
-  facet_grid(Season ~ Model) +
-  # scale_fill_gradient(low="red", high="steelblue") +
-  scale_fill_viridis_c(option = "D") + 
-  theme_minimal() +
-  labs(
-    x = "X2",
-    y = "X3",
-    fill = expression(alpha(c,ldots,c))
-  ) +
-  theme(
-    strip.text = element_text(size = 12, face = "bold"),
-    panel.spacing = unit(1, "lines")
-  )
+# ggplot(long_df, aes(x = X3, y = X2, z = Alpha)) +
+#   geom_raster(aes(fill = Alpha)) +
+#   geom_tile(aes(fill = Alpha)) +
+#   geom_contour(color = "white", alpha = 0.4, bins = 25) +
+#   facet_grid(Season ~ Model) +
+#   # scale_fill_gradient(low="red", high="steelblue") +
+#   scale_fill_viridis_c(option = "D") + 
+#   theme_minimal() +
+#   labs(
+#     x = "X2",
+#     y = "X3",
+#     fill = expression(alpha(c,ldots,c))
+#   ) +
+#   theme(
+#     strip.text = element_text(size = 12, face = "bold"),
+#     panel.spacing = unit(1, "lines")
+#   )
 
 mcmc.alpha <- posterior$alpha
 len <- dim(mcmc.alpha)[1]

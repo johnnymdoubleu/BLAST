@@ -1,13 +1,14 @@
 setwd("../BLAST/simulation/results")
 iter <- 2
-n <- 15000
-EV <- 1
+n <- 10000
+grid.n <- 200
+EV <- 0
 threshold <- 0.95
 if(EV==TRUE){
   file_pattern <- paste0("evgam_mc_scD2_",n,"_.*.Rdata")
   # file_pattern <- paste0("evgam_mc_scA_.*.Rdata")
 }else if(EV==FALSE){
-  file_pattern <- paste0("2026-02-09_",iter,"_MC_scC_",n,"_.*.Rdata")
+  file_pattern <- paste0("2026-02-26_",iter,"_MC_scA_",n,"_.*.Rdata")
 }
 
 file_list <- list.files(pattern = file_pattern)
@@ -19,17 +20,17 @@ if (length(file_list) == 0) {
 
 # 2. Initialize the 4 final containers
 # We use lists initially because they are faster to append to than dataframes
-alpha.container <- matrix(, nrow=ceiling(n*(1-threshold)), ncol=0)
-newgsmooth.container <- matrix(, nrow=ceiling(n*(1-threshold)), ncol=0)
-gridgsmooth.container <- matrix(, nrow=ceiling(n*(1-threshold)), ncol=0)
-gridgl.container <- matrix(, nrow=ceiling(n*(1-threshold)), ncol=0)
-gridgnl.container <- matrix(, nrow=ceiling(n*(1-threshold)), ncol=0)
+alpha.container <- matrix(, nrow=grid.n, ncol=0)
+newgsmooth.container <- matrix(, nrow=grid.n, ncol=0)
+gridgsmooth.container <- matrix(, nrow=grid.n, ncol=0)
+gridgl.container <- matrix(, nrow=grid.n, ncol=0)
+gridgnl.container <- matrix(, nrow=grid.n, ncol=0)
 evgam.1.container <- matrix(, nrow=ceiling(n*(1-threshold)), ncol=0)
 evgam.scale.container <- matrix(, nrow=ceiling(n*(1-threshold)), ncol=0)
 vgam.1.container <- matrix(, nrow=ceiling(n*(1-threshold)), ncol=0)
 vgam.scale.container <- matrix(, nrow=ceiling(n*(1-threshold)), ncol=0)
 mise.container <- mise.evgam.1.container <- mise.evgam.scale.container <- mise.vgam.1.container <- mise.vgam.scale.container <- c()
-qqplot.container <- matrix(, nrow=ceiling(n*(1-threshold)), ncol=0)
+# qqplot.container <- matrix(, nrow=ceiling(n*(1-threshold)), ncol=0)
 
 # 3. Iterate through the files
 for (f in file_list) {
@@ -63,7 +64,7 @@ for (f in file_list) {
       gridgl.container <- cbind(gridgl.container, temp_env$gridgl.container[,c(1:iter)])
       gridgnl.container <- cbind(gridgnl.container, temp_env$gridgnl.container[,c(1:iter)])
       mise.container <- c(mise.container, temp_env$mise.container)
-      qqplot.container <- cbind(qqplot.container, temp_env$qqplot.container[,c(1:iter)])
+      # qqplot.container <- cbind(qqplot.container, temp_env$qqplot.container[,c(1:iter)])
     }, error = function(e) {
       warning(paste("Error loading file", f, ":", e$message))
     })    
@@ -76,7 +77,7 @@ if(EV==FALSE){
   colnames(gridgsmooth.container) <- paste0("V", 1:total.iter)
   colnames(gridgl.container) <- paste0("V", 1:total.iter)
   colnames(gridgnl.container) <- paste0("V", 1:total.iter)
-  colnames(qqplot.container) <- paste0("V", 1:total.iter)
+  # colnames(qqplot.container) <- paste0("V", 1:total.iter)
   alpha.container$x <- temp_env$alpha.container$x
   alpha.container$true <- temp_env$alpha.container$true
   alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
@@ -96,10 +97,9 @@ if(EV==FALSE){
   gridgnl.container$mean <- rowMeans(gridgnl.container[,1:total.iter])
   gridgnl.container$covariate <- temp_env$gridgnl.container$covariate
   gridgnl.container <- as.data.frame(gridgnl.container)
-  qqplot.container$grid <- temp_env$qqplot.container$grid
-  qqplot.container$mean <- rowMeans(qqplot.container[,1:total.iter])
-
-  
+  # qqplot.container$grid <- temp_env$qqplot.container$grid
+  # qqplot.container$mean <- rowMeans(qqplot.container[,1:total.iter])
+  cat(mean(mise.container, na.rm=TRUE), "±", sd(mise.container, na.rm=TRUE)/sqrt(sum(!is.na(mise.container))), "\n")
   # save(alpha.container, gridgnl.container, gridgl.container, gridgsmooth.container, mise.container, qqplot.container, file = paste0(Sys.Date(),"_",total.iter,"_MC_scC_",n,".Rdata"))
 } else {
   total.iter <- length(file_list) * iter
