@@ -1,0 +1,108 @@
+WARNING: ignoring environment value of R_HOME
+
+SAMPLING FOR MODEL 'anon_model' NOW (CHAIN 1).
+
+SAMPLING FOR MODEL 'anon_model' NOW (CHAIN 2).
+
+SAMPLING FOR MODEL 'anon_model' NOW (CHAIN 3).
+Chain 1: 
+Chain 1: Gradient evaluation took 0.006658 seconds
+Chain 1: 1000 transitions using 10 leapfrog steps per transition would take 66.58 seconds.
+Chain 1: Adjust your expectations accordingly!Chain 2: 
+Chain 2: Gradient evaluation took 0.006516 seconds
+Chain 2: 1000 transitions using 10 leapfrog steps per transition would take 65.16 seconds.
+Chain 2: Adjust your expectations accordingly!
+Chain 2: 
+Chain 2: 
+Chain 
+Chain 1: 
+Chain 1: 
+3: 
+Chain 3: Gradient evaluation took 0.006528 seconds
+Chain 3: 1000 transitions using 10 leapfrog steps per transition would take 65.28 seconds.
+Chain 3: Adjust your expectations accordingly!
+Chain 3: 
+Chain 3: 
+Chain 1: Iteration:    1 / 2000 [  0%]  (Warmup)
+Chain 2: Iteration:    1 / 2000 [  0%]  (Warmup)
+Chain 3: Iteration:    1 / 2000 [  0%]  (Warmup)
+Chain 3: Iteration: 1000 / 2000 [ 50%]  (Warmup)
+Chain 3: Iteration: 1001 / 2000 [ 50%]  (Sampling)
+Chain 1: Iteration: 1000 / 2000 [ 50%]  (Warmup)
+Chain 1: Iteration: 1001 / 2000 [ 50%]  (Sampling)
+Chain 2: Iteration: 1000 / 2000 [ 50%]  (Warmup)
+Chain 2: Iteration: 1001 / 2000 [ 50%]  (Sampling)
+Chain 3: Iteration: 2000 / 2000 [100%]  (Sampling)
+Chain 3: 
+Chain 3:  Elapsed Time: 776.859 seconds (Warm-up)
+Chain 3:                598.108 seconds (Sampling)
+Chain 3:                1374.97 seconds (Total)
+Chain 3: 
+Chain 1: Iteration: 2000 / 2000 [100%]  (Sampling)
+Chain 1: 
+Chain 1:  Elapsed Time: 814.539 seconds (Warm-up)
+Chain 1:                586.82 seconds (Sampling)
+Chain 1:                1401.36 seconds (Total)
+Chain 1: 
+Chain 2: Iteration: 2000 / 2000 [100%]  (Sampling)
+Chain 2: 
+Chain 2:  Elapsed Time: 832.4 seconds (Warm-up)
+Chain 2:                577.133 seconds (Sampling)
+Chain 2:                1409.53 seconds (Total)
+Chain 2: 
+
+SAMPLING FOR MODEL 'anon_model' NOW (CHAIN 1).
+
+SAMPLING FOR MODEL 'anon_model' NOW (CHAIN 2).
+
+SAMPLING FOR MODEL 'anon_model' NOW (CHAIN 3).
+Chain 1: 
+Chain 1: Gradient evaluation took 0.024257 seconds
+Chain 1: 1000 transitions using 10 leapfrog steps per transition would take 242.57 seconds.
+Chain 1: Adjust your expectations accordingly!
+Chain 1: 
+Chain 1: 
+Chain 2: 
+Chain 2: Gradient evaluation took 0.006273 seconds
+Chain 2: 1000 transitions using 10 leapfrog steps per transition would take 62.73 seconds.
+Chain 2: Adjust your expectations accordingly!
+Chain 2: 
+Chain 2: 
+Chain 3: 
+Chain 3: Gradient evaluation took 0.006297 seconds
+Chain 3: 1000 transitions using 10 leapfrog steps per transition would take 62.97 seconds.
+Chain 3: Adjust your expectations accordingly!
+Chain 3: 
+Chain 3: 
+Chain 1: Iteration:    1 / 2000 [  0%]  (Warmup)
+Chain 2: Iteration:    1 / 2000 [  0%]  (Warmup)
+Chain 3: Iteration:    1 / 2000 [  0%]  (Warmup)
+Chain 3: Iteration: 1000 / 2000 [ 50%]  (Warmup)
+Chain 3: Iteration: 1001 / 2000 [ 50%]  (Sampling)
+Chain 2: Iteration: 1000 / 2000 [ 50%]  (Warmup)
+Chain 2: Iteration: 1001 / 2000 [ 50%]  (Sampling)
+Chain 1: Iteration: 1000 / 2000 [ 50%]  (Warmup)
+Chain 1: Iteration: 1001 / 2000 [ 50%]  (Sampling)
+Chain 2: Iteration: 2000 / 2000 [100%]  (Sampling)
+Chain 2: 
+Chain 2:  Elapsed Time: 797.517 seconds (Warm-up)
+Chain 2:                549.587 seconds (Sampling)
+Chain 2:                1347.1 seconds (Total)
+Chain 2: 
+Chain 3: Iteration: 2000 / 2000 [100%]  (Sampling)
+Chain 3: 
+Chain 3:  Elapsed Time: 786.131 seconds (Warm-up)
+Chain 3:                563.778 seconds (Sampling)
+Chain 3:                1349.91 seconds (Total)
+Chain 3: 
+Chain 1: Iteration: 2000 / 2000 [100%]  (Sampling)
+Chain 1: 
+Chain 1:  Elapsed Time: 892.41 seconds (Warm-up)
+Chain 1:                493.906 seconds (Sampling)
+Chain 1:                1386.32 seconds (Total)
+Chain 1: 
+BLAST:    0.03249543 ± 0.01317684 
+ EVGAM:   0.4270038 ± 0.2048757 
+ EVGAM-σ: 0.08596314 ± 0.03258885 
+ VGAM:    0.04095341 ± 0.01781585 
+ VGAM-σ:  0.1133648 ± 0.03808741 

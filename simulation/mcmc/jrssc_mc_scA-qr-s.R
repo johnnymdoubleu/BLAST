@@ -8,7 +8,7 @@ library(evgam)
 # Scenario A
 # array.id <- commandArgs(trailingOnly=TRUE)
 
-total.iter <- 2
+total.iter <- 5
 
 n <- n.origin <- 10000
 grid.n <- 200
@@ -94,7 +94,7 @@ model {
   target += pareto_lpdf(y | u, alpha);
   target += normal_lpdf(theta[1] | 0, 10);
   for (j in 1:p){
-    target += gamma_lpdf(lambda1[j] | 1, 1); 
+    target += gamma_lpdf(lambda1[j] | 1e-1, 1e-1); 
     target += gamma_lpdf(lambda2[j] | 1e-2, 1e-2);
     target += double_exponential_lpdf(theta[(j+1)] | 0, 1/(lambda1[j]));
     target += gamma_lpdf(tau[j] | atau, square(lambda2[j])*0.5);
@@ -110,15 +110,15 @@ generated quantities {
   matrix[grid_n, p] gridgl; // linear component
   matrix[grid_n, p] gridgsmooth; // linear component
   vector[grid_n] se;
-  vector[p] theta_origin = theta[2:(p+1)] ./ X_sd;
+  // vector[p] theta_origin = theta[2:(p+1)] ./ X_sd;
 
-  real theta0 = theta[1] - dot_product(X_means, theta_origin);
+  // real theta0 = theta[1] - dot_product(X_means, theta_origin);
 
   {
-    vector[grid_n] grideta = rep_vector(theta0, grid_n);
+    vector[grid_n] grideta = rep_vector(theta[1], grid_n);
     for (j in 1:p){
         int nl_start = (j - 1) * psi + 1;
-        gridgl[,j] = col(xholderLinear, j) * theta_origin[j]; // xholderLinear[,j] * theta_origin[j]
+        gridgl[,j] = col(xholderLinear, j) * theta[j+1]; // xholderLinear[,j] * theta_origin[j]
         gridgnl[,j] = block(xholderNonlinear,1, nl_start, grid_n, psi) * gamma[j]; // xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j]
         gridgsmooth[,j] = gridgl[,j] + gridgnl[,j];
         grideta += gridgsmooth[,j];
@@ -162,6 +162,7 @@ for(iter in 1:total.iter){
     uniform_noise <- runif(n, min = -0.4, max = 0.4)
     x.origin[, j] <- seasonal_trend + uniform_noise
   }
+  x.origin.full <- x.origin
   alp.origin <- exp(rep(theta.origin[1],n) + x.origin%*%theta.origin[-1] + f2(x.origin[,2]) + f3(x.origin[,3]))
   y.noise <- rPareto(n, rep(1, n), alpha = alp.origin)
   f.season.scale <- function(t){
@@ -198,7 +199,7 @@ for(iter in 1:total.iter){
   # newx <- seq(0,1,length.out = n)
   # xholder <- do.call(cbind, lapply(1:p, function(j) {newx}))
 
-  newx <- seq(0, 1, length.out = grid.n)
+  newx <- seq(min(x.origin), max(x.origin), length.out = grid.n)
   xholder <- do.call(cbind, lapply(1:p, function(i) {seq(min(x.origin[,i]), max(x.origin[,i]), length.out = grid.n)}))
   
   g2.nl <- f2(xholder[,2]) - (f2.hidden$intercept + f2.hidden$slope*xholder[,2])
@@ -298,8 +299,9 @@ for(iter in 1:total.iter){
 
   xholder.linear <- model.matrix(~ ., data = data.frame(xholder))[,-1]
   xholder.nonlinear <- do.call(cbind, grid_Z_list)
-
-  bs.linear <- scale(bs.linear, center = X_means, scale = X_sd)
+  # Scale xholder.linear using the SAME X_means and X_sd as bs.linear
+  # xholder.linear <- scale(xholder.linear, center = X_means, scale = X_sd)
+  # bs.linear <- scale(bs.linear, center = X_means, scale = X_sd)
 
   data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, grid_n = grid.n,
                   atau = ((psi+1)/2), X_means = X_means, X_sd=X_sd, Z_scales=Z_scales,

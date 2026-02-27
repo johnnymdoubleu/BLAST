@@ -411,7 +411,7 @@ print(plt +
         scale_color_manual(values = c("steelblue", "red"))+
         guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) +
-        theme_minimal(base_size = 40) + ylim(-0.65, 3.55)+
+        theme_minimal(base_size = 40) + ylim(-0.65, 2)+
         theme(legend.position = "none",
                 strip.text = element_blank(),
                 axis.text = element_text(size = 30)))

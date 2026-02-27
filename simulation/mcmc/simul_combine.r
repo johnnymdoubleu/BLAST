@@ -2,13 +2,13 @@ setwd("../BLAST/simulation/results")
 iter <- 2
 n <- 10000
 grid.n <- 200
-EV <- 0
+EV <- 1
 threshold <- 0.95
 if(EV==TRUE){
-  file_pattern <- paste0("evgam_mc_scD2_",n,"_.*.Rdata")
-  # file_pattern <- paste0("evgam_mc_scA_.*.Rdata")
+  file_pattern <- paste0("evgam_mc_scA_",n,"_.*.Rdata")
+  # file_pattern <- paste0("evgam_mc_scA_.*.Rdata")x``
 }else if(EV==FALSE){
-  file_pattern <- paste0("2026-02-26_",iter,"_MC_scA_",n,"_.*.Rdata")
+  file_pattern <- paste0("2026-02-27_",iter,"_MC_scA_",n,"_.*.Rdata")
 }
 
 file_list <- list.files(pattern = file_pattern)
@@ -25,10 +25,10 @@ newgsmooth.container <- matrix(, nrow=grid.n, ncol=0)
 gridgsmooth.container <- matrix(, nrow=grid.n, ncol=0)
 gridgl.container <- matrix(, nrow=grid.n, ncol=0)
 gridgnl.container <- matrix(, nrow=grid.n, ncol=0)
-evgam.1.container <- matrix(, nrow=ceiling(n*(1-threshold)), ncol=0)
-evgam.scale.container <- matrix(, nrow=ceiling(n*(1-threshold)), ncol=0)
-vgam.1.container <- matrix(, nrow=ceiling(n*(1-threshold)), ncol=0)
-vgam.scale.container <- matrix(, nrow=ceiling(n*(1-threshold)), ncol=0)
+evgam.1.container <- matrix(, nrow=grid.n, ncol=0)
+evgam.scale.container <- matrix(, nrow=grid.n, ncol=0)
+vgam.1.container <- matrix(, nrow=grid.n, ncol=0)
+vgam.scale.container <- matrix(, nrow=grid.n, ncol=0)
 mise.container <- mise.evgam.1.container <- mise.evgam.scale.container <- mise.vgam.1.container <- mise.vgam.scale.container <- c()
 # qqplot.container <- matrix(, nrow=ceiling(n*(1-threshold)), ncol=0)
 
