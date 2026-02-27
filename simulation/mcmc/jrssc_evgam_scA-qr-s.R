@@ -158,7 +158,7 @@ for(iter in 1:total.iter){
     cos.time = cos(2 * pi * time.seq / 365),
     x.origin
   )
-  evgam.cov <- y ~ 1 + cos.time + sin.time + X1 + X2 + X3 + X4 + X5
+  evgam.cov <- y ~ 1 + cos.time + sin.time #+ X1 + X2 + X3 + X4 + X5
   ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
   u.vec <- (predict(ald.cov.fit)$location)
 
@@ -408,7 +408,7 @@ print(plt +
         geom_line(aes(y=vgam.1), colour="purple", linewidth = 1.8, linetype = 4) +
         geom_line(aes(y=vgam.scale), colour="orange", linewidth = 1.8, linetype = 4) +
         scale_fill_manual(values=c("steelblue"), name = "") +
-        scale_color_manual(values = c("steelblue", "red"))+
+        scale_color_manual(values = c("steelblue", "red")) +
         guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) +
         theme_minimal(base_size = 40) + ylim(-0.65, 2)+

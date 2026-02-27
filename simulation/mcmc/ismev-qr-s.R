@@ -35,11 +35,11 @@ wooster.df <- data.frame(y = negated.wooster,
                          time = as.Date("1983-01-01") + 0:(length(wooster)-1))
 
 ggplot(data = wooster.df) +
-  geom_point(aes(y=y, x=time)) +
+  geom_point(aes(y=y, x=time), size= 1.2) +
   # geom_line(aes(y=u.80, x = time), linewidth = 0.8, color = "red") +
   # geom_line(aes(y=u.85, x = time), linewidth = 0.8, color = "orange") +
   # geom_line(aes(y=u.90, x = time), linewidth = 0.8, color = "darkgreen") +
-  geom_line(aes(y=u.91, x = time), linewidth = 1.8) +
+  geom_line(aes(y=u.91, x = time), linewidth = 1) +
   # geom_line(aes(y=u.95, x = time), linewidth = 0.8, color = "steelblue") +
   # geom_line(aes(y=u.99, x = time), linewidth = 0.8, color = "purple") +
   ylab("Daily Minimum Temperature (Degree Below 0F)") + xlab("Year") +
@@ -53,5 +53,5 @@ ggplot(data = wooster.df) +
   ) +  
   theme_minimal(base_size = 15) + 
   theme(legend.position = "none",
-          axis.title = element_text(size = 35), 
+          axis.title = element_text(size = 27), 
           axis.text = element_text(size = 30))

@@ -2,7 +2,7 @@ setwd("../BLAST/simulation/results")
 iter <- 2
 n <- 10000
 grid.n <- 200
-EV <- 1
+EV <- 0
 threshold <- 0.95
 if(EV==TRUE){
   file_pattern <- paste0("evgam_mc_scA_",n,"_.*.Rdata")
