@@ -27,18 +27,20 @@ x.origin <- matrix(0, nrow = n, ncol = p)
 
 for (j in 1:p) {
   phase_shift <- j * (2 * pi / p) 
-  seasonal_trend <- 0.6 * sin(2 * pi * time.seq / period + phase_shift) + 
-                    0.3 * cos(4 * pi * time.seq / period - phase_shift)
-  raw_x <- seasonal_trend + rnorm(n)
-  x.origin[, j] <- (raw_x - min(raw_x)) / (max(raw_x) - min(raw_x))
+  seasonal_trend <- 0.5 + 0.1 * sin(2 * pi * time.seq / period + phase_shift) 
+  # seasonal_trend <- 0.6 * sin(2 * pi * time.seq / period + phase_shift) + 
+                  # 0.3 * cos(4 * pi * time.seq / period - phase_shift)
+  uniform_noise <- runif(n, min = -0.4, max = 0.4)
+  x.origin[, j] <- seasonal_trend + uniform_noise
+  # x.origin[, j] <- (x.origin[,j] - min(x.origin[,j])) / (max(x.origin[,j]) - min(x.origin[,j]))
 }
 
 plot(x.origin[,2])
 covariates <- colnames(data.frame(x.origin))[1:p]
 
-f2 <- function(x) {-1.5 * sin(2 * pi * x^2)*x^3}
-f3 <- function(x) {-1.5 * cos(3 * pi * x^2)*x^2}
-theta.origin <- c(1.5, 0, 0.8, -0.8, 0, 0) 
+f2 <- function(x) {-.7 * sin(2 * pi * x^2)*x^3}
+f3 <- function(x) {-.7 * cos(3 * pi * x^2)*x^2}
+theta.origin <- c(0.7, 0, 0.8, -0.8, 0, 0) 
 
 alp.origin <- exp(rep(theta.origin[1],n) + x.origin%*%theta.origin[-1] + f2(x.origin[,2]) + f3(x.origin[,3]))
 y.noise <- rPareto(n, rep(1, n), alpha = alp.origin)
@@ -59,18 +61,12 @@ ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(t
 u.vec <- (predict(ald.cov.fit)$location)
 
 excess.index <- which(y.origin > u.vec)
-x.origin.excess <- x.origin[excess.index,]
+x.origin <- x.origin[excess.index,]
 y.origin <- y.origin[excess.index]
 u <- u.vec[excess.index]
 season_code_full <- season_code_full[excess.index]  
 n <- length(y.origin)
 
-x_min <- apply(x.origin.excess, 2, min)
-x_max <- apply(x.origin.excess, 2, max)
-
-x.origin <- as.data.frame(
-  sweep(sweep(x.origin.excess, 2, x_min, "-"), 2, (x_max - x_min), "/")
-)
 colnames(x.origin) <- paste0("X", 1:p)
 plot(x.origin[,1])
 
@@ -133,8 +129,8 @@ bs.linear <- model.matrix(~ ., data = data.frame(x.origin))[,-1]
 
 grid_Z_list <- list()
 grid.n <- 200
-newx <- seq(0, 1, length.out = grid.n)
-xholder <- do.call(cbind, lapply(1:p, function(i) {newx}))
+newx <- seq(min(x.origin), max(x.origin), length.out = grid.n)
+xholder <- do.call(cbind, lapply(1:p, function(i) {seq(min(x.origin[,i]), max(x.origin[,i]), length.out = grid.n)}))  
 
 colnames(xholder) <- covariates
 for (i in seq_along(covariates)) {
@@ -166,7 +162,7 @@ cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear_check[,c(1,6)]
 
 X_means <- colMeans(bs.linear)
 X_sd   <- apply(bs.linear, 2, sd)
-# bs.linear <- scale(bs.linear, center = X_means, scale = X_sd)
+bs.linear <- scale(bs.linear, center = X_means, scale = X_sd)
 
 model.stan <- "// Stan model for BLAST Pareto Samples
 data {
@@ -199,12 +195,11 @@ transformed parameters {
     
     array[p] vector[psi] gamma;
     {
-      // matrix[n, p] gsmooth; // linear component
       vector[n] eta = rep_vector(theta[1], n);
       for (j in 1:p){
         for (k in 1:psi){
           int idx = (j-1)*psi + k;
-          gamma[j][k] = gamma_raw[j][k] * sqrt(tau[j]) * Z_scales[idx];
+          gamma[j][k] = gamma_raw[j][k] * sqrt(tau[j]); // * Z_scales[idx];
         }; 
         int nl_start = (j - 1) * psi + 1;
         eta += col(bsLinear, j) * theta[j+1] + block(bsNonlinear,1, nl_start, n, psi) * gamma[j];
@@ -238,10 +233,10 @@ generated quantities {
   real theta0 = theta[1] - dot_product(X_means, theta_origin);
 
   {
-    vector[grid_n] grideta = rep_vector(theta[1], grid_n);
+    vector[grid_n] grideta = rep_vector(thet0, grid_n);
     for (j in 1:p){
         gridgnl[,j] = block(xholderNonlinear,1, ((j - 1) * psi + 1), grid_n, psi) * gamma[j];
-        gridgl[,j] = col(xholderLinear, j) * theta[j+1];
+        gridgl[,j] = col(xholderLinear, j) * theta_origin[j];
         gridgsmooth[,j] = gridgl[,j] + gridgnl[,j];
         grideta += gridgsmooth[,j];
     };

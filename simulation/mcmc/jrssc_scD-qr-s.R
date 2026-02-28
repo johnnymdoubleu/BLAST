@@ -39,7 +39,7 @@ covariates <- colnames(data.frame(x.origin))[1:p]
 # f3 <- function(x) {-0.7 * cos(3 * pi * x^2)*x}
 f2 <- function(x) {-1.5 * sin(2 * pi * (x-1.1)^2)*(x-1.1)^3}
 f3 <- function(x) {0.5 * cos(3 * pi * (x)^2)*(x)^2}
-theta.origin <- c(0.7, 0, 1.2, -1.2, 0, 0) 
+theta.origin <- c(0.7, 1.2, 1.2, -1.2, 0, 0) 
 
 alp.origin <- exp(rep(theta.origin[1],n) + x.origin%*%theta.origin[-1] + f2(x.origin[,2]) + f3(x.origin[,3]))
 y.noise <- NULL
@@ -170,7 +170,7 @@ cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear_check[,c(1,6)]
 
 X_means <- colMeans(bs.linear)
 X_sd   <- apply(bs.linear, 2, sd)
-# bs.linear <- scale(bs.linear, center = X_means, scale = X_sd)
+bs.linear <- scale(bs.linear, center = X_means, scale = X_sd)
 
 model.stan <- "// Stan model for BLAST Burr Samples
 functions{
@@ -258,14 +258,14 @@ generated quantities {
   matrix[grid_n, p] gridgl; // linear component
   matrix[grid_n, p] gridgsmooth; // linear component
 
-  // vector[p] theta_origin = theta[2:(p+1)] ./ X_sd;
-  // real theta0 = theta[1] - dot_product(X_means, theta_origin);
+  vector[p] theta_origin = theta[2:(p+1)] ./ X_sd;
+  real theta0 = theta[1] - dot_product(X_means, theta_origin);
 
   {
-    vector[grid_n] grideta = rep_vector(theta[1], grid_n);
+    vector[grid_n] grideta = rep_vector(theta0, grid_n);
     for (j in 1:p){
         gridgnl[,j] = block(xholderNonlinear,1, ((j - 1) * psi + 1), grid_n, psi) * gamma[j];
-        gridgl[,j] = col(xholderLinear, j) * theta[j+1];
+        gridgl[,j] = col(xholderLinear, j) * theta_origin[j];
         gridgsmooth[,j] = gridgl[,j] + gridgnl[,j];
         grideta += gridgsmooth[,j];
     };
@@ -280,14 +280,14 @@ data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, grid_n
                   xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear)
 
 init.alpha <- list(list(gamma_raw= array(rep(0.2, (psi*p)), dim=c(p,psi)),
-                        theta = rep(-0.1, (p+1)), tau = rep(0.1, p),
-                        lambda1 = rep(0.1,p), lambda2 = rep(1, p)),
-                   list(gamma_raw = array(rep(-0.15, (psi*p)), dim=c(p,psi)),
-                        theta = rep(0.05, (p+1)), tau = rep(2, p),
-                        lambda1 = rep(2,p), lambda2 = rep(5, p)),
-                   list(gamma_raw = array(rep(-0.75, (psi*p)), dim=c(p,psi)),
-                        theta = rep(0.01, (p+1)), tau = rep(1.5, p),
-                        lambda1 = rep(0.5,p), lambda2= rep(5, p)))
+                        theta = rep(-0.1, (p+1)), tau = rep(0.1, p), 
+                        lambda1 = rep(0.1, p), lambda2 = rep(1, p)),
+                  list(gamma_raw = array(rep(0.15, (psi*p)), dim=c(p,psi)),
+                        theta = rep(-0.05, (p+1)), tau = rep(0.3, p),
+                        lambda1 = rep(0.2, p), lambda2 = rep(0.5, p)),
+                  list(gamma_raw = array(rep(0.1, (psi*p)), dim=c(p,psi)),
+                        theta = rep(0.05, (p+1)), tau = rep(0.2, p),
+                        lambda1 = rep(0.2, p), lambda2 = rep(0.5, p)))
 
 system.time(fit1 <- stan(
   model_code = model.stan,  # Stan program
@@ -301,7 +301,7 @@ system.time(fit1 <- stan(
 
 posterior <- extract(fit1)
 bayesplot::color_scheme_set("mix-blue-red")
-bayesplot::mcmc_trace(fit1, pars="lp__") + ylab("Scenario A") +
+bayesplot::mcmc_trace(fit1, pars="lp__") + ylab("Scenario D") +
   theme_minimal(base_size = 30) +
   theme(legend.position = "none",
         strip.text = element_blank(),

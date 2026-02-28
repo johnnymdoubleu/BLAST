@@ -123,9 +123,6 @@ generated quantities {
     gridalpha = exp(grideta);
   }
   se = pow((gridalpha-trueAlpha), 2);
-  for(i in 1:n){
-    log_lik[i] = pareto_lpdf(y[i] | u[i], alpha[i]);
-  }
 }
 "
 
@@ -142,8 +139,6 @@ for(iter in 1:total.iter){
   for (j in 1:p) {
     phase_shift <- j * (2 * pi / p) 
     seasonal_trend <- 0.5 + 0.1 * sin(2 * pi * time.seq / period + phase_shift) 
-    # seasonal_trend <- 0.6 * sin(2 * pi * time.seq / period + phase_shift) + 
-                    # 0.3 * cos(4 * pi * time.seq / period - phase_shift)
     uniform_noise <- runif(n, min = -0.4, max = 0.4)
     x.origin[, j] <- seasonal_trend + uniform_noise
     # x.origin[, j] <- (x.origin[,j] - min(x.origin[,j])) / (max(x.origin[,j]) - min(x.origin[,j]))
@@ -332,6 +327,7 @@ for(iter in 1:total.iter){
       refresh = 1000             # no progress shown
   )
   # posterior <- extract(fit1)
+  lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.5))$summary
   gridgnl.samples <- summary(fit1, par=c("gridgnl"), probs = c(0.5))$summary
   gridgl.samples <- summary(fit1, par=c("gridgl"), probs = c(0.5))$summary
   gridgsmooth.samples <- summary(fit1, par=c("gridgsmooth"), probs = c(0.5))$summary
@@ -394,7 +390,7 @@ if(total.iter <= 50){
 }
 print(plt + 
         geom_line(aes(y=true, col = "True"), linewidth = 2, linetype = 2) + 
-        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.8) + ylim(0, 7) +
+        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.8) + ylim(0, 10) +
         scale_fill_manual(values=c("steelblue"), name = "") +
         scale_color_manual(values = c("steelblue", "red"))+
         guides(color = guide_legend(order = 2), 
