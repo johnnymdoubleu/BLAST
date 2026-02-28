@@ -8,9 +8,9 @@ library(evgam)
 # Scenario A
 # array.id <- commandArgs(trailingOnly=TRUE)
 
-total.iter <- 2
+total.iter <- 4 
 
-n <- n.origin <- 10000
+n <- n.origin <- 20000
 grid.n <- 200
 psi.origin <- psi <- 10
 threshold <- 0.95
@@ -18,8 +18,8 @@ p <- 5
 
 C <- diag(p)
 
-f2 <- function(x) {.7 * sin(2 * pi * x^2)*x^3}
-f3 <- function(x) {-.7 * cos(3 * pi * x^2)*x^2}
+f2 <- function(x) {-.7 * sin(2 * pi * x^2)*x}
+f3 <- function(x) {-.7 * cos(3 * pi * x^2)*x}
 
 time.seq <- 1:n
 period <- 365 
@@ -77,7 +77,7 @@ transformed parameters {
       for (j in 1:p){
         for (k in 1:psi){
           int idx = (j-1)*psi + k;
-          gamma[j][k] = gamma_raw[j][k] * sqrt(tau[j]) * Z_scales[idx];
+          gamma[j][k] = gamma_raw[j][k] * sqrt(tau[j]); // * Z_scales[idx];
         }; 
         int nl_start = (j - 1) * psi + 1;
         eta += col(bsLinear, j) * theta[j+1] + block(bsNonlinear,1, nl_start, n, psi) * gamma[j];
@@ -91,7 +91,7 @@ model {
   target += pareto_lpdf(y | u, alpha);
   target += normal_lpdf(theta[1] | 0, 10);
   for (j in 1:p){
-    target += gamma_lpdf(lambda1[j] | 1e-1, 1e-1); 
+    target += gamma_lpdf(lambda1[j] | 1e-2, 1e-2); 
     target += gamma_lpdf(lambda2[j] | 1e-2, 1e-2);
     target += double_exponential_lpdf(theta[(j+1)] | 0, 1/(lambda1[j]));
     target += gamma_lpdf(tau[j] | atau, square(lambda2[j])*0.5);
@@ -138,17 +138,16 @@ mise.container <- c()
 
 for(iter in 1:total.iter){
   n <- n.origin
-  x.origin <- pnorm(matrix(rnorm(n*p), nrow=n))
-  # x.origin <- matrix(0, nrow = n, ncol = p)
-  # for (j in 1:p) {
-  #   phase_shift <- j * (2 * pi / p) 
-  #   # seasonal_trend <- 0.5 + 0.1 * sin(2 * pi * time.seq / period + phase_shift) 
-  #   seasonal_trend <- 0.6 * sin(2 * pi * time.seq / period + phase_shift) + 
-  #                   0.3 * cos(4 * pi * time.seq / period - phase_shift)
-  #   uniform_noise <- rnorm(n)#runif(n, min = -0.4, max = 0.4)
-  #   x.origin[, j] <- seasonal_trend + uniform_noise
-  #   x.origin[, j] <- (x.origin[,j] - min(x.origin[,j])) / (max(x.origin[,j]) - min(x.origin[,j]))
-  # }
+  x.origin <- matrix(0, nrow = n, ncol = p)
+  for (j in 1:p) {
+    phase_shift <- j * (2 * pi / p) 
+    seasonal_trend <- 0.5 + 0.1 * sin(2 * pi * time.seq / period + phase_shift) 
+    # seasonal_trend <- 0.6 * sin(2 * pi * time.seq / period + phase_shift) + 
+                    # 0.3 * cos(4 * pi * time.seq / period - phase_shift)
+    uniform_noise <- runif(n, min = -0.4, max = 0.4)
+    x.origin[, j] <- seasonal_trend + uniform_noise
+    # x.origin[, j] <- (x.origin[,j] - min(x.origin[,j])) / (max(x.origin[,j]) - min(x.origin[,j]))
+  }
   x.origin.full <- x.origin
   alp.origin <- exp(rep(theta.origin[1],n) + x.origin%*%theta.origin[-1] + f2(x.origin[,2]) + f3(x.origin[,3]))
   y.noise <- rPareto(n, rep(1, n), alpha = alp.origin)
@@ -163,41 +162,38 @@ for(iter in 1:total.iter){
     cos.time = cos(2 * pi * time.seq / 365),
     x.origin
   )
-  evgam.cov <- y ~ 1 + cos.time + sin.time + X1 + X2 + X3 + X4 + X5
+  evgam.cov <- y ~ 1 + cos.time + sin.time #+ X1 + X2 + X3 + X4 + X5
   ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
   u.vec <- (predict(ald.cov.fit)$location)
 
   excess.index <- which(y.origin > u.vec)
 
-  x.origin.excess <- x.origin[excess.index,]
+  x.origin <- x.origin[excess.index,]
   y.origin <- y.origin[excess.index]
   u <- u.vec[excess.index]
   season_code_full <- season_code_full[excess.index]  
   n <- length(y.origin)
 
-  x_min <- apply(x.origin.excess, 2, min)
-  x_max <- apply(x.origin.excess, 2, max)
+  # x_min <- apply(x.origin.excess, 2, min)
+  # x_max <- apply(x.origin.excess, 2, max)
 
-  x.origin <- as.data.frame(
-    sweep(sweep(x.origin.excess, 2, x_min, "-"), 2, (x_max - x_min), "/")
-  )
+  # x.origin <- as.data.frame(
+  #   sweep(sweep(x.origin.excess, 2, x_min, "-"), 2, (x_max - x_min), "/")
+  # )
+
   colnames(x.origin) <- paste0("X", 1:p)
 
   newx <- seq(min(x.origin), max(x.origin), length.out = grid.n)
-  xholder <- do.call(cbind, lapply(1:p, function(i) {newx}))
-  xholder.raw <- sweep(sweep(xholder, 2, (x_max - x_min), "*"), 2, x_min, "+")  
+  xholder <- do.call(cbind, lapply(1:p, function(i) {seq(min(x.origin[,i]), max(x.origin[,i]), length.out = grid.n)}))
+  # xholder.raw <- sweep(sweep(xholder, 2, (x_max - x_min), "*"), 2, x_min, "+")  
   f2.hidden <- make.nl(x.origin[,2], f2(x.origin[,2]))
   f3.hidden <- make.nl(x.origin[,3], f3(x.origin[,3]))
-  # f2.hidden <- make.nl(x.origin[, 2], f2(x.origin.excess[, 2]))
-  # f3.hidden <- make.nl(x.origin[, 3], f3(x.origin.excess[, 3]))  
   theta.adjusted <- c(theta.origin[1] + f2.hidden$intercept + f3.hidden$intercept,
                       theta.origin[2],
                       theta.origin[3] + f2.hidden$slope,
                       theta.origin[4] + f3.hidden$slope,
                       theta.origin[5],
                       theta.origin[6])
-  # newx <- seq(0,1,length.out = n)
-  # xholder <- do.call(cbind, lapply(1:p, function(j) {newx}))
   
 
   g2.nl <- f2(xholder[,2]) - (f2.hidden$intercept + f2.hidden$slope*xholder[,2])
@@ -211,12 +207,14 @@ for(iter in 1:total.iter){
   eta.g <- rep(theta.adjusted[1], grid.n) + g2 + g3
   
   alp.new <- as.vector(exp(theta.origin[1] + xholder %*% theta.origin[-1] + f2(xholder[,2]) + f3(xholder[,3])))
-  alp.new <- as.vector(exp(
-    theta.origin[1] +
-    xholder.raw %*% theta.origin[-1] +
-    f2(xholder.raw[, 2]) +
-    f3(xholder.raw[, 3])
-  ))  
+  # theta.rescaled <- theta.origin[-1] * (x_max - x_min)          # p-vector
+  # theta0.rescaled <- theta.origin[1] + sum(theta.origin[-1] * x_min)
+  # alp.new <- as.vector(exp(
+  #   theta0.rescaled +
+  #   xholder %*% theta.rescaled +
+  #   f2(xholder.raw[, 2]) +
+  #   f3(xholder.raw[, 3])
+  # ))  
   grid.zero <- rep(0, grid.n)
   g.new <- c(grid.zero, g2, g3, grid.zero, grid.zero)
   l.new <- c(grid.zero, g2.l, g3.l, grid.zero, grid.zero)
@@ -241,6 +239,7 @@ for(iter in 1:total.iter){
     X_lin <- model.matrix(~ x_vec) 
     sm_spec <- smoothCon(s(x_vec, bs = "tp", k = psi + 2), 
                         data = data.frame(x_vec = x_vec), 
+                        # absorb.cons = TRUE,
                         knots = NULL)[[1]]
     
     X_raw <- sm_spec$X
@@ -285,7 +284,6 @@ for(iter in 1:total.iter){
   bs.nonlinear <- do.call(cbind, Z.list)
   bs.linear <- model.matrix(~ ., data = data.frame(x.origin))[,-1]
   Z_scales <- unlist(scale_stats_list)
-  # xholder <- do.call(cbind, lapply(1:p, function(j) {newx}))
 
   grid_Z_list <- list()
 
@@ -306,7 +304,6 @@ for(iter in 1:total.iter){
 
   xholder.linear <- model.matrix(~ ., data = data.frame(xholder))[,-1]
   xholder.nonlinear <- do.call(cbind, grid_Z_list)
-  # Scale xholder.linear using the SAME X_means and X_sd as bs.linear
   # xholder.linear <- scale(xholder.linear, center = X_means, scale = X_sd)
   bs.linear <- scale(bs.linear, center = X_means, scale = X_sd)
 
@@ -477,7 +474,7 @@ print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewid
                 axis.title.x = element_text(size = 45),  
                 axis.text = element_text(size = 30)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_linear_scA",n.origin,".pdf"), width=12.5, height = 7.78)                
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_linear_scA_",n.origin,".pdf"), width=12.5, height = 7.78)                
 
 gridgnl.container$x <- newx
 gridgnl.container$true <- as.vector(nl.new)
@@ -511,7 +508,7 @@ print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewid
                 axis.title.x = element_text(size = 45),  
                 axis.text = element_text(size = 30)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_nonlinear_sca",n.origin,".pdf"), width=12.5, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_nonlinear_scA_",n.origin,".pdf"), width=12.5, height = 7.78)
 
 # qqplot.container$grid <- grid
 # qqplot.container$mean <- rowMeans(qqplot.container[,1:total.iter])

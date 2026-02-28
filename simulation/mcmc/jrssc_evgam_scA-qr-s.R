@@ -19,8 +19,8 @@ p <- 5
 
 C <- diag(p)
 
-f2 <- function(x) {.7 * sin(2 * pi * x^2)*x^3}
-f3 <- function(x) {-.7 * cos(3 * pi * x^2)*x^2}
+f2 <- function(x) {-.7 * sin(2 * pi * x^2)*x}
+f3 <- function(x) {-.7 * cos(3 * pi * x^2)*x}
 
 time.seq <- 1:n
 period <- 365 
@@ -72,19 +72,13 @@ parameters {
 
 transformed parameters {
     vector[n] alpha; // covariate-adjusted tail index
-    
     array[p] vector[psi] gamma;
+    
     {
-      // matrix[n, p] gsmooth; // linear component
       vector[n] eta = rep_vector(theta[1], n);
       for (j in 1:p){
         gamma[j] = gamma_raw[j] * sqrt(tau[j]);
-        // for (k in 1:psi){
-        //   int idx = (j-1)*psi + k;
-        //   gamma[j][k] = gamma_raw[j][k] * sqrt(tau[j]) * Z_scales[idx];
-        // }; 
-        int nl_start = (j - 1) * psi + 1;
-        eta += col(bsLinear, j) * theta[j+1] + block(bsNonlinear,1, nl_start, n, psi) * gamma[j];
+        eta += col(bsLinear, j) * theta[j+1] + block(bsNonlinear,1,((j - 1) * psi + 1), n, psi) * gamma[j];
       };
       
       alpha = exp(eta);
@@ -96,7 +90,7 @@ model {
   target += pareto_lpdf(y | u, alpha);
   target += normal_lpdf(theta[1] | 0, 10);
   for (j in 1:p){
-    target += gamma_lpdf(lambda1[j] | 1, 1); 
+    target += gamma_lpdf(lambda1[j] | 1e-2, 1e-2); 
     target += gamma_lpdf(lambda2[j] | 1e-2, 1e-2);
     target += double_exponential_lpdf(theta[(j+1)] | 0, 1/(lambda1[j]));
     target += gamma_lpdf(tau[j] | atau, square(lambda2[j])*0.5);
@@ -107,19 +101,16 @@ model {
 generated quantities {
   // Used in Posterior predictive check    
   vector[grid_n] gridalpha; // new tail index
-  // matrix[grid_n, p] gridgnl; // nonlinear component
-  // matrix[grid_n, p] gridgl; // linear component
   matrix[grid_n, p] gridgsmooth; // linear component
   vector[grid_n] se;
-  vector[p] theta_origin = theta[2:(p+1)] ./ X_sd;
 
+  vector[p] theta_origin = theta[2:(p+1)] ./ X_sd;
   real theta0 = theta[1] - dot_product(X_means, theta_origin);
 
   {
     vector[grid_n] grideta = rep_vector(-theta0, grid_n);
     for (j in 1:p){
-        int nl_start = (j - 1) * psi + 1;
-        gridgsmooth[,j] = col(xholderLinear, j) * theta_origin[j] + block(xholderNonlinear,1, nl_start, grid_n, psi) * gamma[j]; 
+        gridgsmooth[,j] = col(xholderLinear, j) * theta_origin[j] + block(xholderNonlinear,1, ((j - 1) * psi + 1), grid_n, psi) * gamma[j]; 
         grideta -= gridgsmooth[,j];
     };
     gridalpha = exp(grideta);
@@ -178,7 +169,7 @@ for(iter in 1:total.iter){
                       theta.origin[4] + f3.hidden$slope,
                       theta.origin[5],
                       theta.origin[6])
-  newx <- seq(0, 1, length.out = grid.n)
+  newx <- seq(min(x.origin), max(x.origin), length.out = grid.n)
   xholder <- do.call(cbind, lapply(1:p, function(i) {seq(min(x.origin[,i]), max(x.origin[,i]), length.out = grid.n)}))
   
   g2.nl <- f2(xholder[,2]) - (f2.hidden$intercept + f2.hidden$slope*xholder[,2])
@@ -261,7 +252,7 @@ for(iter in 1:total.iter){
   grid_Z_list <- list()
 
   for (i in seq_along(covariates)) {
-    x_vec <- (seq(min(x.origin[,i]), max(x.origin[,i]), length.out = grid.n))# - X_means[i]) / X_sd[i]
+    x_vec <- (seq(min(x.origin[,i]), max(x.origin[,i]), length.out = grid.n))
     grid_df  <- data.frame(x_vec = x_vec)
     X_lin_grid <- model.matrix(~ x_vec, data = grid_df)
     X_raw_grid <- PredictMat(sm_spec_list[[i]], grid_df)
@@ -307,6 +298,7 @@ for(iter in 1:total.iter){
   newgsmooth.samples <- summary(fit1, par=c("gridgsmooth"), probs = c(0.5))$summary
   newalpha.samples <- summary(fit1, par=c("gridalpha"), probs = c(0.5))$summary
   se.samples <- summary(fit1, par=c("se"), probs = c(0.5))$summary
+  lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.5))$summary
 
   simul.data <- data.frame(y = y.origin, x.origin)
   vgam.fit.scale <- vgam(y ~ sm.ps(X1, ps.int = 8) + 

@@ -27,23 +27,24 @@ x.origin <- matrix(0, nrow = n, ncol = p)
 
 for (j in 1:p) {
   phase_shift <- j * (2 * pi / p) 
-  seasonal_trend <- 0.6 * sin(2 * pi * time.seq / period + phase_shift) + 
-                    0.3 * cos(4 * pi * time.seq / period - phase_shift)
-  raw_x <- seasonal_trend + rnorm(n)
-  x.origin[, j] <- (raw_x - min(raw_x)) / (max(raw_x) - min(raw_x))
+  seasonal_trend <- 0.5 + 0.1 * sin(2 * pi * time.seq / period + phase_shift)
+  x.origin[,j] <- seasonal_trend + runif(n, -0.4, 0.4)
+  # x.origin[, j] <- (raw_x - min(raw_x)) / (max(raw_x) - min(raw_x))
 }
 
 plot(x.origin[,2])
 covariates <- colnames(data.frame(x.origin))[1:p]
 
-f2 <- function(x) {-1.5 * sin(2 * pi * x^2)*x^3}
-f3 <- function(x) {-1.5 * cos(3 * pi * x^2)*x^2}
-theta.origin <- c(1.5, 0, 0.8, -0.8, 0, 0) 
+# f2 <- function(x) {-0.7 * sin(2 * pi * x^2)*x}
+# f3 <- function(x) {-0.7 * cos(3 * pi * x^2)*x}
+f2 <- function(x) {-1.5 * sin(2 * pi * (x-1.1)^2)*(x-1.1)^3}
+f3 <- function(x) {0.5 * cos(3 * pi * (x)^2)*(x)^2}
+theta.origin <- c(0.7, 0, 1.2, -1.2, 0, 0) 
 
 alp.origin <- exp(rep(theta.origin[1],n) + x.origin%*%theta.origin[-1] + f2(x.origin[,2]) + f3(x.origin[,3]))
-y.origin <- NULL
+y.noise <- NULL
 for(i in 1:n){
-  y.origin[i] <- rmutil::rburr(1, m=1, s=alp.origin[i], f=1)
+  y.noise[i] <- rmutil::rburr(1, m=1, s=alp.origin[i], f=1)
 }
 f.season.scale <- function(t){
   return(2.5 - .8 * sin(2 * pi * t / 365) - .6 * cos(2 * pi * t/365)) 
@@ -62,18 +63,18 @@ ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(t
 u.vec <- (predict(ald.cov.fit)$location)
 
 excess.index <- which(y.origin > u.vec)
-x.origin.excess <- x.origin[excess.index,]
+x.origin <- x.origin[excess.index,]
 y.origin <- y.origin[excess.index]
 u <- u.vec[excess.index]
 season_code_full <- season_code_full[excess.index]  
 n <- length(y.origin)
 
-x_min <- apply(x.origin.excess, 2, min)
-x_max <- apply(x.origin.excess, 2, max)
+# x_min <- apply(x.origin.excess, 2, min)
+# x_max <- apply(x.origin.excess, 2, max)
 
-x.origin <- as.data.frame(
-  sweep(sweep(x.origin.excess, 2, x_min, "-"), 2, (x_max - x_min), "/")
-)
+# x.origin <- as.data.frame(
+#   sweep(sweep(x.origin.excess, 2, x_min, "-"), 2, (x_max - x_min), "/")
+# )
 colnames(x.origin) <- paste0("X", 1:p)
 plot(x.origin[,1])
 
@@ -171,7 +172,23 @@ X_means <- colMeans(bs.linear)
 X_sd   <- apply(bs.linear, 2, sd)
 # bs.linear <- scale(bs.linear, center = X_means, scale = X_sd)
 
-model.stan <- "// Stan model for BLAST Pareto Samples
+model.stan <- "// Stan model for BLAST Burr Samples
+functions{
+    real burr_lpdf(real y, real c){
+        // Burr distribution log pdf
+        return log(c)+((c-1)*log(y)) - ((1+1)*log1p(y^c));
+    }
+
+    real burr_cdf(real y, real c){
+        // Bur distribution cdf
+        return 1 - (1 + y^c)^(-1);
+    }    
+
+    real burr_rng(real c){
+        return ((1-uniform_rng(0,1))^(-1)-1)^(1/c);
+    }
+}
+
 data {
     int <lower=1> n; // Sample size
     int <lower=1> grid_n;
@@ -207,7 +224,7 @@ transformed parameters {
       for (j in 1:p){
         for (k in 1:psi){
           int idx = (j-1)*psi + k;
-          gamma[j][k] = gamma_raw[j][k] * sqrt(tau[j]) * Z_scales[idx];
+          gamma[j][k] = gamma_raw[j][k] * sqrt(tau[j]); // * Z_scales[idx];
         }; 
         int nl_start = (j - 1) * psi + 1;
         eta += col(bsLinear, j) * theta[j+1] + block(bsNonlinear,1, nl_start, n, psi) * gamma[j];
@@ -218,11 +235,15 @@ transformed parameters {
 }
 
 model {
-  // likelihood
-  target += pareto_lpdf(y | u, alpha);
+  //likelihood
+  for (i in 1:n){
+    target += burr_lpdf(y[i] | alpha[i]);
+    target += -1*log(1-burr_cdf(u[i], alpha[i]));
+  }  
+  // target += pareto_lpdf(y | u, alpha);
   target += normal_lpdf(theta[1] | 0, 10);
   for (j in 1:p){
-    target += gamma_lpdf(lambda1[j] | 1e-1, 1e-1); 
+    target += gamma_lpdf(lambda1[j] | 1e-2, 1e-2); 
     target += gamma_lpdf(lambda2[j] | 1e-2, 1e-2);
     target += double_exponential_lpdf(theta[(j+1)] | 0, 1/(lambda1[j]));
     target += gamma_lpdf(tau[j] | atau, square(lambda2[j])*0.5);
@@ -237,8 +258,8 @@ generated quantities {
   matrix[grid_n, p] gridgl; // linear component
   matrix[grid_n, p] gridgsmooth; // linear component
 
-  vector[p] theta_origin = theta[2:(p+1)] ./ X_sd;
-  real theta0 = theta[1] - dot_product(X_means, theta_origin);
+  // vector[p] theta_origin = theta[2:(p+1)] ./ X_sd;
+  // real theta0 = theta[1] - dot_product(X_means, theta_origin);
 
   {
     vector[grid_n] grideta = rep_vector(theta[1], grid_n);
@@ -273,9 +294,9 @@ system.time(fit1 <- stan(
   data = data.stan,    # named list of data
   init = init.alpha,      # initial value
   chains = 3,             # number of Markov chains
-  iter = 2000,            # total number of iterations per chain
+  iter = 3000,            # total number of iterations per chain
   cores = parallel::detectCores(), # number of cores (could use one per chain)
-  refresh = 1000             # no progress shown
+  refresh = 1500             # no progress shown
 ))
 
 posterior <- extract(fit1)
