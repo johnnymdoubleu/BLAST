@@ -8,7 +8,7 @@ library(evgam)
 # Scenario A
 # array.id <- commandArgs(trailingOnly=TRUE)
 
-total.iter <- 4 
+total.iter <- 5
 
 n <- n.origin <- 10000
 grid.n <- 200
@@ -75,10 +75,11 @@ transformed parameters {
     {
       vector[n] eta = rep_vector(theta[1], n);
       for (j in 1:p){
-        for (k in 1:psi){
-          int idx = (j-1)*psi + k;
-          gamma[j][k] = gamma_raw[j][k] * sqrt(tau[j]); // * Z_scales[idx];
-        }; 
+        gamma[j] = gamma_raw[j] * sqrt(tau[j]);
+        // for (k in 1:psi){
+        //   int idx = (j-1)*psi + k;
+        //   gamma[j][k] = gamma_raw[j][k] * sqrt(tau[j]); // * Z_scales[idx];
+        // }; 
         int nl_start = (j - 1) * psi + 1;
         eta += col(bsLinear, j) * theta[j+1] + block(bsNonlinear,1, nl_start, n, psi) * gamma[j];
       };
@@ -90,9 +91,9 @@ model {
   // likelihood
   target += pareto_lpdf(y | u, alpha);
   target += normal_lpdf(theta[1] | 0, 10);
+  target += gamma_lpdf(lambda1 | 1e-3, 1e-3); 
+  target += gamma_lpdf(lambda2 | 1e-2, 1e-2);  
   for (j in 1:p){
-    target += gamma_lpdf(lambda1[j] | 1e-2, 1e-2); 
-    target += gamma_lpdf(lambda2[j] | 1e-2, 1e-2);
     target += double_exponential_lpdf(theta[(j+1)] | 0, 1/(lambda1[j]));
     target += gamma_lpdf(tau[j] | atau, square(lambda2[j])*0.5);
     target += std_normal_lpdf(gamma_raw[j]);
@@ -129,6 +130,7 @@ gridgnl.container <- as.data.frame(matrix(, nrow = (p*grid.n), ncol = total.iter
 gridgl.container <- as.data.frame(matrix(, nrow = (p*grid.n), ncol = total.iter))
 gridgsmooth.container <- as.data.frame(matrix(, nrow = (p*grid.n), ncol = total.iter))
 alpha.container <- as.data.frame(matrix(, nrow = grid.n, ncol = total.iter))
+true.container <- as.data.frame(matrix(, nrow = grid.n, ncol = total.iter))
 mise.container <- c()
 # qqplot.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total.iter))
 
@@ -321,9 +323,9 @@ for(iter in 1:total.iter){
       data = data.stan,    # named list of data
       init = init.alpha,      # initial value
       chains = 3,             # number of Markov chains
-      iter = 2000,            # total number of iterations per chain
+      iter = 3000,            # total number of iterations per chain
       cores = parallel::detectCores(), # number of cores (could use one per chain)
-      refresh = 1000             # no progress shown
+      refresh = 1500             # no progress shown
   )
   # posterior <- extract(fit1)
   lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.5))$summary
@@ -334,6 +336,7 @@ for(iter in 1:total.iter){
   se.samples <- summary(fit1, par=c("se"), probs = c(0.5))$summary 
 
   alpha.container[,iter] <- newalpha.samples[,4]
+  true.container[,iter] <- alp.new
 
   gridgsmooth.container[,iter] <- as.vector(matrix(gridgsmooth.samples[,4], nrow = grid.n, byrow=TRUE))
   gridgl.container[,iter] <- as.vector(matrix(gridgl.samples[,4], nrow = grid.n, byrow=TRUE))
@@ -371,7 +374,8 @@ for(iter in 1:total.iter){
 }
 
 alpha.container$x <- newx
-alpha.container$true <- alp.new
+# alpha.container$true <- alp.new
+alpha.container$true <- rowMeans(true.container)
 alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 

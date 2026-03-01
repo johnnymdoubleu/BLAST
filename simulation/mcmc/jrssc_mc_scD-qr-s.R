@@ -99,10 +99,11 @@ transformed parameters {
       // matrix[n, p] gsmooth; // linear component
       vector[n] eta = rep_vector(theta[1], n);
       for (j in 1:p){
-        for (k in 1:psi){
-          int idx = (j-1)*psi + k;
-          gamma[j][k] = gamma_raw[j][k] * sqrt(tau[j]); // * Z_scales[idx];
-        }; 
+        gamma[j] = gamma_raw[j] * sqrt(tau[j]);
+        // for (k in 1:psi){
+        //   int idx = (j-1)*psi + k;
+        //   gamma[j][k] = gamma_raw[j][k] * sqrt(tau[j]); // * Z_scales[idx];
+        // }; 
         int nl_start = (j - 1) * psi + 1;
         eta += col(bsLinear, j) * theta[j+1] + block(bsNonlinear,1, nl_start, n, psi) * gamma[j];
       };
@@ -119,9 +120,9 @@ model {
   }  
   // target += pareto_lpdf(y | u, alpha);
   target += normal_lpdf(theta[1] | 0, 100);
+  target += gamma_lpdf(lambda1 | 1e-1, 1e-1); 
+  target += gamma_lpdf(lambda2 | 1e-2, 1e-2);
   for (j in 1:p){
-    target += gamma_lpdf(lambda1[j] | 1e-1, 1e-1); 
-    target += gamma_lpdf(lambda2[j] | 1e-2, 1e-2);
     target += double_exponential_lpdf(theta[(j+1)] | 0, 1/(lambda1[j]));
     target += gamma_lpdf(tau[j] | atau, square(lambda2[j])*0.5);
     target += std_normal_lpdf(gamma_raw[j]);
@@ -157,6 +158,7 @@ gridgnl.container <- as.data.frame(matrix(, nrow = (p*grid.n), ncol = total.iter
 gridgl.container <- as.data.frame(matrix(, nrow = (p*grid.n), ncol = total.iter))
 gridgsmooth.container <- as.data.frame(matrix(, nrow = (p*grid.n), ncol = total.iter))
 alpha.container <- as.data.frame(matrix(, nrow = grid.n, ncol = total.iter))
+true.container <- as.data.frame(matrix(, nrow = grid.n, ncol = total.iter))
 mise.container <- c()
 # qqplot.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total.iter))
 
@@ -334,12 +336,15 @@ for(iter in 1:total.iter){
 
   init.alpha <- list(list(gamma_raw= array(rep(0.2, (psi*p)), dim=c(p,psi)),
                           theta = rep(-0.1, (p+1)), tau = rep(0.1, p), 
+                          # lambda1 = 0.1, lambda2 = 1),
                           lambda1 = rep(0.1, p), lambda2 = rep(1, p)),
                     list(gamma_raw = array(rep(0.15, (psi*p)), dim=c(p,psi)),
                           theta = rep(-0.05, (p+1)), tau = rep(0.3, p),
+                          # lambda1 = 0.4, lambda2 = 0.5),
                           lambda1 = rep(0.2, p), lambda2 = rep(0.5, p)),
                     list(gamma_raw = array(rep(0.1, (psi*p)), dim=c(p,psi)),
                           theta = rep(0.05, (p+1)), tau = rep(0.2, p),
+                          # lambda1 = 0.2, lambda2 = 0.5))
                           lambda1 = rep(0.2, p), lambda2 = rep(0.5, p)))
     
   fit1 <- stan(
@@ -352,6 +357,7 @@ for(iter in 1:total.iter){
       refresh = 1500             # no progress shown
   )
   # posterior <- extract(fit1)
+  theta.samples <- summary(fit1, par=c("theta0", "theta_origin"), probs = c(0.5))$summary
   lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.5))$summary
   gridgnl.samples <- summary(fit1, par=c("gridgnl"), probs = c(0.5))$summary
   gridgl.samples <- summary(fit1, par=c("gridgl"), probs = c(0.5))$summary
@@ -360,6 +366,7 @@ for(iter in 1:total.iter){
   se.samples <- summary(fit1, par=c("se"), probs = c(0.5))$summary 
 
   alpha.container[,iter] <- newalpha.samples[,4]
+  true.container[,iter] <- alp.new
 
   gridgsmooth.container[,iter] <- as.vector(matrix(gridgsmooth.samples[,4], nrow = grid.n, byrow=TRUE))
   gridgl.container[,iter] <- as.vector(matrix(gridgl.samples[,4], nrow = grid.n, byrow=TRUE))
@@ -397,7 +404,8 @@ for(iter in 1:total.iter){
 }
 
 alpha.container$x <- newx
-alpha.container$true <- alp.new
+# alpha.container$true <- alp.new
+alpha.container$true <- rowMeans(true.container)
 alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
