@@ -3,7 +3,6 @@ suppressMessages(library(ggplot2))
 library(rstan)
 library(Pareto)
 library(parallel)
-library(rmutil)
 library(qqboxplot)
 
 set.seed(123)

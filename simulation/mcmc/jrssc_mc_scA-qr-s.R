@@ -10,7 +10,7 @@ library(evgam)
 
 total.iter <- 4 
 
-n <- n.origin <- 20000
+n <- n.origin <- 10000
 grid.n <- 200
 psi.origin <- psi <- 10
 threshold <- 0.95
@@ -52,7 +52,7 @@ data {
     matrix[n, (psi*p)] bsNonlinear; // thin plate splines basis
     matrix[grid_n, p] xholderLinear; // fwi dataset
     matrix[grid_n, (psi*p)] xholderNonlinear; // thin plate splines basis    
-    vector<lower=u>[n] y; // extreme response
+    vector<lower=min(u)>[n] y; // extreme response
     real <lower=0> atau;
     vector[p] X_means;
     vector[p] X_sd;
@@ -100,8 +100,7 @@ model {
 }
 
 generated quantities {
-  // Used in Posterior predictive check    
-  vector[n] log_lik;
+  // Used in Posterior predictive check 
   vector[grid_n] gridalpha; // new tail index
   matrix[grid_n, p] gridgnl; // nonlinear component
   matrix[grid_n, p] gridgl; // linear component

@@ -9,7 +9,7 @@ library(rmutil)
 # Scenario A
 # array.id <- commandArgs(trailingOnly=TRUE)
 
-total.iter <- 5
+total.iter <- 2
 
 n <- n.origin <- 10000
 grid.n <- 200
@@ -54,7 +54,11 @@ functions{
     real burr_cdf(real y, real c){
         // Bur distribution cdf
         return 1 - (1 + y^c)^(-1);
-    }    
+    }
+    real burr_lccdf(real y, real c){
+      real cy = c * log(y);
+      return -log1p_exp(cy); // log( (1 + y^c)^(-1) )
+    }
 
     real burr_rng(real c){
         return ((1-uniform_rng(0,1))^(-1)-1)^(1/c);
@@ -71,7 +75,7 @@ data {
     matrix[n, (psi*p)] bsNonlinear; // thin plate splines basis
     matrix[grid_n, p] xholderLinear; // fwi dataset
     matrix[grid_n, (psi*p)] xholderNonlinear; // thin plate splines basis    
-    vector<lower=u>[n] y; // extreme response
+    vector<lower=min(u)>[n] y; // extreme response
     real <lower=0> atau;
     vector[p] X_means;
     vector[p] X_sd;
@@ -110,8 +114,8 @@ transformed parameters {
 model {
   //likelihood
   for (i in 1:n){
-    target += burr_lpdf(y[i] | alpha[i]);
-    target += -1*log(1-burr_cdf(u[i], alpha[i]));
+    target += burr_lpdf(y[i] | alpha[i]) - burr_lccdf(u[i] | alpha[i]);
+    // target += -1*log(1-burr_cdf(u[i], alpha[i]));
   }  
   // target += pareto_lpdf(y | u, alpha);
   target += normal_lpdf(theta[1] | 0, 100);
@@ -168,21 +172,24 @@ for(iter in 1:total.iter){
   }
   x.origin.full <- x.origin
   alp.origin <- exp(rep(theta.origin[1],n) + x.origin%*%theta.origin[-1] + f2(x.origin[,2]) + f3(x.origin[,3]))
-  y.noise <- rPareto(n, rep(1, n), alpha = alp.origin)
+  y.noise <- NULL
+  for(i in 1:n){
+    y.noise[i] <- rmutil::rburr(1, m=1, s=alp.origin[i], f=1)
+  }
   f.season.scale <- function(t){
     return(2.5 - .8 * sin(2 * pi * t / 365) - .6 * cos(2 * pi * t/365)) 
   }
   y.origin <- y.noise * f.season.scale(time.seq)
 
   evgam.df <- data.frame(
-    y = (y.origin),
+    y = log(y.origin),
     sin.time = sin(2 * pi * time.seq / 365),
     cos.time = cos(2 * pi * time.seq / 365),
     x.origin
   )
   evgam.cov <- y ~ 1 + cos.time + sin.time #+ X1 + X2 + X3 + X4 + X5
   ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
-  u.vec <- (predict(ald.cov.fit)$location)
+  u.vec <- exp(predict(ald.cov.fit)$location)
 
   excess.index <- which(y.origin > u.vec)
 
