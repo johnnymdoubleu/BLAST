@@ -377,7 +377,7 @@ alpha.container <- as.data.frame(alpha.container)
 
 # load(paste0("./simulation/results/MC-Scenario_A/2026-02-07_",total.iter,"_MC_scA_",n.origin,".Rdata"))
 
-plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab(expression(alpha(c,...,c))) #+ ylab("")
+plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab(expression(alpha(c,...,c)))
 if(total.iter <= 50){
   for(i in 1:total.iter){
     plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.05, linewidth = 0.7)

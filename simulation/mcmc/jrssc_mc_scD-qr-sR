@@ -11,7 +11,7 @@ library(rmutil)
 
 total.iter <- 2
 
-n <- n.origin <- 10000
+n <- n.origin <- 20000
 grid.n <- 200
 psi.origin <- psi <- 10
 threshold <- 0.95
