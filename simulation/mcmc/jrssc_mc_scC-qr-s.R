@@ -80,7 +80,7 @@ transformed parameters {
       vector[n] eta = rep_vector(theta[1], n);
       for (j in 1:p){
         gamma[j] = gamma_raw[j] * sqrt(tau[j]);
-        eta += col(bsLinear, j) * theta[j+1] + block(bsNonlinear,1, (nl_start = (j - 1) * psi + 1), n, psi) * gamma[j];
+        eta += col(bsLinear, j) * theta[j+1] + block(bsNonlinear,1, ((j - 1) * psi + 1), n, psi) * gamma[j];
       };
       
       alpha = exp(eta);
@@ -91,7 +91,7 @@ model {
   //likelihood
   target += student_t_lpdf(y | alpha, 0, 1) - student_t_lccdf(u | alpha, 0, 1);
   // target += pareto_lpdf(y | u, alpha);
-  target += normal_lpdf(theta[1] | 0, 100);
+  target += normal_lpdf(theta[1] | 0, 1);
   target += gamma_lpdf(lambda1 | 1e-1, 1e-1); 
   target += gamma_lpdf(lambda2 | 1e-2, 1e-2);
   for (j in 1:p){
@@ -202,7 +202,7 @@ for(iter in 1:total.iter){
   l.new <- c(g1.l, g2.l, grid.zero, grid.zero, g5.l)
   nl.new <- c(g1.nl, grid.zero, grid.zero, grid.zero, g5.nl)
   colnames(xholder) <- colnames(x.origin) <- paste0("X", 1:p)
-
+  covariates <- paste0("X", 1:p)
   group.map <- c()
   Z.list <- list()        # Stores the final non-linear design matrices
   scale_stats_list <- list() 

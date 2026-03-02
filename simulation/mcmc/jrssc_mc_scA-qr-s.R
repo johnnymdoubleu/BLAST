@@ -232,11 +232,13 @@ for(iter in 1:total.iter){
   n <- n.origin
   x.origin <- matrix(0, nrow = n, ncol = p)
   for (j in 1:p) {
-    phase_shift <- j * (2 * pi / p) 
-    seasonal_trend <- 0.5 + 0.1 * sin(2 * pi * time.seq / period + phase_shift) 
+    # phase_shift <- j * (2 * pi / p) 
+    # seasonal_trend <- 0.5 + 0.1 * sin(2 * pi * time.seq / period + phase_shift) 
+    # uniform_noise <- runif(n, min = -0.4, max = 0.4)
+    # x.origin[, j] <- seasonal_trend + uniform_noise
+    seasonal_trend <- 0.5 + 0.1 * sin(j * 2 * pi * time.seq / period) 
     uniform_noise <- runif(n, min = -0.4, max = 0.4)
     x.origin[, j] <- seasonal_trend + uniform_noise
-    # x.origin[, j] <- (x.origin[,j] - min(x.origin[,j])) / (max(x.origin[,j]) - min(x.origin[,j]))
   }
   x.origin.full <- x.origin
   alp.origin <- exp(rep(theta.origin[1],n) + x.origin%*%theta.origin[-1] + f2(x.origin[,2]) + f5(x.origin[,5]))

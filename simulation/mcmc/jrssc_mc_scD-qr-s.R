@@ -6,10 +6,10 @@ library(MESS)
 library(evgam)
 library(rmutil)
 
-# Scenario A
+# Scenario D
 # array.id <- commandArgs(trailingOnly=TRUE)
 
-total.iter <- 2
+total.iter <- 5
 
 n <- n.origin <- 10000
 grid.n <- 200
@@ -75,7 +75,7 @@ data {
     matrix[n, (psi*p)] bsNonlinear; // thin plate splines basis
     matrix[grid_n, p] xholderLinear; // fwi dataset
     matrix[grid_n, (psi*p)] xholderNonlinear; // thin plate splines basis    
-    vector<lower=min(u)>[n] y; // extreme response
+    vector<lower=0>[n] y; // extreme response
     real <lower=0> atau;
     vector[p] X_means;
     vector[p] X_sd;
@@ -100,7 +100,7 @@ transformed parameters {
       vector[n] eta = rep_vector(theta[1], n);
       for (j in 1:p){
         gamma[j] = gamma_raw[j] * sqrt(tau[j]);
-        eta += col(bsLinear, j) * theta[j+1] + block(bsNonlinear,1, (nl_start = (j - 1) * psi + 1), n, psi) * gamma[j];
+        eta += col(bsLinear, j) * theta[j+1] + block(bsNonlinear,1, ((j - 1) * psi + 1), n, psi) * gamma[j];
       };
       
       alpha = exp(eta);
@@ -162,8 +162,9 @@ for(iter in 1:total.iter){
   x.origin <- matrix(0, nrow = n, ncol = p)
 
   for (j in 1:p) {
-    phase_shift <- j * (2 * pi / p) 
-    seasonal_trend <- 0.5 + 0.1 * sin(2 * pi * time.seq / period + phase_shift) 
+    # phase_shift <- j * (2 * pi / p) 
+    # seasonal_trend <- 0.5 + 0.1 * sin(2 * pi * time.seq / period + phase_shift) 
+    seasonal_trend <- 0.5 + 0.1 * sin(j * 2 * pi * time.seq / period) 
     uniform_noise <- runif(n, min = -0.4, max = 0.4)
     x.origin[, j] <- seasonal_trend + uniform_noise
   }
@@ -197,8 +198,10 @@ for(iter in 1:total.iter){
   n <- length(y.origin)
   colnames(x.origin) <- paste0("X", 1:p)
 
-  newx <- seq(min(x.origin), max(x.origin), length.out = grid.n)
-  xholder <- do.call(cbind, lapply(1:p, function(i) {seq(min(x.origin[,i]), max(x.origin[,i]), length.out = grid.n)}))  
+  # newx <- seq(min(x.origin), max(x.origin), length.out = grid.n)
+  # xholder <- do.call(cbind, lapply(1:p, function(i) {seq(min(x.origin[,i]), max(x.origin[,i]), length.out = grid.n)}))
+  newx <- seq(0.1, 0.9, length.out = grid.n)
+  xholder <- do.call(cbind, lapply(1:p, function(i) {newx}))  
   f2.hidden <- make.nl(x.origin[,2], f2(x.origin[,2]))
   f3.hidden <- make.nl(x.origin[,3], f3(x.origin[,3]))
   theta.adjusted <- c(theta.origin[1] + f2.hidden$intercept + f3.hidden$intercept,
@@ -324,12 +327,12 @@ for(iter in 1:total.iter){
                     list(gamma_raw = array(rep(0.15, (psi*p)), dim=c(p,psi)),
                           theta = rep(-0.05, (p+1)), tau = rep(0.3, p),
                           # lambda1 = 0.4, lambda2 = 0.5),
-                          lambda1 = rep(0.2, p), lambda2 = rep(0.5, p)),
+                          lambda1 = rep(1, p), lambda2 = rep(1, p)),
                     list(gamma_raw = array(rep(0.1, (psi*p)), dim=c(p,psi)),
-                          theta = rep(0.05, (p+1)), tau = rep(0.2, p),
+                          theta = rep(0.05, (p+1)), tau = rep(1, p),
                           # lambda1 = 0.2, lambda2 = 0.5))
                           lambda1 = rep(0.2, p), lambda2 = rep(0.5, p)))
-    
+
   fit1 <- stan(
       model_code = model.stan,
       data = data.stan,    # named list of data
@@ -354,8 +357,8 @@ for(iter in 1:total.iter){
   gridgsmooth.container[,iter] <- as.vector(matrix(gridgsmooth.samples[,4], nrow = grid.n, byrow=TRUE))
   gridgl.container[,iter] <- as.vector(matrix(gridgl.samples[,4], nrow = grid.n, byrow=TRUE))
   gridgnl.container[,iter] <- as.vector(matrix(gridgnl.samples[,4], nrow = grid.n, byrow=TRUE))
-  newx <- seq(0, 1, length.out = grid.n)
-  mise.container[iter] <- auc(newx, se.samples[,1], type="spline")
+  # newx <- seq(0, 1, length.out = grid.n)
+  mise.container[iter] <- auc(newx, se.samples[,4], type="spline")
 
   # mcmc.alpha <- rstan::extract(fit1)$alpha
   # r <- matrix(, nrow = n, ncol = 30)
