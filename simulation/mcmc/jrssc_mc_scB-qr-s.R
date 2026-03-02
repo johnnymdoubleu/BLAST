@@ -4,12 +4,11 @@ suppressMessages(library(ggplot2))
 library(rstan)
 library(MESS)
 library(evgam)
-library(rmutil)
 
 # Scenario A
 # array.id <- commandArgs(trailingOnly=TRUE)
 
-total.iter <- 2
+total.iter <- 3
 
 n <- n.origin <- 10000
 grid.n <- 200
@@ -19,8 +18,8 @@ p <- 5
 
 C <- diag(p)
 
-f2 <- function(x) {-1.5 * sin(2 * pi * (x-1.1)^2)*(x-1.1)^3}
-f3 <- function(x) {0.5 * cos(3 * pi * (x)^2)*(x)^2}
+f2 <- function(x) {-.7 * sin(2 * pi * x^2)*x}
+f5 <- function(x) {-.7 * cos(3 * pi * x^2)*x}
 
 time.seq <- 1:n
 period <- 365 
@@ -40,31 +39,9 @@ make.nl <- function(x, raw_y) {
   ))
 }
 
-theta.origin <- c(0.7, 1.2, 1.2, -1.2, 0, 0) 
+theta.origin <- c(0.7, 0, 0.8, 0, 0, -0.8) 
 psi <- psi -2
-
-
-model.stan <- "// Stan model for BLAST Burr Samples
-functions{
-    real burr_lpdf(real y, real c){
-        // Burr distribution log pdf
-        return log(c)+((c-1)*log(y)) - ((1+1)*log1p(y^c));
-    }
-
-    real burr_cdf(real y, real c){
-        // Bur distribution cdf
-        return 1 - (1 + y^c)^(-1);
-    }
-    real burr_lccdf(real y, real c){
-      real cy = c * log(y);
-      return -log1p_exp(cy); // log( (1 + y^c)^(-1) )
-    }
-
-    real burr_rng(real c){
-        return ((1-uniform_rng(0,1))^(-1)-1)^(1/c);
-    }
-}
-
+model.stan <- "// Stan model for BLAST Pareto Samples
 data {
     int <lower=1> n; // Sample size
     int <lower=1> grid_n;
@@ -96,27 +73,26 @@ transformed parameters {
     
     array[p] vector[psi] gamma;
     {
-      // matrix[n, p] gsmooth; // linear component
       vector[n] eta = rep_vector(theta[1], n);
       for (j in 1:p){
         gamma[j] = gamma_raw[j] * sqrt(tau[j]);
-        eta += col(bsLinear, j) * theta[j+1] + block(bsNonlinear,1, (nl_start = (j - 1) * psi + 1), n, psi) * gamma[j];
+        // for (k in 1:psi){
+        //   int idx = (j-1)*psi + k;
+        //   gamma[j][k] = gamma_raw[j][k] * sqrt(tau[j]); // * Z_scales[idx];
+        // }; 
+        int nl_start = (j - 1) * psi + 1;
+        eta += col(bsLinear, j) * theta[j+1] + block(bsNonlinear,1, nl_start, n, psi) * gamma[j];
       };
-      
       alpha = exp(eta);
     }
 }
 
 model {
-  //likelihood
-  for (i in 1:n){
-    target += burr_lpdf(y[i] | alpha[i]) - burr_lccdf(u[i] | alpha[i]);
-    // target += -1*log(1-burr_cdf(u[i], alpha[i]));
-  }  
-  // target += pareto_lpdf(y | u, alpha);
+  // likelihood
+  target += pareto_lpdf(y | u, alpha);
   target += normal_lpdf(theta[1] | 0, 100);
   target += gamma_lpdf(lambda1 | 1e-1, 1e-1); 
-  target += gamma_lpdf(lambda2 | 1e-2, 1e-2);
+  target += gamma_lpdf(lambda2 | 1e-2, 1e-2);  
   for (j in 1:p){
     target += double_exponential_lpdf(theta[(j+1)] | 0, 1/(lambda1[j]));
     target += gamma_lpdf(tau[j] | atau, square(lambda2[j])*0.5);
@@ -125,7 +101,7 @@ model {
 }
 
 generated quantities {
-  // Used in Posterior predictive check
+  // Used in Posterior predictive check 
   vector[grid_n] gridalpha; // new tail index
   matrix[grid_n, p] gridgnl; // nonlinear component
   matrix[grid_n, p] gridgl; // linear component
@@ -138,8 +114,9 @@ generated quantities {
   {
     vector[grid_n] grideta = rep_vector(theta0, grid_n);
     for (j in 1:p){
-        gridgnl[,j] = block(xholderNonlinear,1, ((j - 1) * psi + 1), grid_n, psi) * gamma[j];
-        gridgl[,j] = col(xholderLinear, j) * theta_origin[j];
+        int nl_start = (j - 1) * psi + 1;
+        gridgl[,j] = col(xholderLinear, j) * theta_origin[j]; 
+        gridgnl[,j] = block(xholderNonlinear,1, nl_start, grid_n, psi) * gamma[j];
         gridgsmooth[,j] = gridgl[,j] + gridgnl[,j];
         grideta += gridgsmooth[,j];
     };
@@ -148,6 +125,100 @@ generated quantities {
   se = pow((gridalpha-trueAlpha), 2);
 }
 "
+
+# model.stan <- "// Stan model for BLAST Pareto Samples — Horseshoe Priors
+# data {
+#     int <lower=1> n;
+#     int <lower=1> grid_n;
+#     int <lower=1> p;
+#     int <lower=1> psi;
+#     vector[n] u;
+#     matrix[n, p] bsLinear;
+#     matrix[n, (psi*p)] bsNonlinear;
+#     matrix[grid_n, p] xholderLinear;
+#     matrix[grid_n, (psi*p)] xholderNonlinear;
+#     vector<lower=min(u)>[n] y;
+#     vector[p] X_means;
+#     vector[p] X_sd;
+#     vector[(psi*p)] Z_scales;
+#     vector[grid_n] trueAlpha;
+#     real<lower=0> tau0_lin;   // global scale for linear horseshoe
+#     real<lower=0> tau0_nl;    // global scale for group horseshoe
+# }
+
+# parameters {
+#     real theta0;                          // intercept
+#     vector[p] theta_raw;                  // unscaled linear coefs
+#     vector<lower=0>[p] lambda_local;      // local horseshoe scales (linear)
+#     real<lower=0> tau_global;             // global horseshoe scale (linear)
+
+#     array[p] vector[psi] gamma_raw;       // unscaled spline coefs
+#     vector<lower=0>[p] lambda_group;      // local group-horseshoe scales (nonlinear)
+#     // real<lower=0> tau_global_nl;          // global group-horseshoe scale (nonlinear)
+# }
+
+# transformed parameters {
+#     // Horseshoe reparameterisation: theta_lin = theta_raw * tau_global * lambda_local
+#     vector[p] theta_lin = theta_raw .* (tau_global * lambda_local);
+
+#     array[p] vector[psi] gamma;
+#     vector[n] alpha;
+#     {
+#         vector[n] eta = rep_vector(theta0, n);
+#         for (j in 1:p){
+#             // Group horseshoe: every coef in group j shares lambda_group[j]
+#             gamma[j] = gamma_raw[j] * (tau_global * lambda_group[j]);
+#             int nl_start = (j - 1) * psi + 1;
+#             eta += col(bsLinear, j) * theta_lin[j]
+#                  + block(bsNonlinear, 1, nl_start, n, psi) * gamma[j];
+#         };
+#         alpha = exp(eta);
+#     }
+# }
+
+# model {
+#     // --- Likelihood ---
+#     target += pareto_lpdf(y | u, alpha);
+
+#     // --- Intercept ---
+#     target += normal_lpdf(theta0 | 0, 100);
+
+#     // --- Horseshoe on linear coefs ---
+#     // half-Cauchy(0,1): Stan handles normalisation via <lower=0> constraint
+#     target += cauchy_lpdf(lambda_local | 0, 1);
+#     target += cauchy_lpdf(tau_global   | 0, tau0_lin);
+#     target += std_normal_lpdf(theta_raw);
+
+#     // --- Group Horseshoe on spline coefs ---
+#     target += cauchy_lpdf(lambda_group  | 0, 1);
+#     for (j in 1:p)
+#       target += std_normal_lpdf(gamma_raw[j]);
+# }
+
+# generated quantities {
+#     vector[grid_n] gridalpha;
+#     matrix[grid_n, p] gridgnl;
+#     matrix[grid_n, p] gridgl;
+#     matrix[grid_n, p] gridgsmooth;
+#     vector[grid_n] se;
+
+#     vector[p] theta_origin = theta_lin ./ X_sd;
+#     real theta_int = theta0 - dot_product(X_means, theta_origin);
+
+#     {
+#       vector[grid_n] grideta = rep_vector(theta_int, grid_n);
+#       for (j in 1:p){
+#           gridgl[,j]     = col(xholderLinear, j) * theta_origin[j];
+#           gridgnl[,j]    = block(xholderNonlinear, 1, ((j - 1) * psi + 1), grid_n, psi) * gamma[j];
+#           gridgsmooth[,j] = gridgl[,j] + gridgnl[,j];
+#           grideta        += gridgsmooth[,j];
+#       };
+#       gridalpha = exp(grideta);
+#     }
+#     se = pow((gridalpha - trueAlpha), 2);
+# }
+# "
+
 
 gridgnl.container <- as.data.frame(matrix(, nrow = (p*grid.n), ncol = total.iter))
 gridgl.container <- as.data.frame(matrix(, nrow = (p*grid.n), ncol = total.iter))
@@ -160,33 +231,30 @@ mise.container <- c()
 for(iter in 1:total.iter){
   n <- n.origin
   x.origin <- matrix(0, nrow = n, ncol = p)
-
   for (j in 1:p) {
     phase_shift <- j * (2 * pi / p) 
     seasonal_trend <- 0.5 + 0.1 * sin(2 * pi * time.seq / period + phase_shift) 
     uniform_noise <- runif(n, min = -0.4, max = 0.4)
     x.origin[, j] <- seasonal_trend + uniform_noise
+    # x.origin[, j] <- (x.origin[,j] - min(x.origin[,j])) / (max(x.origin[,j]) - min(x.origin[,j]))
   }
   x.origin.full <- x.origin
-  alp.origin <- exp(rep(theta.origin[1],n) + x.origin%*%theta.origin[-1] + f2(x.origin[,2]) + f3(x.origin[,3]))
-  y.noise <- NULL
-  for(i in 1:n){
-    y.noise[i] <- rmutil::rburr(1, m=1, s=alp.origin[i], f=1)
-  }
+  alp.origin <- exp(rep(theta.origin[1],n) + x.origin%*%theta.origin[-1] + f2(x.origin[,2]) + f5(x.origin[,5]))
+  y.noise <- rPareto(n, rep(1, n), alpha = alp.origin)
   f.season.scale <- function(t){
     return(2.5 - .8 * sin(2 * pi * t / 365) - .6 * cos(2 * pi * t/365)) 
   }
   y.origin <- y.noise * f.season.scale(time.seq)
 
   evgam.df <- data.frame(
-    y = log(y.origin),
+    y = (y.origin),
     sin.time = sin(2 * pi * time.seq / 365),
     cos.time = cos(2 * pi * time.seq / 365),
     x.origin
   )
   evgam.cov <- y ~ cos.time + sin.time #+ X1 + X2 + X3 + X4 + X5
   ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
-  u.vec <- exp(predict(ald.cov.fit)$location)
+  u.vec <- (predict(ald.cov.fit)$location)
 
   excess.index <- which(y.origin > u.vec)
 
@@ -195,35 +263,39 @@ for(iter in 1:total.iter){
   u <- u.vec[excess.index]
   season_code_full <- season_code_full[excess.index]  
   n <- length(y.origin)
+
+
   colnames(x.origin) <- paste0("X", 1:p)
 
   newx <- seq(min(x.origin), max(x.origin), length.out = grid.n)
-  xholder <- do.call(cbind, lapply(1:p, function(i) {seq(min(x.origin[,i]), max(x.origin[,i]), length.out = grid.n)}))  
-  f2.hidden <- make.nl(x.origin[,2], f2(x.origin[,2]))
-  f3.hidden <- make.nl(x.origin[,3], f3(x.origin[,3]))
-  theta.adjusted <- c(theta.origin[1] + f2.hidden$intercept + f3.hidden$intercept,
+  xholder <- do.call(cbind, lapply(1:p, function(i) {seq(min(x.origin[,i]), max(x.origin[,i]), length.out = grid.n)}))
+  # xholder.raw <- sweep(sweep(xholder, 2, (x_max - x_min), "*"), 2, x_min, "+")  
+  f2.hidden <- make.nl(x.origin.full[,2], f2(x.origin.full[,2]))
+  f5.hidden <- make.nl(x.origin.full[,5], f5(x.origin.full[,5]))
+  theta.adjusted <- c(theta.origin[1] + f2.hidden$intercept + f5.hidden$intercept,
                       theta.origin[2],
                       theta.origin[3] + f2.hidden$slope,
-                      theta.origin[4] + f3.hidden$slope,
+                      theta.origin[4],
                       theta.origin[5],
-                      theta.origin[6])
+                      theta.origin[6] + f5.hidden$slope)
   
 
   g2.nl <- f2(xholder[,2]) - (f2.hidden$intercept + f2.hidden$slope*xholder[,2])
-  g3.nl <- f3(xholder[,3]) - (f3.hidden$intercept + f3.hidden$slope*xholder[,3])
-
-  g1.l <- g1 <- theta.adjusted[2] * xholder[,1]
+  g5.nl <- f5(xholder[,5]) - (f5.hidden$intercept + f5.hidden$slope*xholder[,5])
   g2.l <- theta.adjusted[3]*xholder[,2]
-  g3.l <- theta.adjusted[4]*xholder[,3]
+  g5.l <- theta.adjusted[6]*xholder[,5]
   g2 <- g2.l + g2.nl
-  g3 <- g3.l + g3.nl
-  eta.g <- rep(theta.adjusted[1], grid.n) + g1 + g2 + g3
+  g5 <- g5.l + g5.nl
+  eta.g <- rep(theta.adjusted[1], grid.n) + g2 + g5
   
-  alp.new <- as.vector(exp(theta.origin[1] + xholder %*% theta.origin[-1] + f2(xholder[,2]) + f3(xholder[,3])))
+  alp.new <- as.vector(exp(theta.origin[1] + xholder %*% theta.origin[-1] + f2(xholder[,2]) + f5(xholder[,5])))
   grid.zero <- rep(0, grid.n)
-  g.new <- c(g1, g2, g3, grid.zero, grid.zero)
-  l.new <- c(g1.l, g2.l, g3.l, grid.zero, grid.zero)
-  nl.new <- c(grid.zero, g2.nl, g3.nl, grid.zero, grid.zero)
+  g.new <- c(grid.zero, g2, grid.zero, grid.zero, g5)
+  l.new <- c(grid.zero, g2.l, grid.zero, grid.zero, g5.l)
+  nl.new <- c(grid.zero, g2.nl, grid.zero, grid.zero, g5.nl)
+
+  X_means <- colMeans(x.origin)
+  X_sd   <- apply(x.origin, 2, sd)
 
   group.map <- c()
   Z.list <- list()        # Stores the final non-linear design matrices
@@ -241,6 +313,7 @@ for(iter in 1:total.iter){
     X_lin <- model.matrix(~ x_vec) 
     sm_spec <- smoothCon(s(x_vec, bs = "tp", k = psi + 2), 
                         data = data.frame(x_vec = x_vec), 
+                        # absorb.cons = TRUE,
                         knots = NULL)[[1]]
     
     X_raw <- sm_spec$X
@@ -285,12 +358,11 @@ for(iter in 1:total.iter){
   bs.nonlinear <- do.call(cbind, Z.list)
   bs.linear <- model.matrix(~ ., data = data.frame(x.origin))[,-1]
   Z_scales <- unlist(scale_stats_list)
-  # xholder <- do.call(cbind, lapply(1:p, function(j) {newx}))
 
   grid_Z_list <- list()
 
   for (i in seq_along(covariates)) {
-    x_vec <- (seq(min(x.origin[,i]), max(x.origin[,i]), length.out = grid.n))
+    x_vec <- (seq(min(x.origin[,i]), max(x.origin[,i]), length.out = grid.n))# - X_means[i]) / X_sd[i]
     grid_df  <- data.frame(x_vec = x_vec)
     X_lin_grid <- model.matrix(~ x_vec, data = grid_df)
     X_raw_grid <- PredictMat(sm_spec_list[[i]], grid_df)
@@ -306,11 +378,37 @@ for(iter in 1:total.iter){
 
   xholder.linear <- model.matrix(~ ., data = data.frame(xholder))[,-1]
   xholder.nonlinear <- do.call(cbind, grid_Z_list)
-
   # xholder.linear <- scale(xholder.linear, center = X_means, scale = X_sd)
-  X_means <- colMeans(x.origin)
-  X_sd   <- apply(x.origin, 2, sd)
   bs.linear <- scale(bs.linear, center = X_means, scale = X_sd)
+
+
+  # Rule of thumb: tau0 = p0/(p-p0) / sqrt(n), p0 = expected signals
+  # Linear: 3 of 5 nonzero → 3/2 / sqrt(n)
+  tau0_lin <- (3/2) / sqrt(n)   # ~0.05 for n~1000 excess
+  tau0_nl  <- (2/3) / sqrt(n)   # tighter: only 2 smooths nonzero
+
+  # data.stan <- list(
+  #     y = as.vector(y.origin), u = u, p = p, n = n, psi = psi, grid_n = grid.n,
+  #     X_means = X_means, X_sd = X_sd, Z_scales = Z_scales,
+  #     bsLinear = bs.linear, bsNonlinear = bs.nonlinear, trueAlpha = alp.new,
+  #     xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear,
+  #     tau0_lin = tau0_lin, tau0_nl = tau0_nl      # <-- replaces atau
+  # )
+  # init.alpha <- list(
+  #     list(theta0 = -0.1,
+  #         theta_raw = rep(0.1, p),   lambda_local = rep(1.0, p), tau_global = 0.3,
+  #         gamma_raw = array(rep(0.2, psi*p), dim=c(p, psi)),
+  #         lambda_group = rep(1.0, p)),
+  #     list(theta0 = -0.05,
+  #         theta_raw = rep(0.05, p),  lambda_local = rep(0.8, p), tau_global = 0.5,
+  #         gamma_raw = array(rep(0.15, psi*p), dim=c(p, psi)),
+  #         lambda_group = rep(0.8, p)),
+  #     list(theta0 =  0.05,
+  #         theta_raw = rep(0.15, p),  lambda_local = rep(1.2, p), tau_global = 0.2,
+  #         gamma_raw = array(rep(0.1, psi*p), dim=c(p, psi)),
+  #         lambda_group = rep(1.2, p))
+  # )
+
 
   data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, grid_n = grid.n,
                   atau = ((psi+1)/2), X_means = X_means, X_sd=X_sd, Z_scales=Z_scales,
@@ -319,29 +417,27 @@ for(iter in 1:total.iter){
 
   init.alpha <- list(list(gamma_raw= array(rep(0.2, (psi*p)), dim=c(p,psi)),
                           theta = rep(-0.1, (p+1)), tau = rep(0.1, p), 
-                          # lambda1 = 0.1, lambda2 = 1),
                           lambda1 = rep(0.1, p), lambda2 = rep(1, p)),
-                    list(gamma_raw = array(rep(0.15, (psi*p)), dim=c(p,psi)),
-                          theta = rep(-0.05, (p+1)), tau = rep(0.3, p),
-                          # lambda1 = 0.4, lambda2 = 0.5),
-                          lambda1 = rep(0.2, p), lambda2 = rep(0.5, p)),
-                    list(gamma_raw = array(rep(0.1, (psi*p)), dim=c(p,psi)),
-                          theta = rep(0.05, (p+1)), tau = rep(0.2, p),
-                          # lambda1 = 0.2, lambda2 = 0.5))
-                          lambda1 = rep(0.2, p), lambda2 = rep(0.5, p)))
+                    list(gamma_raw = array(rep(-0.15, (psi*p)), dim=c(p,psi)),
+                          theta = rep(0.05, (p+1)), tau = rep(2, p),
+                          lambda1 = rep(2, p), lambda2 = rep(5, p)),
+                    list(gamma_raw = array(rep(-0.75, (psi*p)), dim=c(p,psi)),
+                          theta = rep(0.01, (p+1)), tau = rep(1.5, p), 
+                          lambda1 = rep(0.5, p), lambda2= rep(5, p)))
     
   fit1 <- stan(
       model_code = model.stan,
       data = data.stan,    # named list of data
       init = init.alpha,      # initial value
       chains = 3,             # number of Markov chains
-      iter = 4000,            # total number of iterations per chain
+      iter = 3000,            # total number of iterations per chain
       cores = parallel::detectCores(), # number of cores (could use one per chain)
-      refresh = 2000             # no progress shown
+      refresh = 1500             # no progress shown
   )
   # posterior <- extract(fit1)
   theta.samples <- summary(fit1, par=c("theta0", "theta_origin"), probs = c(0.5))$summary
   lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.5))$summary
+  # lambda.samples <- summary(fit1, par=c("lambda_local", "lambda_group"), probs = c(0.5))$summary
   gridgnl.samples <- summary(fit1, par=c("gridgnl"), probs = c(0.5))$summary
   gridgl.samples <- summary(fit1, par=c("gridgl"), probs = c(0.5))$summary
   gridgsmooth.samples <- summary(fit1, par=c("gridgsmooth"), probs = c(0.5))$summary
@@ -394,7 +490,7 @@ alpha.container <- as.data.frame(alpha.container)
 
 # load(paste0("./simulation/results/MC-Scenario_A/2026-02-07_",total.iter,"_MC_scA_",n.origin,".Rdata"))
 
-plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab(expression(alpha(c,...,c))) #+ ylab("")
+plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab(expression(alpha(c,...,c)))
 if(total.iter <= 50){
   for(i in 1:total.iter){
     plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.05, linewidth = 0.7)
@@ -406,7 +502,7 @@ if(total.iter <= 50){
 }
 print(plt + 
         geom_line(aes(y=true, col = "True"), linewidth = 2, linetype = 2) + 
-        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.8) + ylim(0,10) +
+        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.8) + ylim(0, 10) +
         scale_fill_manual(values=c("steelblue"), name = "") +
         scale_color_manual(values = c("steelblue", "red"))+
         guides(color = guide_legend(order = 2), 
@@ -435,7 +531,7 @@ if(total.iter <= 50){
     plt <- plt + geom_line(aes(y = .data[[names(gridgsmooth.container)[i]]]), alpha = 0.05, linewidth = 0.7)
   }
 }
-print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + ylim(-3, 3) +
+print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + ylim(-1.5, 1.5) +
         geom_line(aes(y=true, col = "True"), linewidth = 2, linetype = 2) + 
         geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5) + 
         facet_grid(covariate ~ ., scales = "free_x", switch = "y",
@@ -473,7 +569,7 @@ if(total.iter <= 50){
 print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
         geom_line(aes(y=true, col = "True"), linewidth = 2, linetype = 2) + 
         geom_line(aes(y=mean, col = "Mean"), linewidth = 1.2) + 
-        ylim(-3, 3)+
+        ylim(-2.5,2.5)+
         facet_grid(covariate ~ ., scales = "free_x", switch = "y",
                     labeller = label_parsed) +  
         scale_color_manual(values = c("steelblue", "red"))+
@@ -486,7 +582,7 @@ print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewid
                 axis.title.x = element_text(size = 45),  
                 axis.text = element_text(size = 30)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_linear_scA",n.origin,".pdf"), width=12.5, height = 7.78)                
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_linear_scA_",n.origin,".pdf"), width=12.5, height = 7.78)                
 
 gridgnl.container$x <- newx
 gridgnl.container$true <- as.vector(nl.new)
@@ -520,7 +616,7 @@ print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewid
                 axis.title.x = element_text(size = 45),  
                 axis.text = element_text(size = 30)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_nonlinear_sca",n.origin,".pdf"), width=12.5, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_nonlinear_scA_",n.origin,".pdf"), width=12.5, height = 7.78)
 
 # qqplot.container$grid <- grid
 # qqplot.container$mean <- rowMeans(qqplot.container[,1:total.iter])

@@ -8,7 +8,7 @@ library(evgam)
 # Scenario A
 # array.id <- commandArgs(trailingOnly=TRUE)
 
-total.iter <- 5
+total.iter <- 3
 
 n <- n.origin <- 10000
 grid.n <- 200
@@ -18,8 +18,8 @@ p <- 5
 
 C <- diag(p)
 
-f2 <- function(x) {-.7 * sin(2 * pi * x^2)*x}
-f3 <- function(x) {-.7 * cos(3 * pi * x^2)*x}
+f2 <- function(x) {-.7 * sin(2 * pi * x^2)*(x-0.5)}
+f5 <- function(x) {-.7 * cos(3 * pi * x^2)*x}
 
 time.seq <- 1:n
 period <- 365 
@@ -39,7 +39,7 @@ make.nl <- function(x, raw_y) {
   ))
 }
 
-theta.origin <- c(0.7, 0, 0.8, -0.8, 0, 0) 
+theta.origin <- c(0.7, 0, 0.8, 0, 0, -0.8) 
 psi <- psi -2
 model.stan <- "// Stan model for BLAST Pareto Samples
 data {
@@ -90,8 +90,8 @@ transformed parameters {
 model {
   // likelihood
   target += pareto_lpdf(y | u, alpha);
-  target += normal_lpdf(theta[1] | 0, 10);
-  target += gamma_lpdf(lambda1 | 1e-3, 1e-3); 
+  target += normal_lpdf(theta[1] | 0, 100);
+  target += gamma_lpdf(lambda1 | 1e-1, 1e-1); 
   target += gamma_lpdf(lambda2 | 1e-2, 1e-2);  
   for (j in 1:p){
     target += double_exponential_lpdf(theta[(j+1)] | 0, 1/(lambda1[j]));
@@ -126,6 +126,100 @@ generated quantities {
 }
 "
 
+# model.stan <- "// Stan model for BLAST Pareto Samples — Horseshoe Priors
+# data {
+#     int <lower=1> n;
+#     int <lower=1> grid_n;
+#     int <lower=1> p;
+#     int <lower=1> psi;
+#     vector[n] u;
+#     matrix[n, p] bsLinear;
+#     matrix[n, (psi*p)] bsNonlinear;
+#     matrix[grid_n, p] xholderLinear;
+#     matrix[grid_n, (psi*p)] xholderNonlinear;
+#     vector<lower=min(u)>[n] y;
+#     vector[p] X_means;
+#     vector[p] X_sd;
+#     vector[(psi*p)] Z_scales;
+#     vector[grid_n] trueAlpha;
+#     real<lower=0> tau0_lin;   // global scale for linear horseshoe
+#     real<lower=0> tau0_nl;    // global scale for group horseshoe
+# }
+
+# parameters {
+#     real theta0;                          // intercept
+#     vector[p] theta_raw;                  // unscaled linear coefs
+#     vector<lower=0>[p] lambda_local;      // local horseshoe scales (linear)
+#     real<lower=0> tau_global;             // global horseshoe scale (linear)
+
+#     array[p] vector[psi] gamma_raw;       // unscaled spline coefs
+#     vector<lower=0>[p] lambda_group;      // local group-horseshoe scales (nonlinear)
+#     // real<lower=0> tau_global_nl;          // global group-horseshoe scale (nonlinear)
+# }
+
+# transformed parameters {
+#     // Horseshoe reparameterisation: theta_lin = theta_raw * tau_global * lambda_local
+#     vector[p] theta_lin = theta_raw .* (tau_global * lambda_local);
+
+#     array[p] vector[psi] gamma;
+#     vector[n] alpha;
+#     {
+#         vector[n] eta = rep_vector(theta0, n);
+#         for (j in 1:p){
+#             // Group horseshoe: every coef in group j shares lambda_group[j]
+#             gamma[j] = gamma_raw[j] * (tau_global * lambda_group[j]);
+#             int nl_start = (j - 1) * psi + 1;
+#             eta += col(bsLinear, j) * theta_lin[j]
+#                  + block(bsNonlinear, 1, nl_start, n, psi) * gamma[j];
+#         };
+#         alpha = exp(eta);
+#     }
+# }
+
+# model {
+#     // --- Likelihood ---
+#     target += pareto_lpdf(y | u, alpha);
+
+#     // --- Intercept ---
+#     target += normal_lpdf(theta0 | 0, 100);
+
+#     // --- Horseshoe on linear coefs ---
+#     // half-Cauchy(0,1): Stan handles normalisation via <lower=0> constraint
+#     target += cauchy_lpdf(lambda_local | 0, 1);
+#     target += cauchy_lpdf(tau_global   | 0, tau0_lin);
+#     target += std_normal_lpdf(theta_raw);
+
+#     // --- Group Horseshoe on spline coefs ---
+#     target += cauchy_lpdf(lambda_group  | 0, 1);
+#     for (j in 1:p)
+#       target += std_normal_lpdf(gamma_raw[j]);
+# }
+
+# generated quantities {
+#     vector[grid_n] gridalpha;
+#     matrix[grid_n, p] gridgnl;
+#     matrix[grid_n, p] gridgl;
+#     matrix[grid_n, p] gridgsmooth;
+#     vector[grid_n] se;
+
+#     vector[p] theta_origin = theta_lin ./ X_sd;
+#     real theta_int = theta0 - dot_product(X_means, theta_origin);
+
+#     {
+#       vector[grid_n] grideta = rep_vector(theta_int, grid_n);
+#       for (j in 1:p){
+#           gridgl[,j]     = col(xholderLinear, j) * theta_origin[j];
+#           gridgnl[,j]    = block(xholderNonlinear, 1, ((j - 1) * psi + 1), grid_n, psi) * gamma[j];
+#           gridgsmooth[,j] = gridgl[,j] + gridgnl[,j];
+#           grideta        += gridgsmooth[,j];
+#       };
+#       gridalpha = exp(grideta);
+#     }
+#     se = pow((gridalpha - trueAlpha), 2);
+# }
+# "
+
+
 gridgnl.container <- as.data.frame(matrix(, nrow = (p*grid.n), ncol = total.iter))
 gridgl.container <- as.data.frame(matrix(, nrow = (p*grid.n), ncol = total.iter))
 gridgsmooth.container <- as.data.frame(matrix(, nrow = (p*grid.n), ncol = total.iter))
@@ -145,7 +239,7 @@ for(iter in 1:total.iter){
     # x.origin[, j] <- (x.origin[,j] - min(x.origin[,j])) / (max(x.origin[,j]) - min(x.origin[,j]))
   }
   x.origin.full <- x.origin
-  alp.origin <- exp(rep(theta.origin[1],n) + x.origin%*%theta.origin[-1] + f2(x.origin[,2]) + f3(x.origin[,3]))
+  alp.origin <- exp(rep(theta.origin[1],n) + x.origin%*%theta.origin[-1] + f2(x.origin[,2]) + f5(x.origin[,5]))
   y.noise <- rPareto(n, rep(1, n), alpha = alp.origin)
   f.season.scale <- function(t){
     return(2.5 - .8 * sin(2 * pi * t / 365) - .6 * cos(2 * pi * t/365)) 
@@ -158,7 +252,7 @@ for(iter in 1:total.iter){
     cos.time = cos(2 * pi * time.seq / 365),
     x.origin
   )
-  evgam.cov <- y ~ 1 + cos.time + sin.time #+ X1 + X2 + X3 + X4 + X5
+  evgam.cov <- y ~ cos.time + sin.time #+ X1 + X2 + X3 + X4 + X5
   ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
   u.vec <- (predict(ald.cov.fit)$location)
 
@@ -170,51 +264,35 @@ for(iter in 1:total.iter){
   season_code_full <- season_code_full[excess.index]  
   n <- length(y.origin)
 
-  # x_min <- apply(x.origin.excess, 2, min)
-  # x_max <- apply(x.origin.excess, 2, max)
-
-  # x.origin <- as.data.frame(
-  #   sweep(sweep(x.origin.excess, 2, x_min, "-"), 2, (x_max - x_min), "/")
-  # )
 
   colnames(x.origin) <- paste0("X", 1:p)
 
   newx <- seq(min(x.origin), max(x.origin), length.out = grid.n)
   xholder <- do.call(cbind, lapply(1:p, function(i) {seq(min(x.origin[,i]), max(x.origin[,i]), length.out = grid.n)}))
   # xholder.raw <- sweep(sweep(xholder, 2, (x_max - x_min), "*"), 2, x_min, "+")  
-  f2.hidden <- make.nl(x.origin[,2], f2(x.origin[,2]))
-  f3.hidden <- make.nl(x.origin[,3], f3(x.origin[,3]))
-  theta.adjusted <- c(theta.origin[1] + f2.hidden$intercept + f3.hidden$intercept,
+  f2.hidden <- make.nl(x.origin.full[,2], f2(x.origin.full[,2]))
+  f5.hidden <- make.nl(x.origin.full[,5], f5(x.origin.full[,5]))
+  theta.adjusted <- c(theta.origin[1] + f2.hidden$intercept + f5.hidden$intercept,
                       theta.origin[2],
                       theta.origin[3] + f2.hidden$slope,
-                      theta.origin[4] + f3.hidden$slope,
+                      theta.origin[4],
                       theta.origin[5],
-                      theta.origin[6])
+                      theta.origin[6] + f5.hidden$slope)
   
 
   g2.nl <- f2(xholder[,2]) - (f2.hidden$intercept + f2.hidden$slope*xholder[,2])
-  g3.nl <- f3(xholder[,3]) - (f3.hidden$intercept + f3.hidden$slope*xholder[,3])
-  # g2.nl <- f2(xholder.raw[, 2]) - (f2.hidden$intercept + f2.hidden$slope * xholder[, 2])
-  # g3.nl <- f3(xholder.raw[, 3]) - (f3.hidden$intercept + f3.hidden$slope * xholder[, 3])  
+  g5.nl <- f5(xholder[,5]) - (f5.hidden$intercept + f5.hidden$slope*xholder[,5])
   g2.l <- theta.adjusted[3]*xholder[,2]
-  g3.l <- theta.adjusted[4]*xholder[,3]
+  g5.l <- theta.adjusted[6]*xholder[,5]
   g2 <- g2.l + g2.nl
-  g3 <- g3.l + g3.nl
-  eta.g <- rep(theta.adjusted[1], grid.n) + g2 + g3
+  g5 <- g5.l + g5.nl
+  eta.g <- rep(theta.adjusted[1], grid.n) + g2 + g5
   
-  alp.new <- as.vector(exp(theta.origin[1] + xholder %*% theta.origin[-1] + f2(xholder[,2]) + f3(xholder[,3])))
-  # theta.rescaled <- theta.origin[-1] * (x_max - x_min)          # p-vector
-  # theta0.rescaled <- theta.origin[1] + sum(theta.origin[-1] * x_min)
-  # alp.new <- as.vector(exp(
-  #   theta0.rescaled +
-  #   xholder %*% theta.rescaled +
-  #   f2(xholder.raw[, 2]) +
-  #   f3(xholder.raw[, 3])
-  # ))  
+  alp.new <- as.vector(exp(theta.origin[1] + xholder %*% theta.origin[-1] + f2(xholder[,2]) + f5(xholder[,5])))
   grid.zero <- rep(0, grid.n)
-  g.new <- c(grid.zero, g2, g3, grid.zero, grid.zero)
-  l.new <- c(grid.zero, g2.l, g3.l, grid.zero, grid.zero)
-  nl.new <- c(grid.zero, g2.nl, g3.nl, grid.zero, grid.zero)
+  g.new <- c(grid.zero, g2, grid.zero, grid.zero, g5)
+  l.new <- c(grid.zero, g2.l, grid.zero, grid.zero, g5.l)
+  nl.new <- c(grid.zero, g2.nl, grid.zero, grid.zero, g5.nl)
 
   X_means <- colMeans(x.origin)
   X_sd   <- apply(x.origin, 2, sd)
@@ -303,6 +381,35 @@ for(iter in 1:total.iter){
   # xholder.linear <- scale(xholder.linear, center = X_means, scale = X_sd)
   bs.linear <- scale(bs.linear, center = X_means, scale = X_sd)
 
+
+  # Rule of thumb: tau0 = p0/(p-p0) / sqrt(n), p0 = expected signals
+  # Linear: 3 of 5 nonzero → 3/2 / sqrt(n)
+  tau0_lin <- (3/2) / sqrt(n)   # ~0.05 for n~1000 excess
+  tau0_nl  <- (2/3) / sqrt(n)   # tighter: only 2 smooths nonzero
+
+  # data.stan <- list(
+  #     y = as.vector(y.origin), u = u, p = p, n = n, psi = psi, grid_n = grid.n,
+  #     X_means = X_means, X_sd = X_sd, Z_scales = Z_scales,
+  #     bsLinear = bs.linear, bsNonlinear = bs.nonlinear, trueAlpha = alp.new,
+  #     xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear,
+  #     tau0_lin = tau0_lin, tau0_nl = tau0_nl      # <-- replaces atau
+  # )
+  # init.alpha <- list(
+  #     list(theta0 = -0.1,
+  #         theta_raw = rep(0.1, p),   lambda_local = rep(1.0, p), tau_global = 0.3,
+  #         gamma_raw = array(rep(0.2, psi*p), dim=c(p, psi)),
+  #         lambda_group = rep(1.0, p)),
+  #     list(theta0 = -0.05,
+  #         theta_raw = rep(0.05, p),  lambda_local = rep(0.8, p), tau_global = 0.5,
+  #         gamma_raw = array(rep(0.15, psi*p), dim=c(p, psi)),
+  #         lambda_group = rep(0.8, p)),
+  #     list(theta0 =  0.05,
+  #         theta_raw = rep(0.15, p),  lambda_local = rep(1.2, p), tau_global = 0.2,
+  #         gamma_raw = array(rep(0.1, psi*p), dim=c(p, psi)),
+  #         lambda_group = rep(1.2, p))
+  # )
+
+
   data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, grid_n = grid.n,
                   atau = ((psi+1)/2), X_means = X_means, X_sd=X_sd, Z_scales=Z_scales,
                   bsLinear = bs.linear, bsNonlinear = bs.nonlinear, trueAlpha = alp.new,
@@ -328,7 +435,9 @@ for(iter in 1:total.iter){
       refresh = 1500             # no progress shown
   )
   # posterior <- extract(fit1)
+  theta.samples <- summary(fit1, par=c("theta0", "theta_origin"), probs = c(0.5))$summary
   lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.5))$summary
+  # lambda.samples <- summary(fit1, par=c("lambda_local", "lambda_group"), probs = c(0.5))$summary
   gridgnl.samples <- summary(fit1, par=c("gridgnl"), probs = c(0.5))$summary
   gridgl.samples <- summary(fit1, par=c("gridgl"), probs = c(0.5))$summary
   gridgsmooth.samples <- summary(fit1, par=c("gridgsmooth"), probs = c(0.5))$summary

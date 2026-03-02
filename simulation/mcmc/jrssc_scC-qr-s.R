@@ -5,6 +5,7 @@ library(Pareto)
 library(parallel)
 library(qqboxplot)
 library(evgam)
+library(crch)
 
 n <- 10000
 psi <- 10
@@ -28,23 +29,34 @@ for (j in 1:p) {
   phase_shift <- j * (2 * pi / p) 
   seasonal_trend <- 0.5 + 0.1 * sin(2 * pi * time.seq / period + phase_shift)
   x.origin[,j] <- seasonal_trend + runif(n, -0.4, 0.4)
-  # x.origin[, j] <- (raw_x - min(raw_x)) / (max(raw_x) - min(raw_x))
 }
-
-plot(x.origin[,2])
+x.origin.full <- x.origin
+# plot(x.origin[,2])
 covariates <- colnames(data.frame(x.origin))[1:p]
-
-f1 <- function(x) {-0.4 * (x-1.5)^3}
-f5 <- function(x) {0.1* (x-1.4)^2}
-theta.origin <- c(1, 0, -0.3, 0, 0, 0.5)
+make.nl <- function(x, raw_y) {
+  fit <- lm(raw_y ~ x)
+  
+  return(list(
+    nl = residuals(fit), 
+    slope = coef(fit)[["x"]],
+    intercept = coef(fit)[["(Intercept)"]]
+  ))
+}
+# f1 <- function(x) {-.4 * (x+0.5)^3}
+# f5 <- function(x) {0.5* (x+0.5)^2}
+f1 <- function(x) { 1.7 * (1.2 - x)^2 }  # Quadratic decrease: ~4.8 (at x=0) to ~0.4 (at x=1)
+f5 <- function(x) { -0.4 * (1.1 - x)^2 }   # Quadratic decrease: ~3.9 (at x=0) to ~0.3 (at x=1)
+theta.origin <- c(0.5, 0, -0.6, 0, 0, 0.5)
 
 alp.origin <- exp(rep(theta.origin[1],n) + x.origin%*%theta.origin[-1] + f1(x.origin[,1]) + f5(x.origin[,5]))
-y.noise <- rt(n, df = alp.origin)
+# y.noise <- rt(n, df = alp.origin)
+y.noise <- rtt(n, df = alp.origin, left=0)
+
 f.season.scale <- function(t){
   return(2.5 - .8 * sin(2 * pi * t / 365) - .6 * cos(2 * pi * t/365)) 
 }
 y.origin <- y.noise * f.season.scale(time.seq)
-plot(y.origin)
+# plot(y.origin)
 
 evgam.df <- data.frame(
   y = (y.origin),
@@ -68,9 +80,31 @@ xholder <- do.call(cbind, lapply(1:p, function(i) {seq(min(x.origin[,i]), max(x.
 alp.new <- as.vector(exp(theta.origin[1] + xholder %*% theta.origin[-1] + 
                           f1(xholder[,1]) + f5(xholder[,5])))
 plot(alp.new)
+
+f1.hidden <- make.nl(x.origin[,1], f1(x.origin[,1]))
+f5.hidden <- make.nl(x.origin[,5], f5(x.origin[,5]))
+theta.adjusted <- c(theta.origin[1] + f1.hidden$intercept + f5.hidden$intercept,
+                    theta.origin[2] + f1.hidden$slope,
+                    theta.origin[3],
+                    theta.origin[4],
+                    theta.origin[5],
+                    theta.origin[6] + f5.hidden$slope)
+
+g1.nl <- f1(xholder[,1]) - (f1.hidden$intercept + f1.hidden$slope*xholder[,1])
+g5.nl <- f5(xholder[,5]) - (f5.hidden$intercept + f5.hidden$slope*xholder[,5])
+
+g1.l <- theta.adjusted[2]*xholder[,1]
+g2.l <- theta.adjusted[3]*xholder[,2]
+g5.l <- theta.adjusted[6]*xholder[,5]
+g1 <- g1.l + g1.nl
+g5 <- g5.l + g5.nl
+eta.g <- rep(theta.adjusted[1], grid.n) + g1 + g2.l + g5
+grid.zero <- rep(0, grid.n)
+g.new <- c(g1, g2.l, grid.zero, grid.zero, g5)
+l.new <- c(g1.l, g2.l, grid.zero, grid.zero, g5.l)
+nl.new <- c(g1.nl, grid.zero, grid.zero, grid.zero, g5.nl)
 colnames(xholder) <- colnames(x.origin) <- paste0("X", 1:p)
 
-# plot(x.origin[,1])
 
 group.map <- c()
 Z.list <- list()        # Stores the final non-linear design matrices
@@ -81,12 +115,10 @@ qr_list <- list()          # Store QR info for prediction
 sm_spec_list <- list()     # Store smooth objects
 keep_cols_list <- list()
 
-covariates <- colnames(data.frame(x.origin))
 for (i in seq_along(covariates)) {
   var_name <- covariates[i]
   x_vec <- x.origin[, i]
   X_lin <- model.matrix(~ x_vec) 
-  # knots <- quantile(x_vec, probs = seq(0, 1, length.out = psi + 2))
   sm_spec <- smoothCon(s(x_vec, bs = "tp", k = psi + 2), 
                       data = data.frame(x_vec = x_vec), 
                       knots = NULL)[[1]]
@@ -157,11 +189,11 @@ cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear_check[,c(1,5)]
 cat("Orthogonality Check (Linear vs Nonlinear):", sum(t(bs.linear_check[,c(1,6)]) %*% bs.nonlinear[,c((psi*4+1):(psi*5))]), "\n")
 
 
-X_means <- colMeans(bs.linear)
-X_sd   <- apply(bs.linear, 2, sd)
+X_means <- colMeans(x.origin)
+X_sd   <- apply(x.origin, 2, sd)
 bs.linear <- scale(bs.linear, center = X_means, scale = X_sd)
 
-model.stan <- "// Stan model for BLAST Burr Samples
+model.stan <- "// Stan model for BLAST t Samples
 data {
     int <lower=1> n; // Sample size
     int <lower=1> grid_n;
@@ -192,15 +224,10 @@ transformed parameters {
     
     array[p] vector[psi] gamma;
     {
-      // matrix[n, p] gsmooth; // linear component
       vector[n] eta = rep_vector(theta[1], n);
       for (j in 1:p){
-        for (k in 1:psi){
-          int idx = (j-1)*psi + k;
-          gamma[j][k] = gamma_raw[j][k] * sqrt(tau[j]); // * Z_scales[idx];
-        }; 
-        int nl_start = (j - 1) * psi + 1;
-        eta += col(bsLinear, j) * theta[j+1] + block(bsNonlinear,1, nl_start, n, psi) * gamma[j];
+        gamma[j] = gamma_raw[j] * sqrt(tau[j]); 
+        eta += col(bsLinear, j) * theta[j+1] + block(bsNonlinear,1, ((j - 1) * psi + 1), n, psi) * gamma[j];
       };
       
       alpha = exp(eta);
@@ -209,15 +236,11 @@ transformed parameters {
 
 model {
   //likelihood
-  for (i in 1:n){
-    target += student_t_lpdf(y[i] | alpha[i], 0, 1);
-    target += -1*log(1-student_t_cdf(u, alpha[i], 0, 1));
-  }
-  // target += pareto_lpdf(y | u, alpha);
-  target += normal_lpdf(theta[1] | 0, 10);
+  target += student_t_lpdf(y | alpha, 0, 1) - student_t_lccdf(u | alpha, 0, 1);
+  target += normal_lpdf(theta[1] | 0, 100);
+  target += gamma_lpdf(lambda1 | 1e-1, 1e-1); 
+  target += gamma_lpdf(lambda2 | 1e-2, 1e-2);
   for (j in 1:p){
-    target += gamma_lpdf(lambda1[j] | 1e-2, 1e-2); 
-    target += gamma_lpdf(lambda2[j] | 1e-2, 1e-2);
     target += double_exponential_lpdf(theta[(j+1)] | 0, 1/(lambda1[j]));
     target += gamma_lpdf(tau[j] | atau, square(lambda2[j])*0.5);
     target += std_normal_lpdf(gamma_raw[j]);
@@ -267,21 +290,21 @@ system.time(fit1 <- stan(
   data = data.stan,    # named list of data
   init = init.alpha,      # initial value
   chains = 3,             # number of Markov chains
-  iter = 3000,            # total number of iterations per chain
+  iter = 4000,            # total number of iterations per chain
   cores = parallel::detectCores(), # number of cores (could use one per chain)
-  refresh = 1500             # no progress shown
+  refresh = 2000             # no progress shown
 ))
 
 posterior <- extract(fit1)
 bayesplot::color_scheme_set("mix-blue-red")
-bayesplot::mcmc_trace(fit1, pars="lp__") + ylab("Scenario D") +
+bayesplot::mcmc_trace(fit1, pars="lp__") + ylab("Scenario B") +
   theme_minimal(base_size = 30) +
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 18))
 # ggsave(paste0("./simulation/results/appendix_",n,"_traceplot_scA.pdf"), width=22, height = 3)
 
-theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
+theta.samples <- summary(fit1, par=c("theta0", "theta_origin"), probs = c(0.05,0.5, 0.95))$summary
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
 lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
 # newgl.samples <- summary(fit1, par=c("gridgl"), probs = c(0.05, 0.5, 0.95))$summary
@@ -392,7 +415,7 @@ ggplot(data.scenario, aes(x=x)) +
 
 
 data.smooth <- data.frame("x"=newx,
-                          # "true" = df_true_smooth$global[1:(grid_n*p)],
+                          "true" = g.new,
                           "q2"        = g.smooth.q2,
                           "q1"        = g.smooth.q1,
                           "q3"        = g.smooth.q3,
@@ -402,7 +425,7 @@ data.smooth <- data.frame("x"=newx,
 ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) + 
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-  # geom_line(aes(y=true, colour = "True"), linewidth=2, linetype=2) + 
+  geom_line(aes(y=true, colour = "True"), linewidth=2, linetype=2) + 
   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1.5) + 
   ylab("") + xlab(expression(c)) +
   facet_grid(covariates ~ ., scales = "free_x", switch = "y", 
