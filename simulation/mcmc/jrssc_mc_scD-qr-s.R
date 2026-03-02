@@ -9,7 +9,7 @@ library(rmutil)
 # Scenario D
 # array.id <- commandArgs(trailingOnly=TRUE)
 
-total.iter <- 5
+total.iter <- 4
 
 n <- n.origin <- 10000
 grid.n <- 200
@@ -40,7 +40,7 @@ make.nl <- function(x, raw_y) {
   ))
 }
 
-theta.origin <- c(0.7, 1.2, 1.2, -1.2, 0, 0) 
+theta.origin <- c(0.9, 1.2, 1.2, -1.2, 0, 0) 
 psi <- psi -2
 
 
@@ -180,14 +180,14 @@ for(iter in 1:total.iter){
   y.origin <- y.noise * f.season.scale(time.seq)
 
   evgam.df <- data.frame(
-    y = log(y.origin),
+    y = (y.origin),
     sin.time = sin(2 * pi * time.seq / 365),
     cos.time = cos(2 * pi * time.seq / 365),
     x.origin
   )
-  evgam.cov <- y ~ cos.time + sin.time #+ X1 + X2 + X3 + X4 + X5
+  evgam.cov <- y ~ 1 + cos.time + sin.time #+ X1 + X2 + X3 + X4 + X5
   ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
-  u.vec <- exp(predict(ald.cov.fit)$location)
+  u.vec <- (predict(ald.cov.fit)$location)
 
   excess.index <- which(y.origin > u.vec)
 
@@ -293,7 +293,8 @@ for(iter in 1:total.iter){
   grid_Z_list <- list()
 
   for (i in seq_along(covariates)) {
-    x_vec <- (seq(min(x.origin[,i]), max(x.origin[,i]), length.out = grid.n))
+    # x_vec <- (seq(min(x.origin[,i]), max(x.origin[,i]), length.out = grid.n))
+    x_vec <- xholder[,i]
     grid_df  <- data.frame(x_vec = x_vec)
     X_lin_grid <- model.matrix(~ x_vec, data = grid_df)
     X_raw_grid <- PredictMat(sm_spec_list[[i]], grid_df)
@@ -311,8 +312,8 @@ for(iter in 1:total.iter){
   xholder.nonlinear <- do.call(cbind, grid_Z_list)
 
   # xholder.linear <- scale(xholder.linear, center = X_means, scale = X_sd)
-  X_means <- colMeans(x.origin)
-  X_sd   <- apply(x.origin, 2, sd)
+  X_means <- colMeans(bs.linear)
+  X_sd   <- apply(bs.linear, 2, sd)
   bs.linear <- scale(bs.linear, center = X_means, scale = X_sd)
 
   data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, grid_n = grid.n,
@@ -338,9 +339,9 @@ for(iter in 1:total.iter){
       data = data.stan,    # named list of data
       init = init.alpha,      # initial value
       chains = 3,             # number of Markov chains
-      iter = 4000,            # total number of iterations per chain
+      iter = 2000,            # total number of iterations per chain
       cores = parallel::detectCores(), # number of cores (could use one per chain)
-      refresh = 2000             # no progress shown
+      refresh = 1000             # no progress shown
   )
   # posterior <- extract(fit1)
   theta.samples <- summary(fit1, par=c("theta0", "theta_origin"), probs = c(0.5))$summary

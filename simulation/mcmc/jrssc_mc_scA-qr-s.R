@@ -254,7 +254,7 @@ for(iter in 1:total.iter){
     cos.time = cos(2 * pi * time.seq / 365),
     x.origin
   )
-  evgam.cov <- y ~ cos.time + sin.time #+ X1 + X2 + X3 + X4 + X5
+  evgam.cov <- y ~ 1 + cos.time + sin.time #+ X1 + X2 + X3 + X4 + X5
   ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
   u.vec <- (predict(ald.cov.fit)$location)
 
@@ -269,9 +269,10 @@ for(iter in 1:total.iter){
 
   colnames(x.origin) <- paste0("X", 1:p)
 
-  newx <- seq(min(x.origin), max(x.origin), length.out = grid.n)
-  xholder <- do.call(cbind, lapply(1:p, function(i) {seq(min(x.origin[,i]), max(x.origin[,i]), length.out = grid.n)}))
-  # xholder.raw <- sweep(sweep(xholder, 2, (x_max - x_min), "*"), 2, x_min, "+")  
+  # newx <- seq(min(x.origin), max(x.origin), length.out = grid.n)
+  # xholder <- do.call(cbind, lapply(1:p, function(i) {seq(min(x.origin[,i]), max(x.origin[,i]), length.out = grid.n)}))
+  newx <- seq(0.1, 0.9, length.out = grid.n)
+  xholder <- do.call(cbind, lapply(1:p, function(i) {newx}))  
   f2.hidden <- make.nl(x.origin.full[,2], f2(x.origin.full[,2]))
   f5.hidden <- make.nl(x.origin.full[,5], f5(x.origin.full[,5]))
   theta.adjusted <- c(theta.origin[1] + f2.hidden$intercept + f5.hidden$intercept,
@@ -452,7 +453,7 @@ for(iter in 1:total.iter){
   gridgsmooth.container[,iter] <- as.vector(matrix(gridgsmooth.samples[,4], nrow = grid.n, byrow=TRUE))
   gridgl.container[,iter] <- as.vector(matrix(gridgl.samples[,4], nrow = grid.n, byrow=TRUE))
   gridgnl.container[,iter] <- as.vector(matrix(gridgnl.samples[,4], nrow = grid.n, byrow=TRUE))
-  newx <- seq(0, 1, length.out = grid.n)
+  # newx <- seq(0, 1, length.out = grid.n)
   mise.container[iter] <- auc(newx, se.samples[,1], type="spline")
 
   # mcmc.alpha <- rstan::extract(fit1)$alpha

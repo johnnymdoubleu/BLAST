@@ -139,8 +139,9 @@ for(iter in 1:total.iter){
   x.origin <- matrix(0, nrow = n, ncol = p)
 
   for (j in 1:p) {
-    phase_shift <- j * (2 * pi / p) 
-    seasonal_trend <- 0.5 + 0.1 * sin(2 * pi * time.seq / period + phase_shift) 
+    # phase_shift <- j * (2 * pi / p) 
+    # seasonal_trend <- 0.5 + 0.1 * sin(2 * pi * time.seq / period + phase_shift)
+    seasonal_trend <- 0.5 + 0.1 * sin(j * 2 * pi * time.seq / period)  
     uniform_noise <- runif(n, min = -0.4, max = 0.4)
     x.origin[, j] <- seasonal_trend + uniform_noise
   }
