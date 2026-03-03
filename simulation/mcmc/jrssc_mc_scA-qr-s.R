@@ -52,7 +52,7 @@ data {
     matrix[n, (psi*p)] bsNonlinear; // thin plate splines basis
     matrix[grid_n, p] xholderLinear; // fwi dataset
     matrix[grid_n, (psi*p)] xholderNonlinear; // thin plate splines basis    
-    vector<lower=min(u)>[n] y; // extreme response
+    vector<lower=0>[n] y; // extreme response
     real <lower=0> atau;
     vector[p] X_means;
     vector[p] X_sd;
@@ -76,12 +76,7 @@ transformed parameters {
       vector[n] eta = rep_vector(theta[1], n);
       for (j in 1:p){
         gamma[j] = gamma_raw[j] * sqrt(tau[j]);
-        // for (k in 1:psi){
-        //   int idx = (j-1)*psi + k;
-        //   gamma[j][k] = gamma_raw[j][k] * sqrt(tau[j]); // * Z_scales[idx];
-        // }; 
-        int nl_start = (j - 1) * psi + 1;
-        eta += col(bsLinear, j) * theta[j+1] + block(bsNonlinear,1, nl_start, n, psi) * gamma[j];
+        eta += col(bsLinear, j) * theta[j+1] + block(bsNonlinear,1, ((j - 1) * psi + 1), n, psi) * gamma[j];
       };
       alpha = exp(eta);
     }
@@ -90,7 +85,7 @@ transformed parameters {
 model {
   // likelihood
   target += pareto_lpdf(y | u, alpha);
-  target += normal_lpdf(theta[1] | 0, 100);
+  target += normal_lpdf(theta[1] | 0, 10);
   target += gamma_lpdf(lambda1 | 1e-1, 1e-1); 
   target += gamma_lpdf(lambda2 | 1e-2, 1e-2);  
   for (j in 1:p){
@@ -254,7 +249,8 @@ for(iter in 1:total.iter){
     cos.time = cos(2 * pi * time.seq / 365),
     x.origin
   )
-  evgam.cov <- y ~ 1 + cos.time + sin.time #+ X1 + X2 + X3 + X4 + X5
+  evgam.cov <- y ~ 1 + cos.time + sin.time + s(X1, k=7) + s(X2, k=7) + s(X3, k=7) + s(X4, k=7) + s(X5, k=7)
+                  # s(X1, bs="ts") + s(X2, bs="ts") + s(X3, bs="ts") + s(X4, bs="ts") + s(X5, bs="ts")
   ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
   u.vec <- (predict(ald.cov.fit)$location)
 
@@ -269,12 +265,12 @@ for(iter in 1:total.iter){
 
   colnames(x.origin) <- paste0("X", 1:p)
 
-  # newx <- seq(min(x.origin), max(x.origin), length.out = grid.n)
-  # xholder <- do.call(cbind, lapply(1:p, function(i) {seq(min(x.origin[,i]), max(x.origin[,i]), length.out = grid.n)}))
-  newx <- seq(0.1, 0.9, length.out = grid.n)
-  xholder <- do.call(cbind, lapply(1:p, function(i) {newx}))  
-  f2.hidden <- make.nl(x.origin.full[,2], f2(x.origin.full[,2]))
-  f5.hidden <- make.nl(x.origin.full[,5], f5(x.origin.full[,5]))
+  newx <- seq(min(x.origin), max(x.origin), length.out = grid.n)
+  xholder <- do.call(cbind, lapply(1:p, function(i) {seq(min(x.origin[,i]), max(x.origin[,i]), length.out = grid.n)}))
+  # newx <- seq(0.05, 0.95, length.out = grid.n)
+  # xholder <- do.call(cbind, lapply(1:p, function(i) {newx}))  
+  f2.hidden <- make.nl(x.origin[,2], f2(x.origin[,2]))
+  f5.hidden <- make.nl(x.origin[,5], f5(x.origin[,5]))
   theta.adjusted <- c(theta.origin[1] + f2.hidden$intercept + f5.hidden$intercept,
                       theta.origin[2],
                       theta.origin[3] + f2.hidden$slope,
@@ -289,16 +285,13 @@ for(iter in 1:total.iter){
   g5.l <- theta.adjusted[6]*xholder[,5]
   g2 <- g2.l + g2.nl
   g5 <- g5.l + g5.nl
-  eta.g <- rep(theta.adjusted[1], grid.n) + g2 + g5
+  eta.g <- theta.adjusted[1] + g2 + g5
   
   alp.new <- as.vector(exp(theta.origin[1] + xholder %*% theta.origin[-1] + f2(xholder[,2]) + f5(xholder[,5])))
   grid.zero <- rep(0, grid.n)
   g.new <- c(grid.zero, g2, grid.zero, grid.zero, g5)
   l.new <- c(grid.zero, g2.l, grid.zero, grid.zero, g5.l)
   nl.new <- c(grid.zero, g2.nl, grid.zero, grid.zero, g5.nl)
-
-  X_means <- colMeans(x.origin)
-  X_sd   <- apply(x.origin, 2, sd)
 
   group.map <- c()
   Z.list <- list()        # Stores the final non-linear design matrices
@@ -316,9 +309,7 @@ for(iter in 1:total.iter){
     X_lin <- model.matrix(~ x_vec) 
     sm_spec <- smoothCon(s(x_vec, bs = "tp", k = psi + 2), 
                         data = data.frame(x_vec = x_vec), 
-                        # absorb.cons = TRUE,
-                        knots = NULL)[[1]]
-    
+                        knots = NULL)[[1]]    
     X_raw <- sm_spec$X
     S     <- sm_spec$S[[1]] 
     
@@ -365,7 +356,7 @@ for(iter in 1:total.iter){
   grid_Z_list <- list()
 
   for (i in seq_along(covariates)) {
-    x_vec <- (seq(min(x.origin[,i]), max(x.origin[,i]), length.out = grid.n))# - X_means[i]) / X_sd[i]
+    x_vec <- xholder[,i] # (seq(min(x.origin[,i]), max(x.origin[,i]), length.out = grid.n))# - X_means[i]) / X_sd[i]
     grid_df  <- data.frame(x_vec = x_vec)
     X_lin_grid <- model.matrix(~ x_vec, data = grid_df)
     X_raw_grid <- PredictMat(sm_spec_list[[i]], grid_df)
@@ -381,12 +372,11 @@ for(iter in 1:total.iter){
 
   xholder.linear <- model.matrix(~ ., data = data.frame(xholder))[,-1]
   xholder.nonlinear <- do.call(cbind, grid_Z_list)
-  # xholder.linear <- scale(xholder.linear, center = X_means, scale = X_sd)
+  X_means <- colMeans(bs.linear)
+  X_sd   <- apply(bs.linear, 2, sd)
   bs.linear <- scale(bs.linear, center = X_means, scale = X_sd)
 
 
-  # Rule of thumb: tau0 = p0/(p-p0) / sqrt(n), p0 = expected signals
-  # Linear: 3 of 5 nonzero → 3/2 / sqrt(n)
   tau0_lin <- (3/2) / sqrt(n)   # ~0.05 for n~1000 excess
   tau0_nl  <- (2/3) / sqrt(n)   # tighter: only 2 smooths nonzero
 
@@ -433,9 +423,9 @@ for(iter in 1:total.iter){
       data = data.stan,    # named list of data
       init = init.alpha,      # initial value
       chains = 3,             # number of Markov chains
-      iter = 3000,            # total number of iterations per chain
+      iter = 2000,            # total number of iterations per chain
       cores = parallel::detectCores(), # number of cores (could use one per chain)
-      refresh = 1500             # no progress shown
+      refresh = 1000             # no progress shown
   )
   # posterior <- extract(fit1)
   theta.samples <- summary(fit1, par=c("theta0", "theta_origin"), probs = c(0.5))$summary

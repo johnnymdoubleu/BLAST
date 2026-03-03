@@ -9,7 +9,7 @@ library(rmutil)
 # Scenario D
 # array.id <- commandArgs(trailingOnly=TRUE)
 
-total.iter <- 4
+total.iter <- 3
 
 n <- n.origin <- 10000
 grid.n <- 200
@@ -34,13 +34,13 @@ make.nl <- function(x, raw_y) {
   fit <- lm(raw_y ~ x)
   
   return(list(
-    nl = residuals(fit), 
+    nl = residuals(fit),
     slope = coef(fit)[["x"]],
     intercept = coef(fit)[["(Intercept)"]]
   ))
 }
 
-theta.origin <- c(0.9, 1.2, 1.2, -1.2, 0, 0) 
+theta.origin <- c(0.8, 1.2, 1.2, -1.2, 0, 0) 
 psi <- psi -2
 
 
@@ -96,7 +96,6 @@ transformed parameters {
     
     array[p] vector[psi] gamma;
     {
-      // matrix[n, p] gsmooth; // linear component
       vector[n] eta = rep_vector(theta[1], n);
       for (j in 1:p){
         gamma[j] = gamma_raw[j] * sqrt(tau[j]);
@@ -111,10 +110,8 @@ model {
   //likelihood
   for (i in 1:n){
     target += burr_lpdf(y[i] | alpha[i]) - burr_lccdf(u[i] | alpha[i]);
-    // target += -1*log(1-burr_cdf(u[i], alpha[i]));
-  }  
-  // target += pareto_lpdf(y | u, alpha);
-  target += normal_lpdf(theta[1] | 0, 100);
+  }
+  target += normal_lpdf(theta[1] | 0, 10);
   target += gamma_lpdf(lambda1 | 1e-1, 1e-1); 
   target += gamma_lpdf(lambda2 | 1e-2, 1e-2);
   for (j in 1:p){
@@ -160,34 +157,43 @@ mise.container <- c()
 for(iter in 1:total.iter){
   n <- n.origin
   x.origin <- matrix(0, nrow = n, ncol = p)
+  valid_data <- FALSE
+  while(!valid_data) {
+    for (j in 1:p) {
+      phase_shift <- j * (2 * pi / p) 
+      seasonal_trend <- 0.5 + 0.1 * sin(2 * pi * time.seq / period + phase_shift) 
+      # seasonal_trend <- 0.5 + 0.1 * sin(j * 2 * pi * time.seq / period) 
+      uniform_noise <- runif(n, min = -0.4, max = 0.4)
+      x.origin[, j] <- seasonal_trend + uniform_noise
+    }
+    x.origin.full <- x.origin
+    alp.origin <- exp(theta.origin[1] + x.origin%*%theta.origin[-1] + f2(x.origin[,2]) + f3(x.origin[,3]))
+    y.noise <- NULL
+    for(i in 1:n){
+      y.noise[i] <- rmutil::rburr(1, m=1, s=alp.origin[i], f=1)
+    }
+    f.season.scale <- function(t){
+      return(2.5 - .8 * sin(2 * pi * t / 365) - .6 * cos(2 * pi * t/365)) 
+    }
+    y.origin <- y.noise * f.season.scale(time.seq)
 
-  for (j in 1:p) {
-    # phase_shift <- j * (2 * pi / p) 
-    # seasonal_trend <- 0.5 + 0.1 * sin(2 * pi * time.seq / period + phase_shift) 
-    seasonal_trend <- 0.5 + 0.1 * sin(j * 2 * pi * time.seq / period) 
-    uniform_noise <- runif(n, min = -0.4, max = 0.4)
-    x.origin[, j] <- seasonal_trend + uniform_noise
+    evgam.df <- data.frame(
+      y = (y.origin),
+      sin.time = sin(2 * pi * time.seq / 365),
+      cos.time = cos(2 * pi * time.seq / 365),
+      x.origin
+    )
+    evgam.cov <- y ~ 1 + cos.time + sin.time + s(X1) + s(X2) + s(X3) + s(X4) + s(X5)
+                      # s(X1, bs="ts") + s(X2, bs="ts") + s(X3, bs="ts") + s(X4, bs="ts") + s(X5, bs="ts")
+    ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
+    u.vec <- (predict(ald.cov.fit)$location) #* f.season.scale(time.seq)
+    if (any(u.vec <= 0)) {
+      message(paste("Iteration", iter, ": Negative u.vec detected. Regenerating dataset..."))
+      # valid_data remains FALSE, loop will repeat
+    } else {
+      valid_data <- TRUE # Passed the check, exit the while loop
+    }    
   }
-  x.origin.full <- x.origin
-  alp.origin <- exp(rep(theta.origin[1],n) + x.origin%*%theta.origin[-1] + f2(x.origin[,2]) + f3(x.origin[,3]))
-  y.noise <- NULL
-  for(i in 1:n){
-    y.noise[i] <- rmutil::rburr(1, m=1, s=alp.origin[i], f=1)
-  }
-  f.season.scale <- function(t){
-    return(2.5 - .8 * sin(2 * pi * t / 365) - .6 * cos(2 * pi * t/365)) 
-  }
-  y.origin <- y.noise * f.season.scale(time.seq)
-
-  evgam.df <- data.frame(
-    y = (y.origin),
-    sin.time = sin(2 * pi * time.seq / 365),
-    cos.time = cos(2 * pi * time.seq / 365),
-    x.origin
-  )
-  evgam.cov <- y ~ 1 + cos.time + sin.time #+ X1 + X2 + X3 + X4 + X5
-  ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
-  u.vec <- (predict(ald.cov.fit)$location)
 
   excess.index <- which(y.origin > u.vec)
 
@@ -198,31 +204,36 @@ for(iter in 1:total.iter){
   n <- length(y.origin)
   colnames(x.origin) <- paste0("X", 1:p)
 
-  # newx <- seq(min(x.origin), max(x.origin), length.out = grid.n)
-  # xholder <- do.call(cbind, lapply(1:p, function(i) {seq(min(x.origin[,i]), max(x.origin[,i]), length.out = grid.n)}))
-  newx <- seq(0.1, 0.9, length.out = grid.n)
-  xholder <- do.call(cbind, lapply(1:p, function(i) {newx}))  
+  newx <- seq(min(x.origin), max(x.origin), length.out = grid.n)
+  xholder <- do.call(cbind, lapply(1:p, function(i) {seq(min(x.origin[,i]), max(x.origin[,i]), length.out = grid.n)}))
+  # newx <- seq(0.05, 0.95, length.out = grid.n)
+  # xholder <- do.call(cbind, lapply(1:p, function(i) {newx}))  
+  
+  # x.hidden <- seq(0.05, 0.95, length.out = 1000)
   f2.hidden <- make.nl(x.origin[,2], f2(x.origin[,2]))
   f3.hidden <- make.nl(x.origin[,3], f3(x.origin[,3]))
+
   theta.adjusted <- c(theta.origin[1] + f2.hidden$intercept + f3.hidden$intercept,
                       theta.origin[2],
                       theta.origin[3] + f2.hidden$slope,
                       theta.origin[4] + f3.hidden$slope,
                       theta.origin[5],
                       theta.origin[6])
-  
+    # Use full-range projection for residuals
+  g2.nl <- f2(xholder[,2]) - (f2.hidden$intercept + f2.hidden$slope * xholder[,2])
+  g3.nl <- f3(xholder[,3]) - (f3.hidden$intercept + f3.hidden$slope * xholder[,3])
 
-  g2.nl <- f2(xholder[,2]) - (f2.hidden$intercept + f2.hidden$slope*xholder[,2])
-  g3.nl <- f3(xholder[,3]) - (f3.hidden$intercept + f3.hidden$slope*xholder[,3])
+  # g2.nl <- f2(xholder[,2]) - (f2.hidden$intercept + f2.hidden$slope*xholder[,2])
+  # g3.nl <- f3(xholder[,3]) - (f3.hidden$intercept + f3.hidden$slope*xholder[,3])
 
   g1.l <- g1 <- theta.adjusted[2] * xholder[,1]
   g2.l <- theta.adjusted[3]*xholder[,2]
   g3.l <- theta.adjusted[4]*xholder[,3]
   g2 <- g2.l + g2.nl
   g3 <- g3.l + g3.nl
-  eta.g <- rep(theta.adjusted[1], grid.n) + g1 + g2 + g3
-  
-  alp.new <- as.vector(exp(theta.origin[1] + xholder %*% theta.origin[-1] + f2(xholder[,2]) + f3(xholder[,3])))
+  eta.g <- theta.adjusted[1] + g1 + g2 + g3
+  alp.new <- exp(eta.g)
+  # alp.new <- as.vector(exp(theta.origin[1] + xholder %*% theta.origin[-1] + f2(xholder[,2]) + f3(xholder[,3])))
   grid.zero <- rep(0, grid.n)
   g.new <- c(g1, g2, g3, grid.zero, grid.zero)
   l.new <- c(g1.l, g2.l, g3.l, grid.zero, grid.zero)
@@ -396,7 +407,7 @@ alpha.container$true <- rowMeans(true.container)
 alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
-# load(paste0("./simulation/results/MC-Scenario_A/2026-02-07_",total.iter,"_MC_scA_",n.origin,".Rdata"))
+# load(paste0("./simulation/results/MC-Scenario_A/2026-02-07_",total.iter,"_MC_scD_",n.origin,".Rdata"))
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab(expression(alpha(c,...,c))) #+ ylab("")
 if(total.iter <= 50){
@@ -420,7 +431,7 @@ print(plt +
                 strip.text = element_blank(),
                 axis.text = element_text(size = 30)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_scA_",n.origin,".pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_scD_",n.origin,".pdf"), width=10, height = 7.78)
 
 gridgsmooth.container$x <- newx
 gridgsmooth.container$true <- g.new
@@ -455,7 +466,7 @@ print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewid
                 axis.title.x = element_text(size = 45),                
                 axis.text = element_text(size = 30)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_scA_",n.origin,".pdf"), width=12.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_scD_",n.origin,".pdf"), width=12.5, height = 15)
 
 
 gridgl.container$x <- newx
@@ -490,7 +501,7 @@ print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewid
                 axis.title.x = element_text(size = 45),  
                 axis.text = element_text(size = 30)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_linear_scA",n.origin,".pdf"), width=12.5, height = 7.78)                
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_linear_scD",n.origin,".pdf"), width=12.5, height = 7.78)                
 
 gridgnl.container$x <- newx
 gridgnl.container$true <- as.vector(nl.new)
@@ -524,7 +535,7 @@ print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewid
                 axis.title.x = element_text(size = 45),  
                 axis.text = element_text(size = 30)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_nonlinear_sca",n.origin,".pdf"), width=12.5, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_nonlinear_scD",n.origin,".pdf"), width=12.5, height = 7.78)
 
 # qqplot.container$grid <- grid
 # qqplot.container$mean <- rowMeans(qqplot.container[,1:total.iter])
@@ -545,8 +556,8 @@ print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewid
 #         theme(text = element_text(size = 20)) +
 #         coord_fixed(xlim = c(-2, 2),  
 #                     ylim = c(-2, 2)))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_qqplot_scA_",n.origin,".pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_qqplot_scD_",n.origin,".pdf"), width=10, height = 7.78)
 
-# save(alpha.container, gridgnl.container, gridgl.container, gridgsmooth.container, mise.container, file = paste0(Sys.Date(),"_",total.iter,"_MC_scA_",n.origin,"_",array.id,".Rdata"))
+# save(alpha.container, gridgnl.container, gridgl.container, gridgsmooth.container, mise.container, file = paste0(Sys.Date(),"_",total.iter,"_MC_scD_",n.origin,"_",array.id,".Rdata"))
 
 mean(mise.container)

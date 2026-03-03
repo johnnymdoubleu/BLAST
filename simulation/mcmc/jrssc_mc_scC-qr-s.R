@@ -76,7 +76,6 @@ transformed parameters {
     
     array[p] vector[psi] gamma;
     {
-      // matrix[n, p] gsmooth; // linear component
       vector[n] eta = rep_vector(theta[1], n);
       for (j in 1:p){
         gamma[j] = gamma_raw[j] * sqrt(tau[j]);
@@ -90,8 +89,7 @@ transformed parameters {
 model {
   //likelihood
   target += student_t_lpdf(y | alpha, 0, 1) - student_t_lccdf(u | alpha, 0, 1);
-  // target += pareto_lpdf(y | u, alpha);
-  target += normal_lpdf(theta[1] | 0, 1);
+  target += normal_lpdf(theta[1] | 0, 10);
   target += gamma_lpdf(lambda1 | 1e-1, 1e-1); 
   target += gamma_lpdf(lambda2 | 1e-2, 1e-2);
   for (j in 1:p){
@@ -162,7 +160,7 @@ for(iter in 1:total.iter){
     cos.time = cos(2 * pi * time.seq / 365),
     x.origin
   )
-  evgam.cov <- y ~ cos.time + sin.time #+ X1 + X2 + X3 + X4 + X5
+  evgam.cov <- y ~ 1 + cos.time + sin.time + s(X1,k=5) + s(X2,k=5) + s(X3,k=5) + s(X4,k=5) + s(X5,k=5)
   ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
   u.vec <- exp(predict(ald.cov.fit)$location)
 
@@ -214,7 +212,7 @@ for(iter in 1:total.iter){
 
   for (i in seq_along(covariates)) {
     var_name <- covariates[i]
-    x_vec <- (x.origin[, i])# - X_means[i]) / X_sd[i]
+    x_vec <- x.origin[, i]
     X_lin <- model.matrix(~ x_vec) 
     sm_spec <- smoothCon(s(x_vec, bs = "tp", k = psi + 2), 
                         data = data.frame(x_vec = x_vec), 
@@ -247,15 +245,12 @@ for(iter in 1:total.iter){
     train_scale <- apply(Z_final, 2, sd)
     Z_final <- scale(Z_final, center = FALSE, scale = train_scale)
     
-    # Store Results
     Z.list[[i]] <- Z_final
     group.map <- c(group.map, rep(i, ncol(Z_final)))
-    
-    # Store Transforms
     spec_decomp_list[[i]] <- list(U_pen = U_pen, Lambda_sqrt_inv = solve(sqrt(Lambda_pen)))
-    projection_coefs_list[[i]] <- Gamma_Original # Store the X-basis coefs
+    projection_coefs_list[[i]] <- Gamma_Original 
     keep_cols_list[[i]] <- keep_cols
-    scale_stats_list[[i]] <- train_scale         # Store the scale
+    scale_stats_list[[i]] <- train_scale         
     sm_spec_list[[i]] <- sm_spec
   }
 
@@ -267,7 +262,7 @@ for(iter in 1:total.iter){
   grid_Z_list <- list()
 
   for (i in seq_along(covariates)) {
-    x_vec <- (seq(min(x.origin[,i]), max(x.origin[,i]), length.out = grid.n))
+    x_vec <- xholder[,i] #(seq(min(x.origin[,i]), max(x.origin[,i]), length.out = grid.n))
     grid_df  <- data.frame(x_vec = x_vec)
     X_lin_grid <- model.matrix(~ x_vec, data = grid_df)
     X_raw_grid <- PredictMat(sm_spec_list[[i]], grid_df)
@@ -308,9 +303,9 @@ for(iter in 1:total.iter){
       data = data.stan,    # named list of data
       init = init.alpha,      # initial value
       chains = 3,             # number of Markov chains
-      iter = 4000,            # total number of iterations per chain
+      iter = 2000,            # total number of iterations per chain
       cores = parallel::detectCores(), # number of cores (could use one per chain)
-      refresh = 2000             # no progress shown
+      refresh = 1000             # no progress shown
   )
   # posterior <- extract(fit1)
   theta.samples <- summary(fit1, par=c("theta0", "theta_origin"), probs = c(0.5))$summary
