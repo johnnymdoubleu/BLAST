@@ -32,7 +32,7 @@ missing.values <- which(!is.na(df.long$measurement))
 #considering the case of leap year, the missing values are the 29th of Feb
 #Thus, each year consist of 366 data with either 1 or 0 missing value.
 Y <- df.long$measurement[!is.na(df.long$measurement)]
-psi.origin <- psi <- 30
+psi.origin <- psi <- 20
 threshold <- 0.95
 
 multiplesheets <- function(fname) {
@@ -98,37 +98,26 @@ fwi.index <- fwi.index[above.0,]
 #   coord_fixed()
 
 qr.df <- data.frame(
-  y = (Y),
+  y = log(Y),
   fwi.scaled
 )
-evgam.cov <- y ~ 1 + cos.time + sin.time + s(BUI) + s(ISI) + s(FFMC) + s(DMC) + s(DC)
+evgam.cov <- y ~ 1 + cos.time + sin.time #+ s(BUI, k=5) + s(ISI, k=5) + s(FFMC, k=5) + s(DMC, k=5) + s(DC, k=5)
 ald.cov.fit <- evgam(evgam.cov, data = qr.df, family = "ald", ald.args=list(tau = 0.95))
-u.vec <- (predict(ald.cov.fit)$location)
-excess <- which(Y>u)
-# pos.idx <- which(preds > 0)
-# Y <- Y[pos.idx]
-# fwi.scaled <- fwi.scaled[pos.idx,]
-# preds <- preds[pos.idx]
-# excess <- which(Y>preds)
-# u <- preds[excess]
-
-# excess <- which(fwi.dd$excess==TRUE)
-# u <- fwi.dd$origin_Model_cov[excess]
-# excess <- which(Y>evgam.cov.pred)
-# u <- evgam.cov.pred[excess]
-# excess <- which(Y>evgam.time.pred)
-# u <- evgam.time.pred[excess]
+u.vec <- exp(predict(ald.cov.fit)$location)
+excess <- which(Y>u.vec)
 y <- Y[excess]
-u <- rep(quantile(Y, threshold), length(y))
-# extRemes::mrlplot(y, main = "Mean Residual Life Plot")
-# fwi.scaled <- data.frame(fwi.scaled[which(Y>u),])
+u <- u.vec[excess]
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
-# range01 <- function(x){(x)/max(x)}
 fwi.scaled <- as.data.frame(sapply(fwi.scaled[excess,c(3,4,5,6,7)], FUN = range01))
 
 n <- dim(fwi.scaled)[[1]]
 p <- dim(fwi.scaled)[[2]]
 
+# par(mfrow=c(1,p))
+# for(i in 3:7) {
+#   qqnorm(log(fwi.index[,i]), main=paste("X",i))
+#   qqline(log(fwi.index[,i]), col="red")
+# }
 
 fwi.origin <- data.frame(fwi.index[excess,c(3,4,5,6,7)], BA=y)
 max.fwi <- fwi.origin[which.max(y),]
@@ -136,56 +125,6 @@ fwi.grid <- data.frame(lapply(fwi.origin[,c(1:p)], function(x) seq(min(x), max(x
 fwi.minmax <- sapply(fwi.origin[,c(1:p)], function(x) max(x)-min(x))
 fwi.min <- sapply(fwi.origin[,c(1:p)], function(x) min(x))
 
-
-
-# ggplot(fwi.origin, aes(x=DSR, y=FFMC)) + 
-#   geom_point(aes(colour = BA), size= 2.5) + 
-#   scale_colour_stepsn(colours = c("slategray1", "red"), labels=function(x) format(x, big.mark = ",", scientific = TRUE), breaks=c(0.1e5, 0.5e5, 1e5, 2e5)) +
-#   geom_density2d(colour="steelblue", linewidth = 1.3) + 
-#   geom_mark_circle(aes(x = max.fwi$DSR, y = max.fwi$FFMC, label = "15th Oct 2017"), con.type = "straight",
-#                    radius = unit(2.5, "mm"), color = "steelblue", size = 1, 
-#                    con.colour = "steelblue", con.cap = unit(0, "mm"),
-#                    label.colour = "steelblue", label.buffer = unit(5, "mm"),
-#                    label.fill = "transparent")  +
-#   theme_minimal(base_size = 30) +
-#   theme(plot.title = element_text(hjust = 0.5, size = 30),
-#         legend.title = element_text(size = 15),
-#         legend.text = element_text(size = 15),
-#         strip.text = element_blank(),
-#         axis.title = element_text(size = 30))
-# ggsave("./BLAST/application/figures/extremeviz.pdf", width = 10, height = 7.78)
-
-# ggplot(fwi.origin, aes(x=as.numeric(year), y=log(BA), color = BA)) + 
-#   ylab("Hectares (log)") + xlab("Time (years)") + 
-#   geom_point(size= 2.5, alpha = 0.5) + 
-#   scale_colour_stepsn(colours = c("slategray1", "red"), labels=function(y) format(y, big.mark = ",", scientific = TRUE), 
-#   breaks = quantile(fwi.origin$BA, probs = seq(0,1,length.out = 20))) + 
-#   theme_minimal(base_size = 30) +
-#   theme(plot.title = element_text(hjust = 0.5, size = 30),
-#         legend.position = "none",
-#         legend.title = element_text(size = 15),
-#         legend.text = element_text(size = 15),
-#         strip.text = element_blank(),
-#         axis.title = element_text(size = 30))
-
-# ggsave("./BLAST/application/figures/hectareslog.pdf", width = 10, height = 7.78)
-
-# ggplot(fwi.origin, aes(x=as.numeric(year))) + 
-#   ylab("Density") + xlab("Time (years)") + 
-#   geom_histogram(aes(y = after_stat(density)), fill = "steelblue", color = "gray", alpha = .2) +
-#   geom_rug() +
-#   theme_minimal(base_size = 30) +
-#   theme(plot.title = element_text(hjust = 0.5, size = 30),
-#         legend.position = "none",
-#         legend.title = element_text(size = 15),
-#         legend.text = element_text(size = 15),
-#         strip.text = element_blank(),
-#         axis.title = element_text(size = 30))
-# M <- cor(fwi.origin[,c(1:p)])
-# corrplot(M, order = 'AOE', type = 'upper', tl.pos = 'tp')
-# corrplot(M, add = TRUE, type = 'lower', method = 'number', order = 'AOE',
-#          col = 'black', diag = FALSE, tl.pos = 'n', cl.pos = 'n')
-# ggsave("./BLAST/application/figures/intensityfn.pdf", width = 10, height = 7.78)
 bs.linear <- model.matrix(~ ., data = data.frame(fwi.scaled))
 psi <- psi - 2
 group.map <- c()
@@ -338,7 +277,7 @@ transformed parameters {
     for (j in 1:p){
       for (k in 1:psi){
         int idx = (j-1)*psi + k;
-        gamma[j][k] = gamma_raw[j][k] * sqrt(tau[j]) * Z_scales[idx];
+        gamma[j][k] = gamma_raw[j][k] * sqrt(tau[j]); // * Z_scales[idx];
       }; 
       eta += bsLinear[,j] * theta[j+1] + bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
     };
@@ -350,9 +289,9 @@ model {
   // likelihood
   target += pareto_lpdf(y | u, alpha);
   target += normal_lpdf(theta[1] | 0, 10);
+  target += gamma_lpdf(lambda1 | 1e-1,1e-1); 
+  target += gamma_lpdf(lambda2 | 1e-2, 1e-2);    
   for (j in 1:p){
-    target += gamma_lpdf(lambda1[j] | 1,1); 
-    target += gamma_lpdf(lambda2[j] | 1e-2, 1e-2);  
     target += double_exponential_lpdf(theta[(j+1)] | 0, 1/(lambda1[j]));
     target += gamma_lpdf(tau[j] | atau, square(lambda2[j])*0.5);
     target += std_normal_lpdf(gamma_raw[j]);
@@ -370,25 +309,25 @@ generated quantities {
   vector[p+1] theta_origin;
   vector[p] theta_fwi;
 
-  for (j in 1:p){
-    theta_origin[j+1] = theta[j+1] / X_sd[j];
-    theta_fwi[j] = theta_origin[j+1] / X_minmax[j];
-  }
+  theta_origin[2:(p+1)] = theta[2:(p+1)] ./ X_sd;
   theta_origin[1] = theta[1] - dot_product(X_means, theta_origin[2:(p+1)]);
-  for (j in 1:p){
-    gridgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
-    gridgl[,j] = xholderLinear[,j] * theta_origin[j+1];
-    fwismooth[,j] = gridNL[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j] + gridL[,j] * theta_fwi[j];
-  };
-  gridgsmooth = gridgl + gridgnl;
-  {
-  vector[n] pred = rep_vector(theta_origin[1], n);
-    for(j in 1:p){
-      pred += gridgsmooth[,j];      
-    }
-    gridalpha = exp(pred);
-  }
+  theta_fwi = theta_origin[2:(p+1)] ./ X_minmax;
+  // for (j in 1:p){
+  //  theta_origin[j+1] = theta[j+1] / X_sd[j];
+  //  theta_fwi[j] = theta_origin[j+1] / X_minmax[j];
+  //}
 
+  {
+    vector[n] pred = rep_vector(theta_origin[1], n);
+    for (j in 1:p){
+      gridgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
+      gridgl[,j] = xholderLinear[,j] * theta_origin[j+1];
+      fwismooth[,j] = gridNL[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j] + gridL[,j] * theta_fwi[j];
+      gridgsmooth[,j] = gridgl[,j] + gridgnl[,j];
+      pred += gridgsmooth[,j];
+    }
+    gridalpha = exp(pred);  
+  }
 
   for (i in 1:n){
     log_lik[i] = pareto_lpdf(y[i] | u[i], alpha[i]);
@@ -420,9 +359,9 @@ fit1 <- stan(
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value 
     chains = 3,             # number of Markov chains
-    iter = 3000,            # total number of iterations per chain
+    iter = 2000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
-    refresh = 1500           # no progress shown
+    refresh = 1000           # no progress shown
 )
 
 # saveRDS(fit1, file=paste0("./BLAST/application/",Sys.Date(),"_stanfit.rds"))
@@ -576,15 +515,6 @@ simul.data <- data.frame(BA = y-u, fwi.scaled[,c(1:p)])#fwi.origin[c(1:p)])
 #   xi.nonlinear.scale[,j] <- bs.nonlinear.scale[,(((j-1)*(psi-1))+1):(((j-1)*(psi-1))+(psi-1))] %*% gamma.xi.scale[,j]
 #   alpha.nonlinear.scale[,j] <- 1/(xi.nonlinear.scale[,j])
 # }
-
-gam.1 <- list(BA ~ 1,
-                ~ s(DSR, bs = "tp", k = 30) + 
-                    s(FWI, bs = "tp", k = 30) + 
-                    s(BUI, bs = "tp", k = 30) + 
-                    s(ISI, bs = "tp", k = 30) + 
-                    s(FFMC, bs = "tp", k = 30) +
-                    s(DMC, bs = "tp", k = 30) + 
-                    s(DC, bs = "tp", k = 30)) 
 
 gam.1 <- list(BA ~ 1,
                 ~ s(BUI, bs = "ts", k = 30) + 

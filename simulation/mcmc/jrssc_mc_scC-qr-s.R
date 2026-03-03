@@ -160,7 +160,7 @@ for(iter in 1:total.iter){
     cos.time = cos(2 * pi * time.seq / 365),
     x.origin
   )
-  evgam.cov <- y ~ 1 + cos.time + sin.time + s(X1,k=5) + s(X2,k=5) + s(X3,k=5) + s(X4,k=5) + s(X5,k=5)
+  evgam.cov <- y ~ 1 + cos.time + sin.time + s(X1,k=3) + s(X2,k=3) + s(X3,k=3) + s(X4,k=3) + s(X5,k=3)
   ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
   u.vec <- exp(predict(ald.cov.fit)$location)
 
