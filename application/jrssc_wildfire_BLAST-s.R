@@ -32,7 +32,7 @@ missing.values <- which(!is.na(df.long$measurement))
 #considering the case of leap year, the missing values are the 29th of Feb
 #Thus, each year consist of 366 data with either 1 or 0 missing value.
 Y <- df.long$measurement[!is.na(df.long$measurement)]
-psi.origin <- psi <- 20
+psi.origin <- psi <- 5
 threshold <- 0.95
 
 multiplesheets <- function(fname) {
@@ -98,16 +98,18 @@ fwi.index <- fwi.index[above.0,]
 #   coord_fixed()
 
 qr.df <- data.frame(
-  y = log(Y),
+  y = (Y),
   fwi.scaled
 )
 evgam.cov <- y ~ 1 + cos.time + sin.time #+ s(BUI, k=5) + s(ISI, k=5) + s(FFMC, k=5) + s(DMC, k=5) + s(DC, k=5)
 ald.cov.fit <- evgam(evgam.cov, data = qr.df, family = "ald", ald.args=list(tau = 0.95))
-u.vec <- exp(predict(ald.cov.fit)$location)
+u.vec <- (predict(ald.cov.fit)$location)
 excess <- which(Y>u.vec)
 y <- Y[excess]
 u <- u.vec[excess]
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
+fwi.minmax <- sapply(fwi.scaled[excess,c(3,4,5,6,7)], function(x) max(x)-min(x))
+fwi.min <- sapply(fwi.scaled[excess,c(3,4,5,6,7)], function(x) min(x))
 fwi.scaled <- as.data.frame(sapply(fwi.scaled[excess,c(3,4,5,6,7)], FUN = range01))
 
 n <- dim(fwi.scaled)[[1]]
@@ -122,8 +124,7 @@ p <- dim(fwi.scaled)[[2]]
 fwi.origin <- data.frame(fwi.index[excess,c(3,4,5,6,7)], BA=y)
 max.fwi <- fwi.origin[which.max(y),]
 fwi.grid <- data.frame(lapply(fwi.origin[,c(1:p)], function(x) seq(min(x), max(x), length.out = nrow(fwi.scaled))))
-fwi.minmax <- sapply(fwi.origin[,c(1:p)], function(x) max(x)-min(x))
-fwi.min <- sapply(fwi.origin[,c(1:p)], function(x) min(x))
+
 
 bs.linear <- model.matrix(~ ., data = data.frame(fwi.scaled))
 psi <- psi - 2
@@ -359,9 +360,9 @@ fit1 <- stan(
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value 
     chains = 3,             # number of Markov chains
-    iter = 2000,            # total number of iterations per chain
+    iter = 4000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
-    refresh = 1000           # no progress shown
+    refresh = 2000           # no progress shown
 )
 
 # saveRDS(fit1, file=paste0("./BLAST/application/",Sys.Date(),"_stanfit.rds"))

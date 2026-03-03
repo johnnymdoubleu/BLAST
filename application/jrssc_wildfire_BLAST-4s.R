@@ -11,7 +11,7 @@ library(qqboxplot)
 library(ggdensity)
 library(ggforce)
 library(ggdist)
-library(mboost)
+library(evgam)
 options(mc.cores = parallel::detectCores())
 
 # Structure of the FWI System
@@ -111,11 +111,17 @@ fwi.season$sin.time <- sin(2*pi*fwi.season$time / 365)
 
 fwi.scaled <- fwi.df <- fwi.season[,c(3,4,5,6,7,16)]
 # save(fwi.season, fwi.scaled, file="./BLAST/application/wildfire_season.Rdata")
-load(paste0("./BLAST/application/qr-",threshold*1000,"-t.Rdata"))
-
+# load(paste0("./BLAST/application/qr-",threshold*1000,"-t.Rdata"))
+qr.df <- data.frame(
+  y = log(Y),
+  fwi.scaled
+)
+evgam.cov <- y ~ cos.time + sin.time + s(BUI, k=5, by = code) + s(ISI, k=5, by = code) + s(FFMC, k=5, by = code) + s(DMC, k=5, by = code) + s(DC, k=5, by = code)
+ald.cov.fit <- evgam(evgam.cov, data = qr.df, family = "ald", ald.args=list(tau = threshold))
+preds <- exp(predict(ald.cov.fit)$location)
 # u <- quantile(Y, threshold)
 # excess <- which(Y>u)
-preds <- preds.evgam
+# preds <- preds.evgam
 excess <- which(Y>preds)
 u <- preds[excess]
 
@@ -433,7 +439,7 @@ transformed parameters {
         
         for (k in 1:psi){
            int flat_idx = nl_start + k - 1;
-           gamma[j,s][k] = gamma_raw[j,s][k] * sqrt(tau[j,s]) * Z_scales[flat_idx];
+           gamma[j,s][k] = gamma_raw[j,s][k] * sqrt(tau[j,s]); // * Z_scales[flat_idx];
         }
         
         lin_predictor += col(bsLinear, lin_idx) * theta[lin_idx] 

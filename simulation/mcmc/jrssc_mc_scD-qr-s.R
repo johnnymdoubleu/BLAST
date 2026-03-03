@@ -9,11 +9,11 @@ library(rmutil)
 # Scenario D
 # array.id <- commandArgs(trailingOnly=TRUE)
 
-total.iter <- 3
+total.iter <- 2
 
 n <- n.origin <- 10000
 grid.n <- 200
-psi.origin <- psi <- 10
+psi.origin <- psi <- 7
 threshold <- 0.95
 p <- 5
 
@@ -157,43 +157,37 @@ mise.container <- c()
 for(iter in 1:total.iter){
   n <- n.origin
   x.origin <- matrix(0, nrow = n, ncol = p)
-  valid_data <- FALSE
-  while(!valid_data) {
-    for (j in 1:p) {
-      phase_shift <- j * (2 * pi / p) 
-      seasonal_trend <- 0.5 + 0.1 * sin(2 * pi * time.seq / period + phase_shift) 
-      # seasonal_trend <- 0.5 + 0.1 * sin(j * 2 * pi * time.seq / period) 
-      uniform_noise <- runif(n, min = -0.4, max = 0.4)
-      x.origin[, j] <- seasonal_trend + uniform_noise
-    }
-    x.origin.full <- x.origin
-    alp.origin <- exp(theta.origin[1] + x.origin%*%theta.origin[-1] + f2(x.origin[,2]) + f3(x.origin[,3]))
-    y.noise <- NULL
-    for(i in 1:n){
-      y.noise[i] <- rmutil::rburr(1, m=1, s=alp.origin[i], f=1)
-    }
-    f.season.scale <- function(t){
-      return(2.5 - .8 * sin(2 * pi * t / 365) - .6 * cos(2 * pi * t/365)) 
-    }
-    y.origin <- y.noise * f.season.scale(time.seq)
 
-    evgam.df <- data.frame(
-      y = (y.origin),
-      sin.time = sin(2 * pi * time.seq / 365),
-      cos.time = cos(2 * pi * time.seq / 365),
-      x.origin
-    )
-    evgam.cov <- y ~ 1 + cos.time + sin.time + s(X1) + s(X2) + s(X3) + s(X4) + s(X5)
-                      # s(X1, bs="ts") + s(X2, bs="ts") + s(X3, bs="ts") + s(X4, bs="ts") + s(X5, bs="ts")
-    ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
-    u.vec <- (predict(ald.cov.fit)$location) #* f.season.scale(time.seq)
-    if (any(u.vec <= 0)) {
-      message(paste("Iteration", iter, ": Negative u.vec detected. Regenerating dataset..."))
-      # valid_data remains FALSE, loop will repeat
-    } else {
-      valid_data <- TRUE # Passed the check, exit the while loop
-    }    
+  for (j in 1:p) {
+    phase_shift <- j * (2 * pi / p) 
+    seasonal_trend <- 0.5 + 0.1 * sin(2 * pi * time.seq / period + phase_shift) 
+    # seasonal_trend <- 0.5 + 0.1 * sin(j * 2 * pi * time.seq / period) 
+    uniform_noise <- runif(n, min = -0.4, max = 0.4)
+    x.origin[, j] <- seasonal_trend + uniform_noise
   }
+  x.origin.full <- x.origin
+  alp.origin <- exp(theta.origin[1] + x.origin%*%theta.origin[-1] + f2(x.origin[,2]) + f3(x.origin[,3]))
+  y.noise <- NULL
+  for(i in 1:n){
+    y.noise[i] <- rmutil::rburr(1, m=1, s=alp.origin[i], f=1)
+  }
+  f.season.scale <- function(t){
+    return(2.5 - .8 * sin(2 * pi * t / 365) - .6 * cos(2 * pi * t/365)) 
+  }
+  y.origin <- y.noise * f.season.scale(time.seq)
+
+  evgam.df <- data.frame(
+    y = log(y.origin),
+    sin.time = sin(2 * pi * time.seq / 365),
+    cos.time = cos(2 * pi * time.seq / 365),
+    x.season = (time.seq %% period) / period,
+    x.origin
+  )
+  evgam.cov <- y ~ 1 + cos.time + sin.time #+ s(X1) + s(X2) + s(X3) + s(X4) + s(X5)
+  evgam.cov <- y ~ 1 + s(x.season, bs = "cc", k =12)
+                    # s(X1, bs="ts") + s(X2, bs="ts") + s(X3, bs="ts") + s(X4, bs="ts") + s(X5, bs="ts")
+  ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
+  u.vec <- exp(predict(ald.cov.fit)$location) #* f.season.scale(time.seq)
 
   excess.index <- which(y.origin > u.vec)
 
