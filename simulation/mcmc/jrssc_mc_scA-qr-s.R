@@ -12,7 +12,7 @@ total.iter <- 10
 
 n <- n.origin <- 10000
 grid.n <- 200
-psi.origin <- psi <- 7
+psi.origin <- psi <- 10
 threshold <- 0.95
 p <- 5
 
@@ -225,17 +225,29 @@ mise.container <- c()
 
 for(iter in 1:total.iter){
   n <- n.origin
-  x.origin <- matrix(0, nrow = n, ncol = p)
+  x.origin.full <- matrix(0, nrow = n, ncol = p)
   for (j in 1:p) {
     # phase_shift <- j * (2 * pi / p) 
     # seasonal_trend <- 0.5 + 0.1 * sin(2 * pi * time.seq / period + phase_shift) 
     # uniform_noise <- runif(n, min = -0.4, max = 0.4)
-    # x.origin[, j] <- seasonal_trend + uniform_noise
-    seasonal_trend <- 0.5 + 0.1 * sin(j * 2 * pi * time.seq / period) 
-    uniform_noise <- runif(n, min = -0.4, max = 0.4)
-    x.origin[, j] <- seasonal_trend + uniform_noise
+    # x.origin.full[, j] <- seasonal_trend + uniform_noise
+    seasonal_trend <- 0.5 + 0.1 * sin(2 * pi * time.seq / period) 
+    uniform_noise <- runif(n, min = -0.49, max = 0.49)
+    x.origin.full[, j] <- seasonal_trend + uniform_noise
   }
-  x.origin.full <- x.origin
+  x.detrended <- matrix(nrow = n.origin, ncol = p)
+  for (j in 1:p) {
+    # fit_lm <- lm(x.origin.full[,j] ~ sin(2 * pi * time.seq / 365) + cos(2 * pi * time.seq / 365))
+    # x.detrended[,j] <- residuals(fit_lm) + mean(x.origin.full[,j])
+    fit_gam <- gam(x.origin.full[,j] ~ s(x.season, bs = "cc", k = 12))
+    x.detrended[,j] <- residuals(fit_gam) + mean(x.origin.full[,j])
+  }
+
+  # range01 <- function(x){(x-min(x))/(max(x)-min(x))}
+  # x_min <- apply(x.origin, 2, min)
+  # x_max <- apply(x.origin, 2, max)
+  # x.origin <- (sapply(as.data.frame(x.detrended), FUN = range01))
+  x.origin <- x.detrended
   alp.origin <- exp(rep(theta.origin[1],n) + x.origin%*%theta.origin[-1] + f2(x.origin[,2]) + f5(x.origin[,5]))
   y.noise <- rPareto(n, rep(1, n), alpha = alp.origin)
   f.season.scale <- function(t){
@@ -244,40 +256,43 @@ for(iter in 1:total.iter){
   y.origin <- y.noise * f.season.scale(time.seq)
 
   evgam.df <- data.frame(
-    y = log(y.origin),
+    y = (y.origin),
     sin.time = sin(2 * pi * time.seq / 365),
     cos.time = cos(2 * pi * time.seq / 365),
     x.season = (time.seq %% period) / period,
     x.origin
   )
-  # evgam.cov <- y ~ 1 + cos.time + sin.time #+ s(X1, k=6) + s(X2, k=6) + s(X3, k=6) + s(X4, k=6) + s(X5, k=6)
-  evgam.cov <- y ~ 1 + s(x.season, bs = "cc", k =12)
+  evgam.cov <- y ~ 1 + cos.time + sin.time #+ s(X1, k=6) + s(X2, k=6) + s(X3, k=6) + s(X4, k=6) + s(X5, k=6)
+  # evgam.cov <- y ~ 1 + s(x.season, bs = "cc", k =12) #+ s(X1, k=6) + s(X2, k=6) + s(X3, k=6) + s(X4, k=6) + s(X5, k=6)
                   # s(X1, bs="ts") + s(X2, bs="ts") + s(X3, bs="ts") + s(X4, bs="ts") + s(X5, bs="ts")
   ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
-  u.vec <- exp(predict(ald.cov.fit)$location)
-  
-  log_u_true <- log(f.season.scale(time.seq)) + log(20) / alp.origin
-  log_u_hat  <- predict(ald.cov.fit)$location   # already log-scale now
-  resid      <- log_u_true - log_u_hat
+  u.vec <- (predict(ald.cov.fit)$location)
+  # u.vec <- exp(log(f.season.scale(time.seq)) + log(20) / alp.origin)
+  # log_u_true <- log(f.season.scale(time.seq) * 20^(1/alp.origin))
+  # log_u_hat  <- predict(ald.cov.fit)$location   # already log-scale now
+  # resid      <- log_u_true - log_u_hat
 
-  cor(resid, evgam.df$sin.time)   # target: ≈ 0
-  cor(resid, evgam.df$cos.time)   # target: ≈ 0
-  cor(resid, x.origin.full) 
+  # cor(resid, evgam.df$sin.time)   # target: ≈ 0
+  # cor(resid, evgam.df$cos.time)   # target: ≈ 0
+  # cor(resid, x.detrended) 
   excess.index <- which(y.origin > u.vec)
 
-  x.origin <- x.origin[excess.index,]
+  x.origin <- data.frame(x.origin[excess.index,])
   y.origin <- y.origin[excess.index]
   u <- u.vec[excess.index]
   season_code_full <- season_code_full[excess.index]  
   n <- length(y.origin)
-
+  # u <- f.season.scale(time.seq)
 
   colnames(x.origin) <- paste0("X", 1:p)
 
-  newx <- seq(min(x.origin), max(x.origin), length.out = grid.n)
-  xholder <- do.call(cbind, lapply(1:p, function(i) {seq(min(x.origin[,i]), max(x.origin[,i]), length.out = grid.n)}))
-  # newx <- seq(0.05, 0.95, length.out = grid.n)
-  # xholder <- do.call(cbind, lapply(1:p, function(i) {newx}))  
+  # newx <- seq(min(x.origin), max(x.origin), length.out = grid.n)
+  # xholder <- do.call(cbind, lapply(1:p, function(i) {seq(min(x.origin[,i]), max(x.origin[,i]), length.out = grid.n)}))
+  newx <- seq(0, 1, length.out = grid.n)
+  xholder <- do.call(cbind, lapply(1:p, function(i) {newx}))  
+  # xholder <- do.call(cbind, lapply(1:p, function(j) {
+  #   newx * (x_max[j] - x_min[j]) + x_min[j]
+  # }))
   f2.hidden <- make.nl(x.origin[,2], f2(x.origin[,2]))
   f5.hidden <- make.nl(x.origin[,5], f5(x.origin[,5]))
   theta.adjusted <- c(theta.origin[1] + f2.hidden$intercept + f5.hidden$intercept,
@@ -453,7 +468,7 @@ for(iter in 1:total.iter){
   gridgl.container[,iter] <- as.vector(matrix(gridgl.samples[,4], nrow = grid.n, byrow=TRUE))
   gridgnl.container[,iter] <- as.vector(matrix(gridgnl.samples[,4], nrow = grid.n, byrow=TRUE))
   # newx <- seq(0, 1, length.out = grid.n)
-  mise.container[iter] <- auc(newx, se.samples[,1], type="spline")
+  mise.container[iter] <- auc(newx, se.samples[,4], type="spline")
 
   # mcmc.alpha <- rstan::extract(fit1)$alpha
   # r <- matrix(, nrow = n, ncol = 30)

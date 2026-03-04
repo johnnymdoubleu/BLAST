@@ -9,11 +9,11 @@ library(rmutil)
 # Scenario D
 # array.id <- commandArgs(trailingOnly=TRUE)
 
-total.iter <- 2
+total.iter <- 5
 
 n <- n.origin <- 10000
 grid.n <- 200
-psi.origin <- psi <- 7
+psi.origin <- psi <- 10
 threshold <- 0.95
 p <- 5
 
@@ -40,7 +40,7 @@ make.nl <- function(x, raw_y) {
   ))
 }
 
-theta.origin <- c(0.8, 1.2, 1.2, -1.2, 0, 0) 
+theta.origin <- c(0.8, 1.2, 1, -1.2, 0, 0) 
 psi <- psi -2
 
 
@@ -184,11 +184,18 @@ for(iter in 1:total.iter){
     x.origin
   )
   evgam.cov <- y ~ 1 + cos.time + sin.time #+ s(X1) + s(X2) + s(X3) + s(X4) + s(X5)
-  evgam.cov <- y ~ 1 + s(x.season, bs = "cc", k =12)
-                    # s(X1, bs="ts") + s(X2, bs="ts") + s(X3, bs="ts") + s(X4, bs="ts") + s(X5, bs="ts")
-  ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
-  u.vec <- exp(predict(ald.cov.fit)$location) #* f.season.scale(time.seq)
+  # evgam.cov <- y ~ 1 + s(x.season, bs = "cc", k =12) + s(X1, bs="ts", k=6) + s(X2, bs="ts", k=6) + s(X3, bs="ts", k=6) + s(X4, bs="ts", k=6) + s(X5, bs="ts", k=6)
+  # ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
+  # u.vec <- exp(predict(ald.cov.fit)$location) #* f.season.scale(time.seq)
+  u.vec <- exp(log(f.season.scale(time.seq)) + log(20^(1/alp.origin)-1))
+  # u.vec <- exp(log(f.season.scale(time.seq)) + log(20) / alp.origin)
+  # log_u_true <- log(f.season.scale(time.seq)) + log(20) / alp.origin
+  # log_u_hat  <- predict(ald.cov.fit)$location   # already log-scale now
+  # resid      <- log_u_true - log_u_hat
 
+  # cor(resid, evgam.df$sin.time)   # target: ≈ 0
+  # cor(resid, evgam.df$cos.time)   # target: ≈ 0
+  # cor(resid, x.origin.full) 
   excess.index <- which(y.origin > u.vec)
 
   x.origin <- x.origin[excess.index,]
