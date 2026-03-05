@@ -68,22 +68,25 @@ for(i in 1:length(cov)){
 # era5 <- era5[!(era5$year == 1999 & era5$month == 2 & era5$day == 14), ]
 # fwi.index$ERA5 <- fwi.scaled$ERA5 <- as.numeric(era5$ERA_5)
 fwi.scaled$time <- fwi.index$time <- seq(1,length(Y), length.out=length(Y))
-fwi.scaled$sea <- fwi.index$sea <- fwi.index$time %% 365 / 365
-fwi.scaled$cos.time <- fwi.index$cos.time <- cos(2*pi*seq(1,length(Y), length.out=length(Y))/365)
-fwi.scaled$sin.time <- fwi.index$cos.time <- sin(2*pi*seq(1,length(Y), length.out=length(Y))/365)
+fwi.scaled$sea <- fwi.index$sea <- fwi.index$time %% 366 / 366
+fwi.scaled$cos.time <- fwi.index$cos.time <- cos(2*pi*seq(1,length(Y), length.out=length(Y))/366)
+fwi.scaled$sin.time <- fwi.index$cos.time <- sin(2*pi*seq(1,length(Y), length.out=length(Y))/366)
 fwi.index$date <- substr(cov.long$...1[missing.values],9,10)
 fwi.index$month <- factor(format(as.Date(substr(cov.long$...1[missing.values],1,10), "%Y-%m-%d"),"%b"),
                             levels = c("Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"))
 fwi.index$date <- as.numeric(fwi.index$date)
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 
-# for (j in 1:7) {
-#   # fit_lm <- lm(x.origin.full[,j] ~ sin(2 * pi * time.seq / 365) + cos(2 * pi * time.seq / 365))
-#   # x.detrended[,j] <- residuals(fit_lm) + mean(x.origin.full[,j])
-#   fit_gam <- gam(fwi.scaled[,j] ~ s(fwi.scaled$sea, bs = "cc", k = 12))
-#   fwi.index[,j] <- fwi.scaled[,j] <- residuals(fit_gam) + mean(fwi.scaled[,j])
-# }
+for (j in 1:7) {
+  y_ts <- ts(fwi.scaled[, j], frequency = 365)
+  decomp <- stl(y_ts, s.window = "periodic", robust = TRUE)
+  seasonal_part <- as.numeric(decomp$time.series[, "seasonal"])
+  fit <- forecast::auto.arima( fwi.scaled[, j] - seasonal_part)
+  fwi.index[,j] <-fwi.scaled[,j] <- as.numeric(residuals(fit))
+}
 
+# acf(fwi.index[,3])
+# plot(fwi.index[,3])
 
 above.0 <- which(Y>0)
 Y <- Y[above.0]

@@ -240,6 +240,7 @@ for(iter in 1:total.iter){
     # fit_lm <- lm(x.origin.full[,j] ~ sin(2 * pi * time.seq / 365) + cos(2 * pi * time.seq / 365))
     # x.detrended[,j] <- residuals(fit_lm) + mean(x.origin.full[,j])
     fit_gam <- gam(x.origin.full[,j] ~ s(x.season, bs = "cc", k = 12))
+
     x.detrended[,j] <- residuals(fit_gam) + mean(x.origin.full[,j])
   }
 

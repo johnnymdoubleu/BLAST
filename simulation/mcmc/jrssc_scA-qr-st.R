@@ -25,13 +25,14 @@ for (j in 1:p) {
   seasonal_trend <- 0.5 + 0.1 * sin(2 * pi * time.seq / period + phase_shift) 
   uniform_noise <- runif(n, min = -0.4, max = 0.4)
   x.origin[, j] <- seasonal_trend + uniform_noise
+  # x.origin[,j] <- runif(n, 0,1)
 }
 
 colnames(x.origin) <- paste0("X", 1:p)
 
 # --- DGP MODIFICATION: ADD HARMONICS DIRECTLY TO TRUE ALPHA ---
-sin.time.full <- sin(2 * pi * time.seq / period)
-cos.time.full <- cos(2 * pi * time.seq / period)
+sin.time.full <- sin(2 * pi * x.season)
+cos.time.full <- cos(2 * pi * x.season)
 
 f2 <- function(x) {-.7 * sin(2 * pi * x^2)*(x-0.5)}
 f5 <- function(x) {-.7 * cos(3 * pi * x^2)*x}
@@ -58,7 +59,7 @@ evgam.df <- data.frame(
 evgam.cov <- y ~ 1 + cos.time + sin.time 
 ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
 u.vec <- (predict(ald.cov.fit)$location)
-
+# u.vec <- 20^(1/alp.origin)
 # Subset excesses
 excess.index <- which(y.origin > u.vec)
 x.origin <- x.origin[excess.index,]
@@ -228,9 +229,9 @@ transformed parameters {
 
 model {
   target += pareto_lpdf(y | u, alpha);
-  target += normal_lpdf(theta[1] | 0, 2); // Tightened prior
-  target += gamma_lpdf(lambda1 | 2, 0.1); 
-  target += gamma_lpdf(lambda2 | 2, 0.1);
+  target += normal_lpdf(theta[1] | 0, 10); // Tightened prior
+  target += gamma_lpdf(lambda1 | 1e-1, 1e-1); 
+  target += gamma_lpdf(lambda2 | 1e-2, 1e-2);
   for (k in 1:p_lin){
     target += double_exponential_lpdf(theta[(k+1)] | 0, 1/(lambda1[k]));
   }
@@ -302,7 +303,7 @@ bayesplot::mcmc_trace(fit1, pars="lp__") + ylab("Scenario A") +
         strip.text = element_blank(),
         axis.text = element_text(size = 18))
 # ggsave(paste0("./simulation/results/appendix_",n,"_traceplot_scA.pdf"), width=22, height = 3)
-
+# theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
 theta.samples <- summary(fit1, par=c("theta0","theta_origin"), probs = c(0.05,0.5, 0.95))$summary
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
 lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
@@ -411,7 +412,7 @@ ggplot(data.scenario, aes(x=x)) +
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 30))
-
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_scA.pdf"), width=10, height = 7.78)
 
 # est_gridalpha_median  <- apply(posterior$gridalpha, 2, median)
 # est_gridalpha_lower <- apply(posterior$gridalpha, 2, quantile, probs = 0.05)
@@ -466,11 +467,7 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
         axis.title.x = element_text(size = 45),
         axis.text = element_text(size=30))
 
-
-
-
-
-# # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_smooth_scA.pdf"), width=12.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_smooth_scA.pdf"), width=12.5, height = 15)
 
 # data.linear <- data.frame("x"=seq(0,1, length.out = n),
 #                           "true" = as.vector(l.new),
@@ -536,7 +533,7 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
 
 # # ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_nonlinear_scA.pdf"), width=12.5, height = 15)
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_scA.pdf"), width=10, height = 7.78)
+
 
 mcmc.alpha <- posterior$alpha
 len <- dim(mcmc.alpha)[1]

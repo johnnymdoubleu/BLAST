@@ -4,8 +4,9 @@ suppressMessages(library(ggplot2))
 library(rstan)
 library(MESS)
 library(evgam)
+library(rmutil)
 
-# Scenario A
+# Scenario D
 # array.id <- commandArgs(trailingOnly=TRUE)
 
 total.iter <- 25

@@ -8,7 +8,7 @@ if(EV==TRUE){
   file_pattern <- paste0("evgam_mc_scA_",n,"_.*.Rdata")
   # file_pattern <- paste0("evgam_mc_scA_.*.Rdata")x``
 }else if(EV==FALSE){
-  file_pattern <- paste0("2026-03-03_",iter,"_MC_scA_",n,"_.*.Rdata")
+  file_pattern <- paste0("2026-03-05_",iter,"_MC_scA_",n,"_.*.Rdata")
 }
 
 file_list <- list.files(pattern = file_pattern)
@@ -88,12 +88,12 @@ if(EV==FALSE){
   gridgsmooth.container$covariate <- temp_env$gridgsmooth.container$covariate
   gridgsmooth.container <- as.data.frame(gridgsmooth.container)
   gridgl.container$x <- temp_env$gridgl.container$x
-  gridgl.container$true <- temp_env$gridgl.container$true
+  # gridgl.container$true <- temp_env$gridgl.container$true
   gridgl.container$mean <- rowMeans(gridgl.container[,1:total.iter])
   gridgl.container$covariate <- temp_env$gridgl.container$covariate
   gridgl.container <- as.data.frame(gridgl.container)
   gridgnl.container$x <- temp_env$gridgnl.container$x
-  gridgnl.container$true <- temp_env$gridgnl.container$true
+  # gridgnl.container$true <- temp_env$gridgnl.container$true
   gridgnl.container$mean <- rowMeans(gridgnl.container[,1:total.iter])
   gridgnl.container$covariate <- temp_env$gridgnl.container$covariate
   gridgnl.container <- as.data.frame(gridgnl.container)

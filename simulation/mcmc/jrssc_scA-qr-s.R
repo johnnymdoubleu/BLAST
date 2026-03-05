@@ -32,28 +32,43 @@ for (j in 1:p) {
                   # 0.3 * cos(4 * pi * time.seq / period - phase_shift)
   uniform_noise <- runif(n, min = -0.4, max = 0.4)
   x.origin[, j] <- seasonal_trend + uniform_noise
-  # x.origin[, j] <- (x.origin[,j] - min(x.origin[,j])) / (max(x.origin[,j]) - min(x.origin[,j]))
 }
 
-plot(x.origin[,2])
+# for (j in 1:p) {
+#   y_ts <- ts(x.origin[, j], frequency = period) # Adjust frequency to your actual cycle
+#   decomp <- stl(y_ts, s.window = "periodic", robust = TRUE)
+  
+#   seasonal_part <- as.numeric(decomp$time.series[, "seasonal"])
+#   x.origin[, j] <- x.origin[, j] - seasonal_part
+# }
+# range01 <- function(x){(x-min(x))/(max(x)-min(x))}
+# X_minmax <- sapply(x.origin, function(x) max(x)-min(x))
+# X_min <- sapply(x.origin, function(x) min(x))
+# x.origin <- as.matrix(sapply(as.data.frame(x.origin), FUN = range01))
+
+# Now check the ACF of the new fwi.index
+# acf(x.origin[, 2],)
+# plot(x.origin[,2])
 covariates <- colnames(data.frame(x.origin))[1:p]
 
-f2 <- function(x) {-.7 * sin(2 * pi * x^2)*x^3}
-f3 <- function(x) {-.7 * cos(3 * pi * x^2)*x^2}
+f2 <- function(x) {-.7 * sin(2 * pi * x^2)*(x-0.5)}
+f3 <- function(x) {-.7 * cos(3 * pi * x^2)*x}
 theta.origin <- c(0.7, 0, 0.8, -0.8, 0, 0) 
 
 alp.origin <- exp(rep(theta.origin[1],n) + x.origin%*%theta.origin[-1] + f2(x.origin[,2]) + f3(x.origin[,3]))
 y.noise <- rPareto(n, rep(1, n), alpha = alp.origin)
 f.season.scale <- function(t){
-  return(2.5 - .8 * sin(2 * pi * t / 365) - .6 * cos(2 * pi * t/365)) 
+  return(2.5 - .8 * sin(2 * pi * t / period) - .6 * cos(2 * pi * t/period)) 
 }
 y.origin <- y.noise * f.season.scale(time.seq)
 plot(y.origin)
 
+
+
 evgam.df <- data.frame(
   y = (y.origin),
-  sin.time = sin(2 * pi * time.seq / 365),
-  cos.time = cos(2 * pi * time.seq / 365),
+  sin.time = sin(2 * pi * time.seq / period),
+  cos.time = cos(2 * pi * time.seq / period),
   x.origin
 )
 evgam.cov <- y ~ 1 + cos.time + sin.time #+ X1 + X2 + X3 + X4 + X5
@@ -61,7 +76,7 @@ ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(t
 u.vec <- (predict(ald.cov.fit)$location)
 
 excess.index <- which(y.origin > u.vec)
-x.origin <- x.origin[excess.index,]
+x.origin <- as.data.frame(x.origin[excess.index,])
 y.origin <- y.origin[excess.index]
 u <- u.vec[excess.index]
 season_code_full <- season_code_full[excess.index]  
@@ -69,6 +84,9 @@ n <- length(y.origin)
 
 colnames(x.origin) <- paste0("X", 1:p)
 plot(x.origin[,1])
+
+
+
 
 group.map <- c()
 Z.list <- list()        # Stores the final non-linear design matrices
@@ -127,11 +145,14 @@ for (i in seq_along(covariates)) {
 bs.nonlinear <- do.call(cbind, Z.list)
 bs.linear <- model.matrix(~ ., data = data.frame(x.origin))[,-1]
 
-grid_Z_list <- list()
 grid.n <- 200
+newx <- seq(0, 1, length.out = grid.n)
+xholder <- do.call(cbind, lapply(1:p, function(j) {newx}))
+
+grid_Z_list <- list()
 
 for (i in seq_along(covariates)) {
-  x_vec <- seq(min(x.origin[,i]), max(x.origin[,i]), length.out = grid.n)
+  x_vec <- xholder[,i]
   grid_df  <- data.frame(x_vec = x_vec)
   X_lin_grid <- model.matrix(~ x_vec, data = grid_df)
   X_raw_grid <- PredictMat(sm_spec_list[[i]], grid_df)
@@ -194,14 +215,10 @@ transformed parameters {
     {
       vector[n] eta = rep_vector(theta[1], n);
       for (j in 1:p){
-        for (k in 1:psi){
-          int idx = (j-1)*psi + k;
-          gamma[j][k] = gamma_raw[j][k] * sqrt(tau[j]); // * Z_scales[idx];
-        }; 
+        gamma[j] = gamma_raw[j] * sqrt(tau[j]);
         int nl_start = (j - 1) * psi + 1;
         eta += col(bsLinear, j) * theta[j+1] + block(bsNonlinear,1, nl_start, n, psi) * gamma[j];
       };
-      
       alpha = exp(eta);
     }
 }
@@ -210,9 +227,9 @@ model {
   // likelihood
   target += pareto_lpdf(y | u, alpha);
   target += normal_lpdf(theta[1] | 0, 10);
+  target += gamma_lpdf(lambda1 | 1e-1, 1e-1); 
+  target += gamma_lpdf(lambda2 | 1e-2, 1e-2);  
   for (j in 1:p){
-    target += gamma_lpdf(lambda1[j] | 1e-1, 1e-1); 
-    target += gamma_lpdf(lambda2[j] | 1e-2, 1e-2);
     target += double_exponential_lpdf(theta[(j+1)] | 0, 1/(lambda1[j]));
     target += gamma_lpdf(tau[j] | atau, square(lambda2[j])*0.5);
     target += std_normal_lpdf(gamma_raw[j]);
@@ -230,7 +247,7 @@ generated quantities {
   real theta0 = theta[1] - dot_product(X_means, theta_origin);
 
   {
-    vector[grid_n] grideta = rep_vector(thet0, grid_n);
+    vector[grid_n] grideta = rep_vector(theta0, grid_n);
     for (j in 1:p){
         gridgnl[,j] = block(xholderNonlinear,1, ((j - 1) * psi + 1), grid_n, psi) * gamma[j];
         gridgl[,j] = col(xholderLinear, j) * theta_origin[j];

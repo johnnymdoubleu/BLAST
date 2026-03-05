@@ -30,7 +30,7 @@ missing.values <- which(!is.na(df.long$measurement))
 
 Y <- df.long$measurement[!is.na(df.long$measurement)]
 # Reduced psi to tighten credible bands slightly via less extreme flexibility
-psi.origin <- psi <- 8 
+psi.origin <- psi <- 8
 threshold <- 0.95
 
 multiplesheets <- function(fname) {
@@ -79,10 +79,10 @@ fwi.scaled <- fwi.scaled[above.0,]
 fwi.index <- fwi.index[above.0,]
 
 # Calculate varying threshold u.vec using harmonics
-qr.df <- data.frame(y = log(Y), fwi.scaled)
+qr.df <- data.frame(y = (Y), fwi.scaled)
 evgam.cov <- y ~ 1 + cos.time + sin.time 
 ald.cov.fit <- evgam(evgam.cov, data = qr.df, family = "ald", ald.args=list(tau = threshold))
-u.vec <- exp(predict(ald.cov.fit)$location)
+u.vec <- (predict(ald.cov.fit)$location)
 
 excess <- which(Y>u.vec)
 y <- Y[excess]
@@ -485,34 +485,30 @@ fwi.min.samples <- sapply(fwi.smooth, min)
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=12.5, height = 15)
 # xholder <- as.data.frame(xholder)
 # colnames(xholder) <- colnames(fwi.scaled)[1:p]
-simul.data <- data.frame(BA = y-u, fwi.scaled.only, fwi.scaled[excess,c(10, 11)])#fwi.origin[c(1:p)])
-# gam.scale <- list(BA ~ s(DSR, bs = "tp", k = 30) + 
-#                       s(FWI, bs = "tp", k = 30) + 
-#                       s(BUI, bs = "tp", k = 30) + 
-#                       s(ISI, bs = "tp", k = 30) + 
-#                       s(FFMC, bs = "tp", k = 30) +
-#                       s(DMC, bs = "tp", k = 30) + 
-#                       s(DC, bs = "tp", k = 30),
-#                     ~ s(DSR, bs = "tp", k = 30) + 
-#                       s(FWI, bs = "tp", k = 30) + 
-#                       s(BUI, bs = "tp", k = 30) + 
-#                       s(ISI, bs = "tp", k = 30) + 
-#                       s(FFMC, bs = "tp", k = 30) +
-#                       s(DMC, bs = "tp", k = 30) +
-#                       s(DC, bs = "tp", k = 30))
-# gam.scale <- list(BA ~ s(BUI, bs = "ts", k = 30) + 
-#                       s(ISI, bs = "ts", k = 30) + 
-#                       s(FFMC, bs = "ts", k = 30) +
-#                       s(DMC, bs = "ts", k = 30) + 
-#                       s(DC, bs = "ts", k = 30),
-#                     ~ s(BUI, bs = "ts", k = 30) + 
-#                       s(ISI, bs = "ts", k = 30) + 
-#                       s(FFMC, bs = "ts", k = 30) +
-#                       s(DMC, bs = "ts", k = 30) +
-#                       s(DC, bs = "ts", k = 30))
-# evgam.fit.scale <- evgam::evgam(gam.scale, data = simul.data, family = "gpd")
-# pred.scale <- predict(evgam.fit.scale, newdata = xholder, type="response", se.fit = TRUE)
-# xi.pred.scale <-pred.scale$fitted$shape
+simul.data <- data.frame(BA = y-u, fwi.scaled.only, 
+                          sin.time = fwi.scaled$sin.time[excess], 
+                          cos.time = fwi.scaled$cos.time[excess])#fwi.origin[c(1:p)])
+
+gam.scale <- list(
+  # 1. Formula for the log-Scale parameter
+  BA ~ sin.time + cos.time + 
+       s(BUI, bs = "ts", k = 10) + 
+       s(ISI, bs = "ts", k = 10) + 
+       s(FFMC, bs = "ts", k = 10) +
+       s(DMC, bs = "ts", k = 10) + 
+       s(DC, bs = "ts", k = 10),
+       
+  # 2. Formula for the Shape parameter (xi)
+     ~ sin.time + cos.time + 
+       s(BUI, bs = "ts", k = 10) + 
+       s(ISI, bs = "ts", k = 10) + 
+       s(FFMC, bs = "ts", k = 10) +
+       s(DMC, bs = "ts", k = 10) +
+       s(DC, bs = "ts", k = 10)
+)
+evgam.fit.scale <- evgam::evgam(gam.scale, data = simul.data, family = "gpd")
+pred.scale <- predict(evgam.fit.scale, newdata = as.data.frame(xholder_all), type="response", se.fit = TRUE)
+xi.pred.scale <-pred.scale$fitted$shape
 # xi.se.scale <- pred.scale$se.fit$shape
 # xi.low.scale <- xi.pred.scale - (1.96 * xi.se.scale)
 # xi.high.scale <- xi.pred.scale + (1.96 * xi.se.scale)
@@ -529,15 +525,16 @@ simul.data <- data.frame(BA = y-u, fwi.scaled.only, fwi.scaled[excess,c(10, 11)]
 #   alpha.nonlinear.scale[,j] <- 1/(xi.nonlinear.scale[,j])
 # }
 
-# gam.1 <- list(BA ~ 1,
-#                 ~ s(BUI, bs = "ts", k = 30) + 
-#                   s(ISI, bs = "ts", k = 30) + 
-#                   s(FFMC, bs = "ts", k = 30) +
-#                   s(DMC, bs = "ts", k = 30) +
-#                   s(DC, bs = "ts", k = 30) + cos.time + sin.time)
-# evgam.fit.1 <- evgam::evgam(gam.1, data = simul.data, family = "gpd")
-# pred.1 <- predict(evgam.fit.1, newdata = xholder_all, type="response", se.fit = TRUE)
-# xi.pred.1 <-pred.1$fitted$shape
+gam.1 <- list(BA ~ 1,
+                ~ cos.time + sin.time + 
+                  s(BUI, bs = "ts", k = 10) + 
+                  s(ISI, bs = "ts", k = 10) + 
+                  s(FFMC, bs = "ts", k = 10) +
+                  s(DMC, bs = "ts", k = 10) +
+                  s(DC, bs = "ts", k = 10))
+evgam.fit.1 <- evgam::evgam(gam.1, data = simul.data, family = "gpd")
+pred.1 <- predict(evgam.fit.1, newdata = as.data.frame(xholder_all), type="response", se.fit = TRUE)
+xi.pred.1 <-pred.1$fitted$shape
 # xi.se.1 <- pred.1$se.fit$shape
 # xi.low.1 <- xi.pred.1 - (1.96 * xi.se.1)
 # xi.high.1 <- xi.pred.1 + (1.96 * xi.se.1)
@@ -587,17 +584,17 @@ simul.data <- data.frame(BA = y-u, fwi.scaled.only, fwi.scaled[excess,c(10, 11)]
 
 
 data.scenario <- data.frame("x" = newx,
-                            "post.mean" = log(alpha.samples[,1]),
-                            "post.median" = log(alpha.samples[,5]),
-                            "q1" = log(alpha.samples[,4]),
-                            "q3" = log(alpha.samples[,6]))
+                            "post.mean" = (alpha.samples[,1]),
+                            "post.median" = (alpha.samples[,5]),
+                            "q1" = (alpha.samples[,4]),
+                            "q3" = (alpha.samples[,6]))
 
 ggplot(data.scenario, aes(x=x)) + 
   ylab(expression(alpha(bold(c),bold(t)))) + xlab(expression(c)) + labs(col = "") +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
   geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
   scale_fill_manual(values=c("steelblue"), name = "") +
-  scale_color_manual(values = c("steelblue")) + 
+  scale_color_manual(values = c("steelblue")) + ylim(0, 10) +
   guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) +
   theme_minimal(base_size = 30) +
@@ -611,24 +608,24 @@ xi.scenario <- data.frame("x" = newx,
                             "post.mean" = (1/alpha.samples[,1]),
                             "post.median" = (1/alpha.samples[,5]),
                             "q1" = (1/alpha.samples[,4]),
-                            "q3" = (1/alpha.samples[,6]))
-                            # "evgam.1" = xi.pred.1,
+                            "q3" = (1/alpha.samples[,6]),
+                            "evgam.1" = xi.pred.1,
                             # "evgam.1.q1" = xi.low.1,
                             # "evgam.1.q3" = xi.high.1,
                             # "vgam.1" = vgam.xi.1,
                             # "vgam.scale" = vgam.xi.scale,
                             # "evgam.scale.q1" = xi.low.scale,
                             # "evgam.scale.q3" = xi.high.scale,
-                            # "evgam.scale" = xi.pred.scale)
+                            "evgam.scale" = xi.pred.scale)
 
 ggplot(xi.scenario, aes(x=x)) + 
   ylab(expression(xi(c,...,c))) + xlab(expression(c)) + labs(col = "") +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
   geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
   # geom_ribbon(aes(ymin = evgam.scale.q1, ymax = evgam.scale.q3), fill= "orange", alpha = 0.2) +
-  # geom_line(aes(y=evgam.scale), colour = "orange", linewidth=1, linetype=3) +
+  geom_line(aes(y=evgam.scale), colour = "orange", linewidth=1, linetype=3) +
   # geom_ribbon(aes(ymin = evgam.1.q1, ymax = evgam.1.q3), fill= "purple", alpha = 0.2) +
-  # geom_line(aes(y=evgam.1), colour = "purple", linewidth=1, linetype=3) +
+  geom_line(aes(y=evgam.1), colour = "purple", linewidth=1, linetype=3) +
   # geom_line(aes(y=vgam.scale), colour = "orange", linewidth=1, linetype=4) +
   # geom_line(aes(y=vgam.1), colour = "purple", linewidth=1, linetype=4) +  
   scale_fill_manual(values=c("steelblue"), name = "") +
@@ -729,7 +726,7 @@ for(i in 1:p){
                   scale_fill_manual(values=c("steelblue"), name = "") + 
                   scale_color_manual(values=c("steelblue")) +
                   # ylim(g.min.samples, g.max.samples) +
-                  ylim(-10, 10) +
+                  ylim(-3, 3) +
                   theme_minimal(base_size = 20) +
                   theme(legend.position = "none",
                         plot.margin = margin(5, 5, 5, 5),
@@ -837,7 +834,7 @@ for(i in 1:p){
                           axis.title.x = element_text(size = 45))
   grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.grid[which.max(y),i], y=-3.3, color = "red", size = 7)
 }
-
+grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
 # time.df <- data.frame(q1 = as.vector(time.samples[,4]), 
 #                       q2 = as.vector(time.samples[,5]), 
 #                       q3 = as.vector(time.samples[,6]), 
@@ -853,7 +850,7 @@ for(i in 1:p){
 #                               plot.margin = margin(0,0,0,-20),
 #                               axis.text = element_text(size = 35),
 #                               axis.title.x = element_text(size = 45))
-grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
+
 
 summary(fit1, par=c("theta_fwi"), probs = c(0.05,0.5, 0.95))$summary
 # saveRDS(data.smooth, file="./BLAST/application/figures/comparison/full_stanfit.rds")
