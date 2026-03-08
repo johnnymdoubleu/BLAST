@@ -9,7 +9,7 @@ library(mgcv)
 
 # Scenario A
 # array.id <- commandArgs(trailingOnly=TRUE)
-total.iter <- 2
+total.iter <- 25
 
 n <- n.origin <- 10000
 grid.n <- 200
@@ -19,7 +19,7 @@ p <- 5
 
 C <- diag(p)
 
-f2 <- function(x) {-.7 * sin(2 * pi * x^2)*x}
+f2 <- function(x) {-.7 * sin(2 * pi * x^2)*(x-0.5)}
 f5 <- function(x) {-.7 * cos(3 * pi * x^2)*x}
 
 time.seq <- 1:n
@@ -58,7 +58,6 @@ data {
     real <lower=0> atau;
     vector[p] X_means;
     vector[p] X_sd;
-    vector[(psi*p)] Z_scales;
     vector[grid_n] trueAlpha;
 }
 
@@ -132,11 +131,20 @@ for(iter in 1:total.iter){
   x.origin <- matrix(0, nrow = n, ncol = p)
 
   for (j in 1:p) {
-    phase_shift <- j * (2 * pi / p) 
-    seasonal_trend <- 0.5 + 0.1 * sin(2 * pi * time.seq / period + phase_shift)
-    uniform_noise <- runif(n, min = -0.4, max = 0.4)
+    # phase_shift <- j * (2 * pi / p) 
+    # seasonal_trend <- 0.5 + 0.1 * sin(2 * pi * time.seq / period + phase_shift)
+    seasonal_trend <- 0.5 + 0.1 * sin(2 * pi * time.seq / period)
+    uniform_noise <- runif(n, min = -0.49, max = 0.49)
     x.origin[, j] <- seasonal_trend + uniform_noise
   }
+
+  for (j in 1:p) {
+    y_ts <- ts(x.origin[, j], frequency = period) 
+    decomp <- stl(y_ts, s.window = "periodic", robust = TRUE)
+    seasonal_part <- as.numeric(decomp$time.series[, "seasonal"])
+    x.origin[, j] <- x.origin[, j] - seasonal_part
+  }
+
   alp.origin <- exp(rep(theta.origin[1],n) + x.origin%*%theta.origin[-1] + f2(x.origin[,2]) + f5(x.origin[,5]))
   y.noise <- rPareto(n, rep(1, n), alpha = alp.origin)
   f.season.scale <- function(t){
@@ -170,8 +178,11 @@ for(iter in 1:total.iter){
                       theta.origin[4],
                       theta.origin[5],
                       theta.origin[6] + f5.hidden$slope)
-  newx <- seq(min(x.origin), max(x.origin), length.out = grid.n)
-  xholder <- do.call(cbind, lapply(1:p, function(i) {seq(min(x.origin[,i]), max(x.origin[,i]), length.out = grid.n)}))
+  newx <- seq(0, 1, length.out = grid.n)
+  xholder <- do.call(cbind, lapply(1:p, function(j) {newx}))
+  # newx <- seq(min(x.origin), max(x.origin), length.out = grid.n)
+  # xholder <- do.call(cbind, lapply(1:p, function(i) {seq(min(x.origin[,i]), max(x.origin[,i]), length.out = grid.n)}))
+
   
   g2.nl <- f2(xholder[,2]) - (f2.hidden$intercept + f2.hidden$slope*xholder[,2])
   g5.nl <- f5(xholder[,5]) - (f5.hidden$intercept + f5.hidden$slope*xholder[,5])
@@ -251,7 +262,7 @@ for(iter in 1:total.iter){
   grid_Z_list <- list()
 
   for (i in seq_along(covariates)) {
-    x_vec <- (seq(min(x.origin[,i]), max(x.origin[,i]), length.out = grid.n))
+    x_vec <- newx #(seq(min(x.origin[,i]), max(x.origin[,i]), length.out = grid.n))
     grid_df  <- data.frame(x_vec = x_vec)
     X_lin_grid <- model.matrix(~ x_vec, data = grid_df)
     X_raw_grid <- PredictMat(sm_spec_list[[i]], grid_df)
@@ -289,22 +300,22 @@ for(iter in 1:total.iter){
       data = data.stan,    # named list of data
       init = init.alpha,      # initial value
       chains = 3,             # number of Markov chains
-      iter = 4000,            # total number of iterations per chain
+      iter = 2000,            # total number of iterations per chain
       cores = parallel::detectCores(), # number of cores (could use one per chain)
-      refresh = 2000             # no progress shown
+      refresh = 1000             # no progress shown
   )
-
+  theta.samples <- summary(fit1, par=c("theta0", "theta_origin"), probs = c(0.5))$summary
   newgsmooth.samples <- summary(fit1, par=c("gridgsmooth"), probs = c(0.5))$summary
   newalpha.samples <- summary(fit1, par=c("gridalpha"), probs = c(0.5))$summary
   se.samples <- summary(fit1, par=c("se"), probs = c(0.5))$summary
   lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.5))$summary
 
   simul.data <- data.frame(y = y.origin, x.origin)
-  vgam.fit.scale <- vgam(y ~ sm.ps(X1, ps.int = 8) + 
-                             sm.ps(X2, ps.int = 8) + 
-                             sm.ps(X3, ps.int = 8) + 
-                             sm.ps(X4, ps.int = 8) + 
-                             sm.ps(X5, ps.int = 8),
+  vgam.fit.scale <- vgam(y ~ sm.ps(X1, ps.int = 8, outer.ok = TRUE) + 
+                             sm.ps(X2, ps.int = 8, outer.ok = TRUE) + 
+                             sm.ps(X3, ps.int = 8, outer.ok = TRUE) + 
+                             sm.ps(X4, ps.int = 8, outer.ok = TRUE) + 
+                             sm.ps(X5, ps.int = 8, outer.ok = TRUE),
                         data = simul.data,
                         family = gpd(threshold= u,
                                       lshape="loglink",
@@ -315,11 +326,11 @@ for(iter in 1:total.iter){
   fitted.terms <- predict(vgam.fit.scale,newdata = data.frame(xholder), type = "terms")
   vgam.xi.scale <- exp(fitted.linear[,2])
 
-  vgam.fit.1 <- vgam(y ~ sm.ps(X1, ps.int = 8) + 
-                         sm.ps(X2, ps.int = 8) + 
-                         sm.ps(X3, ps.int = 8) + 
-                         sm.ps(X4, ps.int = 8) + 
-                         sm.ps(X5, ps.int = 8),
+  vgam.fit.1 <- vgam(y ~ sm.ps(X1, ps.int = 8, outer.ok = TRUE) + 
+                         sm.ps(X2, ps.int = 8, outer.ok = TRUE) + 
+                         sm.ps(X3, ps.int = 8, outer.ok = TRUE) + 
+                         sm.ps(X4, ps.int = 8, outer.ok = TRUE) + 
+                         sm.ps(X5, ps.int = 8, outer.ok = TRUE),
                         data = simul.data,
                         family = gpd(threshold= u,
                                       lshape="loglink",

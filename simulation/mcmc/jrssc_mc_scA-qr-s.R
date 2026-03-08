@@ -8,7 +8,7 @@ library(evgam)
 # Scenario A
 # array.id <- commandArgs(trailingOnly=TRUE)
 
-total.iter <- 10
+total.iter <- 5
 
 n <- n.origin <- 10000
 grid.n <- 200
@@ -237,11 +237,10 @@ for(iter in 1:total.iter){
   }
   x.detrended <- matrix(nrow = n.origin, ncol = p)
   for (j in 1:p) {
-    # fit_lm <- lm(x.origin.full[,j] ~ sin(2 * pi * time.seq / 365) + cos(2 * pi * time.seq / 365))
-    # x.detrended[,j] <- residuals(fit_lm) + mean(x.origin.full[,j])
-    fit_gam <- gam(x.origin.full[,j] ~ s(x.season, bs = "cc", k = 12))
-
-    x.detrended[,j] <- residuals(fit_gam) + mean(x.origin.full[,j])
+    y_ts <- ts(x.origin.full[, j], frequency = period) 
+    decomp <- stl(y_ts, s.window = "periodic", robust = TRUE)
+    seasonal <- as.numeric(decomp$time.series[, "seasonal"])
+    x.detrended[, j] <- x.origin.full[, j] - seasonal
   }
 
   # range01 <- function(x){(x-min(x))/(max(x)-min(x))}
@@ -506,7 +505,7 @@ alpha.container$true <- rowMeans(true.container)
 alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
-# load(paste0("./simulation/results/MC-Scenario_A/2026-02-07_",total.iter,"_MC_scA_",n.origin,".Rdata"))
+# load(paste0("./simulation/results/MC-Scenario_A/2026-03-06_",total.iter,"_MC_scA_",n.origin,".Rdata"))
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab(expression(alpha(c,...,c)))
 if(total.iter <= 50){

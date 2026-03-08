@@ -42,7 +42,7 @@ for (f in file_list) {
     tryCatch({
       load(f, envir = temp_env)
       alpha.container <- cbind(alpha.container, temp_env$alpha.container[,c(1:iter)])
-      gridgsmooth.container <- cbind(gridgsmooth.container, temp_env$newgsmooth.container[,c(1:iter)])
+      # gridgsmooth.container <- cbind(gridgsmooth.container, temp_env$newgsmooth.container[,c(1:iter)])
       evgam.1.container <- cbind(evgam.1.container, temp_env$evgam.1.container[,c(1:iter)])
       evgam.scale.container <- cbind(evgam.scale.container, temp_env$evgam.scale.container[,c(1:iter)])
       vgam.1.container <- cbind(vgam.1.container, temp_env$vgam.1.container[,c(1:iter)])
@@ -117,11 +117,11 @@ if(EV==FALSE){
   alpha.container$vgam.1 <- rowMeans(vgam.1.container[,1:total.iter])
   alpha.container$vgam.scale <- rowMeans(vgam.scale.container[,1:total.iter])   
   alpha.container <- as.data.frame(alpha.container)
-  gridgsmooth.container$x <- temp_env$gridgsmooth.container$x
-  gridgsmooth.container$true <- temp_env$gridgsmooth.container$true
-  gridgsmooth.container$mean <- rowMeans(gridgsmooth.container[,1:total.iter])
-  gridgsmooth.container$covariate <- temp_env$gridgsmooth.container$covariate
-  gridgsmooth.container <- as.data.frame(gridgsmooth.container)
+  # gridgsmooth.container$x <- temp_env$gridgsmooth.container$x
+  # gridgsmooth.container$true <- temp_env$gridgsmooth.container$true
+  # gridgsmooth.container$mean <- rowMeans(gridgsmooth.container[,1:total.iter])
+  # gridgsmooth.container$covariate <- temp_env$gridgsmooth.container$covariate
+  # gridgsmooth.container <- as.data.frame(gridgsmooth.container)
   
   cat("BLAST:   ", mean(mise.container, na.rm=TRUE), "±", sd(mise.container, na.rm=TRUE)/sqrt(sum(!is.na(mise.container))), "\n", 
     "EVGAM:  ", mean(mise.evgam.1.container, na.rm=TRUE), "±", sd(mise.evgam.1.container, na.rm=TRUE)/sqrt(sum(!is.na(mise.evgam.1.container))), "\n",
@@ -129,5 +129,5 @@ if(EV==FALSE){
     "VGAM:   ", mean(mise.vgam.1.container, na.rm=TRUE), "±", sd(mise.vgam.1.container, na.rm=TRUE)/sqrt(sum(!is.na(mise.vgam.1.container))), "\n",
     "VGAM-σ: ", mean(mise.vgam.scale.container, na.rm=TRUE), "±", sd(mise.vgam.scale.container, na.rm=TRUE)/sqrt(sum(!is.na(mise.vgam.scale.container))), "\n")
 
-  # save(alpha.container, gridgsmooth.container, vgam.1.container, vgam.scale.container, evgam.1.container, evgam.scale.container, mise.container, mise.evgam.1.container, mise.evgam.scale.container, mise.vgam.1.container, mise.vgam.scale.container, file = paste0(Sys.Date(),"_evgam_mc_scD2_",(n*0.05),".Rdata"))  
+  # save(alpha.container, vgam.1.container, vgam.scale.container, evgam.1.container, evgam.scale.container, mise.container, mise.evgam.1.container, mise.evgam.scale.container, mise.vgam.1.container, mise.vgam.scale.container, file = paste0(Sys.Date(),"_evgam_mc_scD2_",(n*0.05),".Rdata"))  
 }

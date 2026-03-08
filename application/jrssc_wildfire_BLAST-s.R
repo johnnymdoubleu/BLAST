@@ -32,7 +32,7 @@ missing.values <- which(!is.na(df.long$measurement))
 #considering the case of leap year, the missing values are the 29th of Feb
 #Thus, each year consist of 366 data with either 1 or 0 missing value.
 Y <- df.long$measurement[!is.na(df.long$measurement)]
-psi.origin <- psi <- 10
+psi.origin <- psi <- 30
 threshold <- 0.95
 
 multiplesheets <- function(fname) {
@@ -77,275 +77,182 @@ fwi.index$month <- factor(format(as.Date(substr(cov.long$...1[missing.values],1,
 fwi.index$date <- as.numeric(fwi.index$date)
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 
+fit.list <- list()
 for (j in 1:7) {
-  y_ts <- ts(fwi.scaled[, j], frequency = 365)
+  y_ts <- ts(fwi.scaled[, j], frequency = 365.25)
+  # Step A: STL for seasonality
   decomp <- stl(y_ts, s.window = "periodic", robust = TRUE)
-  seasonal_part <- as.numeric(decomp$time.series[, "seasonal"])
-  fit <- forecast::auto.arima( fwi.scaled[, j] - seasonal_part)
-  fwi.index[,j] <-fwi.scaled[,j] <- as.numeric(residuals(fit))
+  # remainder <- as.numeric(decomp$time.series[, "remainder"])
+  seasonal <- as.numeric(decomp$time.series[, "seasonal"])
+  fit.list[[j]] <- forecast::auto.arima(fwi.scaled[,j] - seasonal, seasonal = FALSE, stepwise = TRUE)
+  fwi.index[,j] <- fwi.scaled[, j] <- as.numeric(residuals(fit.list[[j]]))
 }
 
-# acf(fwi.index[,3])
-# plot(fwi.index[,3])
 
-above.0 <- which(Y>0)
-Y <- Y[above.0]
-fwi.scaled <- fwi.scaled[above.0,]
-fwi.index <- fwi.index[above.0,]
+acf(fwi.index$BUI)
+acf(fwi.index$ISI)
+acf(fwi.index$FFMC)
+acf(fwi.index$DMC)
+acf(fwi.index$DC)
 
-# con_mat <- concurvity(quant.fit, full = FALSE)$worst
-# con_long <- reshape2::melt(con_mat)
-# ggplot(con_long, aes(x = Var1, y = Var2, fill = value)) +
-#   geom_tile(color = "white") +
-#   scale_fill_gradientn(colors = c("darkgreen", "yellow", "red"), 
-#                        values = c(0, 0.5, 1),
-#                        limits = c(0, 1), 
-#                        name = "Concurvity") +
-#   theme_minimal() +
-#   labs(x = "Basis Functions",
-#        y = "Basis Functions") +
-#   theme(axis.text = element_text(size=15)) +
-#   coord_fixed()
+fwi.scaled$time <- seq(1, length(Y))
+fwi.scaled$cos.time <- cos(2*pi*fwi.scaled$time/365.25)
+fwi.scaled$sin.time <- sin(2*pi*fwi.scaled$time/365.25)
 
-qr.df <- data.frame(
-  y = log(Y),
-  fwi.scaled
-)
-evgam.cov <- y ~ 1 + cos.time + sin.time #+ s(BUI, k=5) + s(ISI, k=5) + s(FFMC, k=5) + s(DMC, k=5) + s(DC, k=5)
-ald.cov.fit <- evgam(evgam.cov, data = qr.df, family = "ald", ald.args=list(tau = 0.95))
-u.vec <- exp(predict(ald.cov.fit)$location)
-excess <- which(Y>u.vec)
-y <- Y[excess]
-u <- u.vec[excess]
+above.0 <- which(Y > 0)
+Y_pos <- Y[above.0]
+fwi_pos <- fwi.scaled[above.0, ]
 
+qr.df <- data.frame(y = Y_pos, fwi_pos)
+ald.cov.fit <- evgam(y ~ 1 + cos.time + sin.time, data = qr.df, family = "ald", ald.args=list(tau = 0.95))
+u.vec <- as.numeric(predict(ald.cov.fit)$location)
 
+excess_idx <- which(Y_pos > u.vec)
+y <- Y_pos[excess_idx]
+u <- u.vec[excess_idx]
+fwi_pos <- fwi_pos[excess_idx, 3:7] # BUI to DC
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
-fwi.minmax <- sapply(fwi.scaled[excess,c(3,4,5,6,7)], function(x) max(x)-min(x))
-fwi.min <- sapply(fwi.scaled[excess,c(3,4,5,6,7)], function(x) min(x))
-fwi.scaled <- as.data.frame(sapply(fwi.scaled[excess,c(3,4,5,6,7)], FUN = range01))
+fwi.cols <- c("BUI", "ISI", "FFMC", "DMC", "DC")
+X_minmax <- sapply(fwi_pos, function(x) max(x)-min(x))
+X_min <- sapply(fwi_pos, function(x) min(x))
+fwi_final <- as.data.frame(sapply(fwi_pos, FUN = range01))
 
-n <- dim(fwi.scaled)[[1]]
-p <- dim(fwi.scaled)[[2]]
+n <- nrow(fwi_final)
+p <- ncol(fwi_final)
+psi <- psi.origin - 2 # Adjusted basis dimension
 
-# par(mfrow=c(1,p))
-# for(i in 3:7) {
-#   qqnorm(log(fwi.index[,i]), main=paste("X",i))
-#   qqline(log(fwi.index[,i]), col="red")
-# }
-
-fwi.origin <- data.frame(fwi.index[excess,c(3,4,5,6,7)], BA=y)
-max.fwi <- fwi.origin[which.max(y),]
-fwi.grid <- data.frame(lapply(fwi.origin[,c(1:p)], function(x) seq(min(x), max(x), length.out = nrow(fwi.scaled))))
-
-
-bs.linear <- model.matrix(~ ., data = data.frame(fwi.scaled))[,-1]
-psi <- psi - 2
-group.map <- c()
-Z.list <- list()        # Stores the final non-linear design matrices
-scale_stats_list <- list() 
-projection_coefs_list <- list() #
-spec_decomp_list <- list() # Store eigen-decomp info for prediction
-qr_list <- list()          # Store QR info for prediction
-sm_spec_list <- list()     # Store smooth objects
+Z.list <- list()
+projection_coefs_list <- list()
+spec_decomp_list <- list()
+sm_spec_list <- list()
+scale_stats_list <- list()
 keep_cols_list <- list()
 
-covariates <- colnames(fwi.scaled)
-for (i in seq_along(covariates)) {
-  var_name <- covariates[i]
-  x_vec <- fwi.scaled[, i]
-  X_lin <- model.matrix(~ x_vec) 
-  sm_spec <- smoothCon(mgcv::s(x_vec, bs = "tp", k = psi + 2), 
-                      data = data.frame(x_vec = x_vec), 
-                      knots = NULL)[[1]]
+for (i in 1:p) {
+  x_vec <- as.numeric(fwi_final[, i])
+  X_lin <- model.matrix(~ x_vec)
+  sm_spec <- smoothCon(s(x_vec, bs = "tp", k = psi + 2), data = data.frame(x_vec))[[1]]
   
-  X_raw <- sm_spec$X
-  S     <- sm_spec$S[[1]] 
-  
+  S <- sm_spec$S[[1]]
   eig <- eigen(S, symmetric = TRUE)
-  max_lambda <- max(eig$values)
-  tol <- max_lambda * 1e-8  # Relative threshold (Robust)
+  pos_idx <- which(eig$values > max(eig$values) * 1e-8)
   
-  pos_idx <- which(eig$values > tol)
+  U_pen <- eig$vectors[, pos_idx]
+  Lambda_inv <- solve(sqrt(diag(eig$values[pos_idx])))
   
-  if(length(pos_idx) == 0) stop("No wiggles found. Check data scaling.")
-  
-  U_pen <- eig$vectors[, pos_idx]       
-  Lambda_pen <- diag(eig$values[pos_idx]) 
-  
-  Z_spectral <- X_raw %*% U_pen %*% solve(sqrt(Lambda_pen))
+  Z_spectral <- sm_spec$X %*% U_pen %*% Lambda_inv
   qr_lin <- qr(X_lin)
-  Q_lin <- qr.Q(qr_lin)
-  R_lin <- qr.R(qr_lin)
-  
-  Gamma_Q <- t(Q_lin) %*% Z_spectral
-  Gamma_Original <- backsolve(R_lin, Gamma_Q)
+  Gamma_Original <- backsolve(qr.R(qr_lin), t(qr.Q(qr_lin)) %*% Z_spectral)
   Z_orth <- Z_spectral - X_lin %*% Gamma_Original
   keep_cols <- colSums(Z_orth^2) > 1e-9
   Z_final <- Z_orth[, keep_cols, drop = FALSE]
 
-  train_scale <- apply(Z_final, 2, sd)
-  train_scale[train_scale < 1e-12] <- 1 
-  Z_final <- scale(Z_final, center = FALSE, scale = train_scale)
-  # if(ncol(Z_final) < psi){
-  #   n.pad <- psi - ncol(Z_final)
-  #   zero.pad <- matrix(0, nrow = nrow(Z_final), ncol = n.pad)
-  #   Z_final <- cbind(Z_final, zero.pad)    
-  # }  
-  # Store Results
-  Z.list[[i]] <- Z_final
-  group.map <- c(group.map, rep(i, ncol(Z_final)))
+  z_scale <- apply(Z_final, 2, sd)
+  Z_final <- scale(Z_final, center = FALSE, scale = z_scale)
   
-  # Store Transforms
-  spec_decomp_list[[i]] <- list(U_pen = U_pen, Lambda_sqrt_inv = solve(sqrt(Lambda_pen)))
-  projection_coefs_list[[i]] <- Gamma_Original # Store the X-basis coefs
+  Z.list[[i]] <- Z_final
+  spec_decomp_list[[i]] <- list(U = U_pen, L_inv = Lambda_inv)
+  projection_coefs_list[[i]] <- Gamma_Original
+  scale_stats_list[[i]] <- z_scale
   keep_cols_list[[i]] <- keep_cols
-  scale_stats_list[[i]] <- train_scale         # Store the scale
   sm_spec_list[[i]] <- sm_spec
 }
 
+bs.linear <- as.matrix(fwi_final)
 bs.nonlinear <- do.call(cbind, Z.list)
 
-# xholder <- do.call(cbind, lapply(1:p, function(j) {seq(min(fwi.scaled[,j]),max(fwi.scaled[,j]), length.out = n)}))
 grid.n <- n
-newx <- seq(0, 1, length.out = grid.n)
+newx <- seq(0, 1, length.out = grid.n) # Standard Deviation units
 xholder <- do.call(cbind, lapply(1:p, function(j) {newx}))
+colnames(xholder) <- fwi.cols
+xholder.linear <- matrix(rep(newx, p), ncol = p)
 
-colnames(xholder) <- covariates
 grid_Z_list <- list()
 
-for (i in seq_along(covariates)) {
-  grid_df  <- data.frame(x_vec = xholder[,i])
-  X_lin_grid <- model.matrix(~ x_vec, data = grid_df)
+for (i in 1:p) {
+  grid_df <- data.frame(x_vec = newx)
   X_raw_grid <- PredictMat(sm_spec_list[[i]], grid_df)
-  
-  decomp <- spec_decomp_list[[i]]
-  Z_spectral_grid <- X_raw_grid %*% decomp$U_pen %*% decomp$Lambda_sqrt_inv
+  Z_spectral_grid <- X_raw_grid %*% spec_decomp_list[[i]]$U %*% spec_decomp_list[[i]]$L_inv
+  X_lin_grid <- model.matrix(~ x_vec, data = grid_df)
   Z_orth_grid <- Z_spectral_grid - X_lin_grid %*% projection_coefs_list[[i]]
   Z_final_grid <- Z_orth_grid[, keep_cols_list[[i]], drop = FALSE]
-  Z_final_grid <- scale(Z_final_grid, center = FALSE, scale = scale_stats_list[[i]])
-  grid_Z_list[[i]] <- Z_final_grid
+  grid_Z_list[[i]] <- scale(Z_final_grid, center = FALSE, scale = scale_stats_list[[i]])
 }
-
 xholder.nonlinear <- do.call(cbind, grid_Z_list)
-xholder.linear <- model.matrix(~ ., data = data.frame(xholder))[,-1]
-Z_scales <- unlist(scale_stats_list)
 
-grid_Z_list <- list()
-
-for (i in seq_along(covariates)) {
-  scaled_x_grid <- (fwi.grid[,i] - fwi.min[i]) / (fwi.minmax[i])
-  grid_df  <- data.frame(x_vec = scaled_x_grid)
-  X_lin_grid <- model.matrix(~ x_vec, data = grid_df)
-  X_raw_grid <- PredictMat(sm_spec_list[[i]], grid_df)
-  
-  decomp <- spec_decomp_list[[i]]
-  Z_spectral_grid <- X_raw_grid %*% decomp$U_pen %*% decomp$Lambda_sqrt_inv
-  Z_orth_grid <- Z_spectral_grid - X_lin_grid %*% projection_coefs_list[[i]]
-  Z_final_grid <- Z_orth_grid[, keep_cols_list[[i]], drop = FALSE]
-  Z_final_grid <- scale(Z_final_grid, center = FALSE, scale = scale_stats_list[[i]])
-  grid_Z_list[[i]] <- Z_final_grid
-}
-
-xgrid.nonlinear <- do.call(cbind, grid_Z_list)
-xgrid.linear <- model.matrix(~ ., data = data.frame(fwi.grid))[,-1]
-xgrid.linear <- sweep(xgrid.linear, 2, fwi.min, "-")
 X_means <- colMeans(bs.linear)
 X_sd   <- apply(bs.linear, 2, sd)
 bs.linear <- scale(bs.linear, center = X_means, scale = X_sd)
 
-model.stan <- "// Stan model for BLAST Pareto Samples
+model.stan <- "
 data {
-  int <lower=1> n; // Sample size
-  int <lower=1> grid_n; // Sample size
-  int <lower=1> p; // regression coefficient size
-  int <lower=1> psi; // splines coefficient size
-  vector<lower=0>[n] u; // large threshold value
-  matrix[n, p] bsLinear; // fwi dataset
-  matrix[n, (psi*p)] bsNonlinear; // thin plate splines basis
-  matrix[grid_n, p] xholderLinear; // fwi dataset
-  matrix[grid_n, (psi*p)] xholderNonlinear; // thin plate splines basis    
-  matrix[n, p] gridL; // fwi dataset
-  matrix[n, (psi*p)] gridNL; // thin plate splines basis      
-  vector<lower=0>[n] y; // extreme response
-  real <lower=0> atau;
-  vector[p] X_minmax;
-  vector[p] X_min;
-  vector[p] X_means;
-  vector[p] X_sd;
+  int n; int grid_n; int p; int psi;
+  vector[n] u; 
+  vector[n] y;
+  matrix[n, p] bsLinear; matrix[n, p*psi] bsNonlinear;
+  matrix[grid_n, p] xholderLinear; matrix[grid_n, p*psi] xholderNonlinear;
+  real atau; vector[p] X_means; vector[p] X_sd;
 }
-
 parameters {
-  vector[(p+1)] theta; // linear predictor
+  vector[p+1] theta;
   array[p] vector[psi] gamma_raw;
-  array[p] real <lower=0> lambda1; // lasso penalty //array[p] real <lower=0> 
-  array[p] real <lower=0> lambda2; // lambda2 group lasso penalty
-  array[p] real <lower=0> tau;
+  vector<lower=0>[p] lambda1; 
+  vector<lower=0>[p] lambda2;
+  vector<lower=0>[p] tau;
 }
 
 transformed parameters {
-  vector[n] alpha; // covariate-adjusted tail index
-  
+  vector[n] alpha;
   array[p] vector[psi] gamma;
   {
     vector[n] eta = rep_vector(theta[1], n);
-    for (j in 1:p){
+    for (j in 1:p) {
       gamma[j] = gamma_raw[j] * sqrt(tau[j]);
-      eta += col(bsLinear, j) * theta[j+1] + block(bsNonlinear,1, ((j - 1) * psi + 1), n, psi) * gamma[j];
-    };
+      eta += col(bsLinear, j) * theta[j+1] + block(bsNonlinear, 1, (j-1)*psi + 1, n, psi) * gamma[j];
+    }
     alpha = exp(eta);
   }
 }
 
 model {
-  // likelihood
   target += pareto_lpdf(y | u, alpha);
-  target += normal_lpdf(theta[1] | 0, 2);
+  target += normal_lpdf(theta[1] | 0, 10);
   target += gamma_lpdf(lambda1 | 1e-1, 1e-1); 
-  target += gamma_lpdf(lambda2 | 1e-1, 1e-1);    
-  for (j in 1:p){
-    target += double_exponential_lpdf(theta[(j+1)] | 0, 1/(lambda1[j]));
-    target += gamma_lpdf(tau[j] | atau, square(lambda2[j])*0.5);
+  target += gamma_lpdf(lambda2 | 1e-2, 1e-2);
+  for (j in 1:p) {
+    target += double_exponential_lpdf(theta[j+1] | 0, 1/lambda1[j]);
+    target += gamma_lpdf(tau[j] | atau, 0.5 * square(lambda2[j]));
     target += std_normal_lpdf(gamma_raw[j]);
   }
 }
 
 generated quantities {
-  // Used in Posterior predictive check
-  vector[grid_n] gridalpha; // new tail index
-  matrix[grid_n, p] gridgsmooth; // linear component 
-  matrix[n, p] fwismooth;
   vector[n] log_lik;
+  vector[grid_n] gridalpha;
+  matrix[grid_n, p] gridgsmooth;
   vector[p+1] theta_origin;
-  vector[p] theta_fwi;
 
   theta_origin[2:(p+1)] = theta[2:(p+1)] ./ X_sd;
   theta_origin[1] = theta[1] - dot_product(X_means, theta_origin[2:(p+1)]);
-  theta_fwi = theta_origin[2:(p+1)] ./ X_minmax;
 
+  for (i in 1:n) log_lik[i] = pareto_lpdf(y[i] | u[i], alpha[i]);
   {
     vector[grid_n] pred = rep_vector(theta_origin[1], grid_n);
-    for (j in 1:p){
-      int nl_start = (j - 1) * psi + 1;
-      fwismooth[,j] = block(gridNL,1, nl_start, n, psi) * gamma[j] + col(gridL,j) * theta_fwi[j];
-      gridgsmooth[,j] = col(xholderLinear, j) * theta_origin[j+1]  + block(xholderNonlinear,1, nl_start, grid_n, psi) * gamma[j];
+    for (j in 1:p) {
+      gridgsmooth[,j] = col(xholderLinear, j) * theta_origin[j+1] + block(xholderNonlinear, 1, (j-1)*psi + 1, grid_n, psi) * gamma[j];
       pred += gridgsmooth[,j];
     }
     gridalpha = exp(pred);
   }
-
-  for (i in 1:n){
-    log_lik[i] = pareto_lpdf(y[i] | u[i], alpha[i]);
-  };
 }
 "
 
-
 data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi,
                   atau = ((psi+1)/2), xholderNonlinear = xholder.nonlinear, 
-                  bsLinear = bs.linear, bsNonlinear = bs.nonlinear, X_min=fwi.min,
-                  xholderLinear = xholder.linear, X_minmax = fwi.minmax, 
-                  X_means = X_means, X_sd = X_sd, grid_n = grid.n,
-                  gridL = xgrid.linear, gridNL = xgrid.nonlinear)
+                  bsLinear = bs.linear, bsNonlinear = bs.nonlinear, #X_min=fwi.min,
+                  xholderLinear = xholder.linear, #X_minmax = fwi.minmax, 
+                  X_means = X_means, X_sd = X_sd, grid_n = grid.n)
+                  # gridL = xgrid.linear, gridNL = xgrid.nonlinear)
 
 init.alpha <- list(list(gamma_raw= array(rep(0.2, (psi*p)), dim=c(p, psi)), 
                         theta = rep(-0.1, (p+1)), tau = rep(0.1, p), 
@@ -382,10 +289,10 @@ theta.samples <- summary(fit1, par=c("theta_origin"), probs = c(0.05,0.5, 0.95))
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
 lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
 gsmooth.samples <- summary(fit1, par=c("gridgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
-fwismooth.samples <- summary(fit1, par=c("fwismooth"), probs = c(0.05, 0.5, 0.95))$summary
+# fwismooth.samples <- summary(fit1, par=c("fwismooth"), probs = c(0.05, 0.5, 0.95))$summary
 # gridgl.samples <- summary(fit1, par=c("gridgl"), probs = c(0.05, 0.5, 0.95))$summary
 # gridgnl.samples <- summary(fit1, par=c("gridgnl"), probs = c(0.05, 0.5, 0.95))$summary
-origin.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
+# origin.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
 alpha.samples <- summary(fit1, par=c("gridalpha"), probs = c(0.05,0.5, 0.95))$summary
 # yrep <- summary(fit1, par=c("yrep"), probs = c(0.05,0.5, 0.95))$summary
 # f.samples <- summary(fit1, par=c("f"), probs = c(0.05,0.5, 0.95))$summary
@@ -434,10 +341,10 @@ g.smooth.q3 <- as.vector(matrix(gsmooth.samples[,6], nrow = grid.n, byrow=TRUE))
 # g.nonlinear.q1 <- as.vector(matrix(gridgnl.samples[,4], nrow = grid.n, byrow=TRUE))
 # g.nonlinear.q2 <- as.vector(matrix(gridgnl.samples[,5], nrow = grid.n, byrow=TRUE))
 # g.nonlinear.q3 <- as.vector(matrix(gridgnl.samples[,6], nrow = grid.n, byrow=TRUE))
-fwi.smooth.mean <- as.vector(matrix(fwismooth.samples[,1], nrow = n, byrow=TRUE))
-fwi.smooth.q1 <- as.vector(matrix(fwismooth.samples[,4], nrow = n, byrow=TRUE))
-fwi.smooth.q2 <- as.vector(matrix(fwismooth.samples[,5], nrow = n, byrow=TRUE))
-fwi.smooth.q3 <- as.vector(matrix(fwismooth.samples[,6], nrow = n, byrow=TRUE))
+# fwi.smooth.mean <- as.vector(matrix(fwismooth.samples[,1], nrow = n, byrow=TRUE))
+# fwi.smooth.q1 <- as.vector(matrix(fwismooth.samples[,4], nrow = n, byrow=TRUE))
+# fwi.smooth.q2 <- as.vector(matrix(fwismooth.samples[,5], nrow = n, byrow=TRUE))
+# fwi.smooth.q3 <- as.vector(matrix(fwismooth.samples[,6], nrow = n, byrow=TRUE))
 # fwi.smooth.mean <- as.vector(apply(fwismooth_samples, c(2, 3), mean))
 # fwi.smooth.q2 <- as.vector(apply(fwismooth_samples, c(2, 3), median))
 # fwi.smooth.q1 <- as.vector(apply(fwismooth_samples, c(2, 3), quantile, probs = 0.05))
@@ -446,8 +353,8 @@ fwi.smooth.q3 <- as.vector(matrix(fwismooth.samples[,6], nrow = n, byrow=TRUE))
 g.min.samples <- min(gsmooth.samples[,4])
 g.max.samples <- max(gsmooth.samples[,6])
 # fwi.smooth <- as.data.frame(apply(fwismooth_samples, c(2, 3), quantile, probs = 0.05))
-fwi.smooth <- as.data.frame(matrix(fwismooth.samples[,4], nrow = n, byrow=TRUE))
-fwi.min.samples <- sapply(fwi.smooth, min)
+# fwi.smooth <- as.data.frame(matrix(fwismooth.samples[,4], nrow = n, byrow=TRUE))
+# fwi.min.samples <- sapply(fwi.smooth, min)
 # data.smooth <- data.frame("x"= as.vector(xholder),
 #                           "post.mean" = as.vector(g.smooth.mean),
 #                           "q1" = as.vector(g.smooth.q1),
@@ -475,8 +382,8 @@ fwi.min.samples <- sapply(fwi.smooth, min)
 #           axis.text = element_text(size = 20))
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=12.5, height = 15)
 xholder <- as.data.frame(xholder)
-colnames(xholder) <- colnames(fwi.scaled)[1:p]
-simul.data <- data.frame(BA = y-u, fwi.scaled[,c(1:p)])#fwi.origin[c(1:p)])
+# colnames(xholder) <- colnames(fwi.scaled)[1:p]
+simul.data <- data.frame(BA = y-u, fwi_final)#fwi.origin[c(1:p)])
 # gam.scale <- list(BA ~ s(DSR, bs = "tp", k = 30) + 
 #                       s(FWI, bs = "tp", k = 30) + 
 #                       s(BUI, bs = "tp", k = 30) + 
@@ -521,11 +428,11 @@ simul.data <- data.frame(BA = y-u, fwi.scaled[,c(1:p)])#fwi.origin[c(1:p)])
 # }
 
 gam.1 <- list(BA ~ 1,
-                ~ s(BUI, bs = "ts", k = 30) + 
-                  s(ISI, bs = "ts", k = 30) + 
-                  s(FFMC, bs = "ts", k = 30) +
-                  s(DMC, bs = "ts", k = 30) +
-                  s(DC, bs = "ts", k = 30))
+                ~ s(BUI, bs = "ts", k = 10) + 
+                  s(ISI, bs = "ts", k = 10) + 
+                  s(FFMC, bs = "ts", k = 10) +
+                  s(DMC, bs = "ts", k = 10) +
+                  s(DC, bs = "ts", k = 10))
 evgam.fit.1 <- evgam::evgam(gam.1, data = simul.data, family = "gpd")
 pred.1 <- predict(evgam.fit.1, newdata = xholder, type="response", se.fit = TRUE)
 xi.pred.1 <-pred.1$fitted$shape
@@ -701,7 +608,7 @@ cat("Finished Running")
 
 
 data.smooth <- data.frame("x" = as.vector(as.matrix(xholder)),
-                          "true" = as.vector(as.matrix(fwi.scaled)),
+                          "true" = as.vector(as.matrix(fwi_final)),
                           "post.mean" = as.vector(g.smooth.mean),
                           "q1" = as.vector(g.smooth.q1),
                           "q2" = as.vector(g.smooth.q2),
@@ -716,11 +623,11 @@ for(i in 1:p){
                   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
                   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
                   geom_rug(aes(x=true, y=q2), sides = "b") +
-                  ylab("") + xlab(names(fwi.scaled)[i]) +
+                  ylab("") + xlab(names(fwi_final)[i]) +
                   scale_fill_manual(values=c("steelblue"), name = "") + 
                   scale_color_manual(values=c("steelblue")) +
                   # ylim(g.min.samples, g.max.samples) +
-                  ylim(-10, 10) +
+                  # ylim(-10, 10) +
                   theme_minimal(base_size = 20) +
                   theme(legend.position = "none",
                         plot.margin = margin(5, 5, 5, 5),
@@ -732,7 +639,7 @@ for(i in 1:p){
                   #         plot.margin = margin(0,0,0,-20),
                   #         axis.text = element_text(size = 35),
                   #         axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=g.min.samples, color = "red", size = 7)
+  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi_final[which.max(y),i], y=g.min.samples, color = "red", size = 7)
 }
 marrangeGrob(grobs = grid.plts, nrow = 1, ncol = 5, top = NULL)
 # grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
