@@ -5,6 +5,7 @@ library(rstan)
 library(MESS)
 library(evgam)
 library(rmutil)
+library(forecast)
 
 # Scenario D
 # array.id <- commandArgs(trailingOnly=TRUE)
@@ -40,7 +41,7 @@ make.nl <- function(x, raw_y) {
   ))
 }
 
-theta.origin <- c(0.8, 1.2, 1, -1.2, 0, 0) 
+theta.origin <- c(0.9, 1.2, 1, -1.2, 0, 0) 
 psi <- psi -2
 
 
@@ -75,7 +76,7 @@ data {
     matrix[n, (psi*p)] bsNonlinear; // thin plate splines basis
     matrix[grid_n, p] xholderLinear; // fwi dataset
     matrix[grid_n, (psi*p)] xholderNonlinear; // thin plate splines basis    
-    vector<lower=0>[n] y; // extreme response
+    vector<lower=u>[n] y; // extreme response
     real <lower=0> atau;
     vector[p] X_means;
     vector[p] X_sd;
@@ -111,7 +112,7 @@ model {
   for (i in 1:n){
     target += burr_lpdf(y[i] | alpha[i]) - burr_lccdf(u[i] | alpha[i]);
   }
-  target += normal_lpdf(theta[1] | 0, 10);
+  target += normal_lpdf(theta[1] | 0, 1);
   target += gamma_lpdf(lambda1 | 1e-1, 1e-1); 
   target += gamma_lpdf(lambda2 | 1e-2, 1e-2);
   for (j in 1:p){
@@ -155,47 +156,68 @@ mise.container <- c()
 # qqplot.container <- as.data.frame(matrix(, nrow = (n*(1-threshold)), ncol = total.iter))
 
 for(iter in 1:total.iter){
+  is.positive <- TRUE
   n <- n.origin
-  x.origin <- matrix(0, nrow = n, ncol = p)
+  while(is.positive){
+    x.origin.full <- matrix(0, nrow = n, ncol = p)
 
-  for (j in 1:p) {
-    phase_shift <- j * (2 * pi / p) 
-    seasonal_trend <- 0.5 + 0.1 * sin(2 * pi * time.seq / period + phase_shift) 
-    # seasonal_trend <- 0.5 + 0.1 * sin(j * 2 * pi * time.seq / period) 
-    uniform_noise <- runif(n, min = -0.4, max = 0.4)
-    x.origin[, j] <- seasonal_trend + uniform_noise
-  }
-  x.origin.full <- x.origin
-  alp.origin <- exp(theta.origin[1] + x.origin%*%theta.origin[-1] + f2(x.origin[,2]) + f3(x.origin[,3]))
-  y.noise <- NULL
-  for(i in 1:n){
-    y.noise[i] <- rmutil::rburr(1, m=1, s=alp.origin[i], f=1)
-  }
-  f.season.scale <- function(t){
-    return(2.5 - .8 * sin(2 * pi * t / 365) - .6 * cos(2 * pi * t/365)) 
-  }
-  y.origin <- y.noise * f.season.scale(time.seq)
+    for (j in 1:p) {
+      # seasonal_trend <- 0.1 * sin(2 * pi * time.seq / period) 
+      # uniform_noise <- runif(n, min = -0.49, max = 0.49)
+      # x.origin.full[, j] <- seasonal_trend + uniform_noise
+      # ar_noise <- arima.sim(model = list(ar = 0.5), n = n.origin, sd=0.3)
+      # x.origin.full[,j] <-pnorm(seasonal_trend + ar_noise)
+      x.origin.full[,j] <- pnorm(rnorm(n))
+    }
+    x.origin <- x.origin.full
+    # plot(x.origin.full[,j])
+    fit.list <- list()
+    # x.detrended <- matrix(nrow = n.origin, ncol = p)
+    # for (j in 1:p) {
+      # y_ts <- ts(x.origin.full[, j], frequency = period) 
+      # decomp <- stl(y_ts, s.window = "periodic", robust = TRUE)
+      # seasonal <- as.numeric(decomp$time.series[, "seasonal"])
+      # x.detrended[,j] <- x.origin.full[, j] - seasonal
+      # fit.list[[j]] <- forecast::auto.arima(x.origin.full[, j] - seasonal, seasonal = FALSE, stepwise = TRUE)
+      # fit.list[[j]] <- fit <- auto.arima(y_ts, seasonal = TRUE, stepwise = TRUE, approximation = FALSE)
+      # x.detrended[, j] <- as.numeric(residuals(fit.list[[j]]))
+    # }
+    # x.origin <- x.detrended
 
-  evgam.df <- data.frame(
-    y = log(y.origin),
-    sin.time = sin(2 * pi * time.seq / 365),
-    cos.time = cos(2 * pi * time.seq / 365),
-    x.season = (time.seq %% period) / period,
-    x.origin
-  )
-  evgam.cov <- y ~ 1 + cos.time + sin.time #+ s(X1) + s(X2) + s(X3) + s(X4) + s(X5)
-  # evgam.cov <- y ~ 1 + s(x.season, bs = "cc", k =12) + s(X1, bs="ts", k=6) + s(X2, bs="ts", k=6) + s(X3, bs="ts", k=6) + s(X4, bs="ts", k=6) + s(X5, bs="ts", k=6)
-  # ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
-  # u.vec <- exp(predict(ald.cov.fit)$location) #* f.season.scale(time.seq)
-  u.vec <- exp(log(f.season.scale(time.seq)) + log(20^(1/alp.origin)-1))
-  # u.vec <- exp(log(f.season.scale(time.seq)) + log(20) / alp.origin)
-  # log_u_true <- log(f.season.scale(time.seq)) + log(20) / alp.origin
-  # log_u_hat  <- predict(ald.cov.fit)$location   # already log-scale now
-  # resid      <- log_u_true - log_u_hat
+    # range01 <- function(x){(x-min(x))/(max(x)-min(x))}
+    # X_min <- apply(x.origin, 2, min)
+    # X_minmax <- sapply(x.origin, function(x) max(x)-min(x))
+    # x.origin <- (sapply(as.data.frame(x.origin), FUN = range01))
+    alp.origin <- exp(theta.origin[1] + x.origin%*%theta.origin[-1] + f2(x.origin[,2]) + f3(x.origin[,3]))
+    y.noise <- NULL
+    for(i in 1:n){
+      y.noise[i] <- rmutil::rburr(1, m=1, s=alp.origin[i], f=1)
+    }
+    f.season.scale <- function(t){
+      return(2.5 - .8 * sin(2 * pi * t / 365) - .6 * cos(2 * pi * t/365)) 
+    }
+    y.origin <- y.noise * f.season.scale(time.seq)
 
-  # cor(resid, evgam.df$sin.time)   # target: ≈ 0
-  # cor(resid, evgam.df$cos.time)   # target: ≈ 0
-  # cor(resid, x.origin.full) 
+    evgam.df <- data.frame(
+      y = log(y.origin),
+      sin.time = sin(2 * pi * time.seq / 365),
+      cos.time = cos(2 * pi * time.seq / 365),
+      x.season = (time.seq %% period) / period,
+      x.origin
+    )
+    evgam.cov <- y ~ 1 + cos.time + sin.time 
+    ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
+    u.vec <- exp(predict(ald.cov.fit)$location)
+    # qr.fit <- quantreg::rq(y ~ 1 + cos.time + sin.time, data = evgam.df, tau = threshold)
+    # u.vec <- (predict(qr.fit))  # threshold on raw scale for Y_pos
+    if(any(u.vec < 0)){
+      is.positive <- TRUE
+      message("Negative values found in u.vec, retrying...")
+    } else {
+      is.positive <- FALSE
+    }
+  }
+
   excess.index <- which(y.origin > u.vec)
 
   x.origin <- x.origin[excess.index,]
@@ -204,10 +226,9 @@ for(iter in 1:total.iter){
   season_code_full <- season_code_full[excess.index]  
   n <- length(y.origin)
   colnames(x.origin) <- paste0("X", 1:p)
-
-  newx <- seq(min(x.origin), max(x.origin), length.out = grid.n)
+  newx <- seq(max(apply(x.origin, 2, min)), min(apply(x.origin, 2, max)), length.out = grid.n)
   xholder <- do.call(cbind, lapply(1:p, function(i) {seq(min(x.origin[,i]), max(x.origin[,i]), length.out = grid.n)}))
-  # newx <- seq(0.05, 0.95, length.out = grid.n)
+  # newx <- seq(0.01, 0.99, length.out = grid.n)
   # xholder <- do.call(cbind, lapply(1:p, function(i) {newx}))  
   
   # x.hidden <- seq(0.05, 0.95, length.out = 1000)
@@ -233,8 +254,8 @@ for(iter in 1:total.iter){
   g2 <- g2.l + g2.nl
   g3 <- g3.l + g3.nl
   eta.g <- theta.adjusted[1] + g1 + g2 + g3
-  alp.new <- exp(eta.g)
-  # alp.new <- as.vector(exp(theta.origin[1] + xholder %*% theta.origin[-1] + f2(xholder[,2]) + f3(xholder[,3])))
+  # alp.new <- exp(eta.g)
+  alp.new <- as.vector(exp(theta.origin[1] + xholder %*% theta.origin[-1] + f2(xholder[,2]) + f3(xholder[,3])))
   grid.zero <- rep(0, grid.n)
   g.new <- c(g1, g2, g3, grid.zero, grid.zero)
   l.new <- c(g1.l, g2.l, g3.l, grid.zero, grid.zero)
@@ -335,15 +356,15 @@ for(iter in 1:total.iter){
 
   init.alpha <- list(list(gamma_raw= array(rep(0.2, (psi*p)), dim=c(p,psi)),
                           theta = rep(-0.1, (p+1)), tau = rep(0.1, p), 
-                          # lambda1 = 0.1, lambda2 = 1),
+                          # lambda1 = 0.1, lambda2 = rep(1, p)),
                           lambda1 = rep(0.1, p), lambda2 = rep(1, p)),
                     list(gamma_raw = array(rep(0.15, (psi*p)), dim=c(p,psi)),
                           theta = rep(-0.05, (p+1)), tau = rep(0.3, p),
-                          # lambda1 = 0.4, lambda2 = 0.5),
+                          # lambda1 = 0.4, lambda2 = rep(1, p)),
                           lambda1 = rep(1, p), lambda2 = rep(1, p)),
                     list(gamma_raw = array(rep(0.1, (psi*p)), dim=c(p,psi)),
                           theta = rep(0.05, (p+1)), tau = rep(1, p),
-                          # lambda1 = 0.2, lambda2 = 0.5))
+                          # lambda1 = 0.2, lambda2 = rep(1, p)))
                           lambda1 = rep(0.2, p), lambda2 = rep(0.5, p)))
 
   fit1 <- stan(
@@ -402,13 +423,16 @@ for(iter in 1:total.iter){
   # qqplot.container[iter] <- apply(traj, 2, mean)#quantile, prob = 0.5)
 }
 
-alpha.container$x <- newx
-# alpha.container$true <- alp.new
-alpha.container$true <- rowMeans(true.container)
+newx <- seq(0, 1, length.out = grid.n)
+xholder <- do.call(cbind, lapply(1:p, function(i) {newx}))  
+alp.new <- as.vector(exp(theta.origin[1] + xholder %*% theta.origin[-1] + f2(xholder[,2]) + f3(xholder[,3])))
+alpha.container$x <- seq(0, 1, length.out = grid.n)
+alpha.container$true <- alp.new
+# alpha.container$true <- rowMeans(true.container)
 alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
-# load(paste0("./simulation/results/MC-Scenario_A/2026-02-07_",total.iter,"_MC_scD_",n.origin,".Rdata"))
+# load(paste0("./simulation/results/MC-Scenario_D/2026-03-09_",total.iter,"_MC_scD_",n.origin,".Rdata"))
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab(expression(alpha(c,...,c))) #+ ylab("")
 if(total.iter <= 50){
@@ -434,7 +458,7 @@ print(plt +
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_scD_",n.origin,".pdf"), width=10, height = 7.78)
 
-gridgsmooth.container$x <- newx
+gridgsmooth.container$x <- seq(0, 1, length.out = grid.n)
 gridgsmooth.container$true <- g.new
 gridgsmooth.container$mean <- rowMeans(gridgsmooth.container[,1:total.iter])
 gridgsmooth.container$covariate <- gl(p, grid.n, (p*grid.n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]"))

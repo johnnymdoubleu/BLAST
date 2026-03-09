@@ -60,10 +60,9 @@ for(i in 1:length(cov)){
 }
 
 fwi.scaled$time <- fwi.index$time <- seq(1,length(Y), length.out=length(Y))
-fwi.scaled$sea <- fwi.index$sea <- fwi.index$time %% 365 / 365
-fwi.scaled$cos.time <- fwi.index$cos.time <- cos(2*pi*seq(1,length(Y), length.out=length(Y))/365)
-# FIX: Corrected variable assignment here
-fwi.scaled$sin.time <- fwi.index$sin.time <- sin(2*pi*seq(1,length(Y), length.out=length(Y))/365) 
+fwi.scaled$sea <- fwi.index$sea <- fwi.index$time %% 365.25 / 365.25
+fwi.scaled$cos.time <- fwi.index$cos.time <- cos(2*pi*seq(1,length(Y), length.out=length(Y))/365.25)
+fwi.scaled$sin.time <- fwi.index$sin.time <- sin(2*pi*seq(1,length(Y), length.out=length(Y))/365.25) 
 
 fwi.index$date <- substr(cov.long$...1[missing.values],9,10)
 fwi.index$month <- factor(format(as.Date(substr(cov.long$...1[missing.values],1,10), "%Y-%m-%d"),"%b"),
@@ -184,8 +183,8 @@ colnames(xholder_fwi) <- fwi.cols
 # 1. Define your meaningful day of the year (e.g., August 15 is day 227)
 peak_day <- 227 
 
-raw_cos_peak <- cos(2 * pi * peak_day / 365)
-raw_sin_peak <- sin(2 * pi * peak_day / 365)
+raw_cos_peak <- cos(2 * pi * peak_day / 365.25)
+raw_sin_peak <- sin(2 * pi * peak_day / 365.25)
 # scaled_cos_peak <- (raw_cos_peak + 1) / 2
 # scaled_sin_peak <- (raw_sin_peak + 1) / 2
 xholder_harm <- matrix(

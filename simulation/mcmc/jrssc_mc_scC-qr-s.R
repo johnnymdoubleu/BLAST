@@ -5,11 +5,12 @@ library(rstan)
 library(MESS)
 library(evgam)
 library(crch)
-
+library(forecast)
+ 
 # Scenario C
 # array.id <- commandArgs(trailingOnly=TRUE)
 
-total.iter <- 2
+total.iter <- 5
 
 n <- n.origin <- 10000
 grid.n <- 200
@@ -40,7 +41,7 @@ make.nl <- function(x, raw_y) {
   ))
 }
 
-theta.origin <- c(0.5, 0, -0.6, 0, 0, 0.5)
+theta.origin <- c(0.4, 0, -0.6, 0, 0, 0.4)
 psi <- psi -2
 
 
@@ -134,35 +135,52 @@ mise.container <- c()
 
 for(iter in 1:total.iter){
   n <- n.origin
-  x.origin <- matrix(0, nrow = n, ncol = p)
+  x.origin.full <- matrix(0, nrow = n.origin, ncol = p)
 
   for (j in 1:p) {
-    # phase_shift <- j * (2 * pi / p) 
-    # seasonal_trend <- 0.5 + 0.1 * sin(2 * pi * time.seq / period + phase_shift)
-    seasonal_trend <- 0.5 + 0.1 * sin(j * 2 * pi * time.seq / period)  
-    uniform_noise <- runif(n, min = -0.4, max = 0.4)
-    x.origin[, j] <- seasonal_trend + uniform_noise
+    # seasonal_trend <- 0.1 * sin(2 * pi * time.seq / period) 
+    # uniform_noise <- runif(n, min = -0.49, max = 0.49)
+    # x.origin.full[, j] <- seasonal_trend + uniform_noise
+    # ar_noise <- arima.sim(model = list(ar = 0.5), n = n.origin, sd=0.5)
+    # x.origin.full[,j] <-(seasonal_trend + ar_noise)
+    x.origin.full[,j] <- pnorm(rnorm(n))
   }
-  x.origin.full <- x.origin
+  x.origin <- x.origin.full
+  # plot(x.origin.full[,j])
+  # fit.list <- list()
+  # x.detrended <- matrix(nrow = n.origin, ncol = p)
+  # for (j in 1:p) {
+    # y_ts <- ts(x.origin.full[, j], frequency = period) 
+    # decomp <- stl(y_ts, s.window = "periodic", robust = TRUE)
+    # seasonal <- as.numeric(decomp$time.series[, "seasonal"])
+    # x.detrended[,j] <- x.origin.full[, j] - seasonal
+    # fit.list[[j]] <- forecast::auto.arima(x.origin.full[, j] - seasonal, seasonal = FALSE, stepwise = TRUE)
+    # fit.list[[j]] <- fit <- auto.arima(y_ts, seasonal = TRUE, stepwise = TRUE, approximation = FALSE)
+    # x.detrended[, j] <- as.numeric(residuals(fit.list[[j]]))
+  # }
+  # x.origin <- x.detrended
+  range01 <- function(x){(x-min(x))/(max(x)-min(x))}
+  # X_min <- apply(x.origin, 2, min)
+  # X_minmax <- sapply(x.origin, function(x) max(x)-min(x))
+  # x.origin <- (sapply(as.data.frame(x.origin), FUN = range01))
+
   alp.origin <- exp(rep(theta.origin[1],n) + x.origin%*%theta.origin[-1] + f1(x.origin[,1]) + f5(x.origin[,5]))
-  y.noise <- NULL
-  for(i in 1:n){
-    y.noise[i] <- rmutil::rburr(1, m=1, s=alp.origin[i], f=1)
-  }
+  # y.noise <- rt(n, df = alp.origin)
+  y.noise <- rtt(n, df = alp.origin, left=0)
   f.season.scale <- function(t){
     return(2.5 - .8 * sin(2 * pi * t / 365) - .6 * cos(2 * pi * t/365)) 
   }
   y.origin <- y.noise * f.season.scale(time.seq)
 
   evgam.df <- data.frame(
-    y = log(y.origin),
+    y = (y.origin),
     sin.time = sin(2 * pi * time.seq / 365),
     cos.time = cos(2 * pi * time.seq / 365),
     x.origin
   )
-  evgam.cov <- y ~ 1 + cos.time + sin.time + s(X1,k=3) + s(X2,k=3) + s(X3,k=3) + s(X4,k=3) + s(X5,k=3)
+  evgam.cov <- y ~ 1 + cos.time + sin.time #+ s(X1,k=3) + s(X2,k=3) + s(X3,k=3) + s(X4,k=3) + s(X5,k=3)
   ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
-  u.vec <- exp(predict(ald.cov.fit)$location)
+  u.vec <- (predict(ald.cov.fit)$location)
 
   excess.index <- which(y.origin > u.vec)
 
@@ -172,9 +190,13 @@ for(iter in 1:total.iter){
   season_code_full <- season_code_full[excess.index]  
   n <- length(y.origin)
   colnames(x.origin) <- paste0("X", 1:p)
-
-  newx <- seq(min(x.origin), max(x.origin), length.out = grid.n)
-  xholder <- do.call(cbind, lapply(1:p, function(i) {seq(min(x.origin[,i]), max(x.origin[,i]), length.out = grid.n)}))  
+  # x.origin <- (sapply(as.data.frame(x.origin), FUN = range01))
+  newx <- seq(max(apply(x.origin, 2, min)), min(apply(x.origin, 2, max)), length.out = grid.n)
+  # xholder <- do.call(cbind, lapply(1:p, function(i) {seq(min(x.origin[,i]), max(x.origin[,i]), length.out = grid.n)}))  
+  # newx <- seq(0.1, 0.9, length.out = grid.n)
+  xholder <- do.call(cbind, lapply(1:p, function(i) {newx}))
+  # newx <- seq(0, 1, length.out = grid.n)
+  # xholder <- do.call(cbind, lapply(1:p, function(i) {newx}))  
   alp.new <- as.vector(exp(theta.origin[1] + xholder %*% theta.origin[-1] + 
                           f1(xholder[,1]) + f5(xholder[,5])))
 
@@ -200,8 +222,8 @@ for(iter in 1:total.iter){
   g.new <- c(g1, g2.l, grid.zero, grid.zero, g5)
   l.new <- c(g1.l, g2.l, grid.zero, grid.zero, g5.l)
   nl.new <- c(g1.nl, grid.zero, grid.zero, grid.zero, g5.nl)
-  colnames(xholder) <- colnames(x.origin) <- paste0("X", 1:p)
-  covariates <- paste0("X", 1:p)
+
+  colnames(xholder) <- colnames(x.origin) <- covariates <- paste0("X", 1:p)
   group.map <- c()
   Z.list <- list()        # Stores the final non-linear design matrices
   scale_stats_list <- list() 
@@ -322,8 +344,8 @@ for(iter in 1:total.iter){
   gridgsmooth.container[,iter] <- as.vector(matrix(gridgsmooth.samples[,4], nrow = grid.n, byrow=TRUE))
   gridgl.container[,iter] <- as.vector(matrix(gridgl.samples[,4], nrow = grid.n, byrow=TRUE))
   gridgnl.container[,iter] <- as.vector(matrix(gridgnl.samples[,4], nrow = grid.n, byrow=TRUE))
-  newx <- seq(0, 1, length.out = grid.n)
-  mise.container[iter] <- auc(newx, se.samples[,1], type="spline")
+  # newx <- seq(0.1, , length.out = grid.n)
+  mise.container[iter] <- auc(newx, se.samples[,4], type="spline")
 
   # mcmc.alpha <- rstan::extract(fit1)$alpha
   # r <- matrix(, nrow = n, ncol = 30)
@@ -354,9 +376,12 @@ for(iter in 1:total.iter){
   # qqplot.container[iter] <- apply(traj, 2, mean)#quantile, prob = 0.5)
 }
 
-alpha.container$x <- newx
-# alpha.container$true <- alp.new
-alpha.container$true <- rowMeans(true.container)
+newx <- seq(0, 1, length.out = grid.n)
+xholder <- do.call(cbind, lapply(1:p, function(i) {newx}))  
+alp.new <- as.vector(exp(theta.origin[1] + xholder %*% theta.origin[-1] + f1(xholder[,1]) + f5(xholder[,5])))
+alpha.container$x <- seq(0, 1, length.out = grid.n)
+alpha.container$true <- alp.new
+# alpha.container$true <- rowMeans(true.container)
 alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
@@ -386,7 +411,7 @@ print(plt +
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_scC_",n.origin,".pdf"), width=10, height = 7.78)
 
-gridgsmooth.container$x <- newx
+gridgsmooth.container$x <- seq(0, 1, length.out = grid.n)
 gridgsmooth.container$true <- g.new
 gridgsmooth.container$mean <- rowMeans(gridgsmooth.container[,1:total.iter])
 gridgsmooth.container$covariate <- gl(p, grid.n, (p*grid.n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]"))

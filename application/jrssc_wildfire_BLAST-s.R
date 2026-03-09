@@ -12,6 +12,7 @@ library(ggdensity)
 library(ggforce)
 library(ggdist)
 library(evgam)
+library(forecast)
 options(mc.cores = parallel::detectCores())
 
 # Structure of the FWI System
@@ -32,7 +33,7 @@ missing.values <- which(!is.na(df.long$measurement))
 #considering the case of leap year, the missing values are the 29th of Feb
 #Thus, each year consist of 366 data with either 1 or 0 missing value.
 Y <- df.long$measurement[!is.na(df.long$measurement)]
-psi.origin <- psi <- 30
+psi.origin <- psi <- 8
 threshold <- 0.95
 
 multiplesheets <- function(fname) {
@@ -68,49 +69,56 @@ for(i in 1:length(cov)){
 # era5 <- era5[!(era5$year == 1999 & era5$month == 2 & era5$day == 14), ]
 # fwi.index$ERA5 <- fwi.scaled$ERA5 <- as.numeric(era5$ERA_5)
 fwi.scaled$time <- fwi.index$time <- seq(1,length(Y), length.out=length(Y))
-fwi.scaled$sea <- fwi.index$sea <- fwi.index$time %% 366 / 366
-fwi.scaled$cos.time <- fwi.index$cos.time <- cos(2*pi*seq(1,length(Y), length.out=length(Y))/366)
-fwi.scaled$sin.time <- fwi.index$cos.time <- sin(2*pi*seq(1,length(Y), length.out=length(Y))/366)
+fwi.scaled$sea <- fwi.index$sea <- fwi.index$time %% 365.25 / 365.25
+fwi.scaled$cos.time <- fwi.index$cos.time <- cos(2*pi*seq(1,length(Y), length.out=length(Y))/365.25)
+fwi.scaled$sin.time <- fwi.index$sin.time <- sin(2*pi*seq(1,length(Y), length.out=length(Y))/365.25)
 fwi.index$date <- substr(cov.long$...1[missing.values],9,10)
 fwi.index$month <- factor(format(as.Date(substr(cov.long$...1[missing.values],1,10), "%Y-%m-%d"),"%b"),
                             levels = c("Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"))
 fwi.index$date <- as.numeric(fwi.index$date)
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 
-fit.list <- list()
-for (j in 1:7) {
-  y_ts <- ts(fwi.scaled[, j], frequency = 365.25)
-  # Step A: STL for seasonality
-  decomp <- stl(y_ts, s.window = "periodic", robust = TRUE)
-  # remainder <- as.numeric(decomp$time.series[, "remainder"])
-  seasonal <- as.numeric(decomp$time.series[, "seasonal"])
-  fit.list[[j]] <- forecast::auto.arima(fwi.scaled[,j] - seasonal, seasonal = FALSE, stepwise = TRUE)
-  fwi.index[,j] <- fwi.scaled[, j] <- as.numeric(residuals(fit.list[[j]]))
-}
+# time_arima <- seq(1, length(Y))
+# xreg_trend_seasonal <- cbind(
+#   trend = time_arima,
+#   cos_season = cos(2 * pi * time_arima / 365.25),
+#   sin_season = sin(2 * pi * time_arima / 365.25)
+# )
 
+# fit.list <- list()
+# for (j in 1:7) {
+#   y_ts <- ts(fwi.scaled[, j], frequency = 365.25)
+#   fit.list[[j]] <- forecast::auto.arima(
+#     y_ts,
+#     xreg = xreg_trend_seasonal,
+#     seasonal = FALSE,
+#     stepwise = TRUE,
+#     approximation = FALSE
+#   )
+#   fwi.index[, j] <- fwi.scaled[, j] <- as.numeric(residuals(fit.list[[j]]))
+# }
 
-acf(fwi.index$BUI)
-acf(fwi.index$ISI)
-acf(fwi.index$FFMC)
-acf(fwi.index$DMC)
-acf(fwi.index$DC)
-
-fwi.scaled$time <- seq(1, length(Y))
-fwi.scaled$cos.time <- cos(2*pi*fwi.scaled$time/365.25)
-fwi.scaled$sin.time <- sin(2*pi*fwi.scaled$time/365.25)
+# acf(fwi.index$BUI)
+# acf(fwi.index$ISI)
+# acf(fwi.index$FFMC)
+# acf(fwi.index$DMC)
+# acf(fwi.index$DC)
 
 above.0 <- which(Y > 0)
 Y_pos <- Y[above.0]
 fwi_pos <- fwi.scaled[above.0, ]
 
-qr.df <- data.frame(y = Y_pos, fwi_pos)
-ald.cov.fit <- evgam(y ~ 1 + cos.time + sin.time, data = qr.df, family = "ald", ald.args=list(tau = 0.95))
-u.vec <- as.numeric(predict(ald.cov.fit)$location)
+qr.df <- data.frame(y = log(Y_pos), fwi_pos)
+qr.fit <- evgam(y ~ 1 + cos.time + sin.time, data = qr.df, family = "ald", ald.args=list(tau = threshold))
+u.vec <- exp(predict(qr.fit)$location)
+# qr.fit <- quantreg::rq(y ~ 1 + cos.time + sin.time, data = qr.df, tau = threshold)
+# u.vec <- exp(predict(qr.fit))  # threshold on raw scale for Y_pos
 
 excess_idx <- which(Y_pos > u.vec)
 y <- Y_pos[excess_idx]
 u <- u.vec[excess_idx]
 fwi_pos <- fwi_pos[excess_idx, 3:7] # BUI to DC
+
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 fwi.cols <- c("BUI", "ISI", "FFMC", "DMC", "DC")
 X_minmax <- sapply(fwi_pos, function(x) max(x)-min(x))
