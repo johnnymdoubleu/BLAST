@@ -224,8 +224,9 @@ transformed parameters {
 
 model {
   target += pareto_lpdf(y | u, alpha);
-  target += normal_lpdf(theta[1] | 0, 10);
-  target += gamma_lpdf(lambda1 | 1e-1, 1e-1); 
+  target += normal_lpdf(theta[1] | 0, 1);
+  // target += gamma_lpdf(lambda1 | 1e-1, 1e-1);
+  target += exponential_lpdf(lambda1 | 0.1); 
   target += gamma_lpdf(lambda2 | 1e-2, 1e-2);
   for (j in 1:p) {
     target += double_exponential_lpdf(theta[j+1] | 0, 1/lambda1[j]);

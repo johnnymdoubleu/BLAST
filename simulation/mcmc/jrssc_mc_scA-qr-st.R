@@ -8,7 +8,7 @@ library(evgam)
 # Scenario A
 # array.id <- commandArgs(trailingOnly=TRUE)
 
-total.iter <- 25
+total.iter <- 5
 
 n <- n.origin <- 10000
 grid.n <- 200
@@ -91,7 +91,8 @@ transformed parameters {
 model {
   target += pareto_lpdf(y | u, alpha);
   target += normal_lpdf(theta[1] | 0, 10); // Tightened prior
-  target += gamma_lpdf(lambda1 | 1e-1, 1e-1); 
+  // target += gamma_lpdf(lambda1 | 1e-1, 1e-1); 
+  target += exponential_lpdf(lambda1 | 0.1); 
   target += gamma_lpdf(lambda2 | 1e-2, 1e-2);
   for (k in 1:p_lin){
     target += double_exponential_lpdf(theta[(k+1)] | 0, 1/(lambda1[k]));
@@ -145,7 +146,7 @@ for(iter in 1:total.iter){
   for (j in 1:p) {
     phase_shift <- j * (2 * pi / p) 
     seasonal_trend <- 0.5 + 0.1 * sin(2 * pi * time.seq / period + phase_shift) 
-    uniform_noise <- runif(n, min = -0.4, max = 0.4)
+    uniform_noise <- runif(n, min = -0.49, max = 0.49)
     x.origin[, j] <- seasonal_trend + uniform_noise
   }
   colnames(x.origin) <- paste0("X", 1:p)

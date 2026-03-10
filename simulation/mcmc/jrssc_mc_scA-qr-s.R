@@ -9,7 +9,7 @@ library(forecast)
 # Scenario A
 # array.id <- commandArgs(trailingOnly=TRUE)
 
-total.iter <- 100
+total.iter <- 10
 
 n <- n.origin <- 10000
 grid.n <- 200
@@ -88,6 +88,7 @@ model {
   target += pareto_lpdf(y | u, alpha);
   target += normal_lpdf(theta[1] | 0, 10);
   target += gamma_lpdf(lambda1 | 1e-1, 1e-1); 
+  // target += exponential_lpdf(lambda1 | 0.1); 
   target += gamma_lpdf(lambda2 | 1e-2, 1e-2);  
   for (j in 1:p){
     target += double_exponential_lpdf(theta[(j+1)] | 0, 1/(lambda1[j]));
@@ -226,39 +227,35 @@ mise.container <- c()
 
 for(iter in 1:total.iter){
   n <- n.origin
-  x.origin.full <- matrix(0, nrow = n.origin, ncol = p)
-  for (j in 1:p) {
-    # seasonal_trend <- 0.1 * sin(2 * pi * time.seq / period) 
-    # uniform_noise <- runif(n, min = -0.49, max = 0.49)
-    # x.origin.full[, j] <- seasonal_trend + uniform_noise
-    # ar_noise <- arima.sim(model = list(ar = 0.5), n = n.origin, sd=0.5)
-    # x.origin.full[,j] <-(seasonal_trend + ar_noise)
-    x.origin.full[,j] <-pnorm(rnorm(n))
-  }
-  x.origin <- x.origin.full
-  # plot(x.origin.full[,j])
+  x.origin <- x.origin.full <- pnorm(matrix(rnorm(n.origin*p), nrow = n.origin, ncol = p))
+  range01 <- function(x){(x-min(x))/(max(x)-min(x))}
+  alp.origin <- exp(theta.origin[1] + x.origin.full%*%theta.origin[-1] + 
+                    f2(x.origin.full[,2]) + f5(x.origin.full[,5]))
+  y.origin <- rPareto(n, rep(1, n), alpha = alp.origin)
+  # for (j in 1:p) {
+  #   phase_shift <- j * (2 * pi / p) 
+  #   seasonal_trend <- 0.5 * sin(2 * pi * time.seq / period - phase_shift)
+  #   x.origin[,j] <- seasonal_trend + x.origin.full[,j]
+  # }
+
+  # xreg.season <- cbind(
+  #   trend = time.seq,
+  #   cos_season = cos(2 * pi * time.seq / 365),
+  #   sin_season = sin(2 * pi * time.seq / 365)
+  # )
+
   # fit.list <- list()
   # x.detrended <- matrix(nrow = n.origin, ncol = p)
   # for (j in 1:p) {
-  #   y_ts <- ts(x.origin.full[, j], frequency = period) 
-  #   # decomp <- stl(y_ts, s.window = "periodic", robust = TRUE)
-  #   # seasonal <- as.numeric(decomp$time.series[, "seasonal"])
-  #   # x.detrended[,j] <- x.origin.full[, j] - seasonal
-  #   # fit.list[[j]] <- forecast::auto.arima(x.origin.full[, j] - seasonal, seasonal = FALSE, stepwise = TRUE)
-  #   fit.list[[j]] <- fit <- auto.arima(y_ts, seasonal = TRUE, stepwise = TRUE, approximation = FALSE)
+  #   y_ts <- ts(x.origin[, j], frequency = period) 
+  #   fit.list[[j]] <- fit <- auto.arima(y_ts, seasonal = FALSE, xreg = xreg.season, stepwise = TRUE, approximation = FALSE)
   #   x.detrended[, j] <- as.numeric(residuals(fit.list[[j]]))
   # }
   # x.origin <- x.detrended
-  # range01 <- function(x){(x-min(x))/(max(x)-min(x))}
-  # X_min <- apply(x.origin, 2, min)
-  # X_minmax <- sapply(x.origin, function(x) max(x)-min(x))
-  # x.origin <- (sapply(as.data.frame(x.origin), FUN = range01))
-  alp.origin <- exp(rep(theta.origin[1],n) + x.origin%*%theta.origin[-1] + f2(x.origin[,2]) + f5(x.origin[,5]))
-  y.noise <- rPareto(n, rep(1, n), alpha = alp.origin)
   f.season.scale <- function(t){
     return(2.5 - .8 * sin(2 * pi * t / 365) - .6 * cos(2 * pi * t/365)) 
-  }
-  y.origin <- y.noise * f.season.scale(time.seq)
+  }  
+  y.origin <- y.origin * f.season.scale(time.seq)
 
   evgam.df <- data.frame(
     y = (y.origin),
@@ -270,22 +267,13 @@ for(iter in 1:total.iter){
   evgam.cov <- y ~ 1 + cos.time + sin.time #+ s(X1, k=6) + s(X2, k=6) + s(X3, k=6) + s(X4, k=6) + s(X5, k=6)
   ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
   u.vec <- (predict(ald.cov.fit)$location)
-  # u.vec <- exp(log(f.season.scale(time.seq)) + log(20) / alp.origin)
-  # log_u_true <- log(f.season.scale(time.seq) * 20^(1/alp.origin))
-  # log_u_hat  <- predict(ald.cov.fit)$location   # already log-scale now
-  # resid      <- log_u_true - log_u_hat
 
-  # cor(resid, evgam.df$sin.time)   # target: ≈ 0
-  # cor(resid, evgam.df$cos.time)   # target: ≈ 0
-  # cor(resid, x.detrended) 
   excess.index <- which(y.origin > u.vec)
-
   x.origin <- data.frame(x.origin[excess.index,])
   y.origin <- y.origin[excess.index]
   u <- u.vec[excess.index]
   season_code_full <- season_code_full[excess.index]  
   n <- length(y.origin)
-  # u <- f.season.scale(time.seq)
 
   colnames(x.origin) <- paste0("X", 1:p)
 
@@ -296,29 +284,10 @@ for(iter in 1:total.iter){
   # xholder <- do.call(cbind, lapply(1:p, function(j) {
   #   newx * (x_max[j] - x_min[j]) + x_min[j]
   # }))
-  f2.hidden <- make.nl(x.origin[,2], f2(x.origin[,2]))
-  f5.hidden <- make.nl(x.origin[,5], f5(x.origin[,5]))
-  theta.adjusted <- c(theta.origin[1] + f2.hidden$intercept + f5.hidden$intercept,
-                      theta.origin[2],
-                      theta.origin[3] + f2.hidden$slope,
-                      theta.origin[4],
-                      theta.origin[5],
-                      theta.origin[6] + f5.hidden$slope)
   
+  x.grid <- do.call(cbind, lapply(1:p, function(i) {seq(0, 1, length.out = grid.n)}))  
+  alp.new <- as.vector(exp(theta.origin[1] + x.grid %*% theta.origin[-1] + f2(x.grid[,2]) + f5(x.grid[,5])))
 
-  g2.nl <- f2(xholder[,2]) - (f2.hidden$intercept + f2.hidden$slope*xholder[,2])
-  g5.nl <- f5(xholder[,5]) - (f5.hidden$intercept + f5.hidden$slope*xholder[,5])
-  g2.l <- theta.adjusted[3] * xholder[,2]
-  g5.l <- theta.adjusted[6] * xholder[,5]
-  g2 <- g2.l + g2.nl
-  g5 <- g5.l + g5.nl
-  eta.g <- theta.adjusted[1] + g2 + g5
-  
-  alp.new <- as.vector(exp(theta.origin[1] + xholder %*% theta.origin[-1] + f2(xholder[,2]) + f5(xholder[,5])))
-  grid.zero <- rep(0, grid.n)
-  g.new <- c(grid.zero, g2, grid.zero, grid.zero, g5)
-  l.new <- c(grid.zero, g2.l, grid.zero, grid.zero, g5.l)
-  nl.new <- c(grid.zero, g2.nl, grid.zero, grid.zero, g5.nl)
 
   group.map <- c()
   Z.list <- list()        # Stores the final non-linear design matrices
@@ -502,40 +471,53 @@ for(iter in 1:total.iter){
   # qqplot.container[iter] <- apply(traj, 2, mean)#quantile, prob = 0.5)
 }
 
-newx <- seq(0, 1, length.out = grid.n)
-xholder <- do.call(cbind, lapply(1:p, function(i) {newx}))  
+# xholder <- do.call(cbind, lapply(1:p, function(i) {seq(0, 1, length.out = grid.n)}))  
+xholder <- do.call(cbind, lapply(1:p, function(i) {seq(0, 1, length.out = grid.n)}))  
 alp.new <- as.vector(exp(theta.origin[1] + xholder %*% theta.origin[-1] + f2(xholder[,2]) + f5(xholder[,5])))
-alpha.container$x <- seq(0, 1, length.out = grid.n)
-# alpha.container$true <- alp.new
-alpha.container$true <- rowMeans(true.container)
+alpha.container$x <- xholder[,1]
+alpha.container$true <- alp.new
+# alpha.container$true <- rowMeans(true.container)
 alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
-load(paste0("./simulation/results/MC-Scenario_A/2026-03-09_",total.iter,"_MC_scA_",n.origin,".Rdata"))
+load(paste0("./simulation/results/MC-Scenario_A/2026-03-10_",total.iter,"_MC_scA_",n.origin,".Rdata"))
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab(expression(alpha(c,...,c)))
-if(total.iter <= 50){
-  for(i in 1:total.iter){
-    plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.05, linewidth = 0.7)
-  }
-} else{
-  for(i in 50:100){
-    plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.05, linewidth = 0.7)
-  }
+plot_limit <- min(total.iter, 50)
+for(i in 1:plot_limit){
+  plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.05, linewidth = 0.7)
 }
 print(plt + 
-        geom_line(aes(y=true, col = "True"), linewidth = 2, linetype = 2) + 
-        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.8) + ylim(0, 10) +
-        scale_fill_manual(values=c("steelblue"), name = "") +
-        scale_color_manual(values = c("steelblue", "red"))+
-        guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) +
+        geom_line(aes(y=true), color = "red", linewidth = 2, linetype = 2) + 
+        geom_line(aes(y=mean), color = "steelblue", linewidth = 1.8) + ylim(0, 10) +
         theme_minimal(base_size = 40) + 
         theme(legend.position = "none",
                 strip.text = element_blank(),
                 axis.text = element_text(size = 30)))
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_scA_",n.origin,".pdf"), width=10, height = 7.78)
+
+f2.hidden <- make.nl(x.origin.full[,2], f2(x.origin.full[,2]))
+f5.hidden <- make.nl(x.origin.full[,5], f5(x.origin.full[,5]))
+theta.adjusted <- c(theta.origin[1] + f2.hidden$intercept + f5.hidden$intercept,
+                    theta.origin[2],
+                    theta.origin[3] + f2.hidden$slope,
+                    theta.origin[4],
+                    theta.origin[5],
+                    theta.origin[6] + f5.hidden$slope)
+g2.nl <- f2(x.grid[,2]) - (f2.hidden$intercept + f2.hidden$slope*x.grid[,2])
+g5.nl <- f5(x.grid[,5]) - (f5.hidden$intercept + f5.hidden$slope*x.grid[,5])
+g2.l <- theta.adjusted[3] * x.grid[,2]
+g5.l <- theta.adjusted[6] * x.grid[,5]
+g2 <- g2.l + g2.nl
+g5 <- g5.l + g5.nl
+g2 <- g2 - mean(g2)
+g5 <- g5 - mean(g5)
+# eta.g <- theta.adjusted[1] + x.grid %*% theta.adjusted[-1] + g2 + g5
+grid.zero <- rep(0, grid.n)
+g.new <- c(grid.zero, g2, grid.zero, grid.zero, g5)
+l.new <- c(grid.zero, g2.l, grid.zero, grid.zero, g5.l)
+nl.new <- c(grid.zero, g2.nl, grid.zero, grid.zero, g5.nl)
 
 gridgsmooth.container$x <- seq(0, 1, length.out = grid.n)
 gridgsmooth.container$true <- g.new
@@ -544,24 +526,15 @@ gridgsmooth.container$covariate <- gl(p, grid.n, (p*grid.n), labels = c("g[1]", 
 gridgsmooth.container <- as.data.frame(gridgsmooth.container)
 
 plt <- ggplot(data = gridgsmooth.container, aes(x = x, group = covariate)) + ylab("") + xlab(expression(c))
-if(total.iter <= 50){
-  for(i in 1:total.iter){
-    plt <- plt + geom_line(aes(y = .data[[names(gridgsmooth.container)[i]]]), alpha = 0.05, linewidth = 0.7)
-  }
-} else{
-  # for(i in 1:total.iter){
-  for(i in 50:100){
-    plt <- plt + geom_line(aes(y = .data[[names(gridgsmooth.container)[i]]]), alpha = 0.05, linewidth = 0.7)
-  }
+plot_limit <- min(total.iter, 50)
+for(i in 1:plot_limit){
+  plt <- plt + geom_line(aes(y = .data[[names(gridgsmooth.container)[i]]]), alpha = 0.05, linewidth = 0.7)
 }
 print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + ylim(-1.5, 1.5) +
-        geom_line(aes(y=true, col = "True"), linewidth = 2, linetype = 2) + 
-        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5) + 
+        geom_line(aes(y=true), color = "red", linewidth = 2, linetype = 2) + 
+        geom_line(aes(y=mean), color = "steelblue", linewidth = 1.5) + 
         facet_grid(covariate ~ ., scales = "free_x", switch = "y",
                     labeller = label_parsed) +
-        scale_color_manual(values = c("steelblue", "red"))+
-        guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) +
         theme_minimal(base_size = 30) +
         theme(legend.position = "none",
                 plot.margin = margin(0,0,0,-20),
