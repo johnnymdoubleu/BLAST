@@ -12,7 +12,7 @@ library(forecast)
 
 total.iter <- 2
 
-n <- n.origin <- 10000
+n <- n.origin <- 20000
 grid.n <- 200
 psi.origin <- psi <- 10
 threshold <- 0.95
@@ -354,23 +354,14 @@ alpha.container <- as.data.frame(alpha.container)
 
 # load(paste0("./simulation/results/MC-Scenario_C/2026-03-10_",total.iter,"_MC_scC_",n.origin,".Rdata"))
 
-plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab(expression(alpha(c,...,c))) #+ ylab("")
-if(total.iter <= 50){
-  for(i in 1:total.iter){
-    plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.05, linewidth = 0.7)
-  }
-} else{
-  for(i in 50:100){
-    plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.05, linewidth = 0.7)
-  }
+plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + ylab(expression(alpha(c,...,c))) #+ ylab("")
+plot_limit <- min(total.iter, 50)
+for(i in 1:plot_limit){
+  plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.05, linewidth = 0.7)
 }
 print(plt + 
-        geom_line(aes(y=true, col = "True"), linewidth = 2, linetype = 2) + 
-        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.8) + ylim(0,10) +
-        scale_fill_manual(values=c("steelblue"), name = "") +
-        scale_color_manual(values = c("steelblue", "red"))+
-        guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) +
+        geom_line(aes(y=true), colour = "red", linewidth = 2, linetype = 2) + 
+        geom_line(aes(y=mean), colour = "steelblue", linewidth = 1.8) + ylim(0, 10) +
         theme_minimal(base_size = 40) + 
         theme(legend.position = "none",
                 strip.text = element_blank(),
@@ -396,14 +387,14 @@ g2.l <- theta.adjusted[3]*xholder[,2]
 g5.l <- theta.adjusted[6]*xholder[,5]
 g1 <- g1.l + g1.nl
 g5 <- g5.l + g5.nl
-# g1 <- g1 - mean(g1)
-# g2 <- g2 - mean(g2)
-# g5 <- g5 - mean(g5)
-# eta.g <- rep(theta.adjusted[1], grid.n) + g1 + g2.l + g5
+g1 <- g1 - mean(g1)
+g2 <- g2 - mean(g2)
+g5 <- g5 - mean(g5)
 grid.zero <- rep(0, grid.n)
 g.new <- c(g1, g2.l, grid.zero, grid.zero, g5)
 l.new <- c(g1.l, g2.l, grid.zero, grid.zero, g5.l)
 nl.new <- c(g1.nl, grid.zero, grid.zero, grid.zero, g5.nl)
+
 gridgsmooth.container$x <- seq(0, 1, length.out = grid.n)
 gridgsmooth.container$true <- g.new
 gridgsmooth.container$mean <- rowMeans(gridgsmooth.container[,1:total.iter])
@@ -411,24 +402,15 @@ gridgsmooth.container$covariate <- gl(p, grid.n, (p*grid.n), labels = c("g[1]", 
 gridgsmooth.container <- as.data.frame(gridgsmooth.container)
 
 plt <- ggplot(data = gridgsmooth.container, aes(x = x, group = covariate)) + ylab("") + xlab(expression(c))
-if(total.iter <= 50){
-  for(i in 1:total.iter){
-    plt <- plt + geom_line(aes(y = .data[[names(gridgsmooth.container)[i]]]), alpha = 0.05, linewidth = 0.7)
-  }
-} else{
-  # for(i in 1:total.iter){
-  for(i in 50:100){
-    plt <- plt + geom_line(aes(y = .data[[names(gridgsmooth.container)[i]]]), alpha = 0.05, linewidth = 0.7)
-  }
+plot_limit <- min(total.iter, 50)
+for(i in 1:plot_limit){
+  plt <- plt + geom_line(aes(y = .data[[names(gridgsmooth.container)[i]]]), alpha = 0.05, linewidth = 0.7)
 }
-print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + ylim(-3, 3) +
-        geom_line(aes(y=true, col = "True"), linewidth = 2, linetype = 2) + 
-        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.5) + 
+print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + ylim(-1.5, 1.5) +
+        geom_line(aes(y=true), color = "red", linewidth = 2, linetype = 2) + 
+        geom_line(aes(y=mean), color = "steelblue", linewidth = 1.5) + 
         facet_grid(covariate ~ ., scales = "free_x", switch = "y",
                     labeller = label_parsed) +
-        scale_color_manual(values = c("steelblue", "red"))+
-        guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) +
         theme_minimal(base_size = 30) +
         theme(legend.position = "none",
                 plot.margin = margin(0,0,0,-20),

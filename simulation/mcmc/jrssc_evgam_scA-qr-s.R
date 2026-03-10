@@ -5,11 +5,11 @@ library(rstan)
 library(MESS)
 library(evgam)
 library(mgcv)
-
+library(forecast)
 
 # Scenario A
 # array.id <- commandArgs(trailingOnly=TRUE)
-total.iter <- 25
+total.iter <- 5
 
 n <- n.origin <- 10000
 grid.n <- 200
@@ -26,7 +26,6 @@ time.seq <- 1:n
 period <- 365 
 x.season <- time.seq / period 
 
-# Convert continuous season to Factor for the 'by' argument
 season_code_full <- cut((time.seq%% period / period), breaks = c(-0.1, 0.25, 0.5, 0.75, 1.1), labels = c(1,2,3,4))
 seasons <- c("Winter", "Spring", "Summer", "Autumn")
 
@@ -128,75 +127,66 @@ mise.vgam.scale.container <- mise.vgam.1.container <- mise.evgam.scale.container
 
 for(iter in 1:total.iter){
   n <- n.origin
-  x.origin <- matrix(0, nrow = n, ncol = p)
-
+  x.origin <- x.origin.full <- pnorm(matrix(rnorm(n.origin*p), nrow = n.origin, ncol = p))
+  range01 <- function(x){(x-min(x))/(max(x)-min(x))}
+  alp.origin <- exp(theta.origin[1] + x.origin.full%*%theta.origin[-1] + 
+                    f2(x.origin.full[,2]) + f5(x.origin.full[,5]))
+  y.origin <- rPareto(n, rep(1, n), alpha = alp.origin)
   for (j in 1:p) {
-    # phase_shift <- j * (2 * pi / p) 
-    # seasonal_trend <- 0.5 + 0.1 * sin(2 * pi * time.seq / period + phase_shift)
-    seasonal_trend <- 0.5 + 0.1 * sin(2 * pi * time.seq / period)
-    uniform_noise <- runif(n, min = -0.49, max = 0.49)
-    x.origin[, j] <- seasonal_trend + uniform_noise
+    phase_shift <- j * (2 * pi / p) 
+    seasonal_trend <- 0.5 * sin(2 * pi * time.seq / period - phase_shift)
+    x.origin[,j] <- seasonal_trend + x.origin.full[,j]
   }
 
+  xreg.season <- cbind(
+    trend = time.seq,
+    cos_season = cos(2 * pi * time.seq / 365),
+    sin_season = sin(2 * pi * time.seq / 365)
+  )
+
+  fit.list <- list()
+  x.detrended <- matrix(nrow = n.origin, ncol = p)
   for (j in 1:p) {
     y_ts <- ts(x.origin[, j], frequency = period) 
-    decomp <- stl(y_ts, s.window = "periodic", robust = TRUE)
-    seasonal_part <- as.numeric(decomp$time.series[, "seasonal"])
-    x.origin[, j] <- x.origin[, j] - seasonal_part
+    fit.list[[j]] <- fit <- auto.arima(y_ts, seasonal = FALSE, xreg = xreg.season, stepwise = TRUE, approximation = FALSE)
+    x.detrended[, j] <- as.numeric(residuals(fit.list[[j]]))
   }
-
-  alp.origin <- exp(rep(theta.origin[1],n) + x.origin%*%theta.origin[-1] + f2(x.origin[,2]) + f5(x.origin[,5]))
-  y.noise <- rPareto(n, rep(1, n), alpha = alp.origin)
+  x.origin <- x.detrended
   f.season.scale <- function(t){
     return(2.5 - .8 * sin(2 * pi * t / 365) - .6 * cos(2 * pi * t/365)) 
-  }
-  y.origin <- y.noise * f.season.scale(time.seq)
+  }  
+  y.origin <- y.origin * f.season.scale(time.seq)
 
   evgam.df <- data.frame(
     y = (y.origin),
     sin.time = sin(2 * pi * time.seq / 365),
     cos.time = cos(2 * pi * time.seq / 365),
+    x.season = (time.seq %% period) / period,
     x.origin
   )
-  evgam.cov <- y ~ 1 + cos.time + sin.time #+ X1 + X2 + X3 + X4 + X5
+  evgam.cov <- y ~ 1 + cos.time + sin.time 
   ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
   u.vec <- (predict(ald.cov.fit)$location)
 
   excess.index <- which(y.origin > u.vec)
-
-  x.origin <- x.origin[excess.index,]
+  x.origin <- data.frame(x.origin[excess.index,])
   y.origin <- y.origin[excess.index]
   u <- u.vec[excess.index]
   season_code_full <- season_code_full[excess.index]  
   n <- length(y.origin)
 
-  f2.hidden <- make.nl(x.origin[,2], f2(x.origin[,2]))
-  f5.hidden <- make.nl(x.origin[,5], f5(x.origin[,5]))
-  theta.adjusted <- c(theta.origin[1] + f2.hidden$intercept + f5.hidden$intercept,
-                      theta.origin[2],
-                      theta.origin[3] + f2.hidden$slope,
-                      theta.origin[4],
-                      theta.origin[5],
-                      theta.origin[6] + f5.hidden$slope)
-  newx <- seq(0, 1, length.out = grid.n)
-  xholder <- do.call(cbind, lapply(1:p, function(j) {newx}))
-  # newx <- seq(min(x.origin), max(x.origin), length.out = grid.n)
-  # xholder <- do.call(cbind, lapply(1:p, function(i) {seq(min(x.origin[,i]), max(x.origin[,i]), length.out = grid.n)}))
+  colnames(x.origin) <- paste0("X", 1:p)
 
+  newx <- seq(max(apply(x.origin, 2, min)), min(apply(x.origin, 2, max)), length.out = grid.n)
+  xholder <- do.call(cbind, lapply(1:p, function(i) {seq(min(x.origin[,i]), max(x.origin[,i]), length.out = grid.n)}))
+  # newx <- seq(0.1, 0.9, length.out = grid.n)
+  # xholder <- do.call(cbind, lapply(1:p, function(i) {newx}))
+  # xholder <- do.call(cbind, lapply(1:p, function(j) {
+  #   newx * (x_max[j] - x_min[j]) + x_min[j]
+  # }))
   
-  g2.nl <- f2(xholder[,2]) - (f2.hidden$intercept + f2.hidden$slope*xholder[,2])
-  g5.nl <- f5(xholder[,5]) - (f5.hidden$intercept + f5.hidden$slope*xholder[,5])
-  g2.l <- theta.adjusted[3]*xholder[,2]
-  g5.l <- theta.adjusted[6]*xholder[,5]
-  g2 <- g2.l + g2.nl
-  g5 <- g5.l + g5.nl
-  eta.g <- rep(theta.adjusted[1], grid.n) + g2 + g5
-  alp.new <- as.vector(exp(theta.origin[1] + xholder %*% theta.origin[-1] + f2(xholder[,2]) + f5(xholder[,5])))
-  grid.zero <- rep(0, grid.n)
-  g.new <- c(grid.zero, g2, grid.zero, grid.zero, g5)
-
-  X_means <- colMeans(x.origin)
-  X_sd   <- apply(x.origin, 2, sd)
+  x.grid <- do.call(cbind, lapply(1:p, function(i) {seq(0, 1, length.out = grid.n)}))  
+  alp.new <- as.vector(exp(theta.origin[1] + x.grid %*% theta.origin[-1] + f2(x.grid[,2]) + f5(x.grid[,5])))
 
   group.map <- c()
   Z.list <- list()        # Stores the final non-linear design matrices
@@ -277,7 +267,9 @@ for(iter in 1:total.iter){
   }
   xholder.linear <- model.matrix(~ ., data = data.frame(xholder))[,-1]
   xholder.nonlinear <- do.call(cbind, grid_Z_list)
-
+  
+  X_means <- colMeans(bs.linear)
+  X_sd   <- apply(bs.linear, 2, sd)
   bs.linear <- scale(bs.linear, center = X_means, scale = X_sd)
   
   data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, grid_n = grid.n,
@@ -379,10 +371,10 @@ for(iter in 1:total.iter){
   mise.vgam.scale.container[iter] <- auc(newx, ((1/alp.new)-vgam.xi.scale)^2  ,type="spline")  
 }
 
-
-alpha.container$x <- newx
-# alpha.container$true <- 1/alp.new
-alpha.container$true <- rowMeans(true.container)
+xholder <- do.call(cbind, lapply(1:p, function(i) {seq(0, 1, length.out = grid.n)}))  
+alp.new <- as.vector(exp(theta.origin[1] + xholder %*% theta.origin[-1] + f2(xholder[,2]) + f5(xholder[,5])))
+alpha.container$x <- xholder[,1]
+alpha.container$true <- 1/alp.new
 alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
 alpha.container$evgam.1 <- rowMeans(evgam.1.container[,1:total.iter])
 alpha.container$evgam.scale <- rowMeans(evgam.scale.container[,1:total.iter])
@@ -393,28 +385,19 @@ alpha.container <- as.data.frame(alpha.container)
 # save(newgsmooth.container, alpha.container, mise.container, evgam.1.container, evgam.scale.container, mise.evgam.1.container, mise.evgam.scale.container, vgam.1.container, vgam.scale.container, mise.vgam.1.container, mise.vgam.scale.container, file=paste0("evgam_mc_scA_",n.origin,"_",array.id ,".Rdata"))
 # load(paste0("./simulation/results/2026-02-10_evgam_mc_scA_",(n.origin*0.05),".Rdata"))
 
-plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab(expression(xi(c,ldots,c))) #+ ylab("")
-if(total.iter <= 50){
-  for(i in 1:total.iter){
-    plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.05, linewidth = 0.7)
-  }
-} else{
-  for(i in 50:100){
-    plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.05, linewidth = 0.7)
-  }
+plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + ylab(expression(xi(c,ldots,c))) #+ ylab("")
+plot_limit <- min(total.iter, 50)
+for(i in 1:plot_limit){
+  plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.05, linewidth = 0.7)
 }
 
-print(plt +
-        geom_line(aes(y=true, col = "True"), linewidth = 2, linetype = 2) + 
-        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.8) +
+print(plt + 
+        geom_line(aes(y=true), colour = "red", linewidth = 2, linetype = 2) + 
+        geom_line(aes(y=mean), colour = "steelblue", linewidth = 1.8) + ylim(0, 10) +
         geom_line(aes(y=evgam.1), colour="purple", linewidth = 1.8, linetype = 3) +
         geom_line(aes(y=evgam.scale), colour="orange", linewidth = 1.8, linetype = 3) +
         geom_line(aes(y=vgam.1), colour="purple", linewidth = 1.8, linetype = 4) +
         geom_line(aes(y=vgam.scale), colour="orange", linewidth = 1.8, linetype = 4) +
-        scale_fill_manual(values=c("steelblue"), name = "") +
-        scale_color_manual(values = c("steelblue", "red")) +
-        guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) +
         theme_minimal(base_size = 40) + ylim(-0.65, 2)+
         theme(legend.position = "none",
                 strip.text = element_blank(),

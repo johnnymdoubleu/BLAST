@@ -480,7 +480,7 @@ alpha.container$true <- alp.new
 alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
-load(paste0("./simulation/results/MC-Scenario_A/2026-03-10_",total.iter,"_MC_scA_",n.origin,".Rdata"))
+# load(paste0("./simulation/results/MC-Scenario_A/2026-03-10_",total.iter,"_MC_scA_",n.origin,".Rdata"))
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab(expression(alpha(c,...,c)))
 plot_limit <- min(total.iter, 50)
@@ -488,8 +488,8 @@ for(i in 1:plot_limit){
   plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.05, linewidth = 0.7)
 }
 print(plt + 
-        geom_line(aes(y=true), color = "red", linewidth = 2, linetype = 2) + 
-        geom_line(aes(y=mean), color = "steelblue", linewidth = 1.8) + ylim(0, 10) +
+        geom_line(aes(y=true), colour = "red", linewidth = 2, linetype = 2) + 
+        geom_line(aes(y=mean), colour = "steelblue", linewidth = 1.8) + ylim(0, 10) +
         theme_minimal(base_size = 40) + 
         theme(legend.position = "none",
                 strip.text = element_blank(),
@@ -511,8 +511,8 @@ g2.l <- theta.adjusted[3] * x.grid[,2]
 g5.l <- theta.adjusted[6] * x.grid[,5]
 g2 <- g2.l + g2.nl
 g5 <- g5.l + g5.nl
-g2 <- g2 - mean(g2)
-g5 <- g5 - mean(g5)
+# g2 <- g2 - mean(g2)
+# g5 <- g5 - mean(g5)
 # eta.g <- theta.adjusted[1] + x.grid %*% theta.adjusted[-1] + g2 + g5
 grid.zero <- rep(0, grid.n)
 g.new <- c(grid.zero, g2, grid.zero, grid.zero, g5)
