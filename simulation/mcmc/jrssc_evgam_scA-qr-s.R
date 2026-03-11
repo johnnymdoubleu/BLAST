@@ -267,7 +267,7 @@ for(iter in 1:total.iter){
   }
   xholder.linear <- model.matrix(~ ., data = data.frame(xholder))[,-1]
   xholder.nonlinear <- do.call(cbind, grid_Z_list)
-  
+
   X_means <- colMeans(bs.linear)
   X_sd   <- apply(bs.linear, 2, sd)
   bs.linear <- scale(bs.linear, center = X_means, scale = X_sd)
@@ -393,7 +393,7 @@ for(i in 1:plot_limit){
 
 print(plt + 
         geom_line(aes(y=true), colour = "red", linewidth = 2, linetype = 2) + 
-        geom_line(aes(y=mean), colour = "steelblue", linewidth = 1.8) + ylim(0, 10) +
+        geom_line(aes(y=mean), colour = "steelblue", linewidth = 1.8) + 
         geom_line(aes(y=evgam.1), colour="purple", linewidth = 1.8, linetype = 3) +
         geom_line(aes(y=evgam.scale), colour="orange", linewidth = 1.8, linetype = 3) +
         geom_line(aes(y=vgam.1), colour="purple", linewidth = 1.8, linetype = 4) +

@@ -1,14 +1,14 @@
 setwd("../BLAST/simulation/results")
 iter <- 5
-n <- 20000
+n <- 10000
 grid.n <- 200
-EV <- 0
+EV <- 1
 threshold <- 0.95
 if(EV==TRUE){
   file_pattern <- paste0("evgam_mc_scA_",n,"_.*.Rdata")
   # file_pattern <- paste0("evgam_mc_scA_.*.Rdata")x``
 }else if(EV==FALSE){
-  file_pattern <- paste0("2026-03-10_",iter,"_MC_scA_",n,"_.*.Rdata")
+  file_pattern <- paste0("2026-03-10_",iter,"_MC_scD_",n,"_.*.Rdata")
 }
 
 file_list <- list.files(pattern = file_pattern)
@@ -108,7 +108,7 @@ if(EV==FALSE){
   colnames(evgam.scale.container) <- paste0("V", 1:total.iter)
   colnames(vgam.1.container) <- paste0("V", 1:total.iter)
   colnames(vgam.scale.container) <- paste0("V", 1:total.iter)  
-  colnames(gridgsmooth.container) <- paste0("V", 1:total.iter)
+  # colnames(gridgsmooth.container) <- paste0("V", 1:total.iter)
   alpha.container$x <- temp_env$alpha.container$x
   alpha.container$true <- temp_env$alpha.container$true
   alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
@@ -129,5 +129,5 @@ if(EV==FALSE){
     "VGAM:   ", mean(mise.vgam.1.container, na.rm=TRUE), "±", sd(mise.vgam.1.container, na.rm=TRUE)/sqrt(sum(!is.na(mise.vgam.1.container))), "\n",
     "VGAM-σ: ", mean(mise.vgam.scale.container, na.rm=TRUE), "±", sd(mise.vgam.scale.container, na.rm=TRUE)/sqrt(sum(!is.na(mise.vgam.scale.container))), "\n")
 
-  # save(alpha.container, vgam.1.container, vgam.scale.container, evgam.1.container, evgam.scale.container, mise.container, mise.evgam.1.container, mise.evgam.scale.container, mise.vgam.1.container, mise.vgam.scale.container, file = paste0(Sys.Date(),"_evgam_mc_scD2_",(n*0.05),".Rdata"))  
+  # save(alpha.container, vgam.1.container, vgam.scale.container, evgam.1.container, evgam.scale.container, mise.container, mise.evgam.1.container, mise.evgam.scale.container, mise.vgam.1.container, mise.vgam.scale.container, file = paste0(Sys.Date(),"_evgam_mc_scA_",n,".Rdata"))  
 }

@@ -10,7 +10,7 @@ library(forecast)
 # Scenario D
 # array.id <- commandArgs(trailingOnly=TRUE)
 
-total.iter <- 15
+total.iter <- 5
 
 n <- n.origin <- 10000
 grid.n <- 200
@@ -43,26 +43,52 @@ make.nl <- function(x, raw_y) {
 
 theta.origin <- c(0.9, 1.2, 1, -1.2, 0, 0) 
 psi <- psi -2
+# functions{
+#     real burr_lpdf(real y, real c){
+#         // Burr distribution log pdf
+#         return log(c)+((c-1)*log(y)) - ((1+1)*log1p(y^c));
+#     }
 
+#     real burr_cdf(real y, real c){
+#         // Bur distribution cdf
+#         return 1 - (1 + y^c)^(-1);
+#     }
+#     real burr_lccdf(real y, real c){
+#       real cy = c * log(y);
+#       return -log1p_exp(cy); // log( (1 + y^c)^(-1) )
+#     }
+
+#     real burr_rng(real c){
+#         return ((1-uniform_rng(0,1))^(-1)-1)^(1/c);
+#     }
+# }
 
 model.stan <- "// Stan model for BLAST Burr Samples
-functions{
-    real burr_lpdf(real y, real c){
-        // Burr distribution log pdf
-        return log(c)+((c-1)*log(y)) - ((1+1)*log1p(y^c));
+functions {
+    // Vectorized Burr log-PDF
+    real burr_lpdf(vector y, vector m, vector c) {
+        // m = scale parameter, c = shape parameter (alpha)
+        
+        // Pre-compute log(y/m) for stability
+        vector[num_elements(y)] log_y_div_m = log(y) - log(m);
+        
+        // Scaled Log PDF: log(c) - log(m) + (c-1)*log(y/m) - 2*log(1 + (y/m)^c)
+        // We use log1p_exp for the last term to prevent numerical overflow
+        return sum(log(c) - log(m) + (c - 1) .* log_y_div_m - 2 * log1p_exp(c .* log_y_div_m));
     }
 
-    real burr_cdf(real y, real c){
-        // Bur distribution cdf
-        return 1 - (1 + y^c)^(-1);
-    }
-    real burr_lccdf(real y, real c){
-      real cy = c * log(y);
-      return -log1p_exp(cy); // log( (1 + y^c)^(-1) )
+    // Vectorized Burr log-CCDF (Survival Function)
+    real burr_lccdf(vector y, vector m, vector c) {
+        vector[num_elements(y)] log_y_div_m = log(y) - log(m);
+        
+        // Scaled Log CCDF: -log(1 + (y/m)^c)
+        return sum(-log1p_exp(c .* log_y_div_m));
     }
 
-    real burr_rng(real c){
-        return ((1-uniform_rng(0,1))^(-1)-1)^(1/c);
+    // Scalar Burr RNG (Stan RNGs are usually evaluated element-wise in generated quantities)
+    real burr_rng(real m, real c) {
+        // Multiply the standard RNG inverse CDF by the scale m
+        return m * (((1 - uniform_rng(0, 1))^(-1) - 1)^(1 / c));
     }
 }
 
@@ -82,6 +108,7 @@ data {
     vector[p] X_sd;
     vector[(psi*p)] Z_scales;
     vector[grid_n] trueAlpha;
+    vector<lower=0>[n] sigma_burr;
 }
 
 parameters {
@@ -102,20 +129,21 @@ transformed parameters {
         gamma[j] = gamma_raw[j] * sqrt(tau[j]);
         eta += col(bsLinear, j) * theta[j+1] + block(bsNonlinear,1, ((j - 1) * psi + 1), n, psi) * gamma[j];
       };
-      
+       
       alpha = exp(eta);
     }
 }
 
 model {
   //likelihood
-  for (i in 1:n){
-    target += burr_lpdf(y[i] | alpha[i]) - burr_lccdf(u[i] | alpha[i]);
-  }
-  target += normal_lpdf(theta[1] | 0, 1);
-  target += gamma_lpdf(lambda1 | 1e-1, 1e-1); 
+  // target += burr_lpdf(y | sigma_burr, alpha) - burr_lccdf(u | sigma_burr, alpha);
+  target += pareto_lpdf(y | u, alpha);
+  target += normal_lpdf(theta[1] | 0, 10);
+  // target += gamma_lpdf(lambda1 | 1e-2, 1e-2); 
   // target += exponential_lpdf(lambda1 | 0.1);
-  target += gamma_lpdf(lambda2 | 1e-2, 1e-2);
+  // target += gamma_lpdf(lambda2 | 1e-2, 1e-2);
+  target += cauchy_lpdf(lambda1 | 0, 1); 
+  target += cauchy_lpdf(lambda2 | 0, 1);  
   for (j in 1:p){
     target += double_exponential_lpdf(theta[(j+1)] | 0, 1/(lambda1[j]));
     target += gamma_lpdf(tau[j] | atau, square(lambda2[j])*0.5);
@@ -194,7 +222,6 @@ for(iter in 1:total.iter){
       return(2.5 - .8 * sin(2 * pi * t / 365) - .6 * cos(2 * pi * t/365)) 
     }
     y.origin <- y.origin * f.season.scale(time.seq)
-
     evgam.df <- data.frame(
       y = log(y.origin),
       sin.time = sin(2 * pi * time.seq / 365),
@@ -202,7 +229,7 @@ for(iter in 1:total.iter){
       x.season = (time.seq %% period) / period,
       x.origin
     )
-    evgam.cov <- y ~ 1 + cos.time + sin.time 
+    evgam.cov <- y ~ 1 + cos.time + sin.time + s(X1) + s(X2) + s(X3) + s(X4) + s(X5)
     ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
     u.vec <- exp(predict(ald.cov.fit)$location)
 
@@ -219,7 +246,8 @@ for(iter in 1:total.iter){
   x.origin <- x.origin[excess.index,]
   y.origin <- y.origin[excess.index]
   u <- u.vec[excess.index]
-  season_code_full <- season_code_full[excess.index]  
+  season_code_full <- season_code_full[excess.index]
+  sigma.burr <- f.season.scale(time.seq)[excess.index]
   n <- length(y.origin)
   colnames(x.origin) <- paste0("X", 1:p)
   newx <- seq(max(apply(x.origin, 2, min)), min(apply(x.origin, 2, max)), length.out = grid.n)
@@ -312,14 +340,12 @@ for(iter in 1:total.iter){
 
   xholder.linear <- model.matrix(~ ., data = data.frame(xholder))[,-1]
   xholder.nonlinear <- do.call(cbind, grid_Z_list)
-
-  # xholder.linear <- scale(xholder.linear, center = X_means, scale = X_sd)
   X_means <- colMeans(bs.linear)
   X_sd   <- apply(bs.linear, 2, sd)
   bs.linear <- scale(bs.linear, center = X_means, scale = X_sd)
 
   data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, grid_n = grid.n,
-                  atau = ((psi+1)/2), X_means = X_means, X_sd=X_sd, Z_scales=Z_scales,
+                  atau = ((psi+1)/2), X_means = X_means, X_sd=X_sd, sigma_burr = sigma.burr,
                   bsLinear = bs.linear, bsNonlinear = bs.nonlinear, trueAlpha = alp.new,
                   xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear)
 
@@ -392,18 +418,45 @@ for(iter in 1:total.iter){
   # qqplot.container[iter] <- apply(traj, 2, mean)#quantile, prob = 0.5)
 }
 
-# newx <- seq(0, 1, length.out = grid.n)
-xholder <- do.call(cbind, lapply(1:p, function(i) {seq(0, 1, length.out = grid.n)}))  
-alp.new <- as.vector(exp(theta.origin[1] + xholder %*% theta.origin[-1] + f2(xholder[,2]) + f3(xholder[,3])))
-alpha.container$x <- xholder[,1]
-alpha.container$true <- alp.new
-# alpha.container$true <- rowMeans(true.container)
+f2.hidden <- make.nl(x.origin[,2], f2(x.origin[,2]))
+f3.hidden <- make.nl(x.origin[,3], f3(x.origin[,3]))
+
+theta.adjusted <- c(theta.origin[1] + f2.hidden$intercept + f3.hidden$intercept,
+                    theta.origin[2],
+                    theta.origin[3] + f2.hidden$slope,
+                    theta.origin[4] + f3.hidden$slope,
+                    theta.origin[5],
+                    theta.origin[6])
+  # Use full-range projection for residuals
+g2.nl <- f2(x.grid[,2]) - (f2.hidden$intercept + f2.hidden$slope * x.grid[,2])
+g3.nl <- f3(x.grid[,3]) - (f3.hidden$intercept + f3.hidden$slope * x.grid[,3])
+
+g1.l <- g1 <- theta.adjusted[2] * x.grid[,1]
+g2.l <- theta.adjusted[3]*x.grid[,2]
+g3.l <- theta.adjusted[4]*x.grid[,3]
+g2 <- g2.l + g2.nl
+g3 <- g3.l + g3.nl
+g1 <- g1 - mean(g1)
+g2 <- g2 - mean(g2)
+g3 <- g3 - mean(g3)
+alp.new <- exp(theta.adjusted[1] + g1 + g2 + g3)
+grid.zero <- rep(0, grid.n)
+g.new <- c(g1, g2, g3, grid.zero, grid.zero)
+l.new <- c(g1.l, g2.l, g3.l, grid.zero, grid.zero)
+nl.new <- c(grid.zero, g2.nl, g3.nl, grid.zero, grid.zero)
+
+
+newx <- seq(0, 1, length.out = grid.n)
+alpha.container$x <- newx
+# alpha.container$true <- alp.new
+alpha.container$true <- rowMeans(true.container)
 alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
 # load(paste0("./simulation/results/MC-Scenario_D/2026-03-09_",total.iter,"_MC_scD_",n.origin,".Rdata"))
 
-plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab(expression(alpha(c,...,c))) #+ ylab("")
+plt <- ggplot(data = alpha.container, aes(x = x)) + 
+        xlab(expression(c)) + ylab(expression(alpha(c,ldots,c))) #+ ylab("")
 plot_limit <- min(total.iter, 50)
 for(i in 1:plot_limit){
   plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.05, linewidth = 0.7)
@@ -418,43 +471,19 @@ print(plt +
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_scD_",n.origin,".pdf"), width=10, height = 7.78)
 
-f2.hidden <- make.nl(x.origin.full[,2], f2(x.origin.full[,2]))
-f3.hidden <- make.nl(x.origin.full[,3], f3(x.origin.full[,3]))
-
-theta.adjusted <- c(theta.origin[1] + f2.hidden$intercept + f3.hidden$intercept,
-                    theta.origin[2],
-                    theta.origin[3] + f2.hidden$slope,
-                    theta.origin[4] + f3.hidden$slope,
-                    theta.origin[5],
-                    theta.origin[6])
-  # Use full-range projection for residuals
-g2.nl <- f2(x.grid[,2]) - (f2.hidden$intercept + f2.hidden$slope * x.grid[,2])
-g3.nl <- f3(x.grid[,3]) - (f3.hidden$intercept + f3.hidden$slope * x.grid[,3])
-g1.l <- g1 <- theta.adjusted[2] * x.grid[,1]
-g2.l <- theta.adjusted[3]*x.grid[,2]
-g3.l <- theta.adjusted[4]*x.grid[,3]
-g2 <- g2.l + g2.nl
-g3 <- g3.l + g3.nl
-g1 <- g1 - mean(g1)
-g2 <- g2 - mean(g2)
-g3 <- g3 - mean(g3)
-grid.zero <- rep(0, grid.n)
-g.new <- c(g1, g2, g3, grid.zero, grid.zero)
-l.new <- c(g1.l, g2.l, g3.l, grid.zero, grid.zero)
-nl.new <- c(grid.zero, g2.nl, g3.nl, grid.zero, grid.zero)
-
-gridgsmooth.container$x <- seq(0, 1, length.out = grid.n)
+gridgsmooth.container$x <- newx
 gridgsmooth.container$true <- g.new
 gridgsmooth.container$mean <- rowMeans(gridgsmooth.container[,1:total.iter])
 gridgsmooth.container$covariate <- gl(p, grid.n, (p*grid.n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]"))
 gridgsmooth.container <- as.data.frame(gridgsmooth.container)
 
-plt <- ggplot(data = gridgsmooth.container, aes(x = x, group = covariate)) + ylab("") + xlab(expression(c))
+plt <- ggplot(data = gridgsmooth.container, aes(x = x, group = covariate)) + 
+        ylab("") + xlab(expression(c))
 plot_limit <- min(total.iter, 50)
 for(i in 1:plot_limit){
   plt <- plt + geom_line(aes(y = .data[[names(gridgsmooth.container)[i]]]), alpha = 0.05, linewidth = 0.7)
 }
-print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + ylim(-1.5, 1.5) +
+print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + ylim(-2.5, 2.5) +
         geom_line(aes(y=true), color = "red", linewidth = 2, linetype = 2) + 
         geom_line(aes(y=mean), color = "steelblue", linewidth = 1.5) + 
         facet_grid(covariate ~ ., scales = "free_x", switch = "y",

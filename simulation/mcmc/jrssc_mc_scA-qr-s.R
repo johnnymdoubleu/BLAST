@@ -57,7 +57,6 @@ data {
     real <lower=0> atau;
     vector[p] X_means;
     vector[p] X_sd;
-    vector[(psi*p)] Z_scales;
     vector[grid_n] trueAlpha;
 }
 
@@ -231,7 +230,7 @@ for(iter in 1:total.iter){
   range01 <- function(x){(x-min(x))/(max(x)-min(x))}
   alp.origin <- exp(theta.origin[1] + x.origin.full%*%theta.origin[-1] + 
                     f2(x.origin.full[,2]) + f5(x.origin.full[,5]))
-  y.origin <- rPareto(n, rep(1, n), alpha = alp.origin)
+  y.origin <- rPareto(n.origin, rep(1, n.origin), alpha = alp.origin)
   # for (j in 1:p) {
   #   phase_shift <- j * (2 * pi / p) 
   #   seasonal_trend <- 0.5 * sin(2 * pi * time.seq / period - phase_shift)
@@ -264,7 +263,7 @@ for(iter in 1:total.iter){
     x.season = (time.seq %% period) / period,
     x.origin
   )
-  evgam.cov <- y ~ 1 + cos.time + sin.time #+ s(X1, k=6) + s(X2, k=6) + s(X3, k=6) + s(X4, k=6) + s(X5, k=6)
+  evgam.cov <- y ~ 1 + cos.time + sin.time
   ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
   u.vec <- (predict(ald.cov.fit)$location)
 
@@ -279,16 +278,10 @@ for(iter in 1:total.iter){
 
   newx <- seq(max(apply(x.origin, 2, min)), min(apply(x.origin, 2, max)), length.out = grid.n)
   xholder <- do.call(cbind, lapply(1:p, function(i) {seq(min(x.origin[,i]), max(x.origin[,i]), length.out = grid.n)}))
-  # newx <- seq(0.1, 0.9, length.out = grid.n)
-  # xholder <- do.call(cbind, lapply(1:p, function(i) {newx}))
-  # xholder <- do.call(cbind, lapply(1:p, function(j) {
-  #   newx * (x_max[j] - x_min[j]) + x_min[j]
-  # }))
-  
   x.grid <- do.call(cbind, lapply(1:p, function(i) {seq(0, 1, length.out = grid.n)}))  
   alp.new <- as.vector(exp(theta.origin[1] + x.grid %*% theta.origin[-1] + f2(x.grid[,2]) + f5(x.grid[,5])))
 
-
+  colnames(xholder) <- colnames(x.origin) <- covariates <- paste0("X", 1:p)
   group.map <- c()
   Z.list <- list()        # Stores the final non-linear design matrices
   scale_stats_list <- list() 
@@ -301,7 +294,7 @@ for(iter in 1:total.iter){
   colnames(xholder) <- covariates  
   for (i in seq_along(covariates)) {
     var_name <- covariates[i]
-    x_vec <- (x.origin[, i])# - X_means[i]) / X_sd[i]
+    x_vec <- x.origin[, i]
     X_lin <- model.matrix(~ x_vec) 
     sm_spec <- smoothCon(s(x_vec, bs = "tp", k = psi + 2), 
                         data = data.frame(x_vec = x_vec), 
@@ -352,7 +345,7 @@ for(iter in 1:total.iter){
   grid_Z_list <- list()
 
   for (i in seq_along(covariates)) {
-    x_vec <- xholder[,i] # (seq(min(x.origin[,i]), max(x.origin[,i]), length.out = grid.n))# - X_means[i]) / X_sd[i]
+    x_vec <- xholder[,i] 
     grid_df  <- data.frame(x_vec = x_vec)
     X_lin_grid <- model.matrix(~ x_vec, data = grid_df)
     X_raw_grid <- PredictMat(sm_spec_list[[i]], grid_df)
@@ -371,7 +364,6 @@ for(iter in 1:total.iter){
   X_means <- colMeans(bs.linear)
   X_sd   <- apply(bs.linear, 2, sd)
   bs.linear <- scale(bs.linear, center = X_means, scale = X_sd)
-
 
   tau0_lin <- (3/2) / sqrt(n)   # ~0.05 for n~1000 excess
   tau0_nl  <- (2/3) / sqrt(n)   # tighter: only 2 smooths nonzero
@@ -400,7 +392,7 @@ for(iter in 1:total.iter){
 
 
   data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, grid_n = grid.n,
-                  atau = ((psi+1)/2), X_means = X_means, X_sd=X_sd, Z_scales=Z_scales,
+                  atau = ((psi+1)/2), X_means = X_means, X_sd=X_sd,
                   bsLinear = bs.linear, bsNonlinear = bs.nonlinear, trueAlpha = alp.new,
                   xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear)
 
@@ -471,10 +463,29 @@ for(iter in 1:total.iter){
   # qqplot.container[iter] <- apply(traj, 2, mean)#quantile, prob = 0.5)
 }
 
-# xholder <- do.call(cbind, lapply(1:p, function(i) {seq(0, 1, length.out = grid.n)}))  
-xholder <- do.call(cbind, lapply(1:p, function(i) {seq(0, 1, length.out = grid.n)}))  
-alp.new <- as.vector(exp(theta.origin[1] + xholder %*% theta.origin[-1] + f2(xholder[,2]) + f5(xholder[,5])))
-alpha.container$x <- xholder[,1]
+f2.hidden <- make.nl(x.origin[,2], f2(x.origin[,2]))
+f5.hidden <- make.nl(x.origin[,5], f5(x.origin[,5]))
+theta.adjusted <- c(theta.origin[1] + f2.hidden$intercept + f5.hidden$intercept,
+                    theta.origin[2],
+                    theta.origin[3] + f2.hidden$slope,
+                    theta.origin[4],
+                    theta.origin[5],
+                    theta.origin[6] + f5.hidden$slope)
+g2.nl <- f2(x.grid[,2]) - (f2.hidden$intercept + f2.hidden$slope*x.grid[,2])
+g5.nl <- f5(x.grid[,5]) - (f5.hidden$intercept + f5.hidden$slope*x.grid[,5])
+g2.l <- theta.adjusted[3] * x.grid[,2]
+g5.l <- theta.adjusted[6] * x.grid[,5]
+g2 <- g2.l + g2.nl
+g5 <- g5.l + g5.nl
+# g2 <- g2 - mean(g2)
+# g5 <- g5 - mean(g5)
+alp.new <- exp(theta.adjusted[1] + g2 + g5)
+
+grid.zero <- rep(0, grid.n)
+g.new <- c(grid.zero, g2, grid.zero, grid.zero, g5)
+l.new <- c(grid.zero, g2.l, grid.zero, grid.zero, g5.l)
+nl.new <- c(grid.zero, g2.nl, grid.zero, grid.zero, g5.nl)
+alpha.container$x <- seq(0, 1, length.out = grid.n)
 alpha.container$true <- alp.new
 # alpha.container$true <- rowMeans(true.container)
 alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
@@ -496,28 +507,6 @@ print(plt +
                 axis.text = element_text(size = 30)))
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_scA_",n.origin,".pdf"), width=10, height = 7.78)
-
-f2.hidden <- make.nl(x.origin.full[,2], f2(x.origin.full[,2]))
-f5.hidden <- make.nl(x.origin.full[,5], f5(x.origin.full[,5]))
-theta.adjusted <- c(theta.origin[1] + f2.hidden$intercept + f5.hidden$intercept,
-                    theta.origin[2],
-                    theta.origin[3] + f2.hidden$slope,
-                    theta.origin[4],
-                    theta.origin[5],
-                    theta.origin[6] + f5.hidden$slope)
-g2.nl <- f2(x.grid[,2]) - (f2.hidden$intercept + f2.hidden$slope*x.grid[,2])
-g5.nl <- f5(x.grid[,5]) - (f5.hidden$intercept + f5.hidden$slope*x.grid[,5])
-g2.l <- theta.adjusted[3] * x.grid[,2]
-g5.l <- theta.adjusted[6] * x.grid[,5]
-g2 <- g2.l + g2.nl
-g5 <- g5.l + g5.nl
-# g2 <- g2 - mean(g2)
-# g5 <- g5 - mean(g5)
-# eta.g <- theta.adjusted[1] + x.grid %*% theta.adjusted[-1] + g2 + g5
-grid.zero <- rep(0, grid.n)
-g.new <- c(grid.zero, g2, grid.zero, grid.zero, g5)
-l.new <- c(grid.zero, g2.l, grid.zero, grid.zero, g5.l)
-nl.new <- c(grid.zero, g2.nl, grid.zero, grid.zero, g5.nl)
 
 gridgsmooth.container$x <- seq(0, 1, length.out = grid.n)
 gridgsmooth.container$true <- g.new

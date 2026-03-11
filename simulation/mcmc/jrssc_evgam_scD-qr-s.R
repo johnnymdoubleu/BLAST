@@ -5,7 +5,7 @@ library(rstan)
 library(MESS)
 library(evgam)
 library(mgcv)
-
+library(forecast)
 
 # Scenario D
 # array.id <- commandArgs(trailingOnly=TRUE)
@@ -150,35 +150,62 @@ vgam.scale.container <- vgam.1.container <- evgam.scale.container <- evgam.1.con
 mise.vgam.scale.container <- mise.vgam.1.container <- mise.evgam.scale.container <- mise.evgam.1.container <- mise.container <- c()
 
 for(iter in 1:total.iter){
+  is.positive <- TRUE
   n <- n.origin
-  x.origin <- matrix(0, nrow = n, ncol = p)
+  while(is.positive){
+    x.origin <- x.origin.full <- pnorm(matrix(rnorm(n.origin*p), nrow = n.origin, ncol = p))
+    range01 <- function(x){(x-min(x))/(max(x)-min(x))}
+    alp.origin <- exp(theta.origin[1] + x.origin.full%*%theta.origin[-1] + f2(x.origin.full[,2]) + f3(x.origin.full[,3]))
 
-  for (j in 1:p) {
-    phase_shift <- j * (2 * pi / p) 
-    seasonal_trend <- 0.5 + 0.1 * sin(2 * pi * time.seq / period + phase_shift) 
-    uniform_noise <- runif(n, min = -0.4, max = 0.4)
-    x.origin[, j] <- seasonal_trend + uniform_noise
-  }
-  x.origin.full <- x.origin
-  alp.origin <- exp(rep(theta.origin[1],n) + x.origin%*%theta.origin[-1] + f2(x.origin[,2]) + f3(x.origin[,3]))
-  y.noise <- NULL
-  for(i in 1:n){
-    y.noise[i] <- rmutil::rburr(1, m=1, s=alp.origin[i], f=1)
-  }
-  f.season.scale <- function(t){
-    return(2.5 - .8 * sin(2 * pi * t / 365) - .6 * cos(2 * pi * t/365)) 
-  }
-  y.origin <- y.noise * f.season.scale(time.seq)
+    y.origin <- NULL
+    for(i in 1:n){
+      y.origin[i] <- rmutil::rburr(1, m=1, s=alp.origin[i], f=1)
+    }
 
-  evgam.df <- data.frame(
-    y = log(y.origin),
-    sin.time = sin(2 * pi * time.seq / 365),
-    cos.time = cos(2 * pi * time.seq / 365),
-    x.origin
-  )
-  evgam.cov <- y ~ cos.time + sin.time #+ X1 + X2 + X3 + X4 + X5
-  ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
-  u.vec <- exp(predict(ald.cov.fit)$location)
+    for (j in 1:p) {
+      phase_shift <- j * (2 * pi / p) 
+      seasonal_trend <- 0.5 * sin(2 * pi * time.seq / period - phase_shift)
+      x.origin[,j] <- seasonal_trend + x.origin.full[,j]
+    }
+
+    xreg.season <- cbind(
+      trend = time.seq,
+      cos_season = cos(2 * pi * time.seq / 365),
+      sin_season = sin(2 * pi * time.seq / 365)
+    )
+
+    fit.list <- list()
+    x.detrended <- matrix(nrow = n.origin, ncol = p)
+    for (j in 1:p) {
+      y_ts <- ts(x.origin[, j], frequency = period) 
+      fit.list[[j]] <- fit <- auto.arima(y_ts, seasonal = FALSE, xreg = xreg.season, stepwise = TRUE, approximation = FALSE)
+      x.detrended[, j] <- as.numeric(residuals(fit.list[[j]]))
+    }
+    x.origin <- x.detrended 
+
+    f.season.scale <- function(t){
+      return(2.5 - .8 * sin(2 * pi * t / 365) - .6 * cos(2 * pi * t/365)) 
+    }
+    y.origin <- y.origin * f.season.scale(time.seq)
+
+    evgam.df <- data.frame(
+      y = log(y.origin),
+      sin.time = sin(2 * pi * time.seq / 365),
+      cos.time = cos(2 * pi * time.seq / 365),
+      x.season = (time.seq %% period) / period,
+      x.origin
+    )
+    evgam.cov <- y ~ 1 + cos.time + sin.time 
+    ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
+    u.vec <- exp(predict(ald.cov.fit)$location)
+
+    if(any(u.vec < 0)){
+      is.positive <- TRUE
+      message("Negative values found in u.vec, retrying...")
+    } else {
+      is.positive <- FALSE
+    }
+  }
 
   excess.index <- which(y.origin > u.vec)
 
@@ -188,33 +215,13 @@ for(iter in 1:total.iter){
   season_code_full <- season_code_full[excess.index]  
   n <- length(y.origin)
   colnames(x.origin) <- paste0("X", 1:p)
+  newx <- seq(max(apply(x.origin, 2, min)), min(apply(x.origin, 2, max)), length.out = grid.n)
+  xholder <- do.call(cbind, lapply(1:p, function(i) {seq(min(x.origin[,i]), max(x.origin[,i]), length.out = grid.n)}))
+  # newx <- seq(0.01, 0.99, length.out = grid.n)
+  # xholder <- do.call(cbind, lapply(1:p, function(i) {newx}))  
 
-  newx <- seq(min(x.origin), max(x.origin), length.out = grid.n)
-  xholder <- do.call(cbind, lapply(1:p, function(i) {seq(min(x.origin[,i]), max(x.origin[,i]), length.out = grid.n)}))  
-  f2.hidden <- make.nl(x.origin[,2], f2(x.origin[,2]))
-  f3.hidden <- make.nl(x.origin[,3], f3(x.origin[,3]))
-  theta.adjusted <- c(theta.origin[1] + f2.hidden$intercept + f3.hidden$intercept,
-                      theta.origin[2],
-                      theta.origin[3] + f2.hidden$slope,
-                      theta.origin[4] + f3.hidden$slope,
-                      theta.origin[5],
-                      theta.origin[6])
-  
-
-  g2.nl <- f2(xholder[,2]) - (f2.hidden$intercept + f2.hidden$slope*xholder[,2])
-  g3.nl <- f3(xholder[,3]) - (f3.hidden$intercept + f3.hidden$slope*xholder[,3])
-
-  g1.l <- g1 <- theta.adjusted[2] * xholder[,1]
-  g2.l <- theta.adjusted[3]*xholder[,2]
-  g3.l <- theta.adjusted[4]*xholder[,3]
-  g2 <- g2.l + g2.nl
-  g3 <- g3.l + g3.nl
-  eta.g <- rep(theta.adjusted[1], grid.n) + g1 + g2 + g3
-  
-  alp.new <- as.vector(exp(theta.origin[1] + xholder %*% theta.origin[-1] + f2(xholder[,2]) + f3(xholder[,3])))
-  grid.zero <- rep(0, grid.n)
-  g.new <- c(g1, g2, g3, grid.zero, grid.zero)
-
+  x.grid <- do.call(cbind, lapply(1:p, function(i) {seq(0, 1, length.out = grid.n)}))  
+  alp.new <- as.vector(exp(theta.origin[1] + x.grid %*% theta.origin[-1] + f2(x.grid[,2]) + f3(x.grid[,3])))
 
   group.map <- c()
   Z.list <- list()        # Stores the final non-linear design matrices
