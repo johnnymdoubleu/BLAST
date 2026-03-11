@@ -10,7 +10,7 @@ library(forecast)
 # Scenario C
 # array.id <- commandArgs(trailingOnly=TRUE)
 
-total.iter <- 100
+total.iter <- 25
 
 n <- n.origin <- 10000
 grid.n <- 200
@@ -170,7 +170,7 @@ for(iter in 1:total.iter){
     f.season.scale <- function(t){
       return(2.5 - .8 * sin(2 * pi * t / 365) - .6 * cos(2 * pi * t / 365)) 
     }
-    y.origin <- y.origin * f.season.scale(time.seq)
+    y.origin <- y.origin + f.season.scale(time.seq)
 
     evgam.df <- data.frame(
       y = (y.origin),
@@ -392,7 +392,7 @@ alpha.container$true <- rowMeans(true.container)
 alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
-# load(paste0("./simulation/results/MC-Scenario_C/2026-03-10_",total.iter,"_MC_scC_",n.origin,".Rdata"))
+# load(paste0("./simulation/results/MC-Scenario_C/2026-03-10_",total.iter,"_MC_scC_",n.origin,"-sa-tv.Rdata"))
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + ylab(expression(alpha(c,ldots,c))) #+ ylab("")
 plot_limit <- min(total.iter, 50)
@@ -421,7 +421,7 @@ plot_limit <- min(total.iter, 50)
 for(i in 1:plot_limit){
   plt <- plt + geom_line(aes(y = .data[[names(gridgsmooth.container)[i]]]), alpha = 0.05, linewidth = 0.7)
 }
-print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + ylim(-1.5, 1.5) +
+print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + ylim(-2.5, 2.5) +
         geom_line(aes(y=true), colour = "red", linewidth = 2, linetype = 2) + 
         geom_line(aes(y=mean), colour = "steelblue", linewidth = 1.5) + 
         facet_grid(covariate ~ ., scales = "free_x", switch = "y",
@@ -433,7 +433,7 @@ print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewid
                 axis.title.x = element_text(size = 45),  
                 axis.text = element_text(size = 30)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_scA_",n.origin,".pdf"), width=12.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_scC_",n.origin,".pdf"), width=12.5, height = 15)
 
 
 gridgl.container$x <- newx

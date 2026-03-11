@@ -10,9 +10,9 @@ library(forecast)
 # Scenario D
 # array.id <- commandArgs(trailingOnly=TRUE)
 
-total.iter <- 5
+total.iter <- 100
 
-n <- n.origin <- 10000
+n <- n.origin <- 20000
 grid.n <- 200
 psi.origin <- psi <- 10
 threshold <- 0.95
@@ -453,7 +453,7 @@ alpha.container$true <- rowMeans(true.container)
 alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
-# load(paste0("./simulation/results/MC-Scenario_D/2026-03-09_",total.iter,"_MC_scD_",n.origin,".Rdata"))
+load(paste0("./simulation/results/MC-Scenario_D/2026-03-10_",total.iter,"_MC_scD_",n.origin,"-s.Rdata"))
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + 
         xlab(expression(c)) + ylab(expression(alpha(c,ldots,c))) #+ ylab("")
@@ -469,7 +469,7 @@ print(plt +
                 strip.text = element_blank(),
                 axis.text = element_text(size = 30)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_scD_",n.origin,".pdf"), width=10, height = 7.78)
+ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_scD_",n.origin,".pdf"), width=10, height = 7.78)
 
 gridgsmooth.container$x <- newx
 gridgsmooth.container$true <- g.new
