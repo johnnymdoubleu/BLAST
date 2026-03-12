@@ -10,8 +10,7 @@ library(forecast)
 # Scenario C
 # array.id <- commandArgs(trailingOnly=TRUE)
 
-total.iter <- 25
-
+total.iter <- 2
 n <- n.origin <- 10000
 grid.n <- 200
 psi.origin <- psi <- 10
@@ -20,8 +19,8 @@ p <- 5
 
 C <- diag(p)
 
-f1 <- function(x) { 1.4 * (1.2 - x)^2 }  # Quadratic decrease: ~4.8 (at x=0) to ~0.4 (at x=1)
-f5 <- function(x) { -0.4 * (1.1 - x)^2 }   # Quadratic decrease: ~3.9 (at x=0) to ~0.3 (at x=1)
+f1 <- function(x) { 1.4 * (1.2 - x)^3 }  # Quadratic decrease: ~4.8 (at x=0) to ~0.4 (at x=1)
+f5 <- function(x) { -0.4 * (1.1 - x)^3 }   # Quadratic decrease: ~3.9 (at x=0) to ~0.3 (at x=1)
 
 time.seq <- 1:n
 period <- 365 
@@ -90,7 +89,7 @@ transformed parameters {
 
 model {
   //likelihood
-  // target += student_t_lpdf(y | alpha, 0, sigma_t) - student_t_lccdf(u | alpha, 0, sigma_t);
+  // target += student_t_lpdf(y | alpha, 0, 1) - student_t_lccdf(u | alpha, 0, 1);
   target += pareto_lpdf(y | u, alpha);
   target += normal_lpdf(theta[1] | 0, 10);
   target += cauchy_lpdf(lambda1 | 0, 1); 
@@ -141,12 +140,11 @@ mise.container <- c()
 for(iter in 1:total.iter){
   is.positive <- TRUE
   n <- n.origin
-  while(is.positive){
+  # while(is.positive){
     x.origin <- x.origin.full <- pnorm(matrix(rnorm(n.origin*p), nrow = n.origin, ncol = p))
     alp.origin <- exp(theta.origin[1] + x.origin.full%*%theta.origin[-1] + 
                       f1(x.origin.full[,1]) + f5(x.origin.full[,5]))
     y.origin <- rtt(n.origin, df = alp.origin, left=0)
-
     # for (j in 1:p) {
     #   phase_shift <- j * (2 * pi / p) 
     #   seasonal_trend <- 0.5 * sin(2 * pi * time.seq / period - phase_shift)
@@ -170,7 +168,7 @@ for(iter in 1:total.iter){
     f.season.scale <- function(t){
       return(2.5 - .8 * sin(2 * pi * t / 365) - .6 * cos(2 * pi * t / 365)) 
     }
-    y.origin <- y.origin + f.season.scale(time.seq)
+    y.origin <- y.origin * f.season.scale(time.seq)
 
     evgam.df <- data.frame(
       y = (y.origin),
@@ -179,16 +177,22 @@ for(iter in 1:total.iter){
       x.origin
     )
     
-    evgam.cov <- y ~ 1 + cos.time + sin.time #+ s(X1) + s(X2) + s(X3) + s(X4) + s(X5)
-    ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
-    u.vec <- (predict(ald.cov.fit)$location)
-    if(any(u.vec < 0)){
-      is.positive <- TRUE
-      message("Negative values found in u.vec, retrying...")
-    } else {
-      is.positive <- FALSE
-    }
-  }
+    evgam.cov <- y ~ 1 + cos.time + sin.time
+    # ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
+    # u.vec <- (predict(ald.cov.fit)$location)
+    qr.fit <- quantreg::rq(evgam.cov,  tau = 0.95, data = evgam.df)             
+    # qr.fit <- qgam::qgam(evgam.cov, data = evgam.df, qu = threshold)
+    u.vec <- as.vector(predict(qr.fit))
+    summary(u.vec/f.season.scale(time.seq))
+    summary(qtt(threshold, scale = f.season.scale(time.seq), df = alp.origin, left = 0))
+    summary(ptt(u.vec, scale = f.season.scale(time.seq), df = alp.origin, left = 0))
+  #   if(any(u.vec < 0)){
+  #     is.positive <- TRUE
+  #     message("Negative values found in u.vec, retrying...")
+  #   } else {
+  #     is.positive <- FALSE
+  #   }
+  # }
   excess.index <- which(y.origin > u.vec)
 
   x.origin <- x.origin[excess.index,]

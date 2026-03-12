@@ -9,7 +9,7 @@ library(forecast)
 
 # Scenario A
 # array.id <- commandArgs(trailingOnly=TRUE)
-total.iter <- 100
+total.iter <- 2
 
 n <- n.origin <- 10000
 grid.n <- 200
@@ -165,8 +165,10 @@ for(iter in 1:total.iter){
     x.origin
   )
   evgam.cov <- y ~ 1 + cos.time + sin.time 
-  ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
-  u.vec <- (predict(ald.cov.fit)$location)
+  # ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
+  # u.vec <- (predict(ald.cov.fit)$location)
+  qr.fit <- quantreg::rq(evgam.cov,  tau = 0.95, data = evgam.df)
+  u.vec <- as.vector(predict(qr.fit))
 
   excess.index <- which(y.origin > u.vec)
   x.origin <- data.frame(x.origin[excess.index,])
@@ -383,7 +385,7 @@ alpha.container$vgam.scale <- rowMeans(vgam.scale.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
 # save(newgsmooth.container, alpha.container, mise.container, evgam.1.container, evgam.scale.container, mise.evgam.1.container, mise.evgam.scale.container, vgam.1.container, vgam.scale.container, mise.vgam.1.container, mise.vgam.scale.container, file=paste0("evgam_mc_scA_",n.origin,"_",array.id ,".Rdata"))
-load(paste0("./simulation/results/2026-03-11_evgam_mc_scA_",n,".Rdata"))
+# load(paste0("./simulation/results/2026-03-11_evgam_mc_scA_",n,".Rdata"))
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + ylab(expression(xi(c,ldots,c))) #+ ylab("")
 plot_limit <- min(total.iter, 50)

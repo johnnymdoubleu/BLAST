@@ -9,9 +9,9 @@ library(forecast)
 # Scenario A
 # array.id <- commandArgs(trailingOnly=TRUE)
 
-total.iter <- 100
+total.iter <- 2
 
-n <- n.origin <- 20000
+n <- n.origin <- 10000
 grid.n <- 200
 psi.origin <- psi <- 10
 threshold <- 0.95
@@ -264,8 +264,10 @@ for(iter in 1:total.iter){
     x.origin
   )
   evgam.cov <- y ~ 1 + cos.time + sin.time
-  ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
-  u.vec <- (predict(ald.cov.fit)$location)
+  # ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
+  # u.vec <- (predict(ald.cov.fit)$location)
+  qr.fit <- quantreg::rq(evgam.cov,  tau = 0.95, data = evgam.df)
+  u.vec <- as.vector(predict(qr.fit))
 
   excess.index <- which(y.origin > u.vec)
   x.origin <- data.frame(x.origin[excess.index,])
@@ -491,7 +493,7 @@ alpha.container$true <- alp.new
 alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
-load(paste0("./simulation/results/MC-Scenario_A/2026-03-10_",total.iter,"_MC_scA_",n.origin,"-s.Rdata"))
+# load(paste0("./simulation/results/MC-Scenario_A/2026-03-10_",total.iter,"_MC_scA_",n.origin,"-s.Rdata"))
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab(expression(alpha(c,...,c)))
 plot_limit <- min(total.iter, 50)
