@@ -4,13 +4,14 @@ suppressMessages(library(ggplot2))
 library(rstan)
 library(MESS)
 library(evgam)
-library(crch)
+library(rmutil)
 library(forecast)
- 
-# Scenario C
+
+# Scenario D
 # array.id <- commandArgs(trailingOnly=TRUE)
 
 total.iter <- 2
+
 n <- n.origin <- 10000
 grid.n <- 200
 psi.origin <- psi <- 10
@@ -34,7 +35,7 @@ make.nl <- function(x, raw_y) {
   fit <- lm(raw_y ~ x)
   
   return(list(
-    nl = residuals(fit), 
+    nl = residuals(fit),
     slope = coef(fit)[["x"]],
     intercept = coef(fit)[["(Intercept)"]]
   ))
@@ -42,9 +43,42 @@ make.nl <- function(x, raw_y) {
 
 theta.origin <- c(0.4, 0, -0.6, 0, 0, 0.4)
 psi <- psi -2
+model.stan <- "// Stan model for BLAST Burr Samples
+functions {
+    /**
+     * Vectorized Burr Type XII log-PDF (m = 1)
+     * y: observations
+     * c: first shape parameter
+     * k: second shape parameter
+     */
+    real burr_lpdf(vector y, vector c, vector k) {
+        int N = num_elements(y);
+        vector[N] log_y = log(y);
+        
+        // PDF: log(c) + log(k) + (c-1)*log(y) - (k+1)*log(1 + y^c)
+        // Using log1p_exp(c * log_y) for numerical stability of log(1 + y^c)
+        return sum(log(c) + log(k) + (c - 1) .* log_y - (k + 1) .* log1p_exp(c .* log_y));
+    }
 
+    /**
+     * Vectorized Burr Type XII log-CCDF (Survival Function)
+     * log(S(y)) = -k * log(1 + y^c)
+     */
+    real burr_lccdf(vector y, vector c, vector k) {
+        return sum(-k .* log1p_exp(c .* log(y)));
+    }
 
-model.stan <- "// Stan model for BLAST t Samples
+    /**
+     * Scalar Burr RNG 
+     * Using the inverse transform sampling method
+     */
+    real burr_rng(real c, real k) {
+        // Inverse CDF: ((1 - u)^(-1/k) - 1)^(1/c)
+        real u = uniform_rng(0, 1);
+        return ((1 - u)^(-1.0 / k) - 1.0)^(1.0 / c);
+    }
+}
+
 data {
     int <lower=1> n; // Sample size
     int <lower=1> grid_n;
@@ -59,8 +93,9 @@ data {
     real <lower=0> atau;
     vector[p] X_means;
     vector[p] X_sd;
+    vector[(psi*p)] Z_scales;
     vector[grid_n] trueAlpha;
-    vector<lower=0>[n] sigma_t;
+    vector<lower=0>[n] sigma_burr;
 }
 
 parameters {
@@ -69,7 +104,6 @@ parameters {
     array[p] real <lower=0> lambda1; // 
     array[p] real <lower=0> lambda2; //
     array[p] real <lower=0> tau;
-
 }
 
 transformed parameters {
@@ -82,21 +116,22 @@ transformed parameters {
         gamma[j] = gamma_raw[j] * sqrt(tau[j]);
         eta += col(bsLinear, j) * theta[j+1] + block(bsNonlinear,1, ((j - 1) * psi + 1), n, psi) * gamma[j];
       };
-      
+       
       alpha = exp(eta);
     }
 }
 
 model {
   //likelihood
-  // target += student_t_lpdf(y | alpha, 0, 1) - student_t_lccdf(u | alpha, 0, 1);
+  // target += burr_lpdf(y | alpha, rep_vector(1, n)) - burr_lccdf(u | alpha, rep_vector(1, n));
+  // target += burr_lpdf(y | rep_vector(1, n), alpha) - burr_lccdf(u | rep_vector(1, n), alpha);
   target += pareto_lpdf(y | u, alpha);
   target += normal_lpdf(theta[1] | 0, 10);
-  target += cauchy_lpdf(lambda1 | 0, 1); 
-  target += cauchy_lpdf(lambda2 | 0, 1);
-  // target += gamma_lpdf(lambda1 | 1e-2, 1e-2); 
-  // target += exponential_lpdf(lambda1 | 1);   
-  // target += gamma_lpdf(lambda2 | 1e-2, 1e-2);
+  target += gamma_lpdf(lambda1 | 1e-1, 1e-1); 
+  // target += exponential_lpdf(lambda1 | 0.1);
+  target += gamma_lpdf(lambda2 | 1e-2, 1e-2);
+  // target += cauchy_lpdf(lambda1 | 0, 1); 
+  // target += cauchy_lpdf(lambda2 | 0, 1);  
   for (j in 1:p){
     target += double_exponential_lpdf(theta[(j+1)] | 0, 1/(lambda1[j]));
     target += gamma_lpdf(tau[j] | atau, square(lambda2[j])*0.5);
@@ -140,11 +175,17 @@ mise.container <- c()
 for(iter in 1:total.iter){
   is.positive <- TRUE
   n <- n.origin
-  # while(is.positive){
-    x.origin <- x.origin.full <- pnorm(matrix(rnorm(n.origin*p), nrow = n.origin, ncol = p))
+  while(is.positive){
+    x.origin <- x.origin.full <- (matrix(runif(n.origin*p), nrow = n.origin, ncol = p))
+    range01 <- function(x){(x-min(x))/(max(x)-min(x))}
     alp.origin <- exp(theta.origin[1] + x.origin.full%*%theta.origin[-1] + 
                       f1(x.origin.full[,1]) + f5(x.origin.full[,5]))
-    y.origin <- rtt(n.origin, df = alp.origin, left=0)
+
+
+    # y.origin <- rburr(n.origin, m = rep(1, n.origin), s = rep(1, n.origin), f = alp.origin)
+    y.origin <- Pareto::rPareto(n.origin, rep(1, n.origin), alpha = alp.origin)
+    # y.origin <- rburr(n.origin, m = rep(1, n.origin), s = alp.origin, f = rep(1, n.origin))
+
     # for (j in 1:p) {
     #   phase_shift <- j * (2 * pi / p) 
     #   seasonal_trend <- 0.5 * sin(2 * pi * time.seq / period - phase_shift)
@@ -164,51 +205,53 @@ for(iter in 1:total.iter){
     #   fit.list[[j]] <- fit <- auto.arima(y_ts, seasonal = FALSE, xreg = xreg.season, stepwise = TRUE, approximation = FALSE)
     #   x.detrended[, j] <- as.numeric(residuals(fit.list[[j]]))
     # }
-    # x.origin <- x.detrended
+    # x.origin <- x.detrended 
+
     f.season.scale <- function(t){
-      return(2.5 - .8 * sin(2 * pi * t / 365) - .6 * cos(2 * pi * t / 365)) 
+      return(2.5 - .8 * sin(2 * pi * t / 365) - .6 * cos(2 * pi * t/365)) 
     }
     y.origin <- y.origin * f.season.scale(time.seq)
-
     evgam.df <- data.frame(
-      y = (y.origin),
+      y = log(y.origin),
       sin.time = sin(2 * pi * time.seq / 365),
       cos.time = cos(2 * pi * time.seq / 365),
+      x.season = (time.seq %% period) / period,
+      time = time.seq,
       x.origin
     )
-    
-    evgam.cov <- y ~ 1 + cos.time + sin.time
-    ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
-    u.vec <- (predict(ald.cov.fit, type = "response")$location)
-    # qr.fit <- quantreg::rq(evgam.cov,  tau = 0.95, data = evgam.df)             
-    # qr.fit <- qgam::qgam(evgam.cov, data = evgam.df, qu = threshold)
-    # u.vec <- as.vector(predict(qr.fit))
-    summary(u.vec/f.season.scale(time.seq))
-    summary(qtt(threshold, scale = f.season.scale(time.seq), df = alp.origin, left = 0))
-    summary(ptt(u.vec, scale = f.season.scale(time.seq), df = alp.origin, left = 0))
-  #   if(any(u.vec < 0)){
-  #     is.positive <- TRUE
-  #     message("Negative values found in u.vec, retrying...")
-  #   } else {
-  #     is.positive <- FALSE
-  #   }
-  # }
+    # evgam.cov <- y ~ 1 + cos.time + sin.time #+ s(X1) + s(X2) + s(X3) + s(X4) + s(X5)
+    # evgam.cov <- list(y ~ 1 + cos.time + sin.time)
+    # ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
+    # u.vec <- exp(predict(ald.cov.fit, type= "response")$location)
+    u.vec <- 20^(1/alp.origin) * f.season.scale(time.seq)
+    # qr.fit <- quantreg::rq(evgam.cov, tau = 0.95, data = evgam.df)
+    # u.vec <- as.vector((predict(qr.fit)))
+
+    if(any(u.vec < 0)){
+      is.positive <- TRUE
+      message("Negative values found in u.vec, retrying...")
+    } else {
+      is.positive <- FALSE
+    }
+  }
+
   excess.index <- which(y.origin > u.vec)
 
   x.origin <- x.origin[excess.index,]
   y.origin <- y.origin[excess.index]
   u <- u.vec[excess.index]
-  season_code_full <- season_code_full[excess.index]  
+  season_code_full <- season_code_full[excess.index]
+  sigma.burr <- f.season.scale(time.seq)[excess.index]
   n <- length(y.origin)
-  sigma.t <- f.season.scale(time.seq)[excess.index]
-  # colnames(x.origin) <- paste0("X", 1:p)
-
+  colnames(x.origin) <- paste0("X", 1:p)
   newx <- seq(max(apply(x.origin, 2, min)), min(apply(x.origin, 2, max)), length.out = grid.n)
   xholder <- do.call(cbind, lapply(1:p, function(i) {seq(min(x.origin[,i]), max(x.origin[,i]), length.out = grid.n)}))
+  # newx <- seq(0.01, 0.99, length.out = grid.n)
+  # xholder <- do.call(cbind, lapply(1:p, function(i) {newx}))  
+
   x.grid <- do.call(cbind, lapply(1:p, function(i) {seq(0, 1, length.out = grid.n)}))  
   alp.new <- as.vector(exp(theta.origin[1] + x.grid %*% theta.origin[-1] + f1(x.grid[,1]) + f5(x.grid[,5])))
 
-  colnames(xholder) <- colnames(x.origin) <- covariates <- paste0("X", 1:p)
   group.map <- c()
   Z.list <- list()        # Stores the final non-linear design matrices
   scale_stats_list <- list() 
@@ -217,9 +260,11 @@ for(iter in 1:total.iter){
   sm_spec_list <- list()     # Store smooth objects
   keep_cols_list <- list()
 
+  covariates <- colnames(data.frame(x.origin))
+  colnames(xholder) <- covariates  
   for (i in seq_along(covariates)) {
     var_name <- covariates[i]
-    x_vec <- x.origin[, i]
+    x_vec <- (x.origin[, i])# - X_means[i]) / X_sd[i]
     X_lin <- model.matrix(~ x_vec) 
     sm_spec <- smoothCon(s(x_vec, bs = "tp", k = psi + 2), 
                         data = data.frame(x_vec = x_vec), 
@@ -252,12 +297,15 @@ for(iter in 1:total.iter){
     train_scale <- apply(Z_final, 2, sd)
     Z_final <- scale(Z_final, center = FALSE, scale = train_scale)
     
+    # Store Results
     Z.list[[i]] <- Z_final
     group.map <- c(group.map, rep(i, ncol(Z_final)))
+    
+    # Store Transforms
     spec_decomp_list[[i]] <- list(U_pen = U_pen, Lambda_sqrt_inv = solve(sqrt(Lambda_pen)))
-    projection_coefs_list[[i]] <- Gamma_Original 
+    projection_coefs_list[[i]] <- Gamma_Original # Store the X-basis coefs
     keep_cols_list[[i]] <- keep_cols
-    scale_stats_list[[i]] <- train_scale         
+    scale_stats_list[[i]] <- train_scale         # Store the scale
     sm_spec_list[[i]] <- sm_spec
   }
 
@@ -269,6 +317,7 @@ for(iter in 1:total.iter){
   grid_Z_list <- list()
 
   for (i in seq_along(covariates)) {
+    # x_vec <- (seq(min(x.origin[,i]), max(x.origin[,i]), length.out = grid.n))
     x_vec <- xholder[,i]
     grid_df  <- data.frame(x_vec = x_vec)
     X_lin_grid <- model.matrix(~ x_vec, data = grid_df)
@@ -285,26 +334,28 @@ for(iter in 1:total.iter){
 
   xholder.linear <- model.matrix(~ ., data = data.frame(xholder))[,-1]
   xholder.nonlinear <- do.call(cbind, grid_Z_list)
-
   X_means <- colMeans(bs.linear)
   X_sd   <- apply(bs.linear, 2, sd)
   bs.linear <- scale(bs.linear, center = X_means, scale = X_sd)
 
   data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, grid_n = grid.n,
-                  atau = ((psi+1)/2), X_means = X_means, X_sd=X_sd, sigma_t = sigma.t,
+                  atau = ((psi+1)/2), X_means = X_means, X_sd=X_sd, sigma_burr = sigma.burr,
                   bsLinear = bs.linear, bsNonlinear = bs.nonlinear, trueAlpha = alp.new,
                   xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear)
 
   init.alpha <- list(list(gamma_raw= array(rep(0.2, (psi*p)), dim=c(p,psi)),
                           theta = rep(-0.1, (p+1)), tau = rep(0.1, p), 
+                          # lambda1 = 0.1, lambda2 = rep(1, p)),
                           lambda1 = rep(0.1, p), lambda2 = rep(1, p)),
                     list(gamma_raw = array(rep(0.15, (psi*p)), dim=c(p,psi)),
                           theta = rep(-0.05, (p+1)), tau = rep(0.3, p),
-                          lambda1 = rep(0.2, p), lambda2 = rep(0.5, p)),
+                          # lambda1 = 0.4, lambda2 = rep(1, p)),
+                          lambda1 = rep(1, p), lambda2 = rep(1, p)),
                     list(gamma_raw = array(rep(0.1, (psi*p)), dim=c(p,psi)),
-                          theta = rep(0.05, (p+1)), tau = rep(0.2, p),
+                          theta = rep(0.05, (p+1)), tau = rep(1, p),
+                          # lambda1 = 0.2, lambda2 = rep(1, p)))
                           lambda1 = rep(0.2, p), lambda2 = rep(0.5, p)))
-    
+
   fit1 <- stan(
       model_code = model.stan,
       data = data.stan,    # named list of data
@@ -329,7 +380,7 @@ for(iter in 1:total.iter){
   gridgsmooth.container[,iter] <- as.vector(matrix(gridgsmooth.samples[,4], nrow = grid.n, byrow=TRUE))
   gridgl.container[,iter] <- as.vector(matrix(gridgl.samples[,4], nrow = grid.n, byrow=TRUE))
   gridgnl.container[,iter] <- as.vector(matrix(gridgnl.samples[,4], nrow = grid.n, byrow=TRUE))
-  # newx <- seq(0.1, , length.out = grid.n)
+  # newx <- seq(0, 1, length.out = grid.n)
   mise.container[iter] <- auc(newx, se.samples[,4], type="spline")
 
   # mcmc.alpha <- rstan::extract(fit1)$alpha
@@ -361,7 +412,6 @@ for(iter in 1:total.iter){
   # qqplot.container[iter] <- apply(traj, 2, mean)#quantile, prob = 0.5)
 }
 
-
 f1.hidden <- make.nl(x.origin[,1], f1(x.origin[,1]))
 f5.hidden <- make.nl(x.origin[,5], f5(x.origin[,5]))
 theta.adjusted <- c(theta.origin[1] + f1.hidden$intercept + f5.hidden$intercept,
@@ -388,56 +438,59 @@ grid.zero <- rep(0, grid.n)
 g.new <- c(g1, g2, grid.zero, grid.zero, g5)
 l.new <- c(g1.l, g2.l, grid.zero, grid.zero, g5.l)
 nl.new <- c(g1.nl, grid.zero, grid.zero, grid.zero, g5.nl)
-newx <- seq(0, 1, length.out = grid.n)
 
+
+newx <- seq(0, 1, length.out = grid.n)
 alpha.container$x <- newx
 # alpha.container$true <- alp.new
 alpha.container$true <- rowMeans(true.container)
 alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
-# load(paste0("./simulation/results/MC-Scenario_C/2026-03-10_",total.iter,"_MC_scC_",n.origin,"-sa-tv.Rdata"))
+# load(paste0("./simulation/results/MC-Scenario_D/2026-03-10_",total.iter,"_MC_scD_",n.origin,"-s.Rdata"))
 
-plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + ylab(expression(alpha(c,ldots,c))) #+ ylab("")
+plt <- ggplot(data = alpha.container, aes(x = x)) + 
+        xlab(expression(c)) + ylab(expression(alpha(c,ldots,c))) #+ ylab("")
 plot_limit <- min(total.iter, 50)
 for(i in 1:plot_limit){
   plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.05, linewidth = 0.7)
 }
 print(plt + 
-        geom_line(aes(y=true), colour = "red", linewidth = 2, linetype = 2) + 
-        geom_line(aes(y=mean), colour = "steelblue", linewidth = 1.8) + ylim(0, 10) +
+        geom_line(aes(y=true), color = "red", linewidth = 2, linetype = 2) + 
+        geom_line(aes(y=mean), color = "steelblue", linewidth = 1.8) + ylim(0, 10) +
         theme_minimal(base_size = 40) + 
         theme(legend.position = "none",
                 strip.text = element_blank(),
                 axis.text = element_text(size = 30)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_scC_",n.origin,".pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_scD_",n.origin,".pdf"), width=10, height = 7.78)
 
-
-gridgsmooth.container$x <- seq(0, 1, length.out = grid.n)
+gridgsmooth.container$x <- newx
 gridgsmooth.container$true <- g.new
 gridgsmooth.container$mean <- rowMeans(gridgsmooth.container[,1:total.iter])
 gridgsmooth.container$covariate <- gl(p, grid.n, (p*grid.n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]"))
 gridgsmooth.container <- as.data.frame(gridgsmooth.container)
 
-plt <- ggplot(data = gridgsmooth.container, aes(x = x, group = covariate)) + ylab("") + xlab(expression(c))
+plt <- ggplot(data = gridgsmooth.container, aes(x = x, group = covariate)) + 
+        ylab("") + xlab(expression(c))
 plot_limit <- min(total.iter, 50)
 for(i in 1:plot_limit){
   plt <- plt + geom_line(aes(y = .data[[names(gridgsmooth.container)[i]]]), alpha = 0.05, linewidth = 0.7)
 }
 print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + ylim(-2.5, 2.5) +
-        geom_line(aes(y=true), colour = "red", linewidth = 2, linetype = 2) + 
-        geom_line(aes(y=mean), colour = "steelblue", linewidth = 1.5) + 
+        geom_line(aes(y=true), color = "red", linewidth = 2, linetype = 2) + 
+        geom_line(aes(y=mean), color = "steelblue", linewidth = 1.5) + 
         facet_grid(covariate ~ ., scales = "free_x", switch = "y",
                     labeller = label_parsed) +
         theme_minimal(base_size = 30) +
         theme(legend.position = "none",
                 plot.margin = margin(0,0,0,-20),
-                strip.text = element_blank(),
-                axis.title.x = element_text(size = 45),  
+                strip.text.y = element_text(size = 38, colour = "black", angle = 0, face = "bold.italic"),
+                strip.placement = "outside",
+                axis.title.x = element_text(size = 45),                
                 axis.text = element_text(size = 30)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_scC_",n.origin,".pdf"), width=12.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_scD_",n.origin,".pdf"), width=12.5, height = 15)
 
 
 gridgl.container$x <- newx
@@ -472,7 +525,7 @@ gridgl.container <- as.data.frame(gridgl.container)
 #                 axis.title.x = element_text(size = 45),  
 #                 axis.text = element_text(size = 30)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_linear_scC",n.origin,".pdf"), width=12.5, height = 7.78)                
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_linear_scD",n.origin,".pdf"), width=12.5, height = 7.78)                
 
 gridgnl.container$x <- newx
 gridgnl.container$true <- as.vector(nl.new)
@@ -506,7 +559,7 @@ gridgnl.container <- as.data.frame(gridgnl.container)
 #                 axis.title.x = element_text(size = 45),  
 #                 axis.text = element_text(size = 30)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_nonlinear_scC",n.origin,".pdf"), width=12.5, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_nonlinear_scD",n.origin,".pdf"), width=12.5, height = 7.78)
 
 # qqplot.container$grid <- grid
 # qqplot.container$mean <- rowMeans(qqplot.container[,1:total.iter])
@@ -527,8 +580,8 @@ gridgnl.container <- as.data.frame(gridgnl.container)
 #         theme(text = element_text(size = 20)) +
 #         coord_fixed(xlim = c(-2, 2),  
 #                     ylim = c(-2, 2)))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_qqplot_scC_",n.origin,".pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_qqplot_scD_",n.origin,".pdf"), width=10, height = 7.78)
 
-# save(alpha.container, gridgnl.container, gridgl.container, gridgsmooth.container, mise.container, file = paste0(Sys.Date(),"_",total.iter,"_MC_scC_",n.origin,"_",array.id,".Rdata"))
+# save(alpha.container, gridgnl.container, gridgl.container, gridgsmooth.container, mise.container, file = paste0(Sys.Date(),"_",total.iter,"_MC_scD_",n.origin,"_",array.id,".Rdata"))
 
 mean(mise.container)
