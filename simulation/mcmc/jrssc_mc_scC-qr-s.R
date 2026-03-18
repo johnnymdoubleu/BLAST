@@ -10,7 +10,7 @@ library(forecast)
 # Scenario C
 # array.id <- commandArgs(trailingOnly=TRUE)
 
-total.iter <- 2
+total.iter <- 10
 n <- n.origin <- 10000
 grid.n <- 200
 psi.origin <- psi <- 10
@@ -19,8 +19,10 @@ p <- 5
 
 C <- diag(p)
 
-f1 <- function(x) { 1.4 * (1.2 - x)^3 }  # Quadratic decrease: ~4.8 (at x=0) to ~0.4 (at x=1)
-f5 <- function(x) { -0.4 * (1.1 - x)^3 }   # Quadratic decrease: ~3.9 (at x=0) to ~0.3 (at x=1)
+# f1 <- function(x) { 1.4 * (1.2 - x)^3 }  
+# f5 <- function(x) { -0.4 * (1.1 - x)^3 } 
+f1 <- function(x) { 0.4 * (1.2 - x)^3 } 
+f5 <- function(x) { 0.4 * (1.1 - x)^3 }  
 
 time.seq <- 1:n
 period <- 365 
@@ -183,9 +185,9 @@ for(iter in 1:total.iter){
     # qr.fit <- quantreg::rq(evgam.cov,  tau = 0.95, data = evgam.df)             
     # qr.fit <- qgam::qgam(evgam.cov, data = evgam.df, qu = threshold)
     # u.vec <- as.vector(predict(qr.fit))
-    summary(u.vec/f.season.scale(time.seq))
-    summary(qtt(threshold, scale = f.season.scale(time.seq), df = alp.origin, left = 0))
-    summary(ptt(u.vec, scale = f.season.scale(time.seq), df = alp.origin, left = 0))
+    # summary(u.vec/f.season.scale(time.seq))
+    # summary(qtt(threshold, scale = f.season.scale(time.seq), df = alp.origin, left = 0))
+    # summary(ptt(u.vec, scale = f.season.scale(time.seq), df = alp.origin, left = 0))
   #   if(any(u.vec < 0)){
   #     is.positive <- TRUE
   #     message("Negative values found in u.vec, retrying...")

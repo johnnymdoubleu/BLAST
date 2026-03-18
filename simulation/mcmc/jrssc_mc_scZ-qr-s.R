@@ -10,18 +10,18 @@ library(forecast)
 # Scenario D
 # array.id <- commandArgs(trailingOnly=TRUE)
 
-total.iter <- 2
+total.iter <- 15
 
 n <- n.origin <- 10000
 grid.n <- 200
-psi.origin <- psi <- 10
+psi.origin <- psi <- 5
 threshold <- 0.95
 p <- 5
 
 C <- diag(p)
 
-f1 <- function(x) { 1.4 * (1.2 - x)^3 }  # Quadratic decrease: ~4.8 (at x=0) to ~0.4 (at x=1)
-f5 <- function(x) { -0.4 * (1.1 - x)^3 }   # Quadratic decrease: ~3.9 (at x=0) to ~0.3 (at x=1)
+f1 <- function(x) { 0.4 * (1.2 - x)^3 }  # Quadratic decrease: ~4.8 (at x=0) to ~0.4 (at x=1)
+f5 <- function(x) { 0.4 * (1.1 - x)^3 }   # Quadratic decrease: ~3.9 (at x=0) to ~0.3 (at x=1)
 
 time.seq <- 1:n
 period <- 365 
@@ -183,8 +183,9 @@ for(iter in 1:total.iter){
 
 
     # y.origin <- rburr(n.origin, m = rep(1, n.origin), s = rep(1, n.origin), f = alp.origin)
-    y.origin <- Pareto::rPareto(n.origin, rep(1, n.origin), alpha = alp.origin)
+    # y.origin <- Pareto::rPareto(n.origin, rep(1, n.origin), alpha = alp.origin)
     # y.origin <- rburr(n.origin, m = rep(1, n.origin), s = alp.origin, f = rep(1, n.origin))
+    y.origin <- crch::rtt(n.origin, df = alp.origin, left=0)
 
     # for (j in 1:p) {
     #   phase_shift <- j * (2 * pi / p) 
@@ -208,25 +209,29 @@ for(iter in 1:total.iter){
     # x.origin <- x.detrended 
 
     f.season.scale <- function(t){
-      return(2.5 - .8 * sin(2 * pi * t / 365) - .6 * cos(2 * pi * t/365)) 
+      return(1.6 - .4 * sin(2 * pi * t / 365) - .3 * cos(2 * pi * t/365)) 
     }
     y.origin <- y.origin * f.season.scale(time.seq)
     evgam.df <- data.frame(
-      y = log(y.origin),
+      y = (y.origin),
       sin.time = sin(2 * pi * time.seq / 365),
       cos.time = cos(2 * pi * time.seq / 365),
-      x.season = (time.seq %% period) / period,
+      x.season = (time.seq %% period),
       time = time.seq,
       x.origin
     )
-    # evgam.cov <- y ~ 1 + cos.time + sin.time #+ s(X1) + s(X2) + s(X3) + s(X4) + s(X5)
-    # evgam.cov <- list(y ~ 1 + cos.time + sin.time)
-    # ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
+    evgam.cov <- y ~ cos.time + sin.time + s(X1) + s(X2) + s(X3) + s(X4) + s(X5)
+    # evgam.cov <- list(y ~ cos.time + sin.time)
+    # evgam.cov <- y ~ s(x.season, bs = "cc", k = 6)
+    ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
     # u.vec <- exp(predict(ald.cov.fit, type= "response")$location)
-    u.vec <- 20^(1/alp.origin) * f.season.scale(time.seq)
+    u.vec <- (predict(ald.cov.fit, type= "response")$location)
+    # u.vec <- qt((1 + 0.95) / 2, df = alp.origin)* f.season.scale(time.seq) #20^(1/alp.origin)
     # qr.fit <- quantreg::rq(evgam.cov, tau = 0.95, data = evgam.df)
     # u.vec <- as.vector((predict(qr.fit)))
-
+    plot(time.seq, log(y.origin), type = "p")
+    # lines(time.seq, log(20^(1/alp.origin)*f.season.scale(time.seq)), col = "blue", type = "l")
+    lines(time.seq, log(u.vec), col="red")
     if(any(u.vec < 0)){
       is.positive <- TRUE
       message("Negative values found in u.vec, retrying...")
