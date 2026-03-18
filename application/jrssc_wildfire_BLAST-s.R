@@ -121,11 +121,15 @@ fwi.index[,1:7] <- fwi.scaled[, 1:7] <- x.detrended
 above.0 <- which(Y > 0)
 Y_pos <- Y[above.0]
 fwi_pos <- fwi.scaled[above.0, ]
-
-qr.df <- data.frame(y = log(Y_pos), fwi_pos)
-evgam.cov <- y ~ 1 + cos.time + sin.time + s(BUI, bs = "ts") + s(ISI, bs = "ts") + s(FFMC, bs = "ts") + s(DMC, bs = "ts") + s(DC, bs = "ts")
+pca_result <- prcomp(fwi_pos[,1:7], center = TRUE, scale. = TRUE)
+# qr.df$PC1 <- pca_result$x[, 1]
+# qr.df$PC2 <- pca_result$x[, 2]
+range01 <- function(x){(x-min(x))/(max(x)-min(x))}
+fwi_pos[,1:7] <- as.data.frame(sapply(fwi_pos[,1:7], FUN = range01))
+qr.df <- data.frame(y = (Y_pos), fwi_pos)
+evgam.cov <- y ~ 1 + cos.time + sin.time + s(BUI, bs = "ts", k=6) + s(ISI, bs = "ts", k=6) + s(FFMC, bs = "ts", k=6) + s(DMC, bs = "ts", k=6) + s(DC, bs = "ts", k=6) 
 qr.fit <- evgam(evgam.cov, data = qr.df, family = "ald", ald.args=list(tau = threshold))
-u.vec <- exp(predict(qr.fit)$location)
+u.vec <- (predict(qr.fit)$location)
 # qr.fit <- quantreg::rq(y ~ 1 + cos.time + sin.time, data = qr.df, tau = threshold)
 # u.vec <- exp(predict(qr.fit))  # threshold on raw scale for Y_pos
 
@@ -134,7 +138,6 @@ y <- Y_pos[excess_idx]
 u <- u.vec[excess_idx]
 fwi_pos <- fwi_pos[excess_idx, 3:7] # BUI to DC
 
-range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 fwi.cols <- c("BUI", "ISI", "FFMC", "DMC", "DC")
 X_minmax <- sapply(fwi_pos, function(x) max(x)-min(x))
 X_min <- sapply(fwi_pos, function(x) min(x))

@@ -398,9 +398,9 @@ alpha.container$true <- rowMeans(true.container)
 alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
-load(paste0("./simulation/results/MC-Scenario_C/2026-03-18_",total.iter,"_MC_scC_",n.origin,".Rdata"))
+# load(paste0("./simulation/results/MC-Scenario_C/2026-03-18_",total.iter,"_MC_scC_",n.origin,".Rdata"))
 
-plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + ylab(expression(alpha(c,ldots,c))) #+ ylab("")
+plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + ylab("")
 plot_limit <- min(total.iter, 50)
 for(i in 1:plot_limit){
   plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.05, linewidth = 0.7)
@@ -411,9 +411,10 @@ print(plt +
         theme_minimal(base_size = 40) + 
         theme(legend.position = "none",
                 strip.text = element_blank(),
+                axis.text.y = element_blank(),
                 axis.text = element_text(size = 30)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_scC_",n.origin,".pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_scC_",n.origin,".pdf"), width=9.5, height = 7.78)
 
 
 gridgsmooth.container$x <- seq(0, 1, length.out = grid.n)
@@ -427,7 +428,7 @@ plot_limit <- min(total.iter, 50)
 for(i in 1:plot_limit){
   plt <- plt + geom_line(aes(y = .data[[names(gridgsmooth.container)[i]]]), alpha = 0.05, linewidth = 0.7)
 }
-print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + ylim(-2.5, 2.5) +
+print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + ylim(-1.5, 1.5) +
         geom_line(aes(y=true), colour = "red", linewidth = 2, linetype = 2) + 
         geom_line(aes(y=mean), colour = "steelblue", linewidth = 1.5) + 
         facet_grid(covariate ~ ., scales = "free_x", switch = "y",
@@ -435,11 +436,12 @@ print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewid
         theme_minimal(base_size = 30) +
         theme(legend.position = "none",
                 plot.margin = margin(0,0,0,-20),
+                axis.text.y = element_blank(),
                 strip.text = element_blank(),
-                axis.title.x = element_text(size = 45),  
+                axis.title.x = element_text(size = 45),                
                 axis.text = element_text(size = 30)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_scC_",n.origin,".pdf"), width=12.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_scC_",n.origin,".pdf"), width=11, height = 15)
 
 
 gridgl.container$x <- newx

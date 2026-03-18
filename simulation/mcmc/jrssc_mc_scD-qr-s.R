@@ -106,7 +106,6 @@ data {
     real <lower=0> atau;
     vector[p] X_means;
     vector[p] X_sd;
-    vector[(psi*p)] Z_scales;
     vector[grid_n] trueAlpha;
     vector<lower=0>[n] sigma_burr;
 }
@@ -139,11 +138,11 @@ model {
   // target += burr_lpdf(y | sigma_burr, alpha) - burr_lccdf(u | sigma_burr, alpha);
   target += pareto_lpdf(y | u, alpha);
   target += normal_lpdf(theta[1] | 0, 10);
-  // target += gamma_lpdf(lambda1 | 1e-2, 1e-2); 
+  target += gamma_lpdf(lambda1 | 1e-2, 1e-2); 
   // target += exponential_lpdf(lambda1 | 0.1);
-  // target += gamma_lpdf(lambda2 | 1e-2, 1e-2);
-  target += cauchy_lpdf(lambda1 | 0, 1); 
-  target += cauchy_lpdf(lambda2 | 0, 1);  
+  target += gamma_lpdf(lambda2 | 1e-2, 1e-2);
+  // target += cauchy_lpdf(lambda1 | 0, 1); 
+  // target += cauchy_lpdf(lambda2 | 0, 1);  
   for (j in 1:p){
     target += double_exponential_lpdf(theta[(j+1)] | 0, 1/(lambda1[j]));
     target += gamma_lpdf(tau[j] | atau, square(lambda2[j])*0.5);

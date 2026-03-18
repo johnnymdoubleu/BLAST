@@ -20,8 +20,10 @@ p <- 5
 
 C <- diag(p)
 
-f1 <- function(x) { 0.4 * (1.2 - x)^3 }  # Quadratic decrease: ~4.8 (at x=0) to ~0.4 (at x=1)
-f5 <- function(x) { 0.4 * (1.1 - x)^3 }   # Quadratic decrease: ~3.9 (at x=0) to ~0.3 (at x=1)
+# f1 <- function(x) { 0.4 * (1.2 - x)^3 }
+# f5 <- function(x) { 0.4 * (1.1 - x)^3 }
+f1 <- function(x) { 1.4 * (1.2 - x)^3 }  
+f5 <- function(x) { -0.4 * (1.1 - x)^3 } 
 
 time.seq <- 1:n
 period <- 365 
@@ -184,8 +186,8 @@ for(iter in 1:total.iter){
 
     # y.origin <- rburr(n.origin, m = rep(1, n.origin), s = rep(1, n.origin), f = alp.origin)
     # y.origin <- Pareto::rPareto(n.origin, rep(1, n.origin), alpha = alp.origin)
-    # y.origin <- rburr(n.origin, m = rep(1, n.origin), s = alp.origin, f = rep(1, n.origin))
-    y.origin <- crch::rtt(n.origin, df = alp.origin, left=0)
+    y.origin <- rburr(n.origin, m = rep(1, n.origin), s = alp.origin, f = rep(1, n.origin))
+    # y.origin <- crch::rtt(n.origin, df = alp.origin, left=0)
 
     # for (j in 1:p) {
     #   phase_shift <- j * (2 * pi / p) 
@@ -220,7 +222,7 @@ for(iter in 1:total.iter){
       time = time.seq,
       x.origin
     )
-    evgam.cov <- y ~ cos.time + sin.time + s(X1) + s(X2) + s(X3) + s(X4) + s(X5)
+    evgam.cov <- y ~ cos.time + sin.time #+ s(X1, bs = "ts", k = 6) + s(X2, bs = "ts", k = 6) + s(X3, bs = "ts", k = 6) + s(X4, bs = "ts", k = 6) + s(X5, bs = "ts", k = 6)
     # evgam.cov <- list(y ~ cos.time + sin.time)
     # evgam.cov <- y ~ s(x.season, bs = "cc", k = 6)
     ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
@@ -231,6 +233,7 @@ for(iter in 1:total.iter){
     # u.vec <- as.vector((predict(qr.fit)))
     plot(time.seq, log(y.origin), type = "p")
     # lines(time.seq, log(20^(1/alp.origin)*f.season.scale(time.seq)), col = "blue", type = "l")
+    lines(time.seq, log(qt((1 + 0.95) / 2, df = alp.origin)* f.season.scale(time.seq)), col = "blue", type = "l")
     lines(time.seq, log(u.vec), col="red")
     if(any(u.vec < 0)){
       is.positive <- TRUE
@@ -468,7 +471,7 @@ print(plt +
                 strip.text = element_blank(),
                 axis.text = element_text(size = 30)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_scD_",n.origin,".pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_scZ_",n.origin,".pdf"), width=10, height = 7.78)
 
 gridgsmooth.container$x <- newx
 gridgsmooth.container$true <- g.new
@@ -495,7 +498,7 @@ print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewid
                 axis.title.x = element_text(size = 45),                
                 axis.text = element_text(size = 30)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_scD_",n.origin,".pdf"), width=12.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_scZ_",n.origin,".pdf"), width=12.5, height = 15)
 
 
 gridgl.container$x <- newx
