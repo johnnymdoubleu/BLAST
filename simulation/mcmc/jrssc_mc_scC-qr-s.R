@@ -482,31 +482,31 @@ gridgnl.container$mean <- rowMeans(gridgnl.container[,1:total.iter])
 gridgnl.container$covariate <- gl(p, grid.n, (p*grid.n), labels = c("g[1]", "g[2]", "g[3]", "g[4]", "g[5]"))
 gridgnl.container <- as.data.frame(gridgnl.container)
 
-# plt <- ggplot(data = gridgnl.container, aes(x = x, group = covariate)) + ylab("") + xlab(expression(x))
-# if(total.iter <= 50){
-#   for(i in 1:total.iter){
-#     plt <- plt + geom_line(aes(y = .data[[names(gridgnl.container)[i]]]), alpha = 0.05, linewidth = 0.7)
-#   }
-# }else{
-#   for(i in 1:50){
-#     plt <- plt + geom_line(aes(y = .data[[names(gridgnl.container)[i]]]), alpha = 0.05, linewidth = 0.7)
-#   }
-# }
-# print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-#         geom_line(aes(y=true, col = "True"), linewidth = 2, linetype = 2) + 
-#         geom_line(aes(y=mean, col = "Mean"), linewidth = 1.2) + 
-#         ylim(-2.5,2.5)+
-#         facet_grid(covariate ~ ., scales = "free_x", switch = "y",
-#                     labeller = label_parsed) +  
-#         scale_color_manual(values = c("steelblue", "red"))+
-#         guides(color = guide_legend(order = 2), 
-#           fill = guide_legend(order = 1)) +
-#         theme_minimal(base_size = 30) +
-#         theme(legend.position = "none",
-#                 plot.margin = margin(0,0,0,-20),
-#                 strip.text = element_blank(),
-#                 axis.title.x = element_text(size = 45),  
-#                 axis.text = element_text(size = 30)))
+plt <- ggplot(data = gridgnl.container, aes(x = x, group = covariate)) + ylab("") + xlab(expression(x))
+if(total.iter <= 50){
+  for(i in 1:total.iter){
+    plt <- plt + geom_line(aes(y = .data[[names(gridgnl.container)[i]]]), alpha = 0.05, linewidth = 0.7)
+  }
+}else{
+  for(i in 1:50){
+    plt <- plt + geom_line(aes(y = .data[[names(gridgnl.container)[i]]]), alpha = 0.05, linewidth = 0.7)
+  }
+}
+print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
+        geom_line(aes(y=true, col = "True"), linewidth = 2, linetype = 2) + 
+        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.2) + 
+        ylim(-0.5, 0.5)+
+        facet_grid(covariate ~ ., scales = "free_x", switch = "y",
+                    labeller = label_parsed) +  
+        scale_color_manual(values = c("steelblue", "red"))+
+        guides(color = guide_legend(order = 2), 
+          fill = guide_legend(order = 1)) +
+        theme_minimal(base_size = 30) +
+        theme(legend.position = "none",
+                plot.margin = margin(0,0,0,-20),
+                strip.text = element_blank(),
+                axis.title.x = element_text(size = 45),  
+                axis.text = element_text(size = 30)))
 
 # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_nonlinear_scC",n.origin,".pdf"), width=12.5, height = 7.78)
 

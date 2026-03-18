@@ -98,6 +98,20 @@ fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 #   fwi.index[, j] <- fwi.scaled[, j] <- as.numeric(residuals(fit.list[[j]]))
 # }
 
+xreg.season <- cbind(
+  trend = c(1:length(Y)),
+  cos_season = cos(2 * pi * c(1:length(Y)) / 365.25),
+  sin_season = sin(2 * pi * c(1:length(Y)) / 365.25)
+)
+
+fit.list <- list()
+x.detrended <- matrix(nrow = length(Y), ncol = 7)
+for (j in 1:7) {
+  y_ts <- ts(fwi.scaled[, j], frequency = 365.25) 
+  fit.list[[j]] <- fit <- auto.arima(y_ts, seasonal = FALSE, xreg = xreg.season, stepwise = TRUE, approximation = FALSE)
+  x.detrended[, j] <- as.numeric(residuals(fit.list[[j]]))
+}
+fwi.index[,1:7] <- fwi.scaled[, 1:7] <- x.detrended
 # acf(fwi.index$BUI)
 # acf(fwi.index$ISI)
 # acf(fwi.index$FFMC)
@@ -109,7 +123,8 @@ Y_pos <- Y[above.0]
 fwi_pos <- fwi.scaled[above.0, ]
 
 qr.df <- data.frame(y = log(Y_pos), fwi_pos)
-qr.fit <- evgam(y ~ 1 + cos.time + sin.time, data = qr.df, family = "ald", ald.args=list(tau = threshold))
+evgam.cov <- y ~ 1 + cos.time + sin.time + s(BUI) + s(ISI) + s(FFMC) + s(DMC) + s(DC)
+qr.fit <- evgam(evgam.cov, data = qr.df, family = "ald", ald.args=list(tau = threshold))
 u.vec <- exp(predict(qr.fit)$location)
 # qr.fit <- quantreg::rq(y ~ 1 + cos.time + sin.time, data = qr.df, tau = threshold)
 # u.vec <- exp(predict(qr.fit))  # threshold on raw scale for Y_pos
@@ -224,9 +239,9 @@ transformed parameters {
 
 model {
   target += pareto_lpdf(y | u, alpha);
-  target += normal_lpdf(theta[1] | 0, 1);
-  // target += gamma_lpdf(lambda1 | 1e-1, 1e-1);
-  target += exponential_lpdf(lambda1 | 0.1); 
+  target += normal_lpdf(theta[1] | 0, 10);
+  target += gamma_lpdf(lambda1 | 1e-1, 1e-1);
+  // target += exponential_lpdf(lambda1 | 0.1); 
   target += gamma_lpdf(lambda2 | 1e-2, 1e-2);
   for (j in 1:p) {
     target += double_exponential_lpdf(theta[j+1] | 0, 1/lambda1[j]);
