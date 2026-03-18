@@ -123,7 +123,7 @@ Y_pos <- Y[above.0]
 fwi_pos <- fwi.scaled[above.0, ]
 
 qr.df <- data.frame(y = log(Y_pos), fwi_pos)
-evgam.cov <- y ~ 1 + cos.time + sin.time + s(BUI) + s(ISI) + s(FFMC) + s(DMC) + s(DC)
+evgam.cov <- y ~ 1 + cos.time + sin.time + s(BUI, bs = "ts") + s(ISI, bs = "ts") + s(FFMC, bs = "ts") + s(DMC, bs = "ts") + s(DC, bs = "ts")
 qr.fit <- evgam(evgam.cov, data = qr.df, family = "ald", ald.args=list(tau = threshold))
 u.vec <- exp(predict(qr.fit)$location)
 # qr.fit <- quantreg::rq(y ~ 1 + cos.time + sin.time, data = qr.df, tau = threshold)

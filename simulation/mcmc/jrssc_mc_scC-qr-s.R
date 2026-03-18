@@ -10,7 +10,7 @@ library(forecast)
 # Scenario C
 # array.id <- commandArgs(trailingOnly=TRUE)
 
-total.iter <- 10
+total.iter <- 100
 n <- n.origin <- 10000
 grid.n <- 200
 psi.origin <- psi <- 10
@@ -398,7 +398,7 @@ alpha.container$true <- rowMeans(true.container)
 alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
-# load(paste0("./simulation/results/MC-Scenario_C/2026-03-10_",total.iter,"_MC_scC_",n.origin,"-sa-tv.Rdata"))
+load(paste0("./simulation/results/MC-Scenario_C/2026-03-18_",total.iter,"_MC_scC_",n.origin,".Rdata"))
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + ylab(expression(alpha(c,ldots,c))) #+ ylab("")
 plot_limit <- min(total.iter, 50)
