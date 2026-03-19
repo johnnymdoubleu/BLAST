@@ -125,13 +125,18 @@ pca_result <- prcomp(fwi_pos[,1:7], center = TRUE, scale. = TRUE)
 # qr.df$PC1 <- pca_result$x[, 1]
 # qr.df$PC2 <- pca_result$x[, 2]
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
-fwi_pos[,1:7] <- as.data.frame(sapply(fwi_pos[,1:7], FUN = range01))
-qr.df <- data.frame(y = (Y_pos), fwi_pos)
-evgam.cov <- y ~ 1 + cos.time + sin.time + s(BUI, bs = "ts", k=6) + s(ISI, bs = "ts", k=6) + s(FFMC, bs = "ts", k=6) + s(DMC, bs = "ts", k=6) + s(DC, bs = "ts", k=6) 
+# fwi_pos[,1:7] <- as.data.frame(sapply(fwi_pos[,1:7], FUN = range01))
+# qr.df <- data.frame(y = log(Y_pos), pca_result$x, cos.time = fwi_pos$cos.time, sin.time = fwi_pos$sin.time) #fwi_pos)
+qr.df <- data.frame(y = log(Y_pos), scale(fwi_pos[,3:7]), cos.time = fwi_pos$cos.time, sin.time = fwi_pos$sin.time)
+# evgam.cov <- y ~ 1 + cos.time + sin.time + s(PC1) + s(PC2) + s(PC3) + s(PC4) + s(PC5) + s(PC6) + s(PC7)
+evgam.cov <- y ~ cos.time + sin.time + s(BUI, bs = "ts", k=30) + s(ISI, bs = "ts", k=30) + s(FFMC, bs = "ts", k=30) + s(DMC, bs = "ts", k=30) + s(DC, bs = "ts", k=30) 
 qr.fit <- evgam(evgam.cov, data = qr.df, family = "ald", ald.args=list(tau = threshold))
-u.vec <- (predict(qr.fit)$location)
+u.vec <- exp(predict(qr.fit)$location)
 # qr.fit <- quantreg::rq(y ~ 1 + cos.time + sin.time, data = qr.df, tau = threshold)
 # u.vec <- exp(predict(qr.fit))  # threshold on raw scale for Y_pos
+
+plot(c(1:length(Y_pos)), log(Y_pos))
+lines(c(1:length(Y_pos)), u.vec, type = "l", col = "red")
 
 excess_idx <- which(Y_pos > u.vec)
 y <- Y_pos[excess_idx]
@@ -243,7 +248,7 @@ transformed parameters {
 model {
   target += pareto_lpdf(y | u, alpha);
   target += normal_lpdf(theta[1] | 0, 10);
-  target += gamma_lpdf(lambda1 | 1e-1, 1e-1);
+  target += gamma_lpdf(lambda1 | 1e-2, 1e-2);
   // target += exponential_lpdf(lambda1 | 0.1); 
   target += gamma_lpdf(lambda2 | 1e-2, 1e-2);
   for (j in 1:p) {

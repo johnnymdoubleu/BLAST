@@ -22,8 +22,8 @@ C <- diag(p)
 
 # f1 <- function(x) { 0.4 * (1.2 - x)^3 }
 # f5 <- function(x) { 0.4 * (1.1 - x)^3 }
-f1 <- function(x) { 1.4 * (1.2 - x)^3 }  
-f5 <- function(x) { -0.4 * (1.1 - x)^3 } 
+f1 <- function(x) {1.4 * (1.2 - x)^3}
+f5 <- function(x) {-0.4 * (1.1 - x)^3}
 
 time.seq <- 1:n
 period <- 365 
@@ -185,33 +185,33 @@ for(iter in 1:total.iter){
 
 
     # y.origin <- rburr(n.origin, m = rep(1, n.origin), s = rep(1, n.origin), f = alp.origin)
-    # y.origin <- Pareto::rPareto(n.origin, rep(1, n.origin), alpha = alp.origin)
-    y.origin <- rburr(n.origin, m = rep(1, n.origin), s = alp.origin, f = rep(1, n.origin))
+    y.origin <- Pareto::rPareto(n.origin, rep(1, n.origin), alpha = alp.origin)
+    # y.origin <- rburr(n.origin, m = rep(1, n.origin), s = alp.origin, f = rep(1, n.origin))
     # y.origin <- crch::rtt(n.origin, df = alp.origin, left=0)
 
-    # for (j in 1:p) {
-    #   phase_shift <- j * (2 * pi / p) 
-    #   seasonal_trend <- 0.5 * sin(2 * pi * time.seq / period - phase_shift)
-    #   x.origin[,j] <- seasonal_trend + x.origin.full[,j]
-    # }
+    for (j in 1:p) {
+      phase_shift <- j * (2 * pi / p) 
+      seasonal_trend <- 0.5 * sin(2 * pi * time.seq / period - phase_shift)
+      x.origin[,j] <- seasonal_trend + x.origin.full[,j]
+    }
 
-    # xreg.season <- cbind(
-    #   trend = time.seq,
-    #   cos_season = cos(2 * pi * time.seq / 365),
-    #   sin_season = sin(2 * pi * time.seq / 365)
-    # )
+    xreg.season <- cbind(
+      trend = time.seq,
+      cos_season = cos(2 * pi * time.seq / 365),
+      sin_season = sin(2 * pi * time.seq / 365)
+    )
 
-    # fit.list <- list()
-    # x.detrended <- matrix(nrow = n.origin, ncol = p)
-    # for (j in 1:p) {
-    #   y_ts <- ts(x.origin[, j], frequency = period) 
-    #   fit.list[[j]] <- fit <- auto.arima(y_ts, seasonal = FALSE, xreg = xreg.season, stepwise = TRUE, approximation = FALSE)
-    #   x.detrended[, j] <- as.numeric(residuals(fit.list[[j]]))
-    # }
-    # x.origin <- x.detrended 
+    fit.list <- list()
+    x.detrended <- matrix(nrow = n.origin, ncol = p)
+    for (j in 1:p) {
+      y_ts <- ts(x.origin[, j], frequency = period) 
+      fit.list[[j]] <- fit <- auto.arima(y_ts, seasonal = FALSE, xreg = xreg.season, stepwise = TRUE, approximation = FALSE)
+      x.detrended[, j] <- as.numeric(residuals(fit.list[[j]]))
+    }
+    x.origin <- x.detrended 
 
     f.season.scale <- function(t){
-      return(1.6 - .4 * sin(2 * pi * t / 365) - .3 * cos(2 * pi * t/365)) 
+      return(2.5 - .8 * sin(2 * pi * t / 365) - .6 * cos(2 * pi * t/365)) 
     }
     y.origin <- y.origin * f.season.scale(time.seq)
     evgam.df <- data.frame(
@@ -222,9 +222,8 @@ for(iter in 1:total.iter){
       time = time.seq,
       x.origin
     )
-    evgam.cov <- y ~ cos.time + sin.time #+ s(X1, bs = "ts", k = 6) + s(X2, bs = "ts", k = 6) + s(X3, bs = "ts", k = 6) + s(X4, bs = "ts", k = 6) + s(X5, bs = "ts", k = 6)
+    evgam.cov <- y ~ cos.time + sin.time + s(X1, bs = "ts", k = 6) + s(X2, bs = "ts", k = 6) + s(X3, bs = "ts", k = 6) + s(X4, bs = "ts", k = 6) + s(X5, bs = "ts", k = 6)
     # evgam.cov <- list(y ~ cos.time + sin.time)
-    # evgam.cov <- y ~ s(x.season, bs = "cc", k = 6)
     ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
     # u.vec <- exp(predict(ald.cov.fit, type= "response")$location)
     u.vec <- (predict(ald.cov.fit, type= "response")$location)
@@ -232,8 +231,8 @@ for(iter in 1:total.iter){
     # qr.fit <- quantreg::rq(evgam.cov, tau = 0.95, data = evgam.df)
     # u.vec <- as.vector((predict(qr.fit)))
     plot(time.seq, log(y.origin), type = "p")
-    # lines(time.seq, log(20^(1/alp.origin)*f.season.scale(time.seq)), col = "blue", type = "l")
-    lines(time.seq, log(qt((1 + 0.95) / 2, df = alp.origin)* f.season.scale(time.seq)), col = "blue", type = "l")
+    lines(time.seq, log(20^(1/alp.origin)*f.season.scale(time.seq)), col = "blue", type = "l")
+    # lines(time.seq, log(qt((1 + 0.95) / 2, df = alp.origin)* f.season.scale(time.seq)), col = "blue", type = "l")
     lines(time.seq, log(u.vec), col="red")
     if(any(u.vec < 0)){
       is.positive <- TRUE
@@ -437,9 +436,9 @@ g2 <- g2.l <- theta.adjusted[3]*x.grid[,2]
 g5.l <- theta.adjusted[6]*x.grid[,5]
 g1 <- g1.l + g1.nl
 g5 <- g5.l + g5.nl
-# g1 <- g1 - mean(g1)
-# g2 <- g2 - mean(g2)
-# g5 <- g5 - mean(g5)
+g1 <- g1 - mean(g1)
+g2 <- g2 - mean(g2)
+g5 <- g5 - mean(g5)
 alp.new <- exp(theta.adjusted[1] + g1 + g2 + g5)
 
 grid.zero <- rep(0, grid.n)
