@@ -9,7 +9,7 @@ library(forecast)
 # Scenario A
 # array.id <- commandArgs(trailingOnly=TRUE)
 
-total.iter <- 98
+total.iter <- 100
 
 n <- n.origin <- 10000
 grid.n <- 200
@@ -488,12 +488,12 @@ g.new <- c(grid.zero, g2, grid.zero, grid.zero, g5)
 l.new <- c(grid.zero, g2.l, grid.zero, grid.zero, g5.l)
 nl.new <- c(grid.zero, g2.nl, grid.zero, grid.zero, g5.nl)
 alpha.container$x <- seq(0, 1, length.out = grid.n)
-alpha.container$true <- alp.new
-# alpha.container$true <- rowMeans(true.container)
+# alpha.container$true <- alp.new
+alpha.container$true <- rowMeans(true.container)
 alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
-load(paste0("./simulation/results/MC-Scenario_A/2026-03-18_",total.iter,"_MC_scA_",n.origin,".Rdata"))
+# load(paste0("./simulation/results/MC-Scenario_A/2026-03-21_",total.iter,"_MC_scA_",n.origin,"-c.Rdata"))
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab(expression(alpha(c,...,c)))
 plot_limit <- min(total.iter, 50)
