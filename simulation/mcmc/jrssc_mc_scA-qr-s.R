@@ -493,7 +493,7 @@ alpha.container$true <- rowMeans(true.container)
 alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
-# load(paste0("./simulation/results/MC-Scenario_A/2026-03-21_",total.iter,"_MC_scA_",n.origin,"-c.Rdata"))
+# load(paste0("./simulation/results/MC-Scenario_A/2026-03-21_",total.iter,"_MC_scA_",n.origin,"-t975.Rdata"))
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab(expression(alpha(c,...,c)))
 plot_limit <- min(total.iter, 50)

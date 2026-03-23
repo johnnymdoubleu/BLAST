@@ -452,7 +452,7 @@ alpha.container$true <- rowMeans(true.container)
 alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
-# load(paste0("./simulation/results/MC-Scenario_D/2026-03-21_",total.iter,"_MC_scD_",n.origin,"-c.Rdata"))
+# load(paste0("./simulation/results/MC-Scenario_D/2026-03-21_",total.iter,"_MC_scD_",n.origin,".Rdata"))
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + 
         xlab(expression(c)) + ylab("")
@@ -495,7 +495,7 @@ print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewid
                 axis.title.x = element_text(size = 45),                
                 axis.text = element_text(size = 30)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_scD_",n.origin,"_c.pdf"), width=11, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_scD_",n.origin,".pdf"), width=11, height = 15)
 
 gridgl.container$x <- newx
 gridgl.container$true <- as.vector(l.new)
