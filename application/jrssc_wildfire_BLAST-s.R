@@ -133,17 +133,18 @@ evgam.cov <- y ~ cos.time + sin.time + s(BUI, bs = "ts", k = 30) + s(ISI, bs = "
 
 qr.fit <- evgam(evgam.cov, data = qr.df, family = "ald", ald.args=list(tau = threshold))
 # qr.lin <- evgam(y ~ cos.time + sin.time + BUI + ISI + FFMC + DMC + DC, data = qr.df, family = "ald", ald.args=list(tau = threshold))
-# qr.fit <- evgam(y ~ s(BUI, bs = "ts") + s(ISI, bs = "ts") + s(FFMC, bs = "ts") + s(DMC, bs = "ts") + s(DC, bs = "ts"), data = qr.df, family = "ald", ald.args=list(tau = threshold))
+# qr.cov <- evgam(y ~ s(BUI, bs = "ts", k = 30) + s(ISI, bs = "ts", k = 30) + s(FFMC, bs = "ts", k = 30) + s(DMC, bs = "ts", k = 30) + s(DC, bs = "ts", k = 30), data = qr.df, family = "ald", ald.args=list(tau = threshold))
 # qr.time <- evgam(y ~ cos.time + sin.time, data = qr.df, family = "ald", ald.args=list(tau = threshold))
 # qr.null <- evgam(y ~ 1, data = qr.df, family = "ald", ald.args=list(tau = threshold))
 u.vec <- exp(predict(qr.fit)$location)
 # qr.fit <- quantreg::rq(y ~ 1 + cos.time + sin.time + BUI + ISI + FFMC + DMC + DC, data = qr.df, tau = threshold)
-
 # u.vec <- exp(predict(qr.fit))  # threshold on raw scale for Y_pos
-# AIC(qr.fit, qr.cov, qr.lin, qr.time, qr.null)
+AIC(qr.fit, qr.cov, qr.time, qr.null)
+BIC(qr.fit, qr.cov, qr.time, qr.null)
 
 plot(c(1:length(Y_pos)), log(Y_pos))
 lines(c(1:length(Y_pos)), log(u.vec), type = "l", col = "red")
+
 
 excess_idx <- which(Y_pos > u.vec)
 y <- Y_pos[excess_idx]
@@ -576,7 +577,7 @@ ggplot(xi.scenario, aes(x=x)) +
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 20))
-# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_xi-t.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_xi.pdf"), width=10, height = 7.78)
 
 
 T <- 100
@@ -671,7 +672,8 @@ for(i in 1:p){
                   theme(legend.position = "none",
                         plot.margin = margin(5, 5, 5, 5),
                         plot.title = element_text(hjust = 0.5, face = "bold"),
-                        axis.text = element_text(size = 18),
+                        axis.text.y = element_text(size = 18),
+                        axis.text.x = element_text(size = 12),
                         axis.title.x = element_text(size = 22))
                   # theme_minimal(base_size = 30) +
                   # theme(legend.position = "none",
@@ -683,7 +685,7 @@ for(i in 1:p){
 marrangeGrob(grobs = grid.plts, nrow = 1, ncol = 5, top = NULL)
 # grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
 
-# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_cov.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_cov.pdf"), marrangeGrob(grobs = grid.plts, nrow = 1, ncol = 5, top = NULL), width=10, height = 7.78)
 
 
 # data.linear <- data.frame("x" = as.vector(as.matrix(xholder)),

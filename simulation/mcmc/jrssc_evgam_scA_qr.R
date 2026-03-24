@@ -9,9 +9,9 @@ library(mgcv)
 
 # Scenario A
 # array.id <- commandArgs(trailingOnly=TRUE)
-total.iter <- 250
+total.iter <- 2
 
-n <- n.origin <- 15000
+n <- n.origin <- 10000
 psi.origin <- psi <- 10
 threshold <- 0.95
 p <- 5
@@ -86,10 +86,9 @@ model {
   // likelihood
   target += pareto_lpdf(y | u, alpha);
   target += normal_lpdf(theta[1] | 0, 100);
-
+  target += gamma_lpdf(lambda1 | 0.01, 0.01); 
+  target += gamma_lpdf(lambda2 | 0.01, 0.01);    
   for (j in 1:p){
-    target += gamma_lpdf(lambda1[j] | 2, 1); 
-    target += gamma_lpdf(lambda2[j] | 0.01, 0.01);    
     target += double_exponential_lpdf(theta[(j+1)] | 0, 1/(lambda1[j]));
     target += gamma_lpdf(tau[j] | atau, square(lambda2[j])*0.5);
     target += std_normal_lpdf(gamma_raw[j]);
