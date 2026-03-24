@@ -33,7 +33,7 @@ missing.values <- which(!is.na(df.long$measurement))
 #considering the case of leap year, the missing values are the 29th of Feb
 #Thus, each year consist of 366 data with either 1 or 0 missing value.
 Y <- df.long$measurement[!is.na(df.long$measurement)]
-psi.origin <- psi <- 8
+psi.origin <- psi <- 15
 threshold <- 0.95
 
 multiplesheets <- function(fname) {
@@ -123,17 +123,24 @@ Y_pos <- Y[above.0]
 fwi_pos <- fwi.scaled[above.0, ]
 # Y_pos <- Y
 # fwi_pos <- fwi.scaled
-pca_result <- prcomp(fwi_pos[,3:7], center = TRUE, scale. = TRUE)
+# pca_result <- prcomp(fwi_pos[,3:7], center = TRUE, scale. = TRUE)
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 # fwi_pos[,1:7] <- as.data.frame(sapply(fwi_pos[,1:7], FUN = range01))
 # qr.df <- data.frame(y = log(Y_pos), pca_result$x, cos.time = fwi_pos$cos.time, sin.time = fwi_pos$sin.time) #fwi_pos)
 qr.df <- data.frame(y = log(Y_pos), scale(fwi_pos[,3:7]), cos.time = fwi_pos$cos.time, sin.time = fwi_pos$sin.time)
 # evgam.cov <- y ~ 1 + cos.time + sin.time + s(PC1) + s(PC2) + s(PC3) + s(PC4) + s(PC5)
-evgam.cov <- y ~ s(BUI) + s(ISI) + s(FFMC) + s(DMC) + s(DC) 
+evgam.cov <- y ~ cos.time + sin.time + s(BUI, bs = "ts", k = 30) + s(ISI, bs = "ts", k = 30) + s(FFMC, bs = "ts", k = 30) + s(DMC, bs = "ts", k = 30) + s(DC, bs = "ts", k = 30) 
+
 qr.fit <- evgam(evgam.cov, data = qr.df, family = "ald", ald.args=list(tau = threshold))
+# qr.lin <- evgam(y ~ cos.time + sin.time + BUI + ISI + FFMC + DMC + DC, data = qr.df, family = "ald", ald.args=list(tau = threshold))
+# qr.fit <- evgam(y ~ s(BUI, bs = "ts") + s(ISI, bs = "ts") + s(FFMC, bs = "ts") + s(DMC, bs = "ts") + s(DC, bs = "ts"), data = qr.df, family = "ald", ald.args=list(tau = threshold))
+# qr.time <- evgam(y ~ cos.time + sin.time, data = qr.df, family = "ald", ald.args=list(tau = threshold))
+# qr.null <- evgam(y ~ 1, data = qr.df, family = "ald", ald.args=list(tau = threshold))
 u.vec <- exp(predict(qr.fit)$location)
-# qr.fit <- quantreg::rq(y ~ 1 + cos.time + sin.time, data = qr.df, tau = threshold)
+# qr.fit <- quantreg::rq(y ~ 1 + cos.time + sin.time + BUI + ISI + FFMC + DMC + DC, data = qr.df, tau = threshold)
+
 # u.vec <- exp(predict(qr.fit))  # threshold on raw scale for Y_pos
+# AIC(qr.fit, qr.cov, qr.lin, qr.time, qr.null)
 
 plot(c(1:length(Y_pos)), log(Y_pos))
 lines(c(1:length(Y_pos)), log(u.vec), type = "l", col = "red")
@@ -535,7 +542,7 @@ ggplot(data.scenario, aes(x=x)) +
         strip.text = element_blank(),
         axis.text = element_text(size = 20))
 
-# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_alpha.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_alpha.pdf"), width=10, height = 7.78)
 
 xi.scenario <- data.frame("x" = newx,
                             "post.mean" = (1/alpha.samples[,1]),
@@ -569,7 +576,7 @@ ggplot(xi.scenario, aes(x=x)) +
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 20))
-
+# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_xi-t.pdf"), width=10, height = 7.78)
 
 
 T <- 100
@@ -614,7 +621,7 @@ ggplot(data = ) +
   coord_fixed(xlim = c(-3, 3),
               ylim = c(-3, 3))
 
-# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_qqplot.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_qqplot.pdf"), width=10, height = 7.78)
 # save(loglik.samples, data.smooth, data.scenario, qqplot.df, file="./BLAST/application/blast_1.Rdata")
 
 rp <-c()
@@ -676,7 +683,7 @@ for(i in 1:p){
 marrangeGrob(grobs = grid.plts, nrow = 1, ncol = 5, top = NULL)
 # grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
 
-# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_DC.pdf"), grid.plts[[7]], width=10, height = 7.78)
+# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_cov.pdf"), width=10, height = 7.78)
 
 
 # data.linear <- data.frame("x" = as.vector(as.matrix(xholder)),
