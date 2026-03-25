@@ -4,9 +4,10 @@ suppressMessages(library(ggplot2))
 library(rstan)
 library(MESS)
 library(evgam)
+library(rmutil)
 library(forecast)
 
-# Scenario A
+# Scenario D
 # array.id <- commandArgs(trailingOnly=TRUE)
 
 total.iter <- 100
@@ -19,8 +20,8 @@ p <- 5
 
 C <- diag(p)
 
-f2 <- function(x) {-.7 * sin(2 * pi * x^2)*(x-0.5)}
-f5 <- function(x) {-.7 * cos(3 * pi * x^2)*x}
+f2 <- function(x) {-1.5 * sin(2 * pi * (x-1.1)^2)*(x-1.1)^3}
+f3 <- function(x) {0.5 * cos(3 * pi * (x)^2)*(x)^2}
 
 time.seq <- 1:n
 period <- 365 
@@ -34,14 +35,15 @@ make.nl <- function(x, raw_y) {
   fit <- lm(raw_y ~ x)
   
   return(list(
-    nl = residuals(fit), 
+    nl = residuals(fit),
     slope = coef(fit)[["x"]],
     intercept = coef(fit)[["(Intercept)"]]
   ))
 }
 
-theta.origin <- c(0.7, 0, 0.8, 0, 0, -0.8) 
+theta.origin <- c(0.9, 1.2, 1, -1.2, 0, 0) 
 psi <- psi -2
+
 model.stan <- "// Stan model for BLAST Pareto Samples
 data {
     int <lower=1> n; // Sample size
@@ -134,9 +136,10 @@ for(iter in 1:total.iter){
   n <- n.origin
   x.origin <- x.origin.full <- pnorm(matrix(rnorm(n.origin*p), nrow = n.origin, ncol = p))
   range01 <- function(x){(x-min(x))/(max(x)-min(x))}
-  alp.origin <- exp(theta.origin[1] + x.origin.full%*%theta.origin[-1] + 
-                    f2(x.origin.full[,2]) + f5(x.origin.full[,5]))
-  y.origin <- rPareto(n.origin, rep(1, n.origin), alpha = alp.origin)
+  alp.origin <- exp(theta.origin[1] + x.origin.full%*%theta.origin[-1] + f2(x.origin.full[,2]) + f3(x.origin.full[,3]))
+
+  y.origin[i] <- rmutil::rburr(n.origin, m=rep(1, n.origin), s=alp.origin, f=rep(1,n.origin))
+
   for (j in 1:p) {
     phase_shift <- j * (2 * pi / p) 
     seasonal_trend <- 0.5 * sin(2 * pi * time.seq / period - phase_shift)
@@ -156,10 +159,11 @@ for(iter in 1:total.iter){
     fit.list[[j]] <- fit <- auto.arima(y_ts, seasonal = FALSE, xreg = xreg.season, stepwise = TRUE, approximation = FALSE)
     x.detrended[, j] <- as.numeric(residuals(fit.list[[j]]))
   }
-  x.origin <- x.detrended
+  x.origin <- x.detrended 
+
   f.season.scale <- function(t){
     return(2.5 - .8 * sin(2 * pi * t / 365) - .6 * cos(2 * pi * t/365)) 
-  }  
+  }
   y.origin <- y.origin * f.season.scale(time.seq)
 
   evgam.df <- data.frame(
@@ -169,29 +173,8 @@ for(iter in 1:total.iter){
     x.season = (time.seq %% period) / period,
     x.origin
   )
-  k.values <- c(3, 5, 7, 10, 15, 17)#, 20, 25, 27, 30)
+  k.values <- c(3, 5, 7, 10, 15, 17, 20, 25, 30)
   aic.results <- data.frame(k = k.values, AIC = NA)
-
-  # for (i in seq_along(k.values)) {
-  #   current.k <- k.values[i]
-  #   form_str <- paste0(
-  #     "y ~ 1 + cos.time + sin.time + ",
-  #     "s(X1, k = ", current.k, ") + ",
-  #     "s(X2, k = ", current.k, ") + ",
-  #     "s(X3, k = ", current.k, ") + ",
-  #     "s(X4, k = ", current.k, ") + ",
-  #     "s(X5, k = ", current.k, ")"
-  #   )
-  #   dynamic_formula <- as.formula(form_str)
-  #   fit <- evgam(dynamic_formula, data = evgam.df, family = "ald", ald.args = list(tau = threshold))
-    
-  #   if (!inherits(fit, "try-error")) {
-  #     message(paste("Model for k =", current.k))
-  #     aic.results$AIC[i] <- AIC(fit)
-  #   } else {
-  #     message(paste("Model failed for k =", current.k))
-  #   }
-  # }
   library(foreach)
   library(doParallel)
 
@@ -204,7 +187,7 @@ for(iter in 1:total.iter){
   aic_results_list <- foreach(current.k = k.values, .packages = c("evgam"), .errorhandling = "pass") %dopar% {
     
     form_str <- paste0("y ~ 1 + cos.time + sin.time + ",
-                      paste0("s(X", 1:5, ", k = ", current.k, ")", collapse = " + "))
+                      paste0("s(X", 1:5, ", k = ", current.k, ", bs='" ,"ts')", collapse = " + "))
     
     fit <- evgam(as.formula(form_str), data = evgam.df, 
                 family = "ald", ald.args = list(tau = threshold))
@@ -219,9 +202,17 @@ for(iter in 1:total.iter){
   best.k <- aic.results[which.min(aic.results$AIC), ]
   print(best.k)
 
-  plot(aic.results$k, aic.results$AIC, type = "b", 
-      xlab = "Number of Knots (k)", ylab = "AIC",
-      main = "Knot Selection based on AIC")  
+  ggplot(aic.results, aes(x = k, y = AIC)) +
+    geom_line(color = "steelblue", linewidth = 1) +
+    geom_point(color = "darkblue", size = 3) +
+    geom_point(data = subset(aic.results, k == 10), aes(x = k, y = AIC), 
+              color = "red", size = 5, shape = 1, stroke = 2) +
+    labs(x = "Number of Knots", y = "AIC") +
+    theme_minimal(base_size = 25) +
+    theme(plot.title = element_text(face = "bold"))
+  # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_knots_scD_",n.origin,".pdf"), width=10, height = 7.78)
+  # save(aic.results, file = paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_knots_scD_",n.origin,".Rdata"))
+
   evgam.cov <- y ~ 1 + cos.time + sin.time + s(X1) + s(X2) + s(X3) + s(X4) + s(X5)
   ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
   u.vec <- as.vector(predict(qr.fit))

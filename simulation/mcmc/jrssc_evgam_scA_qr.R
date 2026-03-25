@@ -1,9 +1,10 @@
 library(VGAM)
 library(Pareto)
-suppressMessages(library(tidyverse))
+suppressMessages(library(ggplot2))
 library(rstan)
 library(MESS)
 library(evgam)
+library(forecast)
 library(mgcv)
 
 
@@ -41,16 +42,15 @@ data {
   int <lower=1> grid_n; //Grid size
   int <lower=1> p; // regression coefficient size
   int <lower=1> psi; // splines coefficient size
-  array[n] real <lower=0> u; // large threshold value
+  vector[n] u; // large threshold value
   matrix[n, p] bsLinear; // fwi dataset
   matrix[n, (psi*p)] bsNonlinear; // thin plate splines basis
   matrix[grid_n, p] xholderLinear; // fwi dataset
   matrix[grid_n, (psi*p)] xholderNonlinear; // thin plate splines basis    
-  array[n] real <lower=0> y; // extreme response
+  vector<lower=u>[n] y; // extreme response
   real <lower=0> atau;
   vector[p] X_means;
   vector[p] X_sd;
-  vector[(psi*p)] Z_scales;
   array[grid_n] real <lower=0> trueAlpha;
 }
 
@@ -63,29 +63,23 @@ parameters {
 }
 
 transformed parameters {
-  array[n] real <lower=0> alpha; // covariate-adjusted tail index
-  
-  array[p] vector[psi] gamma;
-  {
-    matrix[n, p] gsmooth; // linear component
-    for (j in 1:p){
-      for (k in 1:psi){
-        int idx = (j-1)*psi + k;
-        gamma[j][k] = gamma_raw[j][k] * sqrt(tau[j]) * Z_scales[idx];
-      }; 
-      gsmooth[,j] = bsLinear[,j] * theta[j+1] + bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
-    };
+    vector[n] alpha; // covariate-adjusted tail index
     
-    for (i in 1:n){
-      alpha[i] = exp(theta[1] + sum(gsmooth[i,]));
-    };
-  }
+    array[p] vector[psi] gamma;
+    {
+      vector[n] eta = rep_vector(theta[1], n);
+      for (j in 1:p){
+        gamma[j] = gamma_raw[j] * sqrt(tau[j]);
+        eta += col(bsLinear, j) * theta[j+1] + block(bsNonlinear,1, ((j - 1) * psi + 1), n, psi) * gamma[j];
+      };
+      alpha = exp(eta);
+    }
 }
 
 model {
   // likelihood
   target += pareto_lpdf(y | u, alpha);
-  target += normal_lpdf(theta[1] | 0, 100);
+  target += normal_lpdf(theta[1] | 0, 10);
   target += gamma_lpdf(lambda1 | 0.01, 0.01); 
   target += gamma_lpdf(lambda2 | 0.01, 0.01);    
   for (j in 1:p){
@@ -97,23 +91,23 @@ model {
 
 generated quantities {
   // Used in Posterior predictive check
-  array[grid_n] real <lower=0> gridalpha; // new tail index
+  vector[grid_n] gridalpha; // new tail index
   matrix[grid_n, p] gridgsmooth; // linear component
-  vector[(p+1)] theta_origin;
   vector[grid_n] se;
 
-  for (j in 1:p){
-    theta_origin[j+1] = theta[j+1] / X_sd[j];
-  }
-  theta_origin[1] = theta[1] - dot_product(X_means, theta_origin[2:(p+1)]);
-  for (j in 1:p){
-      gridgsmooth[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j] + xholderLinear[,j] * theta_origin[j+1];
-  };
+  vector[p] theta_origin = theta[2:(p+1)] ./ X_sd;
+  real theta0 = theta[1] - dot_product(X_means, theta_origin);
 
-  for (i in 1:grid_n){
-      gridalpha[i] = exp(-theta_origin[1] - sum(gridgsmooth[i,]));
-      se[i] = pow((gridalpha[i]-trueAlpha[i]), 2);
-  };
+  {
+    vector[grid_n] grideta = rep_vector(-theta0, grid_n);
+    for (j in 1:p){
+        int nl_start = (j - 1) * psi + 1;
+        gridgsmooth[,j] = col(xholderLinear, j) * theta_origin[j] + block(xholderNonlinear,1, nl_start, grid_n, psi) * gamma[j];
+        grideta -= gridgsmooth[,j];
+    };
+    gridalpha = exp(grideta);
+  }
+  se = pow((gridalpha-trueAlpha), 2);
 }
 "
 
@@ -126,24 +120,40 @@ mise.vgam.scale.container <- mise.vgam.1.container <- mise.evgam.scale.container
 
 for(iter in 1:total.iter){
   n <- n.origin
-  x.origin <- pnorm(matrix(rnorm(n*p), ncol = p) %*% chol(C))
-  f2.nl <- f2(x.origin[,2])
-  f3.nl <- f3(x.origin[,3])
-  f2.l <- theta.origin[3]*x.origin[,2]
-  f3.l <- theta.origin[4]*x.origin[,3]
+  x.origin <- x.origin.full <- pnorm(matrix(rnorm(n.origin*p), nrow = n.origin, ncol = p))
+  range01 <- function(x){(x-min(x))/(max(x)-min(x))}
+  alp.origin <- exp(theta.origin[1] + x.origin.full%*%theta.origin[-1] + 
+                    f2(x.origin.full[,2]) + f5(x.origin.full[,5]))
+  y.origin <- rPareto(n.origin, rep(1, n.origin), alpha = alp.origin)
+  for (j in 1:p) {
+    phase_shift <- j * (2 * pi / p) 
+    seasonal_trend <- 0.5 * sin(2 * pi * time.seq / period - phase_shift)
+    x.origin[,j] <- seasonal_trend + x.origin.full[,j]
+  }
 
-  eta_lin <-  f2.l + f3.l
-  eta_nonlin <- f2.nl + f3.nl
-  eta <- theta.origin[1] + eta_lin + eta_nonlin
-  alp.origin <- exp(eta)
-  y.origin <- rPareto(n, rep(1,n), alpha = alp.origin)
+  xreg.season <- cbind(
+    trend = time.seq,
+    cos_season = cos(2 * pi * time.seq / 365),
+    sin_season = sin(2 * pi * time.seq / 365)
+  )
+
+  fit.list <- list()
+  x.detrended <- matrix(nrow = n.origin, ncol = p)
+  for (j in 1:p) {
+    y_ts <- ts(x.origin[, j], frequency = period) 
+    fit.list[[j]] <- fit <- auto.arima(y_ts, seasonal = FALSE, xreg = xreg.season, stepwise = TRUE, approximation = FALSE)
+    x.detrended[, j] <- as.numeric(residuals(fit.list[[j]]))
+  }
+  x.origin <- x.detrended  
+  f.season.scale <- function(t){
+    return(2.5 - .8 * sin(2 * pi * t / 365) - .6 * cos(2 * pi * t/365)) 
+  }  
+  y.origin <- y.origin * f.season.scale(time.seq)
+
   A.df <- data.frame(y = y.origin, x.origin)
-  quant.evgam <- evgam::evgam(y ~ s(X1, bs="ts", k=10) +
-                                  s(X2, bs="ts", k=10) +
-                                  s(X3, bs="ts", k=10) +
-                                  s(X4, bs="ts", k=10) +
-                                  s(X5, bs="ts", k=10), 
-                    data = A.df, family = "ald", ald.args = list(tau = threshold))
+  evgam.cov <- y ~ 1 + cos.time + sin.time + s(X1) + s(X2) + s(X3) + s(X4) + s(X5)
+  quant.evgam <- evgam(evgam.cov, data = A.df, family = "ald", 
+                        ald.args = list(tau = threshold))
   # u <- quantile(y.origin, threshold)
   # excess.index <- which(y.origin>u)
   pred <- predict(quant.evgam)$location
@@ -152,32 +162,14 @@ for(iter in 1:total.iter){
   x.origin <- x.origin[excess.index,]
   y.origin <- y.origin[excess.index]
   n <- length(y.origin)
-  
-  f2.hidden <- make.nl(x.origin[,2], f2(x.origin[,2]))
-  f3.hidden <- make.nl(x.origin[,3], f3(x.origin[,3]))
-  theta.adjusted <- c(theta.origin[1] + f2.hidden$intercept + f3.hidden$intercept,
-                      theta.origin[2],
-                      theta.origin[3] + f2.hidden$slope,
-                      theta.origin[4] + f3.hidden$slope,
-                      theta.origin[5],
-                      theta.origin[6])
-  newx <- seq(0,1,length.out = newx.length)
-  xholder <- do.call(cbind, lapply(1:p, function(j) {newx}))
-  g2.nl <- f2(newx) - (f2.hidden$intercept + f2.hidden$slope*newx)
-  g3.nl <- f3(newx) - (f3.hidden$intercept + f3.hidden$slope*newx)
-  g2.l <- theta.adjusted[3]*newx
-  g3.l <- theta.adjusted[4]*newx
-  g2 <- g2.l + g2.nl
-  g3 <- g3.l + g3.nl
-  eta.g <- rep(theta.adjusted[1], newx.length) + g2 + g3
-  alp.new <- as.vector(exp(theta.origin[1] + xholder %*% theta.origin[-1] + f2(newx) + f3(newx)))
-  grid.zero <- rep(0, newx.length)
-  g.new <- c(grid.zero, g2, g3, grid.zero, grid.zero)
-  l.new <- c(grid.zero, g2.l, g3.l, grid.zero, grid.zero)
-  nl.new <- c(grid.zero, g2.nl, g3.nl, grid.zero, grid.zero)
+  colnames(x.origin) <- paste0("X", 1:p)
 
-  bs.linear <- model.matrix(~ ., data = data.frame(x.origin))
-  
+  newx <- seq(max(apply(x.origin, 2, min)), min(apply(x.origin, 2, max)), length.out = grid.n)
+  xholder <- do.call(cbind, lapply(1:p, function(i) {seq(min(x.origin[,i]), max(x.origin[,i]), length.out = grid.n)}))
+  x.grid <- do.call(cbind, lapply(1:p, function(i) {seq(0, 1, length.out = grid.n)}))  
+  alp.new <- as.vector(exp(theta.origin[1] + x.grid %*% theta.origin[-1] + f2(x.grid[,2]) + f5(x.grid[,5])))
+  covariates <- colnames(data.frame(x.origin))
+  colnames(xholder) <- colnames(x.origin) <- covariates <- paste0("X", 1:p)
   group.map <- c()
   Z.list <- list()        # Stores the final non-linear design matrices
   scale_stats_list <- list() 
@@ -186,7 +178,6 @@ for(iter in 1:total.iter){
   sm_spec_list <- list()     # Store smooth objects
   keep_cols_list <- list()
 
-  covariates <- colnames(data.frame(x.origin))
   for (i in seq_along(covariates)) {
     var_name <- covariates[i]
     x_vec <- x.origin[, i]
@@ -200,8 +191,8 @@ for(iter in 1:total.iter){
     
     eig <- eigen(S, symmetric = TRUE)
     max_lambda <- max(eig$values)
-    tol <- max_lambda * 1e-6  # Relative threshold (Robust)
-    
+    tol <- max_lambda * 1e-7  
+
     pos_idx <- which(eig$values > tol)
     
     if(length(pos_idx) == 0) stop("No wiggles found. Check data scaling.")
@@ -221,9 +212,12 @@ for(iter in 1:total.iter){
     Z_final <- Z_orth[, keep_cols, drop = FALSE]
     train_scale <- apply(Z_final, 2, sd)
     Z_final <- scale(Z_final, center = FALSE, scale = train_scale)
+
+    # Store Results
     Z.list[[i]] <- Z_final
     group.map <- c(group.map, rep(i, ncol(Z_final)))
-
+    
+    # Store Transforms
     spec_decomp_list[[i]] <- list(U_pen = U_pen, Lambda_sqrt_inv = solve(sqrt(Lambda_pen)))
     projection_coefs_list[[i]] <- Gamma_Original # Store the X-basis coefs
     keep_cols_list[[i]] <- keep_cols
@@ -232,7 +226,9 @@ for(iter in 1:total.iter){
   }
 
   bs.nonlinear <- do.call(cbind, Z.list)
-  colnames(xholder) <- covariates
+  bs.linear <- model.matrix(~ ., data = data.frame(x.origin))[,-1]
+  Z_scales <- unlist(scale_stats_list)
+
   grid_Z_list <- list()
 
   for (i in seq_along(covariates)) {
@@ -248,9 +244,12 @@ for(iter in 1:total.iter){
     
     grid_Z_list[[i]] <- Z_final_grid
   }
-  Z_scales <- unlist(scale_stats_list)
-  xholder.linear <- model.matrix(~ ., data = data.frame(xholder))
+
+  xholder.linear <- model.matrix(~ ., data = data.frame(xholder))[,-1]
   xholder.nonlinear <- do.call(cbind, grid_Z_list)
+  X_means <- colMeans(bs.linear)
+  X_sd   <- apply(bs.linear, 2, sd)
+  bs.linear <- scale(bs.linear, center = X_means, scale = X_sd)
 
   X_means <- colMeans(bs.linear[,-1])
   X_sd   <- apply(bs.linear[,-1], 2, sd)

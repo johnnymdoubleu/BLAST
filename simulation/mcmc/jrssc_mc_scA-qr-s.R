@@ -265,9 +265,9 @@ for(iter in 1:total.iter){
   )
   evgam.cov <- y ~ 1 + cos.time + sin.time + s(X1) + s(X2) + s(X3) + s(X4) + s(X5)
   ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
-  # u.vec <- (predict(ald.cov.fit)$location)
+  u.vec <- (predict(ald.cov.fit)$location)
   # qr.fit <- quantreg::rq(evgam.cov,  tau = 0.95, data = evgam.df)
-  u.vec <- as.vector(predict(qr.fit))
+  # u.vec <- as.vector(predict(qr.fit))
 
   excess.index <- which(y.origin > u.vec)
   x.origin <- data.frame(x.origin[excess.index,])
@@ -276,13 +276,12 @@ for(iter in 1:total.iter){
   season_code_full <- season_code_full[excess.index]  
   n <- length(y.origin)
 
-  colnames(x.origin) <- paste0("X", 1:p)
 
   newx <- seq(max(apply(x.origin, 2, min)), min(apply(x.origin, 2, max)), length.out = grid.n)
   xholder <- do.call(cbind, lapply(1:p, function(i) {seq(min(x.origin[,i]), max(x.origin[,i]), length.out = grid.n)}))
   x.grid <- do.call(cbind, lapply(1:p, function(i) {seq(0, 1, length.out = grid.n)}))  
   alp.new <- as.vector(exp(theta.origin[1] + x.grid %*% theta.origin[-1] + f2(x.grid[,2]) + f5(x.grid[,5])))
-
+  covariates <- colnames(data.frame(x.origin))
   colnames(xholder) <- colnames(x.origin) <- covariates <- paste0("X", 1:p)
   group.map <- c()
   Z.list <- list()        # Stores the final non-linear design matrices
@@ -292,8 +291,7 @@ for(iter in 1:total.iter){
   sm_spec_list <- list()     # Store smooth objects
   keep_cols_list <- list()
 
-  covariates <- colnames(data.frame(x.origin))
-  colnames(xholder) <- covariates  
+  
   for (i in seq_along(covariates)) {
     var_name <- covariates[i]
     x_vec <- x.origin[, i]

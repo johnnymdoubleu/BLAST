@@ -131,16 +131,20 @@ qr.df <- data.frame(y = log(Y_pos), scale(fwi_pos[,3:7]), cos.time = fwi_pos$cos
 # evgam.cov <- y ~ 1 + cos.time + sin.time + s(PC1) + s(PC2) + s(PC3) + s(PC4) + s(PC5)
 evgam.cov <- y ~ cos.time + sin.time + s(BUI, bs = "ts", k = 30) + s(ISI, bs = "ts", k = 30) + s(FFMC, bs = "ts", k = 30) + s(DMC, bs = "ts", k = 30) + s(DC, bs = "ts", k = 30) 
 
-qr.fit <- evgam(evgam.cov, data = qr.df, family = "ald", ald.args=list(tau = threshold))
+# qr.fit <- evgam(evgam.cov, data = qr.df, family = "ald", ald.args=list(tau = threshold))
+
 # qr.lin <- evgam(y ~ cos.time + sin.time + BUI + ISI + FFMC + DMC + DC, data = qr.df, family = "ald", ald.args=list(tau = threshold))
 # qr.cov <- evgam(y ~ s(BUI, bs = "ts", k = 30) + s(ISI, bs = "ts", k = 30) + s(FFMC, bs = "ts", k = 30) + s(DMC, bs = "ts", k = 30) + s(DC, bs = "ts", k = 30), data = qr.df, family = "ald", ald.args=list(tau = threshold))
 # qr.time <- evgam(y ~ cos.time + sin.time, data = qr.df, family = "ald", ald.args=list(tau = threshold))
 # qr.null <- evgam(y ~ 1, data = qr.df, family = "ald", ald.args=list(tau = threshold))
-u.vec <- exp(predict(qr.fit)$location)
+# u.vec <- exp(predict(qr.fit)$location)
+# save(u.c, qr.fit, file = paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_qr-c.Rdata"))
+load(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_qr-c.Rdata"))
+u.vec <- u.c
 # qr.fit <- quantreg::rq(y ~ 1 + cos.time + sin.time + BUI + ISI + FFMC + DMC + DC, data = qr.df, tau = threshold)
 # u.vec <- exp(predict(qr.fit))  # threshold on raw scale for Y_pos
-AIC(qr.fit, qr.cov, qr.time, qr.null)
-BIC(qr.fit, qr.cov, qr.time, qr.null)
+# AIC(qr.fit, qr.cov, qr.time, qr.null)
+# BIC(qr.fit, qr.cov, qr.time, qr.null)
 
 plot(c(1:length(Y_pos)), log(Y_pos))
 lines(c(1:length(Y_pos)), log(u.vec), type = "l", col = "red")

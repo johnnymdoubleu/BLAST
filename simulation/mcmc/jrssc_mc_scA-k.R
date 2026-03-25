@@ -183,7 +183,7 @@ for(iter in 1:total.iter){
   aic_results_list <- foreach(current.k = k.values, .packages = c("evgam"), .errorhandling = "pass") %dopar% {
     
     form_str <- paste0("y ~ 1 + cos.time + sin.time + ",
-                      paste0("s(X", 1:5, ", k = ", current.k, "bs='" ,"ts')", collapse = " + "))
+                      paste0("s(X", 1:5, ", k = ", current.k, ", bs='" ,"ts')", collapse = " + "))
     
     fit <- evgam(as.formula(form_str), data = evgam.df, 
                 family = "ald", ald.args = list(tau = threshold))
@@ -201,12 +201,14 @@ for(iter in 1:total.iter){
   ggplot(aic.results, aes(x = k, y = AIC)) +
     geom_line(color = "steelblue", linewidth = 1) +
     geom_point(color = "darkblue", linewidth = 3) +
-    geom_point(data = subset(aic.results, k == 7), aes(x = k, y = AIC), 
+    geom_point(data = subset(aic.results, k == 10), aes(x = k, y = AIC), 
               color = "red", size = 5, shape = 1, stroke = 2) +
     labs(x = "Number of Knots", y = "AIC") +
     theme_minimal(base_size = 25) +
     theme(plot.title = element_text(face = "bold"))
-  # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_knots_scA_",n.origin,".pdf"), width=12.5, height = 15)
+  # ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_knots_scA_",n.origin,".pdf"), width=10, height = 7.78)
+  # save(aic.results, file = paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_knots_scA_",n.origin,".Rdata"))
+
 
   evgam.cov <- y ~ 1 + cos.time + sin.time + s(X1) + s(X2) + s(X3) + s(X4) + s(X5)
   ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
