@@ -143,45 +143,45 @@ for(iter in 1:total.iter){
   is.positive <- TRUE
   n <- n.origin
   # while(is.positive){
-    x.origin <- x.origin.full <- pnorm(matrix(rnorm(n.origin*p), nrow = n.origin, ncol = p))
-    alp.origin <- exp(theta.origin[1] + x.origin.full%*%theta.origin[-1] + 
-                      f1(x.origin.full[,1]) + f5(x.origin.full[,5]))
-    y.origin <- rtt(n.origin, df = alp.origin, left=0)
-    # for (j in 1:p) {
-    #   phase_shift <- j * (2 * pi / p) 
-    #   seasonal_trend <- 0.5 * sin(2 * pi * time.seq / period - phase_shift)
-    #   x.origin[,j] <- seasonal_trend + x.origin.full[,j]
-    # }
+  x.origin <- x.origin.full <- pnorm(matrix(rnorm(n.origin*p), nrow = n.origin, ncol = p))
+  alp.origin <- exp(theta.origin[1] + x.origin.full%*%theta.origin[-1] + 
+                    f1(x.origin.full[,1]) + f5(x.origin.full[,5]))
+  y.origin <- rtt(n.origin, df = alp.origin, left=0)
+  for (j in 1:p) {
+    phase_shift <- j * (2 * pi / p) 
+    seasonal_trend <- 0.5 * sin(2 * pi * time.seq / period - phase_shift)
+    x.origin[,j] <- seasonal_trend + x.origin.full[,j]
+  }
 
-    # xreg.season <- cbind(
-    #   trend = time.seq,
-    #   cos_season = cos(2 * pi * time.seq / 365),
-    #   sin_season = sin(2 * pi * time.seq / 365)
-    # )
+  xreg.season <- cbind(
+    trend = time.seq,
+    cos_season = cos(2 * pi * time.seq / 365),
+    sin_season = sin(2 * pi * time.seq / 365)
+  )
 
-    # fit.list <- list()
-    # x.detrended <- matrix(nrow = n.origin, ncol = p)
-    # for (j in 1:p) {
-    #   y_ts <- ts(x.origin[, j], frequency = period) 
-    #   fit.list[[j]] <- fit <- auto.arima(y_ts, seasonal = FALSE, xreg = xreg.season, stepwise = TRUE, approximation = FALSE)
-    #   x.detrended[, j] <- as.numeric(residuals(fit.list[[j]]))
-    # }
-    # x.origin <- x.detrended
-    f.season.scale <- function(t){
-      return(2.5 - .8 * sin(2 * pi * t / 365) - .6 * cos(2 * pi * t / 365)) 
-    }
-    y.origin <- y.origin * f.season.scale(time.seq)
+  fit.list <- list()
+  x.detrended <- matrix(nrow = n.origin, ncol = p)
+  for (j in 1:p) {
+    y_ts <- ts(x.origin[, j], frequency = period) 
+    fit.list[[j]] <- fit <- auto.arima(y_ts, seasonal = FALSE, xreg = xreg.season, stepwise = TRUE, approximation = FALSE)
+    x.detrended[, j] <- as.numeric(residuals(fit.list[[j]]))
+  }
+  x.origin <- x.detrended
+  f.season.scale <- function(t){
+    return(2.5 - .8 * sin(2 * pi * t / 365) - .6 * cos(2 * pi * t / 365)) 
+  }
+  y.origin <- y.origin * f.season.scale(time.seq)
 
-    evgam.df <- data.frame(
-      y = (y.origin),
-      sin.time = sin(2 * pi * time.seq / 365),
-      cos.time = cos(2 * pi * time.seq / 365),
-      x.origin
-    )
-    
-    evgam.cov <- y ~ 1 + cos.time + sin.time
-    ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
-    u.vec <- (predict(ald.cov.fit, type = "response")$location)
+  evgam.df <- data.frame(
+    y = (y.origin),
+    sin.time = sin(2 * pi * time.seq / 365),
+    cos.time = cos(2 * pi * time.seq / 365),
+    x.origin
+  )
+  
+  evgam.cov <- y ~ cos.time + sin.time + s(X1) + s(X2) + s(X3) + s(X4) + s(X5)
+  ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
+  u.vec <- (predict(ald.cov.fit, type = "response")$location)
     # qr.fit <- quantreg::rq(evgam.cov,  tau = 0.95, data = evgam.df)             
     # qr.fit <- qgam::qgam(evgam.cov, data = evgam.df, qu = threshold)
     # u.vec <- as.vector(predict(qr.fit))

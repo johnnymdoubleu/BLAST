@@ -298,7 +298,7 @@ for(iter in 1:total.iter){
                                       lshape="loglink",
                                       zero = NULL),
                         trace = TRUE,
-                        control = vgam.control(maxit = 200))
+                        control = vgam.control(maxit = 500))
   fitted.linear <- predict(vgam.fit.scale,newdata = data.frame(xholder), type = "link")
   fitted.terms <- predict(vgam.fit.scale,newdata = data.frame(xholder), type = "terms")
   vgam.xi.scale <- exp(fitted.linear[,2])
@@ -313,7 +313,7 @@ for(iter in 1:total.iter){
                                       lshape="loglink",
                                       zero = 1),
                         trace = TRUE,
-                        control = vgam.control(maxit = 200))
+                        control = vgam.control(maxit = 500))
   fitted.linear <- predict(vgam.fit.1, newdata = data.frame(xholder), type = "link")
   fitted.terms <- predict(vgam.fit.1, newdata = data.frame(xholder), type = "terms")
   vgam.xi.1 <- exp(fitted.linear[,2])

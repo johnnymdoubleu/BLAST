@@ -8,7 +8,7 @@ if(EV==TRUE){
   file_pattern <- paste0("evgam_mc_scA_",n,"_.*.Rdata")
   # file_pattern <- paste0("evgam_mc_scA_.*.Rdata")x``
 }else if(EV==FALSE){
-  file_pattern <- paste0("2026-03-23_",iter,"_MC_scA_",n,"_.*.Rdata")
+  file_pattern <- paste0("2026-03-26_",iter,"_MC_scC_",n,"_.*.Rdata")
 }
 
 file_list <- list.files(pattern = file_pattern)
@@ -100,7 +100,7 @@ if(EV==FALSE){
   # qqplot.container$grid <- temp_env$qqplot.container$grid
   # qqplot.container$mean <- rowMeans(qqplot.container[,1:total.iter])
   cat(mean(mise.container, na.rm=TRUE), "±", sd(mise.container, na.rm=TRUE)/sqrt(sum(!is.na(mise.container))), "\n")
-  # save(alpha.container, gridgnl.container, gridgl.container, gridgsmooth.container, mise.container, file = paste0(Sys.Date(),"_",total.iter,"_MC_scA_",n,".Rdata"))
+  # save(alpha.container, gridgnl.container, gridgl.container, gridgsmooth.container, mise.container, file = paste0(Sys.Date(),"_",total.iter,"_MC_scC_",n,".Rdata"))
 } else {
   total.iter <- length(file_list) * iter
   colnames(alpha.container) <- paste0("V", 1:total.iter)
