@@ -13,14 +13,23 @@ library(mgcv)
 total.iter <- 2
 
 n <- n.origin <- 10000
+grid.n <- 200
 psi.origin <- psi <- 10
 threshold <- 0.95
 p <- 5
 newx.length <- ceiling(n*(1-threshold))
 C <- diag(p)
-## Generate sample
-f2 <- function(x) {1.5 * sin(2 * pi * x^2)*x^3}
-f3 <- function(x) {-1.5 * cos(3 * pi * x^2)*x^2}
+
+f2 <- function(x) {-.7 * sin(2 * pi * x^2)*(x-0.5)}
+f5 <- function(x) {-.7 * cos(3 * pi * x^2)*x}
+
+time.seq <- 1:n
+period <- 365 
+x.season <- time.seq / period 
+
+# Convert continuous season to Factor for the 'by' argument
+season_code_full <- cut((time.seq%% period / period), breaks = c(-0.1, 0.25, 0.5, 0.75, 1.1), labels = c(1,2,3,4))
+seasons <- c("Winter", "Spring", "Summer", "Autumn")
 
 make.nl <- function(x, raw_y) {
   fit <- lm(raw_y ~ x)
@@ -32,7 +41,7 @@ make.nl <- function(x, raw_y) {
   ))
 }
 
-theta.origin <- c(1, 0, 0.8, -0.8, 0, 0) 
+theta.origin <- c(0.7, 0, 0.8, 0, 0, -0.8) 
 psi <- psi -2
 
 
@@ -51,7 +60,7 @@ data {
   real <lower=0> atau;
   vector[p] X_means;
   vector[p] X_sd;
-  array[grid_n] real <lower=0> trueAlpha;
+  vector[grid_n] trueAlpha;
 }
 
 parameters {
@@ -111,11 +120,12 @@ generated quantities {
 }
 "
 
-newgsmooth.container <- as.data.frame(matrix(, nrow = (p*newx.length), ncol = total.iter))
-smooth.scale.container <- as.data.frame(matrix(, nrow = (p*newx.length), ncol = total.iter))
-smooth.1.container <- as.data.frame(matrix(, nrow = (p*newx.length), ncol = total.iter))
-alpha.container <- as.data.frame(matrix(, nrow = newx.length, ncol = total.iter))
-vgam.scale.container <- vgam.1.container <- evgam.scale.container <- evgam.1.container <- as.data.frame(matrix(, nrow = newx.length, ncol = total.iter))
+newgsmooth.container <- as.data.frame(matrix(, nrow = (p*grid.n), ncol = total.iter))
+smooth.scale.container <- as.data.frame(matrix(, nrow = (p*grid.n), ncol = total.iter))
+smooth.1.container <- as.data.frame(matrix(, nrow = (p*grid.n), ncol = total.iter))
+alpha.container <- as.data.frame(matrix(, nrow = grid.n, ncol = total.iter))
+true.container <- as.data.frame(matrix(, nrow = grid.n, ncol = total.iter))
+vgam.scale.container <- vgam.1.container <- evgam.scale.container <- evgam.1.container <- as.data.frame(matrix(, nrow = grid.n, ncol = total.iter))
 mise.vgam.scale.container <- mise.vgam.1.container <- mise.evgam.scale.container <- mise.evgam.1.container <- mise.container <- c()
 
 for(iter in 1:total.iter){
@@ -150,16 +160,18 @@ for(iter in 1:total.iter){
   }  
   y.origin <- y.origin * f.season.scale(time.seq)
 
-  A.df <- data.frame(y = y.origin, x.origin)
+  A.df <- data.frame(y = y.origin, 
+                      sin.time = sin(2 * pi * time.seq / 365),
+                      cos.time = cos(2 * pi * time.seq / 365),
+                      x.origin)
   evgam.cov <- y ~ 1 + cos.time + sin.time + s(X1) + s(X2) + s(X3) + s(X4) + s(X5)
   quant.evgam <- evgam(evgam.cov, data = A.df, family = "ald", 
                         ald.args = list(tau = threshold))
-  # u <- quantile(y.origin, threshold)
-  # excess.index <- which(y.origin>u)
-  pred <- predict(quant.evgam)$location
-  excess.index <- which(as.vector(y.origin) > pred)
-  u <- pred[excess.index]
-  x.origin <- x.origin[excess.index,]
+                        
+  u.vec <- (predict(quant.evgam)$location)
+  excess.index <- which(y.origin > u.vec)
+  u <- u.vec[excess.index]
+  x.origin <- data.frame(x.origin[excess.index,])
   y.origin <- y.origin[excess.index]
   n <- length(y.origin)
   colnames(x.origin) <- paste0("X", 1:p)
@@ -170,6 +182,8 @@ for(iter in 1:total.iter){
   alp.new <- as.vector(exp(theta.origin[1] + x.grid %*% theta.origin[-1] + f2(x.grid[,2]) + f5(x.grid[,5])))
   covariates <- colnames(data.frame(x.origin))
   colnames(xholder) <- colnames(x.origin) <- covariates <- paste0("X", 1:p)
+
+
   group.map <- c()
   Z.list <- list()        # Stores the final non-linear design matrices
   scale_stats_list <- list() 
@@ -232,7 +246,8 @@ for(iter in 1:total.iter){
   grid_Z_list <- list()
 
   for (i in seq_along(covariates)) {
-    grid_df  <- data.frame(x_vec = newx)
+    x_vec <- xholder[,i] 
+    grid_df  <- data.frame(x_vec = x_vec)
     X_lin_grid <- model.matrix(~ x_vec, data = grid_df)
     X_raw_grid <- PredictMat(sm_spec_list[[i]], grid_df)
     
@@ -250,16 +265,11 @@ for(iter in 1:total.iter){
   X_means <- colMeans(bs.linear)
   X_sd   <- apply(bs.linear, 2, sd)
   bs.linear <- scale(bs.linear, center = X_means, scale = X_sd)
-
-  X_means <- colMeans(bs.linear[,-1])
-  X_sd   <- apply(bs.linear[,-1], 2, sd)
-  bs.linear[,-1] <- scale(bs.linear[,-1], center = X_means, scale = X_sd)
   
-  data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, 
-                    X_sd=X_sd, grid_n = newx.length,
-                    atau = ((psi+1)/2), X_means = X_means, trueAlpha = 1/alp.new,
-                    bsLinear = bs.linear[,c(2:(p+1))], bsNonlinear = bs.nonlinear,
-                    xholderLinear = xholder.linear[,c(2:(p+1))], xholderNonlinear = xholder.nonlinear, Z_scales=Z_scales)
+  data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, grid_n = grid.n,
+                  atau = ((psi+1)/2), X_means = X_means, X_sd=X_sd,
+                  bsLinear = bs.linear, bsNonlinear = bs.nonlinear, trueAlpha = 1/alp.new,
+                  xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear)
 
   init.alpha <- list(list(gamma_raw= array(rep(0.2, (psi*p)), dim=c(p,psi)),
                           theta = rep(-0.1, (p+1)), tau = rep(0.1, p), 
@@ -276,7 +286,6 @@ for(iter in 1:total.iter){
       data = data.stan,    # named list of data
       init = init.alpha,      # initial value
       chains = 3,             # number of Markov chains
-      # warmup = 1000,          # number of warmup iterations per chain
       iter = 2000,            # total number of iterations per chain
       cores = parallel::detectCores(), # number of cores (could use one per chain)
       refresh = 1000             # no progress shown
@@ -345,8 +354,8 @@ for(iter in 1:total.iter){
   evgam.1.container[,iter] <- xi.pred.1
   evgam.scale.container[,iter] <- xi.pred.scale
   alpha.container[,iter] <- newalpha.samples[,4]
-  newgsmooth.container[,iter] <- as.vector(matrix(newgsmooth.samples[,4], nrow = newx.length, byrow=TRUE))
-  
+  newgsmooth.container[,iter] <- as.vector(matrix(newgsmooth.samples[,4], nrow = grid.n, byrow=TRUE))
+  true.container[,iter] <- 1/alp.new
   mise.container[iter] <- auc(newx, se.samples[,4], type="spline")
   mise.evgam.1.container[iter] <- auc(newx, (((1/alp.new)-xi.pred.1))^2  ,type="spline")
   mise.evgam.scale.container[iter] <- auc(newx, ((1/alp.new)-xi.pred.scale)^2  ,type="spline")
@@ -355,8 +364,8 @@ for(iter in 1:total.iter){
 }
 
 
-alpha.container$x <- newx
-alpha.container$true <- 1/alp.new
+alpha.container$x <- seq(0, 1, length.out = grid.n)
+alpha.container$true <- rowMeans(true.container)
 alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
 alpha.container$evgam.1 <- rowMeans(evgam.1.container[,1:total.iter])
 alpha.container$evgam.scale <- rowMeans(evgam.scale.container[,1:total.iter])
@@ -364,18 +373,13 @@ alpha.container$vgam.1 <- rowMeans(vgam.1.container[,1:total.iter])
 alpha.container$vgam.scale <- rowMeans(vgam.scale.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
-# save(newgsmooth.container, alpha.container, mise.container, evgam.1.container, evgam.scale.container, mise.evgam.1.container, mise.evgam.scale.container, vgam.1.container, vgam.scale.container, mise.vgam.1.container, mise.vgam.scale.container, file=paste0("evgam_mc_scA_",n.origin,"_",array.id ,".Rdata"))
-load(paste0("./simulation/results/2026-02-10_evgam_mc_scA_",(n.origin*0.05),".Rdata"))
+# save(newgsmooth.container, alpha.container, true.container, mise.container, evgam.1.container, evgam.scale.container, mise.evgam.1.container, mise.evgam.scale.container, vgam.1.container, vgam.scale.container, mise.vgam.1.container, mise.vgam.scale.container, file=paste0("evgam_mc_scA_",n.origin,"_",array.id ,".Rdata"))
+# load(paste0("./simulation/results/2026-02-10_evgam_mc_scA_",(n.origin*0.05),".Rdata"))
 
-plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab(expression(xi(c,ldots,c))) #+ ylab("")
-if(total.iter <= 50){
-  for(i in 1:total.iter){
-    plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.05, linewidth = 0.7)
-  }
-} else{
-  for(i in 50:100){
-    plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.05, linewidth = 0.7)
-  }
+plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab(expression(xi(c,ldots,c))) 
+plot_limit <- min(total.iter, 50)
+for(i in 1:plot_limit){
+  plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.05, linewidth = 0.7)
 }
 
 print(plt +

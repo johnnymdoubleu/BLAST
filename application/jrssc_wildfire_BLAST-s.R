@@ -139,8 +139,8 @@ evgam.cov <- y ~ cos.time + sin.time + s(BUI, bs = "ts", k = 30) + s(ISI, bs = "
 # qr.null <- evgam(y ~ 1, data = qr.df, family = "ald", ald.args=list(tau = threshold))
 # u.vec <- exp(predict(qr.fit)$location)
 # save(u.c, qr.fit, file = paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_qr-c.Rdata"))
-load(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_qr-c.Rdata"))
-u.vec <- u.c
+load(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_qr-t.Rdata"))
+u.vec <- u.t
 # qr.fit <- quantreg::rq(y ~ 1 + cos.time + sin.time + BUI + ISI + FFMC + DMC + DC, data = qr.df, tau = threshold)
 # u.vec <- exp(predict(qr.fit))  # threshold on raw scale for Y_pos
 # AIC(qr.fit, qr.cov, qr.time, qr.null)
