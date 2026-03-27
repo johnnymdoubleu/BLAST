@@ -198,6 +198,8 @@ for(iter in 1:total.iter){
   best.k <- aic.results[which.min(aic.results$AIC), ]
   print(best.k)
 
+  # aic.results$BIC <- c(34805, 27511, 22564, 18865, 17562, 16835, 16275, 15323, 15100)
+
   ggplot(aic.results, aes(x = k, y = AIC)) +
     geom_line(color = "steelblue", linewidth = 1) +
     geom_point(color = "darkblue", linewidth = 3) +
