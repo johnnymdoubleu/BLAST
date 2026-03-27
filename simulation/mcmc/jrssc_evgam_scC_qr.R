@@ -8,8 +8,9 @@ library(crch)
 library(forecast)
 
 # Scenario C
-total.iter <- 2
 # array.id <- commandArgs(trailingOnly=TRUE)
+
+total.iter <- 100
 n <- n.origin <- 10000
 grid.n <- 200
 psi.origin <- psi <- 10
@@ -370,26 +371,24 @@ alpha.container$vgam.scale <- rowMeans(vgam.scale.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
 # save(newgsmooth.container, alpha.container, true.container, mise.container, evgam.1.container, evgam.scale.container, mise.evgam.1.container, mise.evgam.scale.container, vgam.1.container, vgam.scale.container, mise.vgam.1.container, mise.vgam.scale.container, file=paste0("evgam_mc_scC_",n.origin,"_",array.id ,".Rdata"))
-# load(paste0("./simulation/results/2026-02-10_evgam_mc_scC_",(n.origin*0.05),".Rdata"))
+load(paste0("./simulation/results/2026-03-27_evgam_mc_scC_",n.origin,".Rdata"))
 
-plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab("")
+plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + ylab("")
 plot_limit <- min(total.iter, 50)
 for(i in 1:plot_limit){
   plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.05, linewidth = 0.7)
 }
 
 print(plt +
-        geom_line(aes(y=true, col = "True"), linewidth = 2, linetype = 2) + 
-        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.8) +
+        geom_line(aes(y=true), colour = "red", linewidth = 2, linetype = 2) + 
+        geom_line(aes(y=mean), colour = "steelblue", linewidth = 1.8) +
         geom_line(aes(y=evgam.1), colour="purple", linewidth = 1.8, linetype = 3) +
         geom_line(aes(y=evgam.scale), colour="orange", linewidth = 1.8, linetype = 3) +
         geom_line(aes(y=vgam.1), colour="purple", linewidth = 1.8, linetype = 4) +
         geom_line(aes(y=vgam.scale), colour="orange", linewidth = 1.8, linetype = 4) +
-        scale_fill_manual(values=c("steelblue"), name = "") +
-        scale_color_manual(values = c("steelblue", "red"))+
         guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) +
-        theme_minimal(base_size = 40) + ylim(-0.65, 3.55) +
+        theme_minimal(base_size = 40) + ylim(-0.5, 3) +
         theme(legend.position = "none",
                 strip.text = element_blank(),
                 axis.text.y = element_blank(),

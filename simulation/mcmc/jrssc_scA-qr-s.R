@@ -6,7 +6,7 @@ library(MESS)
 library(evgam)
 library(forecast)
 
-# set.seed(10)
+
 set.seed(100)
 n <- n.origin <- 10000
 grid.n <- 200
@@ -353,11 +353,11 @@ ggplot(data.scenario, aes(x=x)) +
   geom_line(aes(y=q2, col = "Posterior Median"), linewidth=1.5) +
   scale_color_manual(values=c("steelblue", "red")) + 
   scale_fill_manual(values=c("steelblue"), name = "") +
-  theme_minimal(base_size = 40) + 
+  theme_minimal(base_size = 40) + ylim(0, 15) +
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 30))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_scA.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_alpha_scA_", n.origin,".pdf"), width=10, height = 7.78)
 
 # est_gridalpha_median  <- apply(posterior$gridalpha, 2, median)
 # est_gridalpha_lower <- apply(posterior$gridalpha, 2, quantile, probs = 0.05)
@@ -403,7 +403,7 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
   scale_color_manual(values=c("steelblue", "red")) + 
   guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) +
-  theme_minimal(base_size = 30) +
+  theme_minimal(base_size = 30) + ylim(-1.5, 1.5) +
   theme(plot.title = element_text(hjust = 0.5, size = 15),
         legend.position="none",
         plot.margin = margin(0,0,0,-20),
@@ -412,9 +412,9 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
         axis.title.x = element_text(size = 45),
         axis.text = element_text(size=30))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_smooth_scA.pdf"), width=12.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_smooth_scA_",n.origin,".pdf"), width=12.5, height = 15)
 
-# data.linear <- data.frame("x"=seq(0,1, length.out = n),
+# data.linear <- data.frame("x"=seq(0,1, length.out = grid.n),
 #                           "true" = as.vector(l.new),
 #                           "post.mean" = as.vector(g.linear.mean),
 #                           "q1" = as.vector(g.linear.q1),

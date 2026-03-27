@@ -94,11 +94,11 @@ model {
   // target += student_t_lpdf(y | alpha, 0, 1) - student_t_lccdf(u | alpha, 0, 1);
   target += pareto_lpdf(y | u, alpha);
   target += normal_lpdf(theta[1] | 0, 10);
-  target += cauchy_lpdf(lambda1 | 0, 1); 
-  target += cauchy_lpdf(lambda2 | 0, 1);
-  // target += gamma_lpdf(lambda1 | 1e-2, 1e-2); 
+  // target += cauchy_lpdf(lambda1 | 0, 1); 
+  // target += cauchy_lpdf(lambda2 | 0, 1);
+  target += gamma_lpdf(lambda1 | 1e-2, 1e-2); 
   // target += exponential_lpdf(lambda1 | 1);   
-  // target += gamma_lpdf(lambda2 | 1e-2, 1e-2);
+  target += gamma_lpdf(lambda2 | 1e-2, 1e-2);
   for (j in 1:p){
     target += double_exponential_lpdf(theta[(j+1)] | 0, 1/(lambda1[j]));
     target += gamma_lpdf(tau[j] | atau, square(lambda2[j])*0.5);
