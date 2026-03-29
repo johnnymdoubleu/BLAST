@@ -127,7 +127,7 @@ fwi_pos <- fwi.scaled[above.0, ]
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 # fwi_pos[,1:7] <- as.data.frame(sapply(fwi_pos[,1:7], FUN = range01))
 # qr.df <- data.frame(y = log(Y_pos), pca_result$x, cos.time = fwi_pos$cos.time, sin.time = fwi_pos$sin.time) #fwi_pos)
-qr.df <- data.frame(y = log(Y_pos), scale(fwi_pos[,3:7]), cos.time = fwi_pos$cos.time, sin.time = fwi_pos$sin.time)
+qr.df <- data.frame(y = log(Y_pos), (fwi_pos[,3:7]), cos.time = fwi_pos$cos.time, sin.time = fwi_pos$sin.time)
 # evgam.cov <- y ~ 1 + cos.time + sin.time + s(PC1) + s(PC2) + s(PC3) + s(PC4) + s(PC5)
 evgam.cov <- y ~ cos.time + sin.time + s(BUI, bs = "ts", k = 30) + s(ISI, bs = "ts", k = 30) + s(FFMC, bs = "ts", k = 30) + s(DMC, bs = "ts", k = 30) + s(DC, bs = "ts", k = 30) 
 
@@ -139,8 +139,8 @@ evgam.cov <- y ~ cos.time + sin.time + s(BUI, bs = "ts", k = 30) + s(ISI, bs = "
 # qr.null <- evgam(y ~ 1, data = qr.df, family = "ald", ald.args=list(tau = threshold))
 # u.vec <- exp(predict(qr.fit)$location)
 # save(u.c, qr.fit, file = paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_qr-c.Rdata"))
-load(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_qr-t.Rdata"))
-u.vec <- u.t
+load("./BLAST/application/figures/2026-03-25_pareto_qr-ct.Rdata")
+u.vec <- u.ct
 # qr.fit <- quantreg::rq(y ~ 1 + cos.time + sin.time + BUI + ISI + FFMC + DMC + DC, data = qr.df, tau = threshold)
 # u.vec <- exp(predict(qr.fit))  # threshold on raw scale for Y_pos
 # AIC(qr.fit, qr.cov, qr.time, qr.null)
@@ -158,10 +158,11 @@ fwi_pos <- fwi_pos[excess_idx, 3:7] # BUI to DC
 fwi.cols <- c("BUI", "ISI", "FFMC", "DMC", "DC")
 X_minmax <- sapply(fwi_pos, function(x) max(x)-min(x))
 X_min <- sapply(fwi_pos, function(x) min(x))
-fwi_final <- as.data.frame(sapply(fwi_pos, FUN = range01))
+fwi.01 <- as.data.frame(sapply(fwi_pos, FUN = range01))
+fwi.origin <- fwi.01 * X_minmax
 
-n <- nrow(fwi_final)
-p <- ncol(fwi_final)
+n <- nrow(fwi.01)
+p <- ncol(fwi.01)
 psi <- psi.origin - 2 # Adjusted basis dimension
 
 Z.list <- list()
@@ -172,7 +173,7 @@ scale_stats_list <- list()
 keep_cols_list <- list()
 
 for (i in 1:p) {
-  x_vec <- as.numeric(fwi_final[, i])
+  x_vec <- as.numeric(fwi.01[, i])
   X_lin <- model.matrix(~ x_vec)
   sm_spec <- smoothCon(s(x_vec, bs = "tp", k = psi + 2), data = data.frame(x_vec))[[1]]
   
@@ -201,11 +202,11 @@ for (i in 1:p) {
   sm_spec_list[[i]] <- sm_spec
 }
 
-bs.linear <- as.matrix(fwi_final)
+bs.linear <- as.matrix(fwi.01)
 bs.nonlinear <- do.call(cbind, Z.list)
 
 grid.n <- n
-newx <- seq(0, 1, length.out = grid.n) # Standard Deviation units
+newx <- seq(0.05, 0.95, length.out = grid.n) # Standard Deviation units
 xholder <- do.call(cbind, lapply(1:p, function(j) {newx}))
 colnames(xholder) <- fwi.cols
 xholder.linear <- matrix(rep(newx, p), ncol = p)
@@ -222,6 +223,7 @@ for (i in 1:p) {
   grid_Z_list[[i]] <- scale(Z_final_grid, center = FALSE, scale = scale_stats_list[[i]])
 }
 xholder.nonlinear <- do.call(cbind, grid_Z_list)
+
 
 X_means <- colMeans(bs.linear)
 X_sd   <- apply(bs.linear, 2, sd)
@@ -427,7 +429,7 @@ g.max.samples <- max(gsmooth.samples[,6])
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_smooth.pdf"), width=12.5, height = 15)
 xholder <- as.data.frame(xholder)
 # colnames(xholder) <- colnames(fwi.scaled)[1:p]
-simul.data <- data.frame(BA = y-u, fwi_final)#fwi.origin[c(1:p)])
+simul.data <- data.frame(BA = y-u, fwi.01)#fwi.origin[c(1:p)])
 # gam.scale <- list(BA ~ s(DSR, bs = "tp", k = 30) + 
 #                       s(FWI, bs = "tp", k = 30) + 
 #                       s(BUI, bs = "tp", k = 30) + 
@@ -535,7 +537,7 @@ data.scenario <- data.frame("x" = newx,
                             "q3" = (alpha.samples[,6]))
 
 ggplot(data.scenario, aes(x=x)) + 
-  ylab(expression(alpha(c,...,c))) + xlab(expression(c)) + labs(col = "") +
+  ylab(expression(alpha(c,ldots,c))) + xlab(expression(c)) + labs(col = "") +
   geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
   geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
   scale_fill_manual(values=c("steelblue"), name = "") +
@@ -652,7 +654,7 @@ cat("Finished Running")
 
 
 data.smooth <- data.frame("x" = as.vector(as.matrix(xholder)),
-                          "true" = as.vector(as.matrix(fwi_final)),
+                          "true" = as.vector(as.matrix(fwi.01)),
                           "post.mean" = as.vector(g.smooth.mean),
                           "q1" = as.vector(g.smooth.q1),
                           "q2" = as.vector(g.smooth.q2),
@@ -667,7 +669,7 @@ for(i in 1:p){
                   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
                   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
                   geom_rug(aes(x=true, y=q2), sides = "b") +
-                  ylab("") + xlab(names(fwi_final)[i]) +
+                  ylab("") + xlab(names(fwi.01)[i]) +
                   scale_fill_manual(values=c("steelblue"), name = "") + 
                   scale_color_manual(values=c("steelblue")) +
                   # ylim(g.min.samples, g.max.samples) +
@@ -684,7 +686,7 @@ for(i in 1:p){
                   #         plot.margin = margin(0,0,0,-20),
                   #         axis.text = element_text(size = 35),
                   #         axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi_final[which.max(y),i], y=g.min.samples, color = "red", size = 7)
+  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.01[which.max(y),i], y=g.min.samples, color = "red", size = 7)
 }
 marrangeGrob(grobs = grid.plts, nrow = 1, ncol = 5, top = NULL)
 # grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
