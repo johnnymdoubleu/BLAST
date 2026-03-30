@@ -33,7 +33,7 @@ missing.values <- which(!is.na(df.long$measurement))
 #considering the case of leap year, the missing values are the 29th of Feb
 #Thus, each year consist of 366 data with either 1 or 0 missing value.
 Y <- df.long$measurement[!is.na(df.long$measurement)]
-psi.origin <- psi <- 15
+psi.origin <- psi <- 30
 threshold <- 0.95
 
 multiplesheets <- function(fname) {
@@ -69,6 +69,8 @@ for(i in 1:length(cov)){
 # era5 <- era5[!(era5$year == 1999 & era5$month == 2 & era5$day == 14), ]
 # fwi.index$ERA5 <- fwi.scaled$ERA5 <- as.numeric(era5$ERA_5)
 fwi.scaled$time <- fwi.index$time <- seq(1,length(Y), length.out=length(Y))
+fwi.scaled$date <- as.Date(fwi.scaled$time - 1, origin = "1980-01-01")
+# head(fwi.scaled[, c("time", "date")])
 fwi.scaled$sea <- fwi.index$sea <- fwi.index$time %% 365.25 / 365.25
 fwi.scaled$cos.time <- fwi.index$cos.time <- cos(2*pi*seq(1,length(Y), length.out=length(Y))/365.25)
 fwi.scaled$sin.time <- fwi.index$sin.time <- sin(2*pi*seq(1,length(Y), length.out=length(Y))/365.25)
@@ -104,14 +106,14 @@ xreg.season <- cbind(
   sin_season = sin(2 * pi * c(1:length(Y)) / 365.25)
 )
 
-fit.list <- list()
-x.detrended <- matrix(nrow = length(Y), ncol = 7)
-for (j in 1:7) {
-  y_ts <- ts(fwi.scaled[, j], frequency = 365.25) 
-  fit.list[[j]] <- fit <- auto.arima(y_ts, seasonal = FALSE, xreg = xreg.season, stepwise = TRUE, approximation = FALSE)
-  x.detrended[, j] <- as.numeric(residuals(fit.list[[j]]))
-}
-fwi.index[,1:7] <- fwi.scaled[, 1:7] <- x.detrended
+# fit.list <- list()
+# x.detrended <- matrix(nrow = length(Y), ncol = 7)
+# for (j in 1:7) {
+#   y_ts <- ts(fwi.scaled[, j], frequency = 365.25) 
+#   fit.list[[j]] <- fit <- auto.arima(y_ts, seasonal = FALSE, xreg = xreg.season, stepwise = TRUE, approximation = FALSE)
+#   x.detrended[, j] <- as.numeric(residuals(fit.list[[j]]))
+# }
+# fwi.index[,1:7] <- fwi.scaled[, 1:7] <- x.detrended
 # acf(fwi.index$BUI)
 # acf(fwi.index$ISI)
 # acf(fwi.index$FFMC)
@@ -127,20 +129,20 @@ fwi_pos <- fwi.scaled[above.0, ]
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 # fwi_pos[,1:7] <- as.data.frame(sapply(fwi_pos[,1:7], FUN = range01))
 # qr.df <- data.frame(y = log(Y_pos), pca_result$x, cos.time = fwi_pos$cos.time, sin.time = fwi_pos$sin.time) #fwi_pos)
-qr.df <- data.frame(y = log(Y_pos), (fwi_pos[,3:7]), cos.time = fwi_pos$cos.time, sin.time = fwi_pos$sin.time)
-# evgam.cov <- y ~ 1 + cos.time + sin.time + s(PC1) + s(PC2) + s(PC3) + s(PC4) + s(PC5)
-evgam.cov <- y ~ cos.time + sin.time + s(BUI, bs = "ts", k = 30) + s(ISI, bs = "ts", k = 30) + s(FFMC, bs = "ts", k = 30) + s(DMC, bs = "ts", k = 30) + s(DC, bs = "ts", k = 30) 
+qr.df <- data.frame(y = log(Y_pos), scale(fwi_pos[,3:7]), cos.time = fwi_pos$cos.time, sin.time = fwi_pos$sin.time)
+# evgam.cov <- y ~ 1 + cos.time + sin.time + s(PC1, k=5) + s(PC2, k=5) + s(PC3, k=5) + s(PC4, k=5) + s(PC5, k=5)
+evgam.cov <- y ~ cos.time + sin.time + s(BUI, bs = "ts", k = 5) + s(ISI, bs = "ts", k = 5) + s(FFMC, bs = "ts", k = 5) + s(DMC, bs = "ts", k = 5) + s(DC, bs = "ts", k = 5) 
 
-# qr.fit <- evgam(evgam.cov, data = qr.df, family = "ald", ald.args=list(tau = threshold))
+qr.fit <- evgam(evgam.cov, data = qr.df, family = "ald", ald.args=list(tau = threshold))
 
 # qr.lin <- evgam(y ~ cos.time + sin.time + BUI + ISI + FFMC + DMC + DC, data = qr.df, family = "ald", ald.args=list(tau = threshold))
 # qr.cov <- evgam(y ~ s(BUI, bs = "ts", k = 30) + s(ISI, bs = "ts", k = 30) + s(FFMC, bs = "ts", k = 30) + s(DMC, bs = "ts", k = 30) + s(DC, bs = "ts", k = 30), data = qr.df, family = "ald", ald.args=list(tau = threshold))
 # qr.time <- evgam(y ~ cos.time + sin.time, data = qr.df, family = "ald", ald.args=list(tau = threshold))
 # qr.null <- evgam(y ~ 1, data = qr.df, family = "ald", ald.args=list(tau = threshold))
-# u.vec <- exp(predict(qr.fit)$location)
+u.vec <- exp(predict(qr.fit)$location)
 # save(u.c, qr.fit, file = paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_qr-c.Rdata"))
-load("./BLAST/application/figures/2026-03-25_pareto_qr-ct.Rdata")
-u.vec <- u.ct
+# load("./BLAST/application/figures/2026-03-25_pareto_qr-ct.Rdata")
+# u.vec <- u.ct
 # qr.fit <- quantreg::rq(y ~ 1 + cos.time + sin.time + BUI + ISI + FFMC + DMC + DC, data = qr.df, tau = threshold)
 # u.vec <- exp(predict(qr.fit))  # threshold on raw scale for Y_pos
 # AIC(qr.fit, qr.cov, qr.time, qr.null)
@@ -150,20 +152,27 @@ plot(c(1:length(Y_pos)), log(Y_pos))
 lines(c(1:length(Y_pos)), log(u.vec), type = "l", col = "red")
 
 
-excess_idx <- which(Y_pos > u.vec)
-y <- Y_pos[excess_idx]
-u <- u.vec[excess_idx]  
-fwi_pos <- fwi_pos[excess_idx, 3:7] # BUI to DC
+excess.idx <- which(Y_pos > u.vec)
+y <- Y_pos[excess.idx]
+u <- u.vec[excess.idx]
+# fwi.scaled <- fwi_pos
+fwi.01 <- fwi_pos[excess.idx, 3:7] # BUI to DC
+
+plot(fwi.scaled[excess.idx, "date"], log(y), xlab= "Year")
+lines(fwi.scaled[excess.idx, "date"], log(u), type = "l", col = "red", xlab= "Year")
 
 fwi.cols <- c("BUI", "ISI", "FFMC", "DMC", "DC")
-X_minmax <- sapply(fwi_pos, function(x) max(x)-min(x))
-X_min <- sapply(fwi_pos, function(x) min(x))
-fwi.01 <- as.data.frame(sapply(fwi_pos, FUN = range01))
-fwi.origin <- fwi.01 * X_minmax
-
-n <- nrow(fwi.01)
+fwi.max <- fwi.01[which.max(y),]
+X_minmax <- sapply(fwi.01, function(x) max(x)-min(x))
+X_min <- sapply(fwi.01, function(x) min(x))
+fwi.01 <- as.data.frame(sapply(fwi.01, FUN = range01))
+grid.n <- n <- nrow(fwi.01)
 p <- ncol(fwi.01)
 psi <- psi.origin - 2 # Adjusted basis dimension
+
+fwi.grid <- data.frame(lapply(fwi_pos[,3:7], function(x) seq(min(x), max(x), length.out =grid.n)))
+
+
 
 Z.list <- list()
 projection_coefs_list <- list()
@@ -205,8 +214,8 @@ for (i in 1:p) {
 bs.linear <- as.matrix(fwi.01)
 bs.nonlinear <- do.call(cbind, Z.list)
 
-grid.n <- n
-newx <- seq(0.05, 0.95, length.out = grid.n) # Standard Deviation units
+
+newx <- seq(0, 1, length.out = grid.n) # Standard Deviation units
 xholder <- do.call(cbind, lapply(1:p, function(j) {newx}))
 colnames(xholder) <- fwi.cols
 xholder.linear <- matrix(rep(newx, p), ncol = p)
@@ -224,6 +233,20 @@ for (i in 1:p) {
 }
 xholder.nonlinear <- do.call(cbind, grid_Z_list)
 
+grid_Z_list <- list()
+
+for (i in 1:p) {
+  scaled_x_grid <- (fwi.grid[,i] - X_min[i]) / (X_minmax[i])
+  grid_df  <- data.frame(x_vec = scaled_x_grid)
+  X_raw_grid <- PredictMat(sm_spec_list[[i]], grid_df)
+  Z_spectral_grid <- X_raw_grid %*% spec_decomp_list[[i]]$U %*% spec_decomp_list[[i]]$L_inv
+  X_lin_grid <- model.matrix(~ x_vec, data = grid_df)
+  Z_orth_grid <- Z_spectral_grid - X_lin_grid %*% projection_coefs_list[[i]]
+  Z_final_grid <- Z_orth_grid[, keep_cols_list[[i]], drop = FALSE]
+  grid_Z_list[[i]] <- scale(Z_final_grid, center = FALSE, scale = scale_stats_list[[i]])
+}
+xgrid.linear <- fwi.grid
+xgrid.nonlinear <- do.call(cbind, grid_Z_list)
 
 X_means <- colMeans(bs.linear)
 X_sd   <- apply(bs.linear, 2, sd)
@@ -235,8 +258,9 @@ data {
   vector[n] u; 
   vector[n] y;
   matrix[n, p] bsLinear; matrix[n, p*psi] bsNonlinear;
+  matrix[n, p] gridL; matrix[n, p*psi] gridNL;
   matrix[grid_n, p] xholderLinear; matrix[grid_n, p*psi] xholderNonlinear;
-  real atau; vector[p] X_means; vector[p] X_sd;
+  real atau; vector[p] X_means; vector[p] X_sd; vector[p] X_minmax;
 }
 parameters {
   vector[p+1] theta;
@@ -277,16 +301,19 @@ generated quantities {
   vector[grid_n] gridalpha;
   matrix[grid_n, p] gridgsmooth;
   vector[p+1] theta_origin;
+  vector[p] theta_fwi;
 
   theta_origin[2:(p+1)] = theta[2:(p+1)] ./ X_sd;
   theta_origin[1] = theta[1] - dot_product(X_means, theta_origin[2:(p+1)]);
+  theta_fwi[1:p] = theta_origin[2:(p+1)] ./ X_minmax;
+
 
   for (i in 1:n) log_lik[i] = pareto_lpdf(y[i] | u[i], alpha[i]);
   {
     vector[grid_n] pred = rep_vector(theta_origin[1], grid_n);
     for (j in 1:p) {
-      gridgsmooth[,j] = col(xholderLinear, j) * theta_origin[j+1] + block(xholderNonlinear, 1, (j-1)*psi + 1, grid_n, psi) * gamma[j];
-      pred += gridgsmooth[,j];
+      gridgsmooth[,j] = col(gridL, j) * theta_fwi[j] + block(gridNL, 1, (j-1)*psi + 1, grid_n, psi) * gamma[j];
+      pred += col(xholderLinear, j) * theta_origin[j+1] + block(xholderNonlinear, 1, (j-1)*psi + 1, grid_n, psi) * gamma[j];
     }
     gridalpha = exp(pred);
   }
@@ -296,9 +323,9 @@ generated quantities {
 data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi,
                   atau = ((psi+1)/2), xholderNonlinear = xholder.nonlinear, 
                   bsLinear = bs.linear, bsNonlinear = bs.nonlinear, #X_min=fwi.min,
-                  xholderLinear = xholder.linear, #X_minmax = fwi.minmax, 
-                  X_means = X_means, X_sd = X_sd, grid_n = grid.n)
-                  # gridL = xgrid.linear, gridNL = xgrid.nonlinear)
+                  xholderLinear = xholder.linear, X_minmax = X_minmax, 
+                  X_means = X_means, X_sd = X_sd, grid_n = grid.n,
+                  gridL = xgrid.linear, gridNL = xgrid.nonlinear)
 
 init.alpha <- list(list(gamma_raw= array(rep(0.2, (psi*p)), dim=c(p, psi)), 
                         theta = rep(-0.1, (p+1)), tau = rep(0.1, p), 
@@ -530,7 +557,7 @@ xi.pred.1 <-pred.1$fitted$shape
 # vgam.sigma.1 <- exp(fitted.linear[,1])
 
 
-data.scenario <- data.frame("x" = newx,
+data.scenario <- data.frame("x" = seq(0,1,length.out=grid.n),
                             "post.mean" = (alpha.samples[,1]),
                             "post.median" = (alpha.samples[,5]),
                             "q1" = (alpha.samples[,4]),
@@ -538,12 +565,8 @@ data.scenario <- data.frame("x" = newx,
 
 ggplot(data.scenario, aes(x=x)) + 
   ylab(expression(alpha(c,ldots,c))) + xlab(expression(c)) + labs(col = "") +
-  geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
-  geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
-  scale_fill_manual(values=c("steelblue"), name = "") +
-  scale_color_manual(values = c("steelblue")) + 
-  guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) +
+  geom_ribbon(aes(ymin = q1, ymax = q3), fill="steelblue", alpha = 0.2) +
+  geom_line(aes(y=post.median), colour = "steelblue", linewidth=1) +
   theme_minimal(base_size = 30) +
   theme(legend.position = "none",
         strip.text = element_blank(),
@@ -551,7 +574,7 @@ ggplot(data.scenario, aes(x=x)) +
 
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_alpha.pdf"), width=10, height = 7.78)
 
-xi.scenario <- data.frame("x" = newx,
+xi.scenario <- data.frame("x" = seq(0,1,length.out=grid.n),
                             "post.mean" = (1/alpha.samples[,1]),
                             "post.median" = (1/alpha.samples[,5]),
                             "q1" = (1/alpha.samples[,4]),
@@ -566,19 +589,15 @@ xi.scenario <- data.frame("x" = newx,
                             # "evgam.scale" = xi.pred.scale)
 
 ggplot(xi.scenario, aes(x=x)) + 
-  ylab(expression(xi(c,...,c))) + xlab(expression(c)) + labs(col = "") +
-  geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
-  geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
+  ylab(expression(xi(c,ldots,c))) + xlab(expression(c)) + labs(col = "") +
+  geom_ribbon(aes(ymin = q1, ymax = q3), fill="steelblue", alpha = 0.2) +
+  geom_line(aes(y=post.median), colour = "steelblue", linewidth=1) +
   # geom_ribbon(aes(ymin = evgam.scale.q1, ymax = evgam.scale.q3), fill= "orange", alpha = 0.2) +
   # geom_line(aes(y=evgam.scale), colour = "orange", linewidth=1, linetype=3) +
   # geom_ribbon(aes(ymin = evgam.1.q1, ymax = evgam.1.q3), fill= "purple", alpha = 0.2) +
   # geom_line(aes(y=evgam.1), colour = "purple", linewidth=1, linetype=3) +
   # geom_line(aes(y=vgam.scale), colour = "orange", linewidth=1, linetype=4) +
   # geom_line(aes(y=vgam.1), colour = "purple", linewidth=1, linetype=4) +  
-  scale_fill_manual(values=c("steelblue"), name = "") +
-  scale_color_manual(values = c("steelblue")) + 
-  guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) +
   theme_minimal(base_size = 30) +
   theme(legend.position = "none",
         strip.text = element_blank(),
@@ -653,8 +672,8 @@ cat("Finished Running")
 #https://discourse.mc-staqan.org/t/four-questions-about-information-criteria-cross-validation-and-hmc-in-relation-to-a-manuscript-review/13841/3
 
 
-data.smooth <- data.frame("x" = as.vector(as.matrix(xholder)),
-                          "true" = as.vector(as.matrix(fwi.01)),
+data.smooth <- data.frame("x" = as.vector(as.matrix(fwi.grid)),
+                          "true" = as.vector(as.matrix(fwi_pos[excess.idx,3:7])),
                           "post.mean" = as.vector(g.smooth.mean),
                           "q1" = as.vector(g.smooth.q1),
                           "q2" = as.vector(g.smooth.q2),
@@ -686,7 +705,7 @@ for(i in 1:p){
                   #         plot.margin = margin(0,0,0,-20),
                   #         axis.text = element_text(size = 35),
                   #         axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.01[which.max(y),i], y=g.min.samples, color = "red", size = 7)
+  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.max[,i], y=g.min.samples, color = "red", size = 7)
 }
 marrangeGrob(grobs = grid.plts, nrow = 1, ncol = 5, top = NULL)
 # grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
@@ -780,7 +799,7 @@ for(i in 1:p){
                           plot.margin = margin(0,0,0,-20),
                           axis.text = element_text(size = 35),
                           axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.grid[which.max(y),i], y=min(fwi.min.samples), color = "red", size = 7)
+  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.max[,i], y=min(fwi.min.samples), color = "red", size = 7)
 }
 
 grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
