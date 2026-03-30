@@ -131,7 +131,7 @@ range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 # qr.df <- data.frame(y = log(Y_pos), pca_result$x, cos.time = fwi_pos$cos.time, sin.time = fwi_pos$sin.time) #fwi_pos)
 qr.df <- data.frame(y = log(Y_pos), scale(fwi_pos[,3:7]), cos.time = fwi_pos$cos.time, sin.time = fwi_pos$sin.time)
 # evgam.cov <- y ~ 1 + cos.time + sin.time + s(PC1, k=5) + s(PC2, k=5) + s(PC3, k=5) + s(PC4, k=5) + s(PC5, k=5)
-evgam.cov <- y ~ cos.time + sin.time + s(BUI, bs = "ts", k = 5) + s(ISI, bs = "ts", k = 5) + s(FFMC, bs = "ts", k = 5) + s(DMC, bs = "ts", k = 5) + s(DC, bs = "ts", k = 5) 
+evgam.cov <- y ~ cos.time + sin.time + s(BUI, bs = "ts", k = 7) + s(ISI, bs = "ts", k = 7) + s(FFMC, bs = "ts", k = 7) + s(DMC, bs = "ts", k = 7) + s(DC, bs = "ts", k = 7) 
 
 qr.fit <- evgam(evgam.cov, data = qr.df, family = "ald", ald.args=list(tau = threshold))
 

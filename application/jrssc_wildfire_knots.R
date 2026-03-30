@@ -160,10 +160,12 @@ aic.results <- do.call(rbind, aic_results_list)
 best.k <- aic.results[which.min(aic.results$AIC), ]
 print(best.k)
 
-ggplot(aic.results, aes(x = k, y = AIC)) +
+load("./BLAST/application/2026-03-30_pareto_950_knots.Rdata")
+
+ggplot(aic.results, aes(x=k, y = BIC)) +
   geom_line(color = "steelblue", linewidth = 1) +
   geom_point(color = "darkblue", size = 3) +
-  geom_point(data = subset(aic.results, k == 10), aes(x = k, y = AIC), 
+  geom_point(data = subset(aic.results, k == 10), aes(x = k, y = BIC), 
             color = "red", size = 5, shape = 1, stroke = 2) +
   labs(x = "Number of Knots", y = "AIC") +
   theme_minimal(base_size = 25) +
