@@ -129,9 +129,10 @@ fwi_pos <- fwi.scaled[above.0, ]
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 # fwi_pos[,1:7] <- as.data.frame(sapply(fwi_pos[,1:7], FUN = range01))
 # qr.df <- data.frame(y = log(Y_pos), pca_result$x, cos.time = fwi_pos$cos.time, sin.time = fwi_pos$sin.time) #fwi_pos)
-qr.df <- data.frame(y = log(Y_pos), scale(fwi_pos[,3:7]), cos.time = fwi_pos$cos.time, sin.time = fwi_pos$sin.time)
+qr.df <- data.frame(y = log(Y_pos), scale(fwi_pos[,1:7]), cos.time = fwi_pos$cos.time, sin.time = fwi_pos$sin.time, time = fwi_pos$sea)
 # evgam.cov <- y ~ 1 + cos.time + sin.time + s(PC1, k=5) + s(PC2, k=5) + s(PC3, k=5) + s(PC4, k=5) + s(PC5, k=5)
-evgam.cov <- y ~ cos.time + sin.time + s(BUI, bs = "ts", k = 7) + s(ISI, bs = "ts", k = 7) + s(FFMC, bs = "ts", k = 7) + s(DMC, bs = "ts", k = 7) + s(DC, bs = "ts", k = 7) 
+# evgam.cov <- y ~ s(time, bs="cc")
+evgam.cov <- y ~ cos.time + sin.time #+ s(BUI, k = 20) + s(ISI, k = 20) + s(FFMC, k = 20) + s(DMC, k = 20) + s(DC, k = 20) #+ s(DSR, bs = "ts", k = 7) + s(FWI, bs = "ts", k = 7) 
 
 qr.fit <- evgam(evgam.cov, data = qr.df, family = "ald", ald.args=list(tau = threshold))
 
@@ -336,6 +337,26 @@ init.alpha <- list(list(gamma_raw= array(rep(0.2, (psi*p)), dim=c(p, psi)),
                    list(gamma_raw= array(rep(0.1, (psi*p)), dim=c(p, psi)),
                         theta = rep(0.1, (p+1)), tau = rep(0.1, p), 
                         lambda1 = rep(0.1,p), lambda2 = rep(0.1, p)))
+
+blast_model <- stan_model(model_code = model.stan)
+map_fit <- optimizing(
+  blast_model,
+  data = data.stan, 
+  init = init.alpha[[1]],
+  as_vector = FALSE, # Returns a structured list
+  algorithm = "BFGS",
+  iter = 10000        # Give it plenty of iterations to converge
+)
+
+init.alpha <- list(list(gamma_raw= array(map_fit$par$gamma_raw, dim=c(p, psi)), 
+                        theta = map_fit$par$theta, tau = map_fit$par$tau, 
+                        lambda1 = map_fit$par$lambda1, lambda2 = map_fit$par$lambda2),
+                    list(gamma_raw= array(map_fit$par$gamma_raw, dim=c(p, psi)), 
+                          theta = map_fit$par$theta, tau = map_fit$par$tau, 
+                          lambda1 = map_fit$par$lambda1, lambda2 = map_fit$par$lambda2),
+                    list(gamma_raw= array(map_fit$par$gamma_raw, dim=c(p, psi)), 
+                    theta = map_fit$par$theta, tau = map_fit$par$tau, 
+                    lambda1 = map_fit$par$lambda1, lambda2 = map_fit$par$lambda2))
 
 fit1 <- stan(
     model_code = model.stan,
@@ -564,10 +585,10 @@ data.scenario <- data.frame("x" = seq(0,1,length.out=grid.n),
                             "q3" = (alpha.samples[,6]))
 
 ggplot(data.scenario, aes(x=x)) + 
-  ylab(expression(alpha(c,ldots,c))) + xlab(expression(c)) + labs(col = "") +
+  ylab(expression(alpha(c,ldots,c))) + xlab(expression(c)) +
   geom_ribbon(aes(ymin = q1, ymax = q3), fill="steelblue", alpha = 0.2) +
   geom_line(aes(y=post.median), colour = "steelblue", linewidth=1) +
-  theme_minimal(base_size = 30) +
+  theme_minimal(base_size = 30) + #scale_y_log10() +
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 20))
@@ -589,16 +610,16 @@ xi.scenario <- data.frame("x" = seq(0,1,length.out=grid.n),
                             # "evgam.scale" = xi.pred.scale)
 
 ggplot(xi.scenario, aes(x=x)) + 
-  ylab(expression(xi(c,ldots,c))) + xlab(expression(c)) + labs(col = "") +
+  ylab(expression(xi(c,ldots,c))) + xlab(expression(c)) +
   geom_ribbon(aes(ymin = q1, ymax = q3), fill="steelblue", alpha = 0.2) +
-  geom_line(aes(y=post.median), colour = "steelblue", linewidth=1) +
+  geom_line(aes(y=post.median), color = "steelblue", linewidth=1) +
   # geom_ribbon(aes(ymin = evgam.scale.q1, ymax = evgam.scale.q3), fill= "orange", alpha = 0.2) +
   # geom_line(aes(y=evgam.scale), colour = "orange", linewidth=1, linetype=3) +
   # geom_ribbon(aes(ymin = evgam.1.q1, ymax = evgam.1.q3), fill= "purple", alpha = 0.2) +
   # geom_line(aes(y=evgam.1), colour = "purple", linewidth=1, linetype=3) +
   # geom_line(aes(y=vgam.scale), colour = "orange", linewidth=1, linetype=4) +
   # geom_line(aes(y=vgam.1), colour = "purple", linewidth=1, linetype=4) +  
-  theme_minimal(base_size = 30) +
+  theme_minimal(base_size = 30) + scale_y_log10() +
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 20))
@@ -773,36 +794,6 @@ marrangeGrob(grobs = grid.plts, nrow = 1, ncol = 5, top = NULL)
 # }
 
 # grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
-
-data.smooth <- data.frame("x" = as.vector(as.matrix(fwi.grid)),
-                          "true" = as.vector(as.matrix(fwi.origin[,c(1:p)])),
-                          "post.mean" = as.vector(fwi.smooth.mean),
-                          "q1" = as.vector(fwi.smooth.q1),
-                          "q2" = as.vector(fwi.smooth.q2),
-                          "q3" = as.vector(fwi.smooth.q3),
-                          "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)))
-
-
-grid.plts <- list()
-for(i in 1:p){
-  grid.plt <- ggplot(data = data.frame(data.smooth[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + 
-                  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-                  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
-                  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
-                  geom_rug(aes(x=true, y=q2), sides = "b") +
-                  ylab("") + xlab(names(fwi.scaled)[i]) +
-                  scale_fill_manual(values=c("steelblue"), name = "") + 
-                  scale_color_manual(values=c("steelblue")) +
-                  ylim(min(fwi.min.samples), 7) +
-                  theme_minimal(base_size = 30) +
-                  theme(legend.position = "none",
-                          plot.margin = margin(0,0,0,-20),
-                          axis.text = element_text(size = 35),
-                          axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.max[,i], y=min(fwi.min.samples), color = "red", size = 7)
-}
-
-grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
 
 summary(fit1, par=c("theta_fwi"), probs = c(0.05,0.5, 0.95))$summary
 # saveRDS(data.smooth, file="./BLAST/application/figures/comparison/full_stanfit.rds")
