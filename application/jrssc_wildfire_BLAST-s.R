@@ -33,7 +33,7 @@ missing.values <- which(!is.na(df.long$measurement))
 #considering the case of leap year, the missing values are the 29th of Feb
 #Thus, each year consist of 366 data with either 1 or 0 missing value.
 Y <- df.long$measurement[!is.na(df.long$measurement)]
-psi.origin <- psi <- 30
+psi.origin <- psi <- 5
 threshold <- 0.95
 
 multiplesheets <- function(fname) {
@@ -106,21 +106,21 @@ xreg.season <- cbind(
   sin_season = sin(2 * pi * c(1:length(Y)) / 365.25)
 )
 
-# fit.list <- list()
-# x.detrended <- matrix(nrow = length(Y), ncol = 7)
-# for (j in 1:7) {
-#   y_ts <- ts(fwi.scaled[, j], frequency = 365.25) 
-#   fit.list[[j]] <- fit <- auto.arima(y_ts, seasonal = FALSE, xreg = xreg.season, stepwise = TRUE, approximation = FALSE)
-#   x.detrended[, j] <- as.numeric(residuals(fit.list[[j]]))
-# }
-# fwi.index[,1:7] <- fwi.scaled[, 1:7] <- x.detrended
+fit.list <- list()
+x.detrended <- matrix(nrow = length(Y), ncol = 7)
+for (j in 1:7) {
+  y_ts <- ts(fwi.scaled[, j], frequency = 365.25) 
+  fit.list[[j]] <- auto.arima(y_ts, seasonal = FALSE, xreg = xreg.season, stepwise = TRUE, approximation = FALSE)
+  x.detrended[, j] <- as.numeric(residuals(fit.list[[j]]))
+}
+fwi.index[,1:7] <- fwi.scaled[, 1:7] <- x.detrended
 # acf(fwi.index$BUI)
 # acf(fwi.index$ISI)
 # acf(fwi.index$FFMC)
 # acf(fwi.index$DMC)
 # acf(fwi.index$DC)
 
-above.0 <- which(Y > 0)
+above.0 <- which(Y > 1e-5)
 Y_pos <- Y[above.0]
 fwi_pos <- fwi.scaled[above.0, ]
 # Y_pos <- Y
@@ -129,10 +129,12 @@ fwi_pos <- fwi.scaled[above.0, ]
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 # fwi_pos[,1:7] <- as.data.frame(sapply(fwi_pos[,1:7], FUN = range01))
 # qr.df <- data.frame(y = log(Y_pos), pca_result$x, cos.time = fwi_pos$cos.time, sin.time = fwi_pos$sin.time) #fwi_pos)
-qr.df <- data.frame(y = log(Y_pos), scale(fwi_pos[,1:7]), cos.time = fwi_pos$cos.time, sin.time = fwi_pos$sin.time, time = fwi_pos$sea)
+qr.df <- data.frame(y = log(Y_pos), (fwi_pos[,1:7]), cos.time = fwi_pos$cos.time, sin.time = fwi_pos$sin.time, time = fwi_pos$sea)
 # evgam.cov <- y ~ 1 + cos.time + sin.time + s(PC1, k=5) + s(PC2, k=5) + s(PC3, k=5) + s(PC4, k=5) + s(PC5, k=5)
-# evgam.cov <- y ~ s(time, bs="cc")
-evgam.cov <- y ~ cos.time + sin.time #+ s(BUI, k = 20) + s(ISI, k = 20) + s(FFMC, k = 20) + s(DMC, k = 20) + s(DC, k = 20) #+ s(DSR, bs = "ts", k = 7) + s(FWI, bs = "ts", k = 7) 
+# evgam.cov <- y ~ s(time, bs="cc", k=5) + s(BUI, bs="ts", k = 5) + s(ISI, bs="ts", k = 5) + s(FFMC, bs="ts", k = 5) + s(DMC, bs="ts", k = 5) + s(DC, bs="ts", k = 5)
+# evgam.cov <- y ~ cos.time + sin.time + s(BUI, bs="ts", k = 5) + s(ISI, bs="ts", k = 5) + s(FFMC, bs="ts", k = 5) + s(DMC, bs="ts", k = 5) + s(DC, bs="ts", k = 5) #+ s(DSR, bs = "ts", k = 7) + s(FWI, bs = "ts", k = 7) 
+evgam.cov <- as.formula(paste0("y ~ cos.time + sin.time + ",
+                    paste0("s(", colnames(fwi_pos[,1:7]), ", k = ", psi+2, ", bs='" ,"ts')", collapse = " + ")))
 
 qr.fit <- evgam(evgam.cov, data = qr.df, family = "ald", ald.args=list(tau = threshold))
 
@@ -157,7 +159,7 @@ excess.idx <- which(Y_pos > u.vec)
 y <- Y_pos[excess.idx]
 u <- u.vec[excess.idx]
 # fwi.scaled <- fwi_pos
-fwi.01 <- fwi_pos[excess.idx, 3:7] # BUI to DC
+fwi.01 <- fwi_pos[excess.idx, 1:7] # BUI to DC
 
 plot(fwi.scaled[excess.idx, "date"], log(y), xlab= "Year")
 lines(fwi.scaled[excess.idx, "date"], log(u), type = "l", col = "red", xlab= "Year")
@@ -171,7 +173,7 @@ grid.n <- n <- nrow(fwi.01)
 p <- ncol(fwi.01)
 psi <- psi.origin - 2 # Adjusted basis dimension
 
-fwi.grid <- data.frame(lapply(fwi_pos[,3:7], function(x) seq(min(x), max(x), length.out =grid.n)))
+fwi.grid <- data.frame(lapply(fwi_pos[,1:7], function(x) seq(min(x), max(x), length.out =grid.n)))
 
 
 
@@ -619,7 +621,7 @@ ggplot(xi.scenario, aes(x=x)) +
   # geom_line(aes(y=evgam.1), colour = "purple", linewidth=1, linetype=3) +
   # geom_line(aes(y=vgam.scale), colour = "orange", linewidth=1, linetype=4) +
   # geom_line(aes(y=vgam.1), colour = "purple", linewidth=1, linetype=4) +  
-  theme_minimal(base_size = 30) + scale_y_log10() +
+  theme_minimal(base_size = 30) + #scale_y_log10() +
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 20))
