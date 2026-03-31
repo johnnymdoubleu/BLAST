@@ -33,7 +33,7 @@ missing.values <- which(!is.na(df.long$measurement))
 #considering the case of leap year, the missing values are the 29th of Feb
 #Thus, each year consist of 366 data with either 1 or 0 missing value.
 Y <- df.long$measurement[!is.na(df.long$measurement)]
-psi.origin <- psi <- 5
+psi.origin <- psi <- 10
 threshold <- 0.95
 
 multiplesheets <- function(fname) {
@@ -60,8 +60,7 @@ fwi.scaled <- fwi.index <- data.frame(DSR = double(length(Y)),
                                         stringsAsFactors = FALSE)
 for(i in 1:length(cov)){
     cov.long <- gather(cov[[i]][,1:41], condition, measurement, "1980":"2019", factor_key=TRUE)
-    fwi.index[,i] <- cov.long$measurement[missing.values]
-    fwi.scaled[,i] <- cov.long$measurement[missing.values]
+    fwi.scaled[,i] <- fwi.index[,i] <- cov.long$measurement[missing.values]
 }
 
 # era5 <- read_excel("./BLAST/application/ERA_5.xlsx")
@@ -110,7 +109,7 @@ fit.list <- list()
 x.detrended <- matrix(nrow = length(Y), ncol = 7)
 for (j in 1:7) {
   y_ts <- ts(fwi.scaled[, j], frequency = 365.25) 
-  fit.list[[j]] <- auto.arima(y_ts, seasonal = FALSE, xreg = xreg.season, stepwise = TRUE, approximation = FALSE)
+  fit.list[[j]] <- auto.arima(y_ts, seasonal = FALSE, xreg = xreg.season, stepwise = TRUE, approximation = FALSE, max.d = 0)
   x.detrended[, j] <- as.numeric(residuals(fit.list[[j]]))
 }
 fwi.index[,1:7] <- fwi.scaled[, 1:7] <- x.detrended
@@ -120,9 +119,10 @@ fwi.index[,1:7] <- fwi.scaled[, 1:7] <- x.detrended
 # acf(fwi.index$DMC)
 # acf(fwi.index$DC)
 
-above.0 <- which(Y > 1e-5)
+above.0 <- which(Y > 0.2)
 Y_pos <- Y[above.0]
 fwi_pos <- fwi.scaled[above.0, ]
+# Y[!above.0] <- 1e-5
 # Y_pos <- Y
 # fwi_pos <- fwi.scaled
 # pca_result <- prcomp(fwi_pos[,3:7], center = TRUE, scale. = TRUE)
@@ -130,11 +130,10 @@ range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 # fwi_pos[,1:7] <- as.data.frame(sapply(fwi_pos[,1:7], FUN = range01))
 # qr.df <- data.frame(y = log(Y_pos), pca_result$x, cos.time = fwi_pos$cos.time, sin.time = fwi_pos$sin.time) #fwi_pos)
 qr.df <- data.frame(y = log(Y_pos), (fwi_pos[,1:7]), cos.time = fwi_pos$cos.time, sin.time = fwi_pos$sin.time, time = fwi_pos$sea)
-# evgam.cov <- y ~ 1 + cos.time + sin.time + s(PC1, k=5) + s(PC2, k=5) + s(PC3, k=5) + s(PC4, k=5) + s(PC5, k=5)
+# evgam.cov <- y ~ 1 + cos.time + sin.time + s(PC1, k=15) + s(PC2, k=15) + s(PC3, k=15) + s(PC4, k=15) + s(PC5, k=15)
 # evgam.cov <- y ~ s(time, bs="cc", k=5) + s(BUI, bs="ts", k = 5) + s(ISI, bs="ts", k = 5) + s(FFMC, bs="ts", k = 5) + s(DMC, bs="ts", k = 5) + s(DC, bs="ts", k = 5)
-# evgam.cov <- y ~ cos.time + sin.time + s(BUI, bs="ts", k = 5) + s(ISI, bs="ts", k = 5) + s(FFMC, bs="ts", k = 5) + s(DMC, bs="ts", k = 5) + s(DC, bs="ts", k = 5) #+ s(DSR, bs = "ts", k = 7) + s(FWI, bs = "ts", k = 7) 
-evgam.cov <- as.formula(paste0("y ~ cos.time + sin.time + ",
-                    paste0("s(", colnames(fwi_pos[,1:7]), ", k = ", psi+2, ", bs='" ,"ts')", collapse = " + ")))
+s.cov <- c(1:7)
+evgam.cov <- as.formula(paste0("y ~ cos.time + sin.time + ", paste0("s(", colnames(fwi_pos[,s.cov]), ", k = ", psi+2, ", bs='" ,"ts')", collapse = " + ")))
 
 qr.fit <- evgam(evgam.cov, data = qr.df, family = "ald", ald.args=list(tau = threshold))
 
@@ -151,20 +150,20 @@ u.vec <- exp(predict(qr.fit)$location)
 # AIC(qr.fit, qr.cov, qr.time, qr.null)
 # BIC(qr.fit, qr.cov, qr.time, qr.null)
 
-plot(c(1:length(Y_pos)), log(Y_pos))
-lines(c(1:length(Y_pos)), log(u.vec), type = "l", col = "red")
+plot(fwi.scaled[above.0,"date"], log(Y_pos))
+lines(fwi.scaled[above.0,"date"], log(u.vec), type = "l", col = "red")
 
 
 excess.idx <- which(Y_pos > u.vec)
 y <- Y_pos[excess.idx]
 u <- u.vec[excess.idx]
 # fwi.scaled <- fwi_pos
-fwi.01 <- fwi_pos[excess.idx, 1:7] # BUI to DC
+fwi.01 <- fwi_pos[excess.idx, s.cov] # BUI to DC
 
-plot(fwi.scaled[excess.idx, "date"], log(y), xlab= "Year")
-lines(fwi.scaled[excess.idx, "date"], log(u), type = "l", col = "red", xlab= "Year")
+plot(fwi_pos[excess.idx, "date"], log(y), xlab= "Year")
+lines(fwi_pos[excess.idx, "date"], log(u), type = "l", col = "red", xlab= "Year")
 
-fwi.cols <- c("BUI", "ISI", "FFMC", "DMC", "DC")
+fwi.cols <- colnames(fwi_pos[,s.cov])
 fwi.max <- fwi.01[which.max(y),]
 X_minmax <- sapply(fwi.01, function(x) max(x)-min(x))
 X_min <- sapply(fwi.01, function(x) min(x))
@@ -173,7 +172,7 @@ grid.n <- n <- nrow(fwi.01)
 p <- ncol(fwi.01)
 psi <- psi.origin - 2 # Adjusted basis dimension
 
-fwi.grid <- data.frame(lapply(fwi_pos[,1:7], function(x) seq(min(x), max(x), length.out =grid.n)))
+fwi.grid <- data.frame(lapply(fwi_pos[,s.cov], function(x) seq(min(x), max(x), length.out =grid.n)))
 
 
 
@@ -730,7 +729,7 @@ for(i in 1:p){
                   #         axis.title.x = element_text(size = 45))
   grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.max[,i], y=g.min.samples, color = "red", size = 7)
 }
-marrangeGrob(grobs = grid.plts, nrow = 1, ncol = 5, top = NULL)
+marrangeGrob(grobs = grid.plts, nrow = 1, ncol = p, top = NULL)
 # grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
 
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_cov.pdf"), marrangeGrob(grobs = grid.plts, nrow = 1, ncol = 5, top = NULL), width=10, height = 7.78)
