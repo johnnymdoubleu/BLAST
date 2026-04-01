@@ -491,22 +491,22 @@ alpha.container$true <- rowMeans(true.container)
 alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
-# load(paste0("./simulation/results/MC-Scenario_A/2026-03-21_",total.iter,"_MC_scA_",n.origin,"-t975.Rdata"))
+# load(paste0("./simulation/results/MC-Scenario_A/2026-03-18_",total.iter,"_MC_scA_",n.origin,"-ct.Rdata"))
 
-plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab(expression(alpha(c,ldots,c)))
+plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + ylab(expression(alpha(c,ldots,c)))
 plot_limit <- min(total.iter, 50)
 for(i in 1:plot_limit){
   plt <- plt + geom_line(aes(y = .data[[names(alpha.container)[i]]]), alpha = 0.05, linewidth = 0.7)
 }
 print(plt + 
         geom_line(aes(y=true), colour = "red", linewidth = 2, linetype = 2) + 
-        geom_line(aes(y=mean), colour = "steelblue", linewidth = 1.8) + ylim(0, 10) +
+        geom_line(aes(y=mean), colour = "steelblue", linewidth = 1.8) + ylim(0, 15) +
         theme_minimal(base_size = 40) + 
         theme(legend.position = "none",
                 strip.text = element_blank(),
                 axis.text = element_text(size = 30)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_scA_",n.origin,".pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_scA_",n.origin,"_ct.pdf"), width=10, height = 7.78)
 
 gridgsmooth.container$x <- seq(0, 1, length.out = grid.n)
 gridgsmooth.container$true <- g.new

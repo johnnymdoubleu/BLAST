@@ -119,7 +119,7 @@ fwi.index[,1:7] <- fwi.scaled[, 1:7] <- x.detrended
 # acf(fwi.index$DMC)
 # acf(fwi.index$DC)
 
-above.0 <- which(Y > 0.15)
+above.0 <- which(Y > 0)
 Y_pos <- Y[above.0]
 fwi_pos <- fwi.scaled[above.0, ]
 # Y[!above.0] <- 1e-5
@@ -589,7 +589,7 @@ ggplot(data.scenario, aes(x=x)) +
   ylab(expression(alpha(c,ldots,c))) + xlab(expression(c)) +
   geom_ribbon(aes(ymin = q1, ymax = q3), fill="steelblue", alpha = 0.2) +
   geom_line(aes(y=post.median), colour = "steelblue", linewidth=1) +
-  theme_minimal(base_size = 30) + #scale_y_log10() +
+  theme_minimal(base_size = 30) + scale_y_log10() +
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 20))
@@ -620,7 +620,7 @@ ggplot(xi.scenario, aes(x=x)) +
   # geom_line(aes(y=evgam.1), colour = "purple", linewidth=1, linetype=3) +
   # geom_line(aes(y=vgam.scale), colour = "orange", linewidth=1, linetype=4) +
   # geom_line(aes(y=vgam.1), colour = "purple", linewidth=1, linetype=4) +  
-  theme_minimal(base_size = 30) + #scale_y_log10() +
+  theme_minimal(base_size = 30) + scale_y_log10() +
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 20))

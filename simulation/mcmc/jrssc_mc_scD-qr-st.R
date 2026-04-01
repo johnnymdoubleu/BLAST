@@ -9,7 +9,7 @@ library(rmutil)
 # Scenario D
 # array.id <- commandArgs(trailingOnly=TRUE)
 
-total.iter <- 25
+total.iter <- 100
 
 n <- n.origin <- 10000
 grid.n <- 200
@@ -380,7 +380,7 @@ for(iter in 1:total.iter){
   # y.matrix <- matrix(y.origin, nrow = T, ncol = n, byrow = TRUE)
   # u.matrix <- matrix(u, nrow = T, ncol = n, byrow = TRUE)
   # r_vec <- qnorm(pPareto(y.matrix, u.matrix, alpha = alpha_sub))
-  # r_mat <- matrix(r_vec, nrow = T, ncol = n)
+  # r_mat <- matrix(r_vec, nrow = T, ncol = n)s
   # quantile_prob <- ppoints(n)
   # grid          <- qnorm(quantile_prob)
   # traj <- t(apply(r_mat, 1, sort))  
@@ -393,7 +393,7 @@ alpha.container$true <- alp.new
 alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
-# load(paste0("./simulation/results/MC-Scenario_A/2026-02-07_",total.iter,"_MC_scA_",n.origin,".Rdata"))
+load(paste0("./simulation/results/MC-Scenario_D/2026-03-18_",total.iter,"_MC_scD_",n.origin,"-ct.Rdata"))
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + labs(col = "") + ylab(expression(alpha(bold(c),bold(t))))
 if(total.iter <= 50){
@@ -407,7 +407,7 @@ if(total.iter <= 50){
 }
 print(plt + 
         geom_line(aes(y=true, col = "True"), linewidth = 2, linetype = 2) + 
-        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.8) + ylim(0, 10) +
+        geom_line(aes(y=mean, col = "Mean"), linewidth = 1.8) + ylim(0, 15) +
         scale_fill_manual(values=c("steelblue"), name = "") +
         scale_color_manual(values = c("steelblue", "red"))+
         guides(color = guide_legend(order = 2), 
@@ -417,7 +417,7 @@ print(plt +
                 strip.text = element_blank(),
                 axis.text = element_text(size = 30)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_scA_",n.origin,".pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_scD_",n.origin,"_ct.pdf"), width=10, height = 7.78)
 
 gridgsmooth.container$x <- newx
 gridgsmooth.container$true <- g.new
