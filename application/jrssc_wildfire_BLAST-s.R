@@ -119,7 +119,7 @@ fwi.index[,1:7] <- fwi.scaled[, 1:7] <- x.detrended
 # acf(fwi.index$DMC)
 # acf(fwi.index$DC)
 
-above.0 <- which(Y > 0.2)
+above.0 <- which(Y > 0.15)
 Y_pos <- Y[above.0]
 fwi_pos <- fwi.scaled[above.0, ]
 # Y[!above.0] <- 1e-5
@@ -132,7 +132,7 @@ range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 qr.df <- data.frame(y = log(Y_pos), (fwi_pos[,1:7]), cos.time = fwi_pos$cos.time, sin.time = fwi_pos$sin.time, time = fwi_pos$sea)
 # evgam.cov <- y ~ 1 + cos.time + sin.time + s(PC1, k=15) + s(PC2, k=15) + s(PC3, k=15) + s(PC4, k=15) + s(PC5, k=15)
 # evgam.cov <- y ~ s(time, bs="cc", k=5) + s(BUI, bs="ts", k = 5) + s(ISI, bs="ts", k = 5) + s(FFMC, bs="ts", k = 5) + s(DMC, bs="ts", k = 5) + s(DC, bs="ts", k = 5)
-s.cov <- c(1:7)
+s.cov <- c(3:7)
 evgam.cov <- as.formula(paste0("y ~ cos.time + sin.time + ", paste0("s(", colnames(fwi_pos[,s.cov]), ", k = ", psi+2, ", bs='" ,"ts')", collapse = " + ")))
 
 qr.fit <- evgam(evgam.cov, data = qr.df, family = "ald", ald.args=list(tau = threshold))
@@ -314,7 +314,7 @@ generated quantities {
   {
     vector[grid_n] pred = rep_vector(theta_origin[1], grid_n);
     for (j in 1:p) {
-      gridgsmooth[,j] = col(gridL, j) * theta_fwi[j] + block(gridNL, 1, (j-1)*psi + 1, grid_n, psi) * gamma[j];
+      gridgsmooth[,j] = col(xholderLinear, j) * theta_origin[j+1] + block(xholderNonlinear, 1, (j-1)*psi + 1, grid_n, psi) * gamma[j]; // gridgsmooth[,j] = col(gridL, j) * theta_fwi[j] + block(gridNL, 1, (j-1)*psi + 1, grid_n, psi) * gamma[j]
       pred += col(xholderLinear, j) * theta_origin[j+1] + block(xholderNonlinear, 1, (j-1)*psi + 1, grid_n, psi) * gamma[j];
     }
     gridalpha = exp(pred);
@@ -695,7 +695,7 @@ cat("Finished Running")
 
 
 data.smooth <- data.frame("x" = as.vector(as.matrix(fwi.grid)),
-                          "true" = as.vector(as.matrix(fwi_pos[excess.idx,3:7])),
+                          "true" = as.vector(as.matrix(fwi_pos[excess.idx,s.cov])),
                           "post.mean" = as.vector(g.smooth.mean),
                           "q1" = as.vector(g.smooth.q1),
                           "q2" = as.vector(g.smooth.q2),

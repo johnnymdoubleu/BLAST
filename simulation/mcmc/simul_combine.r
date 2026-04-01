@@ -1,14 +1,14 @@
 setwd("../BLAST/simulation/results")
 iter <- 2
-n <- 20000
+n <- 10000
 grid.n <- 200
 EV <- 1
 threshold <- 0.95
 if(EV==TRUE){
-  file_pattern <- paste0("evgam_mc_scC2_",n,"_.*.Rdata")
+  file_pattern <- paste0("evgam_mc_scD2_",n,"_.*.Rdata")
   # file_pattern <- paste0("evgam_mc_scA_.*.Rdata")x``
 }else if(EV==FALSE){
-  file_pattern <- paste0("2026-03-27_",iter,"_MC_scC_",n,"_.*.Rdata")
+  file_pattern <- paste0("2026-03-27_",iter,"_MC_scD_",n,"_.*.Rdata")
 }
 
 file_list <- list.files(pattern = file_pattern)
@@ -102,7 +102,7 @@ if(EV==FALSE){
   # qqplot.container$grid <- temp_env$qqplot.container$grid
   # qqplot.container$mean <- rowMeans(qqplot.container[,1:total.iter])
   cat(mean(mise.container, na.rm=TRUE), "±", sd(mise.container, na.rm=TRUE)/sqrt(sum(!is.na(mise.container))), "\n")
-  # save(alpha.container, gridgnl.container, gridgl.container, gridgsmooth.container, mise.container, file = paste0(Sys.Date(),"_",total.iter,"_MC_scC_",n,".Rdata"))
+  # save(alpha.container, gridgnl.container, gridgl.container, gridgsmooth.container, mise.container, file = paste0(Sys.Date(),"_",total.iter,"_MC_scD_",n,".Rdata"))
 } else {
   total.iter <- length(file_list) * iter
   colnames(alpha.container) <- paste0("V", 1:total.iter)
@@ -132,5 +132,5 @@ if(EV==FALSE){
     "VGAM:   ", mean(mise.vgam.1.container, na.rm=TRUE), "±", sd(mise.vgam.1.container, na.rm=TRUE)/sqrt(sum(!is.na(mise.vgam.1.container))), "\n",
     "VGAM-σ: ", mean(mise.vgam.scale.container, na.rm=TRUE), "±", sd(mise.vgam.scale.container, na.rm=TRUE)/sqrt(sum(!is.na(mise.vgam.scale.container))), "\n")
 
-  # save(alpha.container, true.container, vgam.1.container, vgam.scale.container, evgam.1.container, evgam.scale.container, mise.container, mise.evgam.1.container, mise.evgam.scale.container, mise.vgam.1.container, mise.vgam.scale.container, file = paste0(Sys.Date(),"_evgam_mc_scC2_",n,"_ct.Rdata"))  
+  # save(alpha.container, true.container, vgam.1.container, vgam.scale.container, evgam.1.container, evgam.scale.container, mise.container, mise.evgam.1.container, mise.evgam.scale.container, mise.vgam.1.container, mise.vgam.scale.container, file = paste0(Sys.Date(),"_evgam_mc_scD2_",n,"_ct.Rdata"))  
 }
