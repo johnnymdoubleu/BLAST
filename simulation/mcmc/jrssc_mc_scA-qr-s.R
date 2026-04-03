@@ -491,7 +491,7 @@ alpha.container$true <- rowMeans(true.container)
 alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
-# load(paste0("./simulation/results/MC-Scenario_A/2026-03-18_",total.iter,"_MC_scA_",n.origin,"-ct.Rdata"))
+# load(paste0("./simulation/results/MC-Scenario_A/2026-04-01_",total.iter,"_MC_scA_",n.origin,"-cts.Rdata"))
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + xlab(expression(c)) + ylab(expression(alpha(c,ldots,c)))
 plot_limit <- min(total.iter, 50)
@@ -506,7 +506,7 @@ print(plt +
                 strip.text = element_blank(),
                 axis.text = element_text(size = 30)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_scA_",n.origin,"_ct.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_scA_",n.origin,"_cts.pdf"), width=10, height = 7.78)
 
 gridgsmooth.container$x <- seq(0, 1, length.out = grid.n)
 gridgsmooth.container$true <- g.new
@@ -532,7 +532,7 @@ print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewid
                 axis.title.x = element_text(size = 45),                
                 axis.text = element_text(size = 30)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_scA_",n.origin,".pdf"), width=12.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_scA_",n.origin,"-cts.pdf"), width=12.5, height = 15)
 
 
 gridgl.container$x <- newx

@@ -306,6 +306,19 @@ system.time(fit1 <- stan(
   refresh = 1000             # no progress shown
 ))
 
+library(posterior)
+drws <- posterior::as_draws_df(fit1)
+# posterior::summarise_draws(posterior::subset_draws(drws, variable = "gamma"), rhat, ess_bulk, ess_tail, .num_args = list(sigfig=5, notation = "dec"))
+posterior::summarise_draws(
+  posterior::subset_draws(drws, variable = "tau"), 
+  rhat, ess_bulk, ess_tail
+) %>%
+dplyr::summarise(
+  rhat_range     = paste(round(min(rhat, na.rm=T), 4), "-", round(max(rhat, na.rm=T), 4)),
+  ess_bulk_range = paste(min(ess_bulk), "-", max(ess_bulk)),
+  ess_tail_range = paste(min(ess_tail), "-", max(ess_tail))
+)
+
 posterior <- extract(fit1)
 bayesplot::color_scheme_set("mix-blue-red")
 bayesplot::mcmc_trace(fit1, pars="lp__") + ylab("Scenario B") +

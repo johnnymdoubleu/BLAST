@@ -100,16 +100,18 @@ fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
 # }
 
 xreg.season <- cbind(
-  trend = c(1:length(Y)),
+  # trend = c(1:length(Y)),
   cos_season = cos(2 * pi * c(1:length(Y)) / 365.25),
   sin_season = sin(2 * pi * c(1:length(Y)) / 365.25)
 )
 
 fit.list <- list()
+arima_fitted_matrix <- matrix(nrow = length(Y), ncol = 7)
 x.detrended <- matrix(nrow = length(Y), ncol = 7)
 for (j in 1:7) {
   y_ts <- ts(fwi.scaled[, j], frequency = 365.25) 
   fit.list[[j]] <- auto.arima(y_ts, seasonal = FALSE, xreg = xreg.season, stepwise = TRUE, approximation = FALSE, max.d = 0)
+  arima_fitted_matrix[, j] <- as.numeric(fitted(fit.list[[j]]))
   x.detrended[, j] <- as.numeric(residuals(fit.list[[j]]))
 }
 fwi.index[,1:7] <- fwi.scaled[, 1:7] <- x.detrended
@@ -122,6 +124,7 @@ fwi.index[,1:7] <- fwi.scaled[, 1:7] <- x.detrended
 above.0 <- which(Y > 0)
 Y_pos <- Y[above.0]
 fwi_pos <- fwi.scaled[above.0, ]
+arima_fitted_pos <- arima_fitted_matrix[above.0, ]
 # Y[!above.0] <- 1e-5
 # Y_pos <- Y
 # fwi_pos <- fwi.scaled
@@ -130,7 +133,7 @@ range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 # fwi_pos[,1:7] <- as.data.frame(sapply(fwi_pos[,1:7], FUN = range01))
 # qr.df <- data.frame(y = log(Y_pos), pca_result$x, cos.time = fwi_pos$cos.time, sin.time = fwi_pos$sin.time) #fwi_pos)
 qr.df <- data.frame(y = log(Y_pos), (fwi_pos[,1:7]), cos.time = fwi_pos$cos.time, sin.time = fwi_pos$sin.time, time = fwi_pos$sea)
-# evgam.cov <- y ~ 1 + cos.time + sin.time + s(PC1, k=15) + s(PC2, k=15) + s(PC3, k=15) + s(PC4, k=15) + s(PC5, k=15)
+# evgam.cov <- y ~ cos.time + sin.time
 # evgam.cov <- y ~ s(time, bs="cc", k=5) + s(BUI, bs="ts", k = 5) + s(ISI, bs="ts", k = 5) + s(FFMC, bs="ts", k = 5) + s(DMC, bs="ts", k = 5) + s(DC, bs="ts", k = 5)
 s.cov <- c(3:7)
 evgam.cov <- as.formula(paste0("y ~ cos.time + sin.time + ", paste0("s(", colnames(fwi_pos[,s.cov]), ", k = ", psi+2, ", bs='" ,"ts')", collapse = " + ")))
@@ -172,7 +175,7 @@ grid.n <- n <- nrow(fwi.01)
 p <- ncol(fwi.01)
 psi <- psi.origin - 2 # Adjusted basis dimension
 
-fwi.grid <- data.frame(lapply(fwi_pos[,s.cov], function(x) seq(min(x), max(x), length.out =grid.n)))
+fwi.grid <- data.frame(lapply(fwi_pos[excess.idx,s.cov], function(x) seq(min(x), max(x), length.out =grid.n)))
 
 
 
@@ -289,7 +292,6 @@ model {
   target += pareto_lpdf(y | u, alpha);
   target += normal_lpdf(theta[1] | 0, 10);
   target += gamma_lpdf(lambda1 | 1e-2, 1e-2);
-  // target += exponential_lpdf(lambda1 | 0.1); 
   target += gamma_lpdf(lambda2 | 1e-2, 1e-2);
   for (j in 1:p) {
     target += double_exponential_lpdf(theta[j+1] | 0, 1/lambda1[j]);
@@ -365,9 +367,9 @@ fit1 <- stan(
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value 
     chains = 3,             # number of Markov chains
-    iter = 4000,            # total number of iterations per chain
+    iter = 2000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
-    refresh = 2000           # no progress shown
+    refresh = 1000           # no progress shown
 )
 
 # saveRDS(fit1, file=paste0("./BLAST/application/",Sys.Date(),"_stanfit.rds"))
@@ -900,7 +902,7 @@ summary(fit1, par=c("theta_fwi"), probs = c(0.05,0.5, 0.95))$summary
 # save(constraint.elpd.loo, constraint.waic, file = (paste0("./BLAST/application/BLAST_constraint_",Sys.Date(),"_",psi,"_",floor(threshold*100),"quantile_IC.Rdata")))
 
 
-# x_data <- sort(Y[Y > 0], decreasing = TRUE)
+# x_data <- sort(Y_pos, decreasing = TRUE)
 # n <- length(x_data)
 # k_range_pick <- 15:500
 # pick_res <- data.frame(k = k_range_pick, xi = NA, lower = NA, upper = NA)
@@ -968,24 +970,23 @@ summary(fit1, par=c("theta_fwi"), probs = c(0.05,0.5, 0.95))$summary
 #   geom_line(color="darkgreen", linewidth=1) +
 #   geom_hline(yintercept = 0, linetype="dashed") +
 #   coord_cartesian(ylim=c(-0.15, 1.5)) + # Zoom to relevant range
-#   labs(title="Pickands Estimator", 
-#        y="Extreme Value Index") +
+#   labs(y=expression(xi), x="n") +
 #   theme_minimal(base_size = 30) + ylim(-10,10) +
 #   theme(legend.position = "none",
 #           axis.text = element_text(size = 35),
-#           axis.title.x = element_text(size = 45))
+#           axis.title = element_text(size = 45))
 
 # p2 <- ggplot(mom_res, aes(x=k, y=xi)) +
 #   geom_ribbon(aes(ymin=lower, ymax=upper), fill="purple", alpha=0.2) +
 #   geom_line(color="purple", linewidth=1) +
 #   geom_hline(yintercept = 0, linetype="dashed") +
 #   coord_cartesian(ylim=c(-0.15, 1.5)) + 
-#   labs(title="Moment Estimator", y="") +
+#   labs(y="", x="n") +
 #   theme_minimal(base_size = 30) + ylim(0, 2) +
 #   theme(legend.position = "none",
 #           axis.text = element_text(size = 35),
 #           axis.text.y = element_blank(),
-#           axis.title.x = element_text(size = 45))
+#           axis.title = element_text(size = 45))
 
 # grid.plt <- grid.arrange(p1, p2, nrow=1)
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_heavytail.pdf"), grid.plt, width=22, height = 7.78)

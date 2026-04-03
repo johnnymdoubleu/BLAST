@@ -452,7 +452,7 @@ alpha.container$true <- rowMeans(true.container)
 alpha.container$mean <- rowMeans(alpha.container[,1:total.iter])
 alpha.container <- as.data.frame(alpha.container)
 
-# load(paste0("./simulation/results/MC-Scenario_D/2026-03-21_",total.iter,"_MC_scD_",n.origin,".Rdata"))
+load(paste0("./simulation/results/MC-Scenario_D/2026-03-21_",total.iter,"_MC_scD_",n.origin,"-c.Rdata"))
 
 plt <- ggplot(data = alpha.container, aes(x = x)) + 
         xlab(expression(c)) + ylab("")
@@ -462,14 +462,14 @@ for(i in 1:plot_limit){
 }
 print(plt + 
         geom_line(aes(y=true), colour = "red", linewidth = 2, linetype = 2) + 
-        geom_line(aes(y=mean), colour = "steelblue", linewidth = 1.8) + ylim(0, 10) +
+        geom_line(aes(y=mean), colour = "steelblue", linewidth = 1.8) + ylim(0, 15) +
         theme_minimal(base_size = 40) + 
         theme(legend.position = "none",
                 strip.text = element_blank(),
                 axis.text.y = element_blank(),
                 axis.text = element_text(size = 30)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_scD_",n.origin,".pdf"), width=9.5, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_alpha_scD_",n.origin,"_ct.pdf"), width=9.5, height = 7.78)
 
 gridgsmooth.container$x <- newx
 gridgsmooth.container$true <- g.new
@@ -495,7 +495,7 @@ print(plt + geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewid
                 axis.title.x = element_text(size = 45),                
                 axis.text = element_text(size = 30)))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_scD_",n.origin,".pdf"), width=11, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_",total.iter,"_MC_smooth_scD_",n.origin,"-cts.pdf"), width=11, height = 15)
 
 gridgl.container$x <- newx
 gridgl.container$true <- as.vector(l.new)
