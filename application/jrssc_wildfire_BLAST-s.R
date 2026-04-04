@@ -33,7 +33,7 @@ missing.values <- which(!is.na(df.long$measurement))
 #considering the case of leap year, the missing values are the 29th of Feb
 #Thus, each year consist of 366 data with either 1 or 0 missing value.
 Y <- df.long$measurement[!is.na(df.long$measurement)]
-psi.origin <- psi <- 10
+psi.origin <- psi <- 15
 threshold <- 0.95
 
 multiplesheets <- function(fname) {
@@ -78,7 +78,7 @@ fwi.index$month <- factor(format(as.Date(substr(cov.long$...1[missing.values],1,
                             levels = c("Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"))
 fwi.index$date <- as.numeric(fwi.index$date)
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
-
+fwi.unscaled <- fwi.scaled
 # time_arima <- seq(1, length(Y))
 # xreg_trend_seasonal <- cbind(
 #   trend = time_arima,
@@ -123,20 +123,21 @@ fwi.index[,1:7] <- fwi.scaled[, 1:7] <- x.detrended
 
 above.0 <- which(Y > 0)
 Y_pos <- Y[above.0]
-fwi_pos <- fwi.scaled[above.0, ]
+fwi.qr <- fwi.scaled[above.0, ]
+fwi.pos <- fwi.unscaled[above.0, ]
 arima_fitted_pos <- arima_fitted_matrix[above.0, ]
 # Y[!above.0] <- 1e-5
 # Y_pos <- Y
-# fwi_pos <- fwi.scaled
-# pca_result <- prcomp(fwi_pos[,3:7], center = TRUE, scale. = TRUE)
+# fwi.qr <- fwi.scaled
+# pca_result <- prcomp(fwi.qr[,3:7], center = TRUE, scale. = TRUE)
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
-# fwi_pos[,1:7] <- as.data.frame(sapply(fwi_pos[,1:7], FUN = range01))
-# qr.df <- data.frame(y = log(Y_pos), pca_result$x, cos.time = fwi_pos$cos.time, sin.time = fwi_pos$sin.time) #fwi_pos)
-qr.df <- data.frame(y = log(Y_pos), (fwi_pos[,1:7]), cos.time = fwi_pos$cos.time, sin.time = fwi_pos$sin.time, time = fwi_pos$sea)
+# fwi.qr[,1:7] <- as.data.frame(sapply(fwi.qr[,1:7], FUN = range01))
+# qr.df <- data.frame(y = log(Y_pos), pca_result$x, cos.time = fwi.qr$cos.time, sin.time = fwi.qr$sin.time) #fwi.qr)
+qr.df <- data.frame(y = log(Y_pos), (fwi.qr[,1:7]), cos.time = fwi.qr$cos.time, sin.time = fwi.qr$sin.time, time = fwi.qr$sea)
 # evgam.cov <- y ~ cos.time + sin.time
 # evgam.cov <- y ~ s(time, bs="cc", k=5) + s(BUI, bs="ts", k = 5) + s(ISI, bs="ts", k = 5) + s(FFMC, bs="ts", k = 5) + s(DMC, bs="ts", k = 5) + s(DC, bs="ts", k = 5)
 s.cov <- c(3:7)
-evgam.cov <- as.formula(paste0("y ~ cos.time + sin.time + ", paste0("s(", colnames(fwi_pos[,s.cov]), ", k = ", psi+2, ", bs='" ,"ts')", collapse = " + ")))
+evgam.cov <- as.formula(paste0("y ~ ", paste0("s(", colnames(fwi.qr[,s.cov]), ", k = ", psi+2, ", bs='" ,"ts')", collapse = " + ")))
 
 qr.fit <- evgam(evgam.cov, data = qr.df, family = "ald", ald.args=list(tau = threshold))
 
@@ -160,13 +161,13 @@ lines(fwi.scaled[above.0,"date"], log(u.vec), type = "l", col = "red")
 excess.idx <- which(Y_pos > u.vec)
 y <- Y_pos[excess.idx]
 u <- u.vec[excess.idx]
-# fwi.scaled <- fwi_pos
-fwi.01 <- fwi_pos[excess.idx, s.cov] # BUI to DC
+# fwi.scaled <- fwi.qr
+fwi.01 <- fwi.pos[excess.idx, s.cov] # BUI to DC
 
-plot(fwi_pos[excess.idx, "date"], log(y), xlab= "Year")
-lines(fwi_pos[excess.idx, "date"], log(u), type = "l", col = "red", xlab= "Year")
+plot(fwi.pos[excess.idx, "date"], log(y), xlab= "Year")
+lines(fwi.pos[excess.idx, "date"], log(u), type = "l", col = "red", xlab= "Year")
 
-fwi.cols <- colnames(fwi_pos[,s.cov])
+fwi.cols <- colnames(fwi.pos[,s.cov])
 fwi.max <- fwi.01[which.max(y),]
 X_minmax <- sapply(fwi.01, function(x) max(x)-min(x))
 X_min <- sapply(fwi.01, function(x) min(x))
@@ -175,7 +176,7 @@ grid.n <- n <- nrow(fwi.01)
 p <- ncol(fwi.01)
 psi <- psi.origin - 2 # Adjusted basis dimension
 
-fwi.grid <- data.frame(lapply(fwi_pos[excess.idx,s.cov], function(x) seq(min(x), max(x), length.out =grid.n)))
+fwi.grid <- data.frame(lapply(fwi.pos[excess.idx,s.cov], function(x) seq(min(x), max(x), length.out =grid.n)))
 
 
 
@@ -591,7 +592,7 @@ ggplot(data.scenario, aes(x=x)) +
   ylab(expression(alpha(c,ldots,c))) + xlab(expression(c)) +
   geom_ribbon(aes(ymin = q1, ymax = q3), fill="steelblue", alpha = 0.2) +
   geom_line(aes(y=post.median), colour = "steelblue", linewidth=1) +
-  theme_minimal(base_size = 30) + scale_y_log10() +
+  theme_minimal(base_size = 30) + #scale_y_log10() +
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 20))
@@ -622,7 +623,7 @@ ggplot(xi.scenario, aes(x=x)) +
   # geom_line(aes(y=evgam.1), colour = "purple", linewidth=1, linetype=3) +
   # geom_line(aes(y=vgam.scale), colour = "orange", linewidth=1, linetype=4) +
   # geom_line(aes(y=vgam.1), colour = "purple", linewidth=1, linetype=4) +  
-  theme_minimal(base_size = 30) + scale_y_log10() +
+  theme_minimal(base_size = 30) + # scale_y_log10() +
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 20))
@@ -697,7 +698,7 @@ cat("Finished Running")
 
 
 data.smooth <- data.frame("x" = as.vector(as.matrix(fwi.grid)),
-                          "true" = as.vector(as.matrix(fwi_pos[excess.idx,s.cov])),
+                          "true" = as.vector(as.matrix(fwi.pos[excess.idx,s.cov])),
                           "post.mean" = as.vector(g.smooth.mean),
                           "q1" = as.vector(g.smooth.q1),
                           "q2" = as.vector(g.smooth.q2),
