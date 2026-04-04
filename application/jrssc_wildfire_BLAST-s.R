@@ -137,7 +137,7 @@ qr.df <- data.frame(y = log(Y_pos), (fwi.qr[,1:7]), cos.time = fwi.qr$cos.time, 
 # evgam.cov <- y ~ cos.time + sin.time
 # evgam.cov <- y ~ s(time, bs="cc", k=5) + s(BUI, bs="ts", k = 5) + s(ISI, bs="ts", k = 5) + s(FFMC, bs="ts", k = 5) + s(DMC, bs="ts", k = 5) + s(DC, bs="ts", k = 5)
 s.cov <- c(3:7)
-evgam.cov <- as.formula(paste0("y ~ ", paste0("s(", colnames(fwi.qr[,s.cov]), ", k = ", psi+2, ", bs='" ,"ts')", collapse = " + ")))
+evgam.cov <- as.formula(paste0("y ~ cos.time + sin.time + ", paste0("s(", colnames(fwi.qr[,s.cov]), ", k = ", psi+2, ", bs='" ,"ts')", collapse = " + ")))
 
 qr.fit <- evgam(evgam.cov, data = qr.df, family = "ald", ald.args=list(tau = threshold))
 
@@ -271,8 +271,8 @@ data {
 parameters {
   vector[p+1] theta;
   array[p] vector[psi] gamma_raw;
-  vector<lower=0>[p] lambda1; 
-  vector<lower=0>[p] lambda2;
+  real <lower=0> lambda1; // vector<lower=0>[p] lambda1 
+  real <lower=0> lambda2; // vector<lower=0>[p] lambda2
   vector<lower=0>[p] tau;
 }
 
@@ -295,8 +295,8 @@ model {
   target += gamma_lpdf(lambda1 | 1e-2, 1e-2);
   target += gamma_lpdf(lambda2 | 1e-2, 1e-2);
   for (j in 1:p) {
-    target += double_exponential_lpdf(theta[j+1] | 0, 1/lambda1[j]);
-    target += gamma_lpdf(tau[j] | atau, 0.5 * square(lambda2[j]));
+    target += double_exponential_lpdf(theta[j+1] | 0, 1/lambda1);
+    target += gamma_lpdf(tau[j] | atau, 0.5 * square(lambda2));
     target += std_normal_lpdf(gamma_raw[j]);
   }
 }
@@ -334,13 +334,16 @@ data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi,
 
 init.alpha <- list(list(gamma_raw= array(rep(0.2, (psi*p)), dim=c(p, psi)), 
                         theta = rep(-0.1, (p+1)), tau = rep(0.1, p), 
-                        lambda1 = rep(0.1,p), lambda2 = rep(1, p)),
+                        # lambda1 = rep(0.1, p), lambda2 = rep(1, p)),
+                        lambda1 = 0.1, lambda2 = 1),
                    list(gamma_raw = array(rep(-0.15, (psi*p)), dim=c(p, psi)),
                         theta = rep(0.05, (p+1)), tau = rep(0.2, p),
-                        lambda1 = rep(2,p), lambda2 = rep(5, p)),
+                        # lambda1 = rep(2, p), lambda2 = rep(5, p)),
+                        lambda1 = 2, lambda2 = 5),
                    list(gamma_raw= array(rep(0.1, (psi*p)), dim=c(p, psi)),
                         theta = rep(0.1, (p+1)), tau = rep(0.1, p), 
-                        lambda1 = rep(0.1,p), lambda2 = rep(0.1, p)))
+                        # lambda1 = rep(0.1,p), lambda2 = rep(0.1, p)))
+                        lambda1 = 0.1, lambda2 = 0.1))
 
 blast_model <- stan_model(model_code = model.stan)
 map_fit <- optimizing(
@@ -359,8 +362,8 @@ init.alpha <- list(list(gamma_raw= array(map_fit$par$gamma_raw, dim=c(p, psi)),
                           theta = map_fit$par$theta, tau = map_fit$par$tau, 
                           lambda1 = map_fit$par$lambda1, lambda2 = map_fit$par$lambda2),
                     list(gamma_raw= array(map_fit$par$gamma_raw, dim=c(p, psi)), 
-                    theta = map_fit$par$theta, tau = map_fit$par$tau, 
-                    lambda1 = map_fit$par$lambda1, lambda2 = map_fit$par$lambda2))
+                          theta = map_fit$par$theta, tau = map_fit$par$tau, 
+                          lambda1 = map_fit$par$lambda1, lambda2 = map_fit$par$lambda2))
 
 fit1 <- stan(
     model_code = model.stan,
