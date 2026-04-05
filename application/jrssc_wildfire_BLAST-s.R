@@ -33,8 +33,8 @@ missing.values <- which(!is.na(df.long$measurement))
 #considering the case of leap year, the missing values are the 29th of Feb
 #Thus, each year consist of 366 data with either 1 or 0 missing value.
 Y <- df.long$measurement[!is.na(df.long$measurement)]
-psi.origin <- psi <- 15
-threshold <- 0.95
+psi.origin <- psi <- 10
+threshold <- 0.945
 
 multiplesheets <- function(fname) {
     setwd("C:/Users/Johnny Lee/Documents/GitHub")
@@ -100,7 +100,7 @@ fwi.unscaled <- fwi.scaled
 # }
 
 xreg.season <- cbind(
-  # trend = c(1:length(Y)),
+  trend = c(1:length(Y)),
   cos_season = cos(2 * pi * c(1:length(Y)) / 365.25),
   sin_season = sin(2 * pi * c(1:length(Y)) / 365.25)
 )
@@ -110,7 +110,7 @@ arima_fitted_matrix <- matrix(nrow = length(Y), ncol = 7)
 x.detrended <- matrix(nrow = length(Y), ncol = 7)
 for (j in 1:7) {
   y_ts <- ts(fwi.scaled[, j], frequency = 365.25) 
-  fit.list[[j]] <- auto.arima(y_ts, seasonal = FALSE, xreg = xreg.season, stepwise = TRUE, approximation = FALSE, max.d = 0)
+  fit.list[[j]] <- auto.arima(y_ts, seasonal = FALSE, xreg = xreg.season, stepwise = TRUE, approximation = FALSE)
   arima_fitted_matrix[, j] <- as.numeric(fitted(fit.list[[j]]))
   x.detrended[, j] <- as.numeric(residuals(fit.list[[j]]))
 }
@@ -137,7 +137,7 @@ qr.df <- data.frame(y = log(Y_pos), (fwi.qr[,1:7]), cos.time = fwi.qr$cos.time, 
 # evgam.cov <- y ~ cos.time + sin.time
 # evgam.cov <- y ~ s(time, bs="cc", k=5) + s(BUI, bs="ts", k = 5) + s(ISI, bs="ts", k = 5) + s(FFMC, bs="ts", k = 5) + s(DMC, bs="ts", k = 5) + s(DC, bs="ts", k = 5)
 s.cov <- c(3:7)
-evgam.cov <- as.formula(paste0("y ~ cos.time + sin.time + ", paste0("s(", colnames(fwi.qr[,s.cov]), ", k = ", psi+2, ", bs='" ,"ts')", collapse = " + ")))
+evgam.cov <- as.formula(paste0("y ~ cos.time + sin.time +", paste0("s(", colnames(fwi.qr[,s.cov]), ", k = ", 10, ", bs='" ,"ts')", collapse = " + ")))
 
 qr.fit <- evgam(evgam.cov, data = qr.df, family = "ald", ald.args=list(tau = threshold))
 
@@ -371,9 +371,9 @@ fit1 <- stan(
     data = data.stan,    # named list of data
     init = init.alpha,      # initial value 
     chains = 3,             # number of Markov chains
-    iter = 2000,            # total number of iterations per chain
+    iter = 4000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
-    refresh = 1000           # no progress shown
+    refresh = 2000           # no progress shown
 )
 
 # saveRDS(fit1, file=paste0("./BLAST/application/",Sys.Date(),"_stanfit.rds"))
@@ -720,7 +720,7 @@ for(i in 1:p){
                   scale_fill_manual(values=c("steelblue"), name = "") + 
                   scale_color_manual(values=c("steelblue")) +
                   # ylim(g.min.samples, g.max.samples) +
-                  # ylim(-10, 10) +
+                  ylim(-2.5, 2.5) +
                   theme_minimal(base_size = 20) +
                   theme(legend.position = "none",
                         plot.margin = margin(5, 5, 5, 5),
@@ -733,7 +733,7 @@ for(i in 1:p){
                   #         plot.margin = margin(0,0,0,-20),
                   #         axis.text = element_text(size = 35),
                   #         axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.max[,i], y=g.min.samples, color = "red", size = 7)
+  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.max[,i], y=-2.5, color = "red", size = 7)
 }
 marrangeGrob(grobs = grid.plts, nrow = 1, ncol = p, top = NULL)
 # grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)

@@ -10,6 +10,8 @@ library(qqboxplot)
 library(ggdensity)
 library(ggforce)
 library(ggdist)
+library(evgam)
+library(forecast)
 options(mc.cores = parallel::detectCores())
 
 # Structure of the FWI System
@@ -30,8 +32,8 @@ missing.values <- which(!is.na(df.long$measurement))
 #considering the case of leap year, the missing values are the 29th of Feb
 #Thus, each year consist of 366 data with either 1 or 0 missing value.
 Y <- df.long$measurement[!is.na(df.long$measurement)]
-psi.origin <- psi <- 30
-threshold <- 0.975
+psi.origin <- psi <- 20
+threshold <- 0.95
 
 multiplesheets <- function(fname) {
     setwd("C:/Users/Johnny Lee/Documents/GitHub")
@@ -57,167 +59,159 @@ fwi.scaled <- fwi.index <- data.frame(DSR = double(length(Y)),
                                         stringsAsFactors = FALSE)
 for(i in 1:length(cov)){
     cov.long <- gather(cov[[i]][,1:41], condition, measurement, "1980":"2019", factor_key=TRUE)
-    fwi.index[,i] <- cov.long$measurement[missing.values]
-    fwi.scaled[,i] <- cov.long$measurement[missing.values]
+    fwi.scaled[,i] <- fwi.index[,i] <- cov.long$measurement[missing.values]
 }
 
 # era5 <- read_excel("./BLAST/application/ERA_5.xlsx")
 # era5 <- era5[era5$year>1979,]
 # era5 <- era5[!(era5$year == 1999 & era5$month == 2 & era5$day == 14), ]
 # fwi.index$ERA5 <- fwi.scaled$ERA5 <- as.numeric(era5$ERA_5)
-
+fwi.scaled$time <- fwi.index$time <- seq(1,length(Y), length.out=length(Y))
+fwi.scaled$date <- as.Date(fwi.scaled$time - 1, origin = "1980-01-01")
+# head(fwi.scaled[, c("time", "date")])
+fwi.scaled$sea <- fwi.index$sea <- fwi.index$time %% 365.25 / 365.25
+fwi.scaled$cos.time <- fwi.index$cos.time <- cos(2*pi*seq(1,length(Y), length.out=length(Y))/365.25)
+fwi.scaled$sin.time <- fwi.index$sin.time <- sin(2*pi*seq(1,length(Y), length.out=length(Y))/365.25)
 fwi.index$date <- substr(cov.long$...1[missing.values],9,10)
 fwi.index$month <- factor(format(as.Date(substr(cov.long$...1[missing.values],1,10), "%Y-%m-%d"),"%b"),
                             levels = c("Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"))
 fwi.index$date <- as.numeric(fwi.index$date)
 fwi.index$year <- substr(as.Date(cov.long$condition[missing.values], "%Y"),1,4)
+fwi.unscaled <- fwi.scaled
 
+xreg.season <- cbind(
+  # trend = c(1:length(Y)),
+  cos_season = cos(2 * pi * c(1:length(Y)) / 365.25),
+  sin_season = sin(2 * pi * c(1:length(Y)) / 365.25)
+)
 
+fit.list <- list()
+arima_fitted_matrix <- matrix(nrow = length(Y), ncol = 7)
+x.detrended <- matrix(nrow = length(Y), ncol = 7)
+for (j in 1:7) {
+  y_ts <- ts(fwi.scaled[, j], frequency = 365.25) 
+  fit.list[[j]] <- auto.arima(y_ts, seasonal = FALSE, xreg = xreg.season, stepwise = TRUE, approximation = FALSE, max.d = 0)
+  arima_fitted_matrix[, j] <- as.numeric(fitted(fit.list[[j]]))
+  x.detrended[, j] <- as.numeric(residuals(fit.list[[j]]))
+}
+fwi.index[,1:7] <- fwi.scaled[, 1:7] <- x.detrended
 
-# fwi.index <- fwi.index[which(Y>1),]
-# load("./BLAST/application/quant-t.Rdata")
-load("./BLAST/application/quant-t_10.Rdata")
-# load("./BLAST/application/qgam_5_10.Rdata")
-preds <- predict(quant.fit)
-# u <- rep(quantile(Y, threshold),ceiling(nrow(fwi.index)*(1-threshold)))
-# excess <- which(Y>u)
-excess <- which(Y>preds)
-u <- preds[excess]
-# excess <- which(fwi.dd$excess==TRUE)
-# u <- fwi.dd$origin_Model_Smooth_975[excess]
-y <- Y[excess]
-
-# fwi.scaled <- data.frame(fwi.scaled[which(Y>u),])
+above.0 <- which(Y > 0)
+Y_pos <- Y[above.0]
+fwi.qr <- fwi.scaled[above.0, ]
+fwi.pos <- fwi.unscaled[above.0, ]
+arima_fitted_pos <- arima_fitted_matrix[above.0, ]
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
-# range01 <- function(x){(x)/max(x)}
-fwi.scaled <- as.data.frame(sapply(fwi.scaled[excess,], FUN = range01))
+qr.df <- data.frame(y = log(Y_pos), (fwi.qr[,1:7]), cos.time = fwi.qr$cos.time, sin.time = fwi.qr$sin.time, time = fwi.qr$sea)
+s.cov <- c(3:7)
+evgam.cov <- as.formula(paste0("y ~ cos.time + sin.time + ", paste0("s(", colnames(fwi.qr[,s.cov]), ", k = ", 10, ", bs='" ,"ts')", collapse = " + ")))
 
-n <- dim(fwi.scaled)[[1]]
-p <- dim(fwi.scaled)[[2]]
+qr.fit <- evgam(evgam.cov, data = qr.df, family = "ald", ald.args=list(tau = threshold))
+
+u.vec <- exp(predict(qr.fit)$location)
+
+plot(fwi.scaled[above.0,"date"], log(Y_pos))
+lines(fwi.scaled[above.0,"date"], log(u.vec), type = "l", col = "red")
+
+excess.idx <- which(Y_pos > u.vec)
+y <- Y_pos[excess.idx]
+u <- u.vec[excess.idx]
+# fwi.scaled <- fwi.qr
+fwi.01 <- fwi.pos[excess.idx, s.cov] # BUI to DC
+
+plot(fwi.pos[excess.idx, "date"], log(y), xlab= "Year")
+lines(fwi.pos[excess.idx, "date"], log(u), type = "l", col = "red", xlab= "Year")
+
+fwi.cols <- colnames(fwi.pos[,s.cov])
+fwi.max <- fwi.01[which.max(y),]
+X_minmax <- sapply(fwi.01, function(x) max(x)-min(x))
+X_min <- sapply(fwi.01, function(x) min(x))
+fwi.01 <- as.data.frame(sapply(fwi.01, FUN = range01))
+grid.n <- n <- nrow(fwi.01)
+p <- ncol(fwi.01)
+psi <- psi.origin - 2 # Adjusted basis dimension
+
+fwi.grid <- data.frame(lapply(fwi.pos[excess.idx,s.cov], function(x) seq(min(x), max(x), length.out =grid.n)))
 
 
-fwi.origin <- data.frame(fwi.index[excess,], BA=y)
-max.fwi <- fwi.origin[which.max(y),]
-fwi.grid <- data.frame(lapply(fwi.origin[,c(1:p)], function(x) seq(min(x), max(x), length.out = nrow(fwi.scaled))))
-fwi.minmax <- sapply(fwi.origin[,c(1:p)], function(x) max(x)-min(x))
-fwi.min <- sapply(fwi.origin[,c(1:p)], function(x) min(x))
 
-
-bs.linear <- model.matrix(~ ., data = data.frame(fwi.scaled))
-psi <- psi - 2
-group.map <- c()
-Z.list <- list()        # Stores the final non-linear design matrices
-scale_stats_list <- list() 
-projection_coefs_list <- list() #
-spec_decomp_list <- list() # Store eigen-decomp info for prediction
-qr_list <- list()          # Store QR info for prediction
-sm_spec_list <- list()     # Store smooth objects
+Z.list <- list()
+projection_coefs_list <- list()
+spec_decomp_list <- list()
+sm_spec_list <- list()
+scale_stats_list <- list()
 keep_cols_list <- list()
 
-covariates <- colnames(fwi.scaled)
-for (i in seq_along(covariates)) {
-  var_name <- covariates[i]
-  x_vec <- fwi.scaled[, i]
-  X_lin <- model.matrix(~ x_vec) 
-  sm_spec <- smoothCon(s(x_vec, bs = "tp", k = psi + 2), 
-                      data = data.frame(x_vec = x_vec), 
-                      knots = NULL)[[1]]
+for (i in 1:p) {
+  x_vec <- as.numeric(fwi.01[, i])
+  X_lin <- model.matrix(~ x_vec)
+  sm_spec <- smoothCon(s(x_vec, bs = "tp", k = psi + 2), data = data.frame(x_vec))[[1]]
   
-  X_raw <- sm_spec$X
-  S     <- sm_spec$S[[1]] 
-  
+  S <- sm_spec$S[[1]]
   eig <- eigen(S, symmetric = TRUE)
-  max_lambda <- max(eig$values)
-  tol <- max_lambda * 1e-7  # Relative threshold (Robust)
+  pos_idx <- which(eig$values > max(eig$values) * 1e-8)
   
-  pos_idx <- which(eig$values > tol)
+  U_pen <- eig$vectors[, pos_idx]
+  Lambda_inv <- solve(sqrt(diag(eig$values[pos_idx])))
   
-  if(length(pos_idx) == 0) stop("No wiggles found. Check data scaling.")
-  
-  U_pen <- eig$vectors[, pos_idx]       
-  Lambda_pen <- diag(eig$values[pos_idx]) 
-  
-  Z_spectral <- X_raw %*% U_pen %*% solve(sqrt(Lambda_pen))
+  Z_spectral <- sm_spec$X %*% U_pen %*% Lambda_inv
   qr_lin <- qr(X_lin)
-  Q_lin <- qr.Q(qr_lin)
-  R_lin <- qr.R(qr_lin)
-  
-  Gamma_Q <- t(Q_lin) %*% Z_spectral
-  Gamma_Original <- backsolve(R_lin, Gamma_Q)
+  Gamma_Original <- backsolve(qr.R(qr_lin), t(qr.Q(qr_lin)) %*% Z_spectral)
   Z_orth <- Z_spectral - X_lin %*% Gamma_Original
   keep_cols <- colSums(Z_orth^2) > 1e-9
   Z_final <- Z_orth[, keep_cols, drop = FALSE]
 
-  train_scale <- apply(Z_final, 2, sd)
-  train_scale[train_scale < 1e-12] <- 1 
-  Z_final <- scale(Z_final, center = FALSE, scale = train_scale)
-  # if(ncol(Z_final) < psi){
-  #   n.pad <- psi - ncol(Z_final)
-  #   zero.pad <- matrix(0, nrow = nrow(Z_final), ncol = n.pad)
-  #   Z_final <- cbind(Z_final, zero.pad)    
-  # }  
-  # Store Results
-  Z.list[[i]] <- Z_final
-  group.map <- c(group.map, rep(i, ncol(Z_final)))
+  z_scale <- apply(Z_final, 2, sd)
+  Z_final <- scale(Z_final, center = FALSE, scale = z_scale)
   
-  # Store Transforms
-  spec_decomp_list[[i]] <- list(U_pen = U_pen, Lambda_sqrt_inv = solve(sqrt(Lambda_pen)))
-  projection_coefs_list[[i]] <- Gamma_Original # Store the X-basis coefs
+  Z.list[[i]] <- Z_final
+  spec_decomp_list[[i]] <- list(U = U_pen, L_inv = Lambda_inv)
+  projection_coefs_list[[i]] <- Gamma_Original
+  scale_stats_list[[i]] <- z_scale
   keep_cols_list[[i]] <- keep_cols
-  scale_stats_list[[i]] <- train_scale         # Store the scale
   sm_spec_list[[i]] <- sm_spec
 }
 
+bs.linear <- as.matrix(fwi.01)
 bs.nonlinear <- do.call(cbind, Z.list)
 
-# xholder <- do.call(cbind, lapply(1:p, function(j) {seq(min(fwi.scaled[,j]),max(fwi.scaled[,j]), length.out = n)}))
-newx <- seq(0, 1, length.out = n)
+
+newx <- seq(0, 1, length.out = grid.n) # Standard Deviation units
 xholder <- do.call(cbind, lapply(1:p, function(j) {newx}))
+colnames(xholder) <- fwi.cols
+xholder.linear <- matrix(rep(newx, p), ncol = p)
 
-colnames(xholder) <- covariates
 grid_Z_list <- list()
 
-for (i in seq_along(covariates)) {
-  grid_df  <- data.frame(x_vec = xholder[,i])
-  X_lin_grid <- model.matrix(~ x_vec, data = grid_df)
+for (i in 1:p) {
+  grid_df <- data.frame(x_vec = newx)
   X_raw_grid <- PredictMat(sm_spec_list[[i]], grid_df)
-  
-  decomp <- spec_decomp_list[[i]]
-  Z_spectral_grid <- X_raw_grid %*% decomp$U_pen %*% decomp$Lambda_sqrt_inv
+  Z_spectral_grid <- X_raw_grid %*% spec_decomp_list[[i]]$U %*% spec_decomp_list[[i]]$L_inv
+  X_lin_grid <- model.matrix(~ x_vec, data = grid_df)
   Z_orth_grid <- Z_spectral_grid - X_lin_grid %*% projection_coefs_list[[i]]
   Z_final_grid <- Z_orth_grid[, keep_cols_list[[i]], drop = FALSE]
-  Z_final_grid <- scale(Z_final_grid, center = FALSE, scale = scale_stats_list[[i]])
-  grid_Z_list[[i]] <- Z_final_grid
+  grid_Z_list[[i]] <- scale(Z_final_grid, center = FALSE, scale = scale_stats_list[[i]])
 }
-
 xholder.nonlinear <- do.call(cbind, grid_Z_list)
-xholder.linear <- model.matrix(~ ., data = data.frame(xholder))
-Z_scales <- unlist(scale_stats_list)
 
 grid_Z_list <- list()
 
-for (i in seq_along(covariates)) {
-  scaled_x_grid <- (fwi.grid[,i] - fwi.min[i]) / (fwi.minmax[i])
+for (i in 1:p) {
+  scaled_x_grid <- (fwi.grid[,i] - X_min[i]) / (X_minmax[i])
   grid_df  <- data.frame(x_vec = scaled_x_grid)
-  X_lin_grid <- model.matrix(~ x_vec, data = grid_df)
   X_raw_grid <- PredictMat(sm_spec_list[[i]], grid_df)
-  
-  decomp <- spec_decomp_list[[i]]
-  Z_spectral_grid <- X_raw_grid %*% decomp$U_pen %*% decomp$Lambda_sqrt_inv
+  Z_spectral_grid <- X_raw_grid %*% spec_decomp_list[[i]]$U %*% spec_decomp_list[[i]]$L_inv
+  X_lin_grid <- model.matrix(~ x_vec, data = grid_df)
   Z_orth_grid <- Z_spectral_grid - X_lin_grid %*% projection_coefs_list[[i]]
   Z_final_grid <- Z_orth_grid[, keep_cols_list[[i]], drop = FALSE]
-  Z_final_grid <- scale(Z_final_grid, center = FALSE, scale = scale_stats_list[[i]])
-  grid_Z_list[[i]] <- Z_final_grid
+  grid_Z_list[[i]] <- scale(Z_final_grid, center = FALSE, scale = scale_stats_list[[i]])
 }
-
+xgrid.linear <- fwi.grid
 xgrid.nonlinear <- do.call(cbind, grid_Z_list)
-# fwi.grid <- as.data.frame(sapply(fwi.grid, FUN = range01))
-xgrid.linear <- model.matrix(~ ., data = data.frame(fwi.grid))
-xgrid.linear[,-1] <- sweep(xgrid.linear[, -1], 2, fwi.min, "-")
-X_means <- colMeans(bs.linear[,-1])
-X_sd   <- apply(bs.linear[,-1], 2, sd)
-bs.linear[,-1] <- scale(bs.linear[,-1], center = X_means, scale = X_sd)
 
+X_means <- colMeans(bs.linear)
+X_sd   <- apply(bs.linear, 2, sd)
+bs.linear <- scale(bs.linear, center = X_means, scale = X_sd)
 model.stan <- "// Stan model for BHST Pareto Samples
 data {
   int <lower=1> n; // Sample size
@@ -231,7 +225,6 @@ data {
   matrix[n, p] gridL; // fwi dataset
   matrix[n, (psi*p)] gridNL; // thin plate splines basis      
   array[n] real <lower=1> y; // extreme response
-  vector[(psi*p)] Z_scales;
   vector[p] X_minmax;
   vector[p] X_means;
   vector[p] X_sd;
@@ -259,7 +252,7 @@ transformed parameters {
     for (j in 1:p){
       for (k in 1:psi){
         int idx = (j-1)*psi + k;
-        gamma[j][k] = gamma_raw[j][k] * sqrt(lambda2[j]) * sqrt(t2) * Z_scales[idx];
+        gamma[j][k] = gamma_raw[j][k] * sqrt(lambda2[j]) * sqrt(t2);
       }; 
       gsmooth[,j] = bsLinear[,j] * theta[j+1] + bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
     };
