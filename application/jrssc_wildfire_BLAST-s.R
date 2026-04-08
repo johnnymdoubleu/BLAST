@@ -34,7 +34,7 @@ missing.values <- which(!is.na(df.long$measurement))
 #Thus, each year consist of 366 data with either 1 or 0 missing value.
 Y <- df.long$measurement[!is.na(df.long$measurement)]
 psi.origin <- psi <- 10
-threshold <- 0.945
+threshold <- 0.95
 
 multiplesheets <- function(fname) {
     setwd("C:/Users/Johnny Lee/Documents/GitHub")
@@ -124,20 +124,20 @@ fwi.index[,1:7] <- fwi.scaled[, 1:7] <- x.detrended
 above.0 <- which(Y > 0)
 Y_pos <- Y[above.0]
 fwi.qr <- fwi.scaled[above.0, ]
-fwi.pos <- fwi.unscaled[above.0, ]
+fwi.pos <- fwi.scaled[above.0, ]
 arima_fitted_pos <- arima_fitted_matrix[above.0, ]
 # Y[!above.0] <- 1e-5
-# Y_pos <- Y
+# Y_pos <- Y + 1
 # fwi.qr <- fwi.scaled
+# fwi.pos <- fwi.unscaled
 # pca_result <- prcomp(fwi.qr[,3:7], center = TRUE, scale. = TRUE)
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
-# fwi.qr[,1:7] <- as.data.frame(sapply(fwi.qr[,1:7], FUN = range01))
-# qr.df <- data.frame(y = log(Y_pos), pca_result$x, cos.time = fwi.qr$cos.time, sin.time = fwi.qr$sin.time) #fwi.qr)
+
+# qr.df <- data.frame(y = (Y_pos), pca_result$x, cos.time = fwi.qr$cos.time, sin.time = fwi.qr$sin.time)
 qr.df <- data.frame(y = log(Y_pos), (fwi.qr[,1:7]), cos.time = fwi.qr$cos.time, sin.time = fwi.qr$sin.time, time = fwi.qr$sea)
-# evgam.cov <- y ~ cos.time + sin.time
-# evgam.cov <- y ~ s(time, bs="cc", k=5) + s(BUI, bs="ts", k = 5) + s(ISI, bs="ts", k = 5) + s(FFMC, bs="ts", k = 5) + s(DMC, bs="ts", k = 5) + s(DC, bs="ts", k = 5)
-s.cov <- c(3:7)
-evgam.cov <- as.formula(paste0("y ~ cos.time + sin.time +", paste0("s(", colnames(fwi.qr[,s.cov]), ", k = ", 10, ", bs='" ,"ts')", collapse = " + ")))
+s.cov <- c(1:7)
+# evgam.cov <- y ~ cos.time + sin.time + s(PC1, bs='ts', k=10) + s(PC2, bs='ts', k=10) + s(PC3, bs='ts', k=10) + s(PC4, bs='ts', k=10)
+evgam.cov <- as.formula(paste0("y ~ cos.time + sin.time +", paste0("s(", colnames(fwi.qr[,s.cov]), ", k = ", 10, ", bs='" ,"tp')", collapse = " + ")))
 
 qr.fit <- evgam(evgam.cov, data = qr.df, family = "ald", ald.args=list(tau = threshold))
 
@@ -146,6 +146,7 @@ qr.fit <- evgam(evgam.cov, data = qr.df, family = "ald", ald.args=list(tau = thr
 # qr.time <- evgam(y ~ cos.time + sin.time, data = qr.df, family = "ald", ald.args=list(tau = threshold))
 # qr.null <- evgam(y ~ 1, data = qr.df, family = "ald", ald.args=list(tau = threshold))
 u.vec <- exp(predict(qr.fit)$location)
+# u.vec[which(u.vec<0)] <- Y_pos[which(u.vec<0)]
 # save(u.c, qr.fit, file = paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_qr-c.Rdata"))
 # load("./BLAST/application/figures/2026-03-25_pareto_qr-ct.Rdata")
 # u.vec <- u.ct
@@ -164,7 +165,7 @@ u <- u.vec[excess.idx]
 # fwi.scaled <- fwi.qr
 fwi.01 <- fwi.pos[excess.idx, s.cov] # BUI to DC
 
-plot(fwi.pos[excess.idx, "date"], log(y), xlab= "Year")
+plot(fwi.pos[excess.idx, "date"], log(y-1), xlab= "Year")
 lines(fwi.pos[excess.idx, "date"], log(u), type = "l", col = "red", xlab= "Year")
 
 fwi.cols <- colnames(fwi.pos[,s.cov])

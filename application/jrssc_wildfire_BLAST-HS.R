@@ -28,11 +28,11 @@ df <- read_excel("./BLAST/application/AADiarioAnual.xlsx", col_types = c("date",
 df.long <- gather(df, condition, measurement, "1980":"2019", factor_key=TRUE)
 missing.values <- which(!is.na(df.long$measurement))
 
-#NAs on Feb 29 most years, and Feb 14, 1999
+#NAs on Feb 29 most years, and Feb 14, 1999 (31 NA values)
 #considering the case of leap year, the missing values are the 29th of Feb
 #Thus, each year consist of 366 data with either 1 or 0 missing value.
 Y <- df.long$measurement[!is.na(df.long$measurement)]
-psi.origin <- psi <- 20
+psi.origin <- psi <- 10
 threshold <- 0.95
 
 multiplesheets <- function(fname) {
@@ -102,6 +102,7 @@ fwi.qr <- fwi.scaled[above.0, ]
 fwi.pos <- fwi.unscaled[above.0, ]
 arima_fitted_pos <- arima_fitted_matrix[above.0, ]
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
+
 qr.df <- data.frame(y = log(Y_pos), (fwi.qr[,1:7]), cos.time = fwi.qr$cos.time, sin.time = fwi.qr$sin.time, time = fwi.qr$sea)
 s.cov <- c(3:7)
 evgam.cov <- as.formula(paste0("y ~ cos.time + sin.time + ", paste0("s(", colnames(fwi.qr[,s.cov]), ", k = ", 10, ", bs='" ,"ts')", collapse = " + ")))
@@ -132,8 +133,6 @@ p <- ncol(fwi.01)
 psi <- psi.origin - 2 # Adjusted basis dimension
 
 fwi.grid <- data.frame(lapply(fwi.pos[excess.idx,s.cov], function(x) seq(min(x), max(x), length.out =grid.n)))
-
-
 
 Z.list <- list()
 projection_coefs_list <- list()
@@ -212,19 +211,22 @@ xgrid.nonlinear <- do.call(cbind, grid_Z_list)
 X_means <- colMeans(bs.linear)
 X_sd   <- apply(bs.linear, 2, sd)
 bs.linear <- scale(bs.linear, center = X_means, scale = X_sd)
+
+
 model.stan <- "// Stan model for BHST Pareto Samples
 data {
   int <lower=1> n; // Sample size
+  int <lower=1> grid_n; // Sample size
   int <lower=1> p; // regression coefficient size
   int <lower=1> psi; // splines coefficient size
-  array[n] real <lower=0> u; // large threshold value
+  vector[n] u; // large threshold value
   matrix[n, p] bsLinear; // fwi dataset
   matrix[n, (psi*p)] bsNonlinear; // thin plate splines basis
   matrix[n, p] xholderLinear; // fwi dataset
   matrix[n, (psi*p)] xholderNonlinear; // thin plate splines basis    
   matrix[n, p] gridL; // fwi dataset
   matrix[n, (psi*p)] gridNL; // thin plate splines basis      
-  array[n] real <lower=1> y; // extreme response
+  vector[n] y; // extreme response
   vector[p] X_minmax;
   vector[p] X_means;
   vector[p] X_sd;
@@ -244,22 +246,16 @@ parameters {
 }
 
 transformed parameters {
-  array[n] real <lower=0> alpha; // covariate-adjusted tail index
+  vector[n] alpha; // covariate-adjusted tail index
   
   array[p] vector[psi] gamma;
   {
-    matrix[n, p] gsmooth; // linear component
-    for (j in 1:p){
-      for (k in 1:psi){
-        int idx = (j-1)*psi + k;
-        gamma[j][k] = gamma_raw[j][k] * sqrt(lambda2[j]) * sqrt(t2);
-      }; 
-      gsmooth[,j] = bsLinear[,j] * theta[j+1] + bsNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
-    };
-    
-    for (i in 1:n){
-      alpha[i] = exp(theta[1] + sum(gsmooth[i,]));
-    };
+    vector[n] eta = rep_vector(theta[1], n);
+    for (j in 1:p) {
+      gamma[j] = gamma_raw[j] * sqrt(lambda2[j]) * sqrt(t2);
+      eta += col(bsLinear, j) * theta[j+1] + block(bsNonlinear, 1, (j-1)*psi + 1, n, psi) * gamma[j];
+    }
+    alpha = exp(eta);
   }
 }
 
@@ -282,42 +278,36 @@ model {
 }
 
 generated quantities {
-  // Used in Posterior predictive check
-  array[n] real <lower=0> gridalpha; // new tail index
-  matrix[n, p] gridgnl; // nonlinear component
-  matrix[n, p] gridgl; // linear component
-  matrix[n, p] gridgsmooth; // linear component 
-  matrix[n, p] fwismooth;
   vector[n] log_lik;
+  vector[grid_n] gridalpha;
+  matrix[grid_n, p] gridgsmooth;
   vector[p+1] theta_origin;
   vector[p] theta_fwi;
 
-  for (j in 1:p){
-    theta_origin[j+1] = theta[j+1] / X_sd[j];
-    theta_fwi[j] = theta_origin[j+1] / X_minmax[j];
-  }
+  theta_origin[2:(p+1)] = theta[2:(p+1)] ./ X_sd;
   theta_origin[1] = theta[1] - dot_product(X_means, theta_origin[2:(p+1)]);
-  for (j in 1:p){
-    gridgnl[,j] = xholderNonlinear[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j];
-    gridgl[,j] = xholderLinear[,j] * theta_origin[j+1];
-    gridgsmooth[,j] = gridgl[,j] + gridgnl[,j];
-    fwismooth[,j] = gridNL[,(((j-1)*psi)+1):(((j-1)*psi)+psi)] * gamma[j] + gridL[,j] * theta_fwi[j];
-  };
+  theta_fwi[1:p] = theta_origin[2:(p+1)] ./ X_minmax;
 
-  for (i in 1:n){
-    gridalpha[i] = exp(theta_origin[1] + sum(gridgsmooth[i,]));
-    log_lik[i] = pareto_lpdf(y[i] | u[i], alpha[i]);
-  };
+
+  for (i in 1:n) log_lik[i] = pareto_lpdf(y[i] | u[i], alpha[i]);
+  {
+    vector[grid_n] pred = rep_vector(theta_origin[1], grid_n);
+    for (j in 1:p) {
+      gridgsmooth[,j] = col(xholderLinear, j) * theta_origin[j+1] + block(xholderNonlinear, 1, (j-1)*psi + 1, grid_n, psi) * gamma[j]; // gridgsmooth[,j] = col(gridL, j) * theta_fwi[j] + block(gridNL, 1, (j-1)*psi + 1, grid_n, psi) * gamma[j]
+      pred += col(xholderLinear, j) * theta_origin[j+1] + block(xholderNonlinear, 1, (j-1)*psi + 1, grid_n, psi) * gamma[j];
+    }
+    gridalpha = exp(pred);
+  }
 }
 "
 
 
-data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, Z_scales= Z_scales, 
+data.stan <- list(y = as.vector(y), u = u, p = p, n= n, psi = psi, grid_n = grid.n,
                   xholderNonlinear = xholder.nonlinear, 
-                  bsLinear = bs.linear[,-1], bsNonlinear = bs.nonlinear, 
-                  xholderLinear = xholder.linear[,-1], X_minmax = fwi.minmax, 
+                  bsLinear = bs.linear, bsNonlinear = bs.nonlinear, 
+                  xholderLinear = xholder.linear, X_minmax = X_minmax, 
                   X_means = X_means, X_sd = X_sd,
-                  gridL = xgrid.linear[,-1], gridNL = xgrid.nonlinear)
+                  gridL = xgrid.linear, gridNL = xgrid.nonlinear)
 
 init.alpha <- list(list(gamma_raw = array(rep(1, (psi*p)), dim=c(p,psi)),
                         theta = rep(0, (p+1)), 
@@ -335,6 +325,35 @@ init.alpha <- list(list(gamma_raw = array(rep(1, (psi*p)), dim=c(p,psi)),
                         t1 = 1, t2 = 0.01, b1 = 0.01, b2 = 0.01,
                         lt1 = rep(1, p), lt2 = rep(0.01, p))
 
+# blast.model <- stan_model(model_code = model.stan)
+# map_fit <- optimizing(
+#   blast.model,
+#   data = data.stan, 
+#   init = init.alpha[[1]],
+#   as_vector = FALSE, # Returns a structured list
+#   algorithm = "BFGS",
+#   iter = 10000        # Give it plenty of iterations to converge
+# )
+
+# init.alpha <- list(list(gamma_raw= array(map_fit$par$gamma_raw, dim=c(p, psi)),
+#                         theta = map_fit$par$theta,
+#                         t1 = map_fit$par$t1, t2 = map_fit$par$t2, 
+#                         b1 = map_fit$par$b1, b2 = map_fit$par$b2,
+#                         lt1 = map_fit$par$lt1, lt2 = map_fit$par$lt2,
+#                         lambda1 = map_fit$par$lambda1, lambda2 = map_fit$par$lambda2),
+#                     list(gamma_raw= array(map_fit$par$gamma_raw, dim=c(p, psi)), 
+#                         theta = map_fit$par$theta,
+#                         t1 = map_fit$par$t1, t2 = map_fit$par$t2, 
+#                         b1 = map_fit$par$b1, b2 = map_fit$par$b2,
+#                         lt1 = map_fit$par$lt1, lt2 = map_fit$par$lt2,
+#                         lambda1 = map_fit$par$lambda1, lambda2 = map_fit$par$lambda2),
+#                     list(gamma_raw= array(map_fit$par$gamma_raw, dim=c(p, psi)), 
+#                         theta = map_fit$par$theta,
+#                         t1 = map_fit$par$t1, t2 = map_fit$par$t2, 
+#                         b1 = map_fit$par$b1, b2 = map_fit$par$b2,
+#                         lt1 = map_fit$par$lt1, lt2 = map_fit$par$lt2,
+#                         lambda1 = map_fit$par$lambda1, lambda2 = map_fit$par$lambda2))
+
 fit1 <- stan(
     model_code = model.stan,
     model_name = "BHST_full",
@@ -343,91 +362,81 @@ fit1 <- stan(
     chains = 3,             # number of Markov chains
     iter = 4000,            # total number of iterations per chain
     cores = parallel::detectCores(), # number of cores (could use one per chain)
-    refresh = 1000           # no progress shown
+    refresh = 2000           # no progress shown
 )
 
 posterior <- rstan::extract(fit1)
-# bayesplot::color_scheme_set("mix-blue-red")
-# bayesplot::mcmc_trace(fit1, pars="lp__") + ylab("") +
-#   theme_minimal(base_size = 30) +
-#   theme(legend.position = "none",
-#         strip.text = element_blank(),
-#         axis.text = element_text(size = 18))
+bayesplot::color_scheme_set("mix-blue-red")
+bayesplot::mcmc_trace(fit1, pars="lp__") + ylab("") +
+  theme_minimal(base_size = 30) +
+  theme(legend.position = "none",
+        strip.text = element_blank(),
+        axis.text = element_text(size = 18))
 
-theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
-gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
+# theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
+# gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
 lambda.samples <- summary(fit1, par=c("lambda1", "lambda2", "t1", "t2", "lt1", "lt2", "b1", "b2"), probs = c(0.05,0.5, 0.95))$summary
 gsmooth.samples <- summary(fit1, par=c("gridgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
-fwismooth.samples <- summary(fit1, par=c("fwismooth"), probs = c(0.05, 0.5, 0.95))$summary
-gridgl.samples <- summary(fit1, par=c("gridgl"), probs = c(0.05, 0.5, 0.95))$summary
-gridgnl.samples <- summary(fit1, par=c("gridgnl"), probs = c(0.05, 0.5, 0.95))$summary
+# fwismooth.samples <- summary(fit1, par=c("fwismooth"), probs = c(0.05, 0.5, 0.95))$summary
+# gridgl.samples <- summary(fit1, par=c("gridgl"), probs = c(0.05, 0.5, 0.95))$summary
+# gridgnl.samples <- summary(fit1, par=c("gridgnl"), probs = c(0.05, 0.5, 0.95))$summary
 alpha.samples <- summary(fit1, par=c("gridalpha"), probs = c(0.05,0.5, 0.95))$summary
 # yrep <- summary(fit1, par=c("yrep"), probs = c(0.05,0.5, 0.95))$summary
 # f.samples <- summary(fit1, par=c("f"), probs = c(0.05,0.5, 0.95))$summary
 # loglik.samples <- summary(fit1, par=c("log_lik"), probs = c(0.05,0.5, 0.95))$summary
-MCMCvis::MCMCplot(fit1, params = 'theta')
-MCMCvis::MCMCplot(fit1, params = "gamma")
+# MCMCvis::MCMCplot(fit1, params = 'theta')
+# MCMCvis::MCMCplot(fit1, params = "gamma")
 
 g.smooth.mean <- as.vector(matrix(gsmooth.samples[,1], nrow = n, byrow=TRUE))
 g.smooth.q1 <- as.vector(matrix(gsmooth.samples[,4], nrow = n, byrow=TRUE))
 g.smooth.q2 <- as.vector(matrix(gsmooth.samples[,5], nrow = n, byrow=TRUE))
 g.smooth.q3 <- as.vector(matrix(gsmooth.samples[,6], nrow = n, byrow=TRUE))
-g.linear.mean <- as.vector(matrix(gridgl.samples[,1], nrow = n, byrow=TRUE))
-g.linear.q1 <- as.vector(matrix(gridgl.samples[,4], nrow = n, byrow=TRUE))
-g.linear.q2 <- as.vector(matrix(gridgl.samples[,5], nrow = n, byrow=TRUE))
-g.linear.q3 <- as.vector(matrix(gridgl.samples[,6], nrow = n, byrow=TRUE))
-g.nonlinear.mean <- as.vector(matrix(gridgnl.samples[,1], nrow = n, byrow=TRUE))
-g.nonlinear.q1 <- as.vector(matrix(gridgnl.samples[,4], nrow = n, byrow=TRUE))
-g.nonlinear.q2 <- as.vector(matrix(gridgnl.samples[,5], nrow = n, byrow=TRUE))
-g.nonlinear.q3 <- as.vector(matrix(gridgnl.samples[,6], nrow = n, byrow=TRUE))
-fwi.smooth.mean <- as.vector(matrix(fwismooth.samples[,1], nrow = n, byrow=TRUE))
-fwi.smooth.q1 <- as.vector(matrix(fwismooth.samples[,4], nrow = n, byrow=TRUE))
-fwi.smooth.q2 <- as.vector(matrix(fwismooth.samples[,5], nrow = n, byrow=TRUE))
-fwi.smooth.q3 <- as.vector(matrix(fwismooth.samples[,6], nrow = n, byrow=TRUE))
+# g.linear.mean <- as.vector(matrix(gridgl.samples[,1], nrow = n, byrow=TRUE))
+# g.linear.q1 <- as.vector(matrix(gridgl.samples[,4], nrow = n, byrow=TRUE))
+# g.linear.q2 <- as.vector(matrix(gridgl.samples[,5], nrow = n, byrow=TRUE))
+# g.linear.q3 <- as.vector(matrix(gridgl.samples[,6], nrow = n, byrow=TRUE))
+# g.nonlinear.mean <- as.vector(matrix(gridgnl.samples[,1], nrow = n, byrow=TRUE))
+# g.nonlinear.q1 <- as.vector(matrix(gridgnl.samples[,4], nrow = n, byrow=TRUE))
+# g.nonlinear.q2 <- as.vector(matrix(gridgnl.samples[,5], nrow = n, byrow=TRUE))
+# g.nonlinear.q3 <- as.vector(matrix(gridgnl.samples[,6], nrow = n, byrow=TRUE))
+# fwi.smooth.mean <- as.vector(matrix(fwismooth.samples[,1], nrow = n, byrow=TRUE))
+# fwi.smooth.q1 <- as.vector(matrix(fwismooth.samples[,4], nrow = n, byrow=TRUE))
+# fwi.smooth.q2 <- as.vector(matrix(fwismooth.samples[,5], nrow = n, byrow=TRUE))
+# fwi.smooth.q3 <- as.vector(matrix(fwismooth.samples[,6], nrow = n, byrow=TRUE))
 
 g.min.samples <- min(gsmooth.samples[,4])
 g.max.samples <- max(gsmooth.samples[,6])
-fwi.smooth <- as.data.frame(matrix(fwismooth.samples[,4], nrow = n, byrow=TRUE))
-fwi.min.samples <- sapply(fwi.smooth, min)
+# fwi.smooth <- as.data.frame(matrix(fwismooth.samples[,4], nrow = n, byrow=TRUE))
+# fwi.min.samples <- sapply(fwi.smooth, min)
 
-
-
-data.scenario <- data.frame("x" = newx,
+data.scenario <- data.frame("x" = seq(0,1,length.out=grid.n),
                             "post.mean" = (alpha.samples[,1]),
                             "post.median" = (alpha.samples[,5]),
                             "q1" = (alpha.samples[,4]),
                             "q3" = (alpha.samples[,6]))
 
 ggplot(data.scenario, aes(x=x)) + 
-  ylab(expression(alpha(c,...,c))) + xlab(expression(c)) + labs(col = "") +
-  geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
-  geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
-  scale_fill_manual(values=c("steelblue"), name = "") +
-  scale_color_manual(values = c("steelblue")) + 
-  guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) +
-  theme_minimal(base_size = 30) +
+  ylab(expression(alpha(c,ldots,c))) + xlab(expression(c)) +
+  geom_ribbon(aes(ymin = q1, ymax = q3), fill="steelblue", alpha = 0.2) +
+  geom_line(aes(y=post.median), colour = "steelblue", linewidth=1) +
+  theme_minimal(base_size = 30) + #scale_y_log10() +
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 20))
 
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_alpha.pdf"), width=10, height = 7.78)
 
-xi.scenario <- data.frame("x" = newx,
+xi.scenario <- data.frame("x" = seq(0,1,length.out=grid.n),
                             "post.mean" = (1/alpha.samples[,1]),
                             "post.median" = (1/alpha.samples[,5]),
                             "q1" = (1/alpha.samples[,4]),
                             "q3" = (1/alpha.samples[,6]))
 
 ggplot(xi.scenario, aes(x=x)) + 
-  ylab(expression(xi(c,...,c))) + xlab(expression(c)) + labs(col = "") +
-  geom_ribbon(aes(ymin = q1, ymax = q3, fill="Credible Band"), alpha = 0.2) +
-  geom_line(aes(y=post.median, col = "Posterior Median"), linewidth=1) +
-  scale_fill_manual(values=c("steelblue"), name = "") +
-  scale_color_manual(values = c("steelblue")) + 
-  guides(color = guide_legend(order = 2), 
-          fill = guide_legend(order = 1)) +
-  theme_minimal(base_size = 30) +
+  ylab(expression(xi(c,ldots,c))) + xlab(expression(c)) +
+  geom_ribbon(aes(ymin = q1, ymax = q3), fill="steelblue", alpha = 0.2) +
+  geom_line(aes(y=post.median), color = "steelblue", linewidth=1) +
+  theme_minimal(base_size = 30) + # scale_y_log10() +
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 20))
@@ -440,6 +449,7 @@ r <- sapply(1:T, function(t) {
   alpha_t <- posterior$alpha[posterior_idx[t], ]  # Extract vector of length n
   qnorm(pPareto(y, u, alpha = alpha_t))           # Vectorized across all y
 })
+
 quantile.prob <- ppoints(n)
 grid <- qnorm(quantile.prob)
 traj <- t(apply(r, 2, quantile, probs = quantile.prob, type = 2))
@@ -499,129 +509,39 @@ cat("Finished Running")
 #https://discourse.mc-staqan.org/t/four-questions-about-information-criteria-cross-validation-and-hmc-in-relation-to-a-manuscript-review/13841/3
 
 
-data.smooth <- data.frame("x" = as.vector(as.matrix(xholder)),
-                          "true" = as.vector(as.matrix(fwi.scaled)),
+data.smooth <- data.frame("x" = as.vector(as.matrix(fwi.grid)),
+                          "true" = as.vector(as.matrix(fwi.pos[excess.idx,s.cov])),
                           "post.mean" = as.vector(g.smooth.mean),
                           "q1" = as.vector(g.smooth.q1),
                           "q2" = as.vector(g.smooth.q2),
                           "q3" = as.vector(g.smooth.q3),
-                          "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)))
+                          "covariates" = gl(p, grid.n, (p*grid.n), labels = names(fwi.scaled)))
 
 
 grid.plts <- list()
 for(i in 1:p){
-  grid.plt <- ggplot(data = data.frame(data.smooth[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + 
+  grid.plt <- ggplot(data = data.frame(data.smooth[((((i-1)*grid.n)+1):(i*grid.n)),]), aes(x=x)) + 
                   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
                   geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
                   geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
                   geom_rug(aes(x=true, y=q2), sides = "b") +
-                  ylab("") + xlab(names(fwi.scaled)[i]) +
+                  ylab("") + xlab(names(fwi.01)[i]) +
                   scale_fill_manual(values=c("steelblue"), name = "") + 
                   scale_color_manual(values=c("steelblue")) +
-                  ylim(g.min.samples, g.max.samples) +
-                  theme_minimal(base_size = 30) +
+                  # ylim(g.min.samples, g.max.samples) +
+                  ylim(-2.5, 2.5) +
+                  theme_minimal(base_size = 20) +
                   theme(legend.position = "none",
-                          plot.margin = margin(0,0,0,-20),
-                          axis.text = element_text(size = 35),
-                          axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=g.min.samples, color = "red", size = 7)
+                        plot.margin = margin(5, 5, 5, 5),
+                        plot.title = element_text(hjust = 0.5, face = "bold"),
+                        axis.text.y = element_text(size = 18),
+                        axis.text.x = element_text(size = 12),
+                        axis.title.x = element_text(size = 22))
+  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.max[,i], y=-2.5, color = "red", size = 7)
 }
-
-grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
+marrangeGrob(grobs = grid.plts, nrow = 1, ncol = p, top = NULL)
 
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_mcmc_DC.pdf"), grid.plts[[7]], width=10, height = 7.78)
-
-
-data.linear <- data.frame("x" = as.vector(xholder),
-                          "true" = as.vector(as.matrix(fwi.scaled)),
-                          "post.mean" = as.vector(g.linear.mean),
-                          "q1" = as.vector(g.linear.q1),
-                          "q2" = as.vector(g.linear.q2),
-                          "q3" = as.vector(g.linear.q3),
-                          "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)))
-
-
-grid.plts <- list()
-for(i in 1:p){
-  grid.plt <- ggplot(data = data.frame(data.linear[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + 
-                  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-                  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
-                  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
-                  geom_rug(aes(x=true, y=q2), sides = "b") +
-                  ylab("") + xlab(names(fwi.scaled)[i]) +
-                  scale_fill_manual(values=c("steelblue"), name = "") + 
-                  scale_color_manual(values=c("steelblue")) +
-                  ylim(g.min.samples, g.max.samples) +
-                  theme_minimal(base_size = 30) +
-                  theme(legend.position = "none",
-                          plot.margin = margin(0,0,0,-20),
-                          axis.text = element_text(size = 35),
-                          axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=g.min.samples, color = "red", size = 7)
-}
-
-grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
-
-
-data.nonlinear <- data.frame("x" = as.vector(xholder),
-                          "true" = as.vector(as.matrix(fwi.scaled)),
-                          "post.mean" = as.vector(g.nonlinear.mean),
-                          "q1" = as.vector(g.nonlinear.q1),
-                          "q2" = as.vector(g.nonlinear.q2),
-                          "q3" = as.vector(g.nonlinear.q3),
-                          "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)))
-
-
-grid.plts <- list()
-for(i in 1:p){
-  grid.plt <- ggplot(data = data.frame(data.nonlinear[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + 
-                  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-                  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
-                  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
-                  geom_rug(aes(x=true, y=q2), sides = "b") +
-                  ylab("") + xlab(names(fwi.scaled)[i]) +
-                  scale_fill_manual(values=c("steelblue"), name = "") + 
-                  scale_color_manual(values=c("steelblue")) +
-                  ylim(g.min.samples, g.max.samples) +
-                  theme_minimal(base_size = 30) +
-                  theme(legend.position = "none",
-                          plot.margin = margin(0,0,0,-20),
-                          axis.text = element_text(size = 35),
-                          axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.scaled[which.max(y),i], y=g.min.samples, color = "red", size = 7)
-}
-
-grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
-
-data.smooth <- data.frame("x" = as.vector(as.matrix(fwi.grid)),
-                          "true" = as.vector(as.matrix(fwi.origin[,c(1:p)])),
-                          "post.mean" = as.vector(fwi.smooth.mean),
-                          "q1" = as.vector(fwi.smooth.q1),
-                          "q2" = as.vector(fwi.smooth.q2),
-                          "q3" = as.vector(fwi.smooth.q3),
-                          "covariates" = gl(p, n, (p*n), labels = names(fwi.scaled)))
-
-
-grid.plts <- list()
-for(i in 1:p){
-  grid.plt <- ggplot(data = data.frame(data.smooth[((((i-1)*n)+1):(i*n)),]), aes(x=x)) + 
-                  geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-                  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "Credible Band"), alpha = 0.2) +
-                  geom_line(aes(y=q2, colour = "Posterior Median"), linewidth=1) + 
-                  geom_rug(aes(x=true, y=q2), sides = "b") +
-                  ylab("") + xlab(names(fwi.scaled)[i]) +
-                  scale_fill_manual(values=c("steelblue"), name = "") + 
-                  scale_color_manual(values=c("steelblue")) +
-                  # ylim(fwi.min.samples[i], 7) +
-                  theme_minimal(base_size = 30) +
-                  theme(legend.position = "none",
-                          plot.margin = margin(0,0,0,-20),
-                          axis.text = element_text(size = 35),
-                          axis.title.x = element_text(size = 45))
-  grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.grid[which.max(y),i], y=fwi.min.samples[i], color = "red", size = 7)
-}
-
-grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
 
 summary(fit1, par=c("theta_fwi"), probs = c(0.05,0.5, 0.95))$summary
 
