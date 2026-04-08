@@ -123,8 +123,8 @@ fwi.index[,1:7] <- fwi.scaled[, 1:7] <- x.detrended
 
 above.0 <- which(Y > 0)
 Y_pos <- Y[above.0]
-fwi.qr <- fwi.scaled[above.0, ]
-fwi.pos <- fwi.scaled[above.0, ]
+fwi.qr <- fwi.unscaled[above.0, ]
+fwi.pos <- fwi.unscaled[above.0, ]
 arima_fitted_pos <- arima_fitted_matrix[above.0, ]
 # Y[!above.0] <- 1e-5
 # Y_pos <- Y + 1
@@ -133,11 +133,13 @@ arima_fitted_pos <- arima_fitted_matrix[above.0, ]
 # pca_result <- prcomp(fwi.qr[,3:7], center = TRUE, scale. = TRUE)
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 
-# qr.df <- data.frame(y = (Y_pos), pca_result$x, cos.time = fwi.qr$cos.time, sin.time = fwi.qr$sin.time)
+# qr.df <- data.frame(y = log(Y_pos), pca_result$x, cos.time = fwi.qr$cos.time, sin.time = fwi.qr$sin.time)
 qr.df <- data.frame(y = log(Y_pos), (fwi.qr[,1:7]), cos.time = fwi.qr$cos.time, sin.time = fwi.qr$sin.time, time = fwi.qr$sea)
-s.cov <- c(1:7)
-# evgam.cov <- y ~ cos.time + sin.time + s(PC1, bs='ts', k=10) + s(PC2, bs='ts', k=10) + s(PC3, bs='ts', k=10) + s(PC4, bs='ts', k=10)
+s.cov <- c(3:7)
+# evgam.cov <- y ~ cos.time + sin.time + s(PC1, bs='tp', k=10) + s(PC2, bs='tp', k=10) + s(PC3, bs='tp', k=10) + s(PC4, bs='tp', k=10)
 evgam.cov <- as.formula(paste0("y ~ cos.time + sin.time +", paste0("s(", colnames(fwi.qr[,s.cov]), ", k = ", 10, ", bs='" ,"tp')", collapse = " + ")))
+# evgam.cov <- as.formula(y ~ cos.time + sin.time)
+# evgam.cov <- as.formula(paste0("y ~ ", paste0("s(", colnames(fwi.qr[,s.cov]), ", k = ", 10, ", bs='" ,"tp')", collapse = " + ")))
 
 qr.fit <- evgam(evgam.cov, data = qr.df, family = "ald", ald.args=list(tau = threshold))
 
@@ -155,9 +157,17 @@ u.vec <- exp(predict(qr.fit)$location)
 # AIC(qr.fit, qr.cov, qr.time, qr.null)
 # BIC(qr.fit, qr.cov, qr.time, qr.null)
 
-plot(fwi.scaled[above.0,"date"], log(Y_pos))
-lines(fwi.scaled[above.0,"date"], log(u.vec), type = "l", col = "red")
+# plot(fwi.scaled[above.0,"date"], log(Y_pos))
+# lines(fwi.scaled[above.0,"date"], log(u.vec), type = "l", col = "red")
 
+ggplot(data = data.frame(Year = fwi.scaled[above.0,"date"], BA = Y_pos, thres=u.vec), aes(x=Year)) +
+  geom_point(aes(y = BA), colour = "black", size = 0.7) +
+  geom_line(aes(y=thres), colour = "red") + scale_y_log10() +
+  theme_minimal(base_size = 30) + 
+  theme(legend.position = "none",
+        strip.text = element_blank(),
+        axis.text = element_text(size = 20))
+# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_thres-pc.pdf"), width=10, height = 7.78)
 
 excess.idx <- which(Y_pos > u.vec)
 y <- Y_pos[excess.idx]
@@ -165,8 +175,8 @@ u <- u.vec[excess.idx]
 # fwi.scaled <- fwi.qr
 fwi.01 <- fwi.pos[excess.idx, s.cov] # BUI to DC
 
-plot(fwi.pos[excess.idx, "date"], log(y-1), xlab= "Year")
-lines(fwi.pos[excess.idx, "date"], log(u), type = "l", col = "red", xlab= "Year")
+# plot(fwi.pos[excess.idx, "date"], log(y-1), xlab= "Year")
+# lines(fwi.pos[excess.idx, "date"], log(u), type = "l", col = "red", xlab= "Year")
 
 fwi.cols <- colnames(fwi.pos[,s.cov])
 fwi.max <- fwi.01[which.max(y),]
@@ -601,7 +611,7 @@ ggplot(data.scenario, aes(x=x)) +
         strip.text = element_blank(),
         axis.text = element_text(size = 20))
 
-# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_alpha.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_alpha-pc.pdf"), width=10, height = 7.78)
 
 xi.scenario <- data.frame("x" = seq(0,1,length.out=grid.n),
                             "post.mean" = (1/alpha.samples[,1]),
@@ -631,7 +641,7 @@ ggplot(xi.scenario, aes(x=x)) +
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 20))
-# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_xi.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_xi-pct.pdf"), width=10, height = 7.78)
 
 
 T <- 100
@@ -676,7 +686,7 @@ ggplot(data = ) +
   coord_fixed(xlim = c(-3, 3),
               ylim = c(-3, 3))
 
-# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_qqplot.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_qqplot-pc.pdf"), width=10, height = 7.78)
 # save(loglik.samples, data.smooth, data.scenario, qqplot.df, file="./BLAST/application/blast_1.Rdata")
 
 rp <-c()
@@ -739,7 +749,7 @@ for(i in 1:p){
 marrangeGrob(grobs = grid.plts, nrow = 1, ncol = p, top = NULL)
 # grid.arrange(grobs = grid.plts, ncol = 4, nrow = 2)
 
-# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_cov.pdf"), marrangeGrob(grobs = grid.plts, nrow = 1, ncol = 5, top = NULL), width=10, height = 7.78)
+# ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_cov-pc.pdf"), marrangeGrob(grobs = grid.plts, nrow = 1, ncol = 5, top = NULL), width=10, height = 7.78)
 
 
 # data.linear <- data.frame("x" = as.vector(as.matrix(xholder)),
