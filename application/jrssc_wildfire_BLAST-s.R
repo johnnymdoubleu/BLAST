@@ -125,7 +125,7 @@ above.0 <- which(Y > 0)
 Y_pos <- Y[above.0]
 fwi.qr <- fwi.scaled[above.0, ]
 fwi.pos <- fwi.unscaled[above.0, ]
-arima_fitted_pos <- arima_fitted_matrix[above.0, ]
+# arima_fitted_pos <- arima_fitted_matrix[above.0, ]
 # Y[!above.0] <- 1e-5
 # Y_pos <- Y + 1
 # fwi.qr <- fwi.scaled
@@ -133,14 +133,14 @@ arima_fitted_pos <- arima_fitted_matrix[above.0, ]
 pca_result <- prcomp(fwi.qr[,3:7], center = TRUE, scale. = TRUE)
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 
-qr.df <- data.frame(y = log(Y_pos), pca_result$x, cos.time = fwi.qr$cos.time, sin.time = fwi.qr$sin.time)
-# qr.df <- data.frame(y = log(Y_pos), (fwi.qr[,1:7]), cos.time = fwi.qr$cos.time, sin.time = fwi.qr$sin.time, time = fwi.qr$sea)
+# qr.df <- data.frame(y = log(Y_pos), pca_result$x, cos.time = fwi.qr$cos.time, sin.time = fwi.qr$sin.time)
+qr.df <- data.frame(y = log(Y_pos), (fwi.qr[,1:7]), cos.time = fwi.qr$cos.time, sin.time = fwi.qr$sin.time, time = fwi.qr$sea)
 s.cov <- c(3:7)
-evgam.cov <- y ~ cos.time + sin.time + s(PC1, bs='tp', k=10) + s(PC2, bs='tp', k=10) + s(PC3, bs='tp', k=10) + s(PC4, bs='tp', k=10)
-# evgam.cov <- as.formula(paste0("y ~ cos.time + sin.time +", paste0("s(", colnames(fwi.qr[,s.cov]), ", k = ", 10, ", bs='" ,"tp')", collapse = " + ")))
+# evgam.cov <- y ~ cos.time + sin.time + s(PC1, bs='tp', k=10) + s(PC2, bs='tp', k=10) + s(PC3, bs='tp', k=10) + s(PC4, bs='tp', k=10)
+evgam.cov <- as.formula(paste0("y ~ cos.time + sin.time +", paste0("s(", colnames(fwi.qr[,s.cov]), ", k = ", 10, ", bs='" ,"ps')", collapse = " + ")))
 # evgam.cov <- as.formula(y ~ cos.time + sin.time)
 # evgam.cov <- as.formula(paste0("y ~ ", paste0("s(", colnames(fwi.qr[,s.cov]), ", k = ", 10, ", bs='" ,"tp')", collapse = " + ")))
-
+# qr.fit <- quantreg::rq(evgam.cov, data= qr.df, tau=threshold)
 qr.fit <- evgam(evgam.cov, data = qr.df, family = "ald", ald.args=list(tau = threshold))
 
 # qr.lin <- evgam(y ~ cos.time + sin.time + BUI + ISI + FFMC + DMC + DC, data = qr.df, family = "ald", ald.args=list(tau = threshold))
@@ -148,6 +148,7 @@ qr.fit <- evgam(evgam.cov, data = qr.df, family = "ald", ald.args=list(tau = thr
 # qr.time <- evgam(y ~ cos.time + sin.time, data = qr.df, family = "ald", ald.args=list(tau = threshold))
 # qr.null <- evgam(y ~ 1, data = qr.df, family = "ald", ald.args=list(tau = threshold))
 u.vec <- exp(predict(qr.fit)$location)
+# u.vec <- (predict(qr.fit))
 # u.vec[which(u.vec<0)] <- Y_pos[which(u.vec<0)]
 # save(u.c, qr.fit, file = paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_qr-c.Rdata"))
 # load("./BLAST/application/figures/2026-03-25_pareto_qr-ct.Rdata")
@@ -162,8 +163,9 @@ u.vec <- exp(predict(qr.fit)$location)
 
 ggplot(data = data.frame(Year = fwi.scaled[above.0,"date"], BA = Y_pos, thres=u.vec), aes(x=Year)) +
   geom_point(aes(y = BA), colour = "black", size = 0.7) +
-  geom_line(aes(y=thres), colour = "red") + scale_y_log10() +
-  theme_minimal(base_size = 30) + 
+  geom_line(aes(y=thres), colour = "red") + 
+  # geom_line(aes(y=Mod(fft(u.vec))), colour = "steelblue") + 
+  theme_minimal(base_size = 30) + scale_y_log10() +
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 20))
