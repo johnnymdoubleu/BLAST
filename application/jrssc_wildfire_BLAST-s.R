@@ -134,11 +134,11 @@ fwi.pos <- fwi.unscaled[above.0, ]
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 
 # qr.df <- data.frame(y = log(Y_pos), pca_result$x, cos.time = fwi.qr$cos.time, sin.time = fwi.qr$sin.time)
-qr.df <- data.frame(y = log(Y_pos), (fwi.qr[,1:7]), cos.time = fwi.qr$cos.time, sin.time = fwi.qr$sin.time, time = fwi.qr$sea)
+qr.df <- data.frame(y = (Y_pos), (fwi.qr[,1:7]), cos.time = fwi.qr$cos.time, sin.time = fwi.qr$sin.time, time = fwi.qr$sea)
 s.cov <- c(3:7)
 # evgam.cov <- y ~ cos.time + sin.time + s(PC1, bs='tp', k=10) + s(PC2, bs='tp', k=10) + s(PC3, bs='tp', k=10) + s(PC4, bs='tp', k=10)
-# evgam.cov <- as.formula(paste0("y ~ cos.time + sin.time +", paste0("s(", colnames(fwi.qr[,s.cov]), ", k = ", 10, ", bs='" ,"bs')", collapse = " + ")))
-evgam.cov <- as.formula(y ~ cos.time + sin.time)
+evgam.cov <- as.formula(paste0("y ~ cos.time + sin.time +", paste0("s(", colnames(fwi.qr[,s.cov]), ", k = ", 10, ", bs='" ,"bs')", collapse = " + ")))
+# evgam.cov <- as.formula(y ~ cos.time + sin.time)
 # evgam.cov <- as.formula(paste0("y ~ ", paste0("s(", colnames(fwi.qr[,s.cov]), ", k = ", 10, ", bs='" ,"bs')", collapse = " + ")))
 # qr.fit <- quantreg::rq(evgam.cov, data= qr.df, tau=threshold)
 qr.fit <- evgam(evgam.cov, data = qr.df, family = "ald", ald.args=list(tau = threshold))
@@ -147,7 +147,7 @@ qr.fit <- evgam(evgam.cov, data = qr.df, family = "ald", ald.args=list(tau = thr
 # qr.cov <- evgam(y ~ s(BUI, bs = "ts", k = 30) + s(ISI, bs = "ts", k = 30) + s(FFMC, bs = "ts", k = 30) + s(DMC, bs = "ts", k = 30) + s(DC, bs = "ts", k = 30), data = qr.df, family = "ald", ald.args=list(tau = threshold))
 # qr.time <- evgam(y ~ cos.time + sin.time, data = qr.df, family = "ald", ald.args=list(tau = threshold))
 # qr.null <- evgam(y ~ 1, data = qr.df, family = "ald", ald.args=list(tau = threshold))
-u.vec <- exp(predict(qr.fit)$location)
+u.vec <- (predict(qr.fit)$location)
 # u.vec <- (predict(qr.fit))
 # u.vec[which(u.vec<0)] <- Y_pos[which(u.vec<0)]
 # save(u.c, qr.fit, file = paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_qr-c.Rdata"))
