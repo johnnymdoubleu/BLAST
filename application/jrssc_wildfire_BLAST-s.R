@@ -34,7 +34,7 @@ missing.values <- which(!is.na(df.long$measurement))
 #Thus, each year consist of 366 data with either 1 or 0 missing value.
 Y <- df.long$measurement[!is.na(df.long$measurement)]
 psi.origin <- psi <- 10
-threshold <- 0.95
+threshold <- 0.90
 
 multiplesheets <- function(fname) {
     setwd("C:/Users/Johnny Lee/Documents/GitHub")
@@ -137,7 +137,7 @@ range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 qr.df <- data.frame(y = log(Y_pos), (fwi.qr[,1:7]), cos.time = fwi.qr$cos.time, sin.time = fwi.qr$sin.time, time = fwi.qr$sea)
 s.cov <- c(3:7)
 # evgam.cov <- y ~ cos.time + sin.time + s(PC1, bs='tp', k=10) + s(PC2, bs='tp', k=10) + s(PC3, bs='tp', k=10) + s(PC4, bs='tp', k=10)
-evgam.cov <- as.formula(paste0("y ~ cos.time + sin.time +", paste0("s(", colnames(fwi.qr[,s.cov]), ", k = ", 10, ", bs='" ,"bs')", collapse = " + ")))
+evgam.cov <- as.formula(paste0("y ~ cos.time + sin.time +", paste0("s(", colnames(fwi.qr[,s.cov]), ", k = ", 15, ", bs='" ,"tp')", collapse = " + ")))
 # evgam.cov <- as.formula(y ~ cos.time + sin.time)
 # evgam.cov <- as.formula(paste0("y ~ ", paste0("s(", colnames(fwi.qr[,s.cov]), ", k = ", 10, ", bs='" ,"bs')", collapse = " + ")))
 # qr.fit <- quantreg::rq(evgam.cov, data= qr.df, tau=threshold)
