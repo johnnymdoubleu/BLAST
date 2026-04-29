@@ -123,7 +123,7 @@ fwi.index[,1:7] <- fwi.scaled[, 1:7] <- x.detrended
 
 above.0 <- which(Y > 0)
 Y_pos <- Y[above.0]
-fwi.qr <- fwi.scaled[above.0, ]
+fwi.qr <- fwi.unscaled[above.0, ]
 fwi.pos <- fwi.unscaled[above.0, ]
 # arima_fitted_pos <- arima_fitted_matrix[above.0, ]
 # Y[!above.0] <- 1e-5
@@ -137,7 +137,7 @@ range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 qr.df <- data.frame(y = log(Y_pos), (fwi.qr[,1:7]), cos.time = fwi.qr$cos.time, sin.time = fwi.qr$sin.time, time = fwi.qr$sea)
 s.cov <- c(3:7)
 # evgam.cov <- y ~ cos.time + sin.time + s(PC1, bs='tp', k=10) + s(PC2, bs='tp', k=10) + s(PC3, bs='tp', k=10) + s(PC4, bs='tp', k=10)
-evgam.cov <- as.formula(paste0("y ~ cos.time + sin.time +", paste0("s(", colnames(fwi.qr[,s.cov]), ", k = ", 15, ", bs='" ,"tp')", collapse = " + ")))
+evgam.cov <- as.formula(paste0("y ~ cos.time + sin.time +", paste0("s(", colnames(fwi.qr[,s.cov]), ", k = ", 15, ", bs='" ,"bs')", collapse = " + ")))
 # evgam.cov <- as.formula(y ~ cos.time + sin.time)
 # evgam.cov <- as.formula(paste0("y ~ ", paste0("s(", colnames(fwi.qr[,s.cov]), ", k = ", 10, ", bs='" ,"bs')", collapse = " + ")))
 # qr.fit <- quantreg::rq(evgam.cov, data= qr.df, tau=threshold)

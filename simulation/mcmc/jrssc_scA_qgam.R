@@ -78,7 +78,7 @@ f.season.scale <- function(t){
 y.origin <- y.origin * f.season.scale(time.seq)
 
 evgam.df <- data.frame(
-  y = log(y.origin),
+  y = (y.origin),
   sin.time = sin(2 * pi * time.seq / period),
   cos.time = cos(2 * pi * time.seq / period),
   x.origin
@@ -86,7 +86,7 @@ evgam.df <- data.frame(
 
 evgam.cov <- y ~ cos.time + sin.time + s(X1) + s(X2) + s(X3) + s(X4) + s(X5)
 ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
-u.vec <- exp(predict(ald.cov.fit)$location)
+u.vec <- (predict(ald.cov.fit)$location)
 
 excess.index <- which(y.origin > u.vec)
 x.origin <- as.data.frame(x.origin[excess.index,])
