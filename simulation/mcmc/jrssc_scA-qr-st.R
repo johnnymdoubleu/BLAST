@@ -1,107 +1,135 @@
 library(mgcv)
+library(Pareto)
 suppressMessages(library(ggplot2))
 library(rstan)
-library(Pareto)
-library(parallel)
-library(qqboxplot)
+library(MESS)
 library(evgam)
+library(forecast)
+library(posterior)
 
-n <- 10000
+set.seed(100)
+n <- n.origin <- 10000
+grid.n <- 200
 psi <- 10
 threshold <- 0.95
 p <- 5
-p_lin <- 7 # 5 covariates + 2 harmonics
-psi <- psi - 2
-
-time.seq <- 1:n
-period <- 365 
-x.season <- time.seq %% period / period 
-
-seasons <- c("Winter", "Spring", "Summer", "Autumn")
-x.origin <- matrix(0, nrow = n, ncol = p)
-
-for (j in 1:p) {
-  phase_shift <- j * (2 * pi / p) 
-  seasonal_trend <- 0.5 + 0.1 * sin(2 * pi * time.seq / period + phase_shift) 
-  uniform_noise <- runif(n, min = -0.4, max = 0.4)
-  x.origin[, j] <- seasonal_trend + uniform_noise
-  # x.origin[,j] <- runif(n, 0,1)
-}
-
-colnames(x.origin) <- paste0("X", 1:p)
-
-# --- DGP MODIFICATION: ADD HARMONICS DIRECTLY TO TRUE ALPHA ---
-sin.time.full <- sin(2 * pi * x.season)
-cos.time.full <- cos(2 * pi * x.season)
+C <- diag(p)
 
 f2 <- function(x) {-.7 * sin(2 * pi * x^2)*(x-0.5)}
 f5 <- function(x) {-.7 * cos(3 * pi * x^2)*x}
 
+time.seq <- 1:n
+period <- 365 
+x.season <- time.seq / period 
+
+# Convert continuous season to Factor for the 'by' argument
+season_code_full <- cut((time.seq%% period / period), breaks = c(-0.1, 0.25, 0.5, 0.75, 1.1), labels = c(1,2,3,4))
+seasons <- c("Winter", "Spring", "Summer", "Autumn")
+
+make.nl <- function(x, raw_y) {
+  fit <- lm(raw_y ~ x)
+  
+  return(list(
+    nl = residuals(fit), 
+    slope = coef(fit)[["x"]],
+    intercept = coef(fit)[["(Intercept)"]]
+  ))
+}
+
 theta.origin <- c(0.7, 0, 0.8, 0, 0, -0.8) 
-theta.harm <- c(-0.5, 0.3)                 # True effects for sin and cos
+psi <- psi -2
 
-alp.origin <- exp(rep(theta.origin[1],n) + 
-                  x.origin %*% theta.origin[-1] + 
-                  f2(x.origin[,2]) + f5(x.origin[,5]) + 
-                  (theta.harm[1] * sin.time.full) + 
-                  (theta.harm[2] * cos.time.full))
+x.origin <- x.origin.full <- pnorm(matrix(rnorm(n.origin*p), nrow = n.origin, ncol = p))
 
-# Generate true Pareto responses
-y.origin <- rPareto(n, rep(1, n), alpha = alp.origin)
+for (j in 1:p) {
+  phase_shift <- j * (2 * pi / p) 
+  seasonal_trend <- 0.5 * sin(2 * pi * time.seq / period - phase_shift)
+  x.origin[,j] <- seasonal_trend + x.origin.full[,j]
+}
 
-# Dynamic Thresholding using ALD
+range01 <- function(x){(x-min(x))/(max(x)-min(x))}
+x.origin <- (apply(x.origin, 2, range01))
+
+alp.origin <- exp(theta.origin[1] + x.origin%*%theta.origin[-1] + 
+                  f2(x.origin[,2]) + f5(x.origin[,5]))
+y.origin <- rPareto(n.origin, rep(1, n.origin), alpha = alp.origin)
+# xreg.season <- cbind(
+#   trend = time.seq,
+#   cos_season = cos(2 * pi * time.seq / 365),
+#   sin_season = sin(2 * pi * time.seq / 365)
+# )
+
+# fit.list <- list()
+# x.detrended <- matrix(nrow = n.origin, ncol = p)
+# for (j in 1:p) {
+#   y_ts <- ts(x.origin[, j], frequency = period) 
+#   fit.list[[j]] <- fit <- auto.arima(y_ts, seasonal = FALSE, xreg = xreg.season, stepwise = TRUE, approximation = FALSE)
+#   x.detrended[, j] <- as.numeric(residuals(fit.list[[j]]))
+# }
+# x.origin <- x.detrended
+
+covariates <- colnames(data.frame(x.origin))[1:p]
+
+f2 <- function(x) {-.7 * sin(2 * pi * x^2)*(x-0.5)}
+f5 <- function(x) {-.7 * cos(3 * pi * x^2)*x}
+theta.origin <- c(0.7, 0, 0.8, 0, 0, -0.8) 
+
+f.season.scale <- function(t){
+  return(2.5 - .8 * sin(2 * pi * t / period) - .6 * cos(2 * pi * t/period)) 
+}
+
+y.origin <- y.origin * f.season.scale(time.seq)
+
 evgam.df <- data.frame(
-  y = (y.origin),
-  sin.time = sin.time.full,
-  cos.time = cos.time.full,
+  y = log(y.origin),
+  sin.time = sin(2 * pi * time.seq / period),
+  cos.time = cos(2 * pi * time.seq / period),
   x.origin
 )
-evgam.cov <- y ~ 1 + cos.time + sin.time 
+
+evgam.cov <- y ~ cos.time + sin.time + s(X1) + s(X2) + s(X3) + s(X4) + s(X5)
 ald.cov.fit <- evgam(evgam.cov, data = evgam.df, family = "ald", ald.args=list(tau = threshold))
-u.vec <- (predict(ald.cov.fit)$location)
-# u.vec <- 20^(1/alp.origin)
-# Subset excesses
+u.vec <- exp(predict(ald.cov.fit)$location)
+
 excess.index <- which(y.origin > u.vec)
-x.origin <- x.origin[excess.index,]
-sin.time <- sin.time.full[excess.index]
-cos.time <- cos.time.full[excess.index]
+x.origin <- as.data.frame(x.origin[excess.index,])
 y.origin <- y.origin[excess.index]
 u <- u.vec[excess.index]
-n_excess <- length(y.origin)
+season_code_full <- season_code_full[excess.index]  
+n <- length(y.origin)
 
-# Combine all 7 linear variables
-all_linear_vars <- data.frame(x.origin, sin.time = sin.time, cos.time = cos.time)
-
-# Scale linear covariates to [0,1]
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
-X_minmax <- sapply(all_linear_vars, function(x) max(x)-min(x))
-X_min <- sapply(all_linear_vars, function(x) min(x))
-all_scaled <- as.data.frame(sapply(all_linear_vars, FUN = range01))
-x_scaled_only <- all_scaled[, 1:p]
+
+newx <- seq(max(apply(x.origin, 2, min)), min(apply(x.origin, 2, max)), length.out = grid.n)
+xholder <- do.call(cbind, lapply(1:p, function(i) {seq(min(x.origin[,i]), max(x.origin[,i]), length.out = grid.n)}))
+x.grid <- do.call(cbind, lapply(1:p, function(i) {seq(0, 1, length.out = grid.n)}))
+alp.new <- as.vector(exp(theta.origin[1] + x.grid %*% theta.origin[-1] + f2(x.grid[,2]) + f5(x.grid[,5])))
+covariates <- colnames(data.frame(x.origin))
+colnames(xholder) <- colnames(x.origin) <- covariates <- paste0("X", 1:p)
 
 group.map <- c()
 Z.list <- list()        
 scale_stats_list <- list() 
 projection_coefs_list <- list() 
 spec_decomp_list <- list() 
+qr_list <- list()          
 sm_spec_list <- list()     
 keep_cols_list <- list()
 
-covariates <- colnames(x.origin)
-
-# QR Spline decomposition applied ONLY to the p=5 covariates
 for (i in seq_along(covariates)) {
-  x_vec <- x_scaled_only[, i]
+  var_name <- covariates[i]
+  x_vec <- x.origin[, i]
   X_lin <- model.matrix(~ x_vec) 
   sm_spec <- smoothCon(s(x_vec, bs = "tp", k = psi + 2), 
-                       data = data.frame(x_vec = x_vec), 
-                       knots = NULL)[[1]]
-  
+                      data = data.frame(x_vec = x_vec), 
+                      knots = NULL)[[1]]    
   X_raw <- sm_spec$X
   S     <- sm_spec$S[[1]] 
   
   eig <- eigen(S, symmetric = TRUE)
-  tol <- max(eig$values) * 1e-6 
+  max_lambda <- max(eig$values)
+  tol <- max_lambda * 1e-7  # Relative threshold (Robust)
+  
   pos_idx <- which(eig$values > tol)
   
   if(length(pos_idx) == 0) stop("No wiggles found. Check data scaling.")
@@ -119,147 +147,135 @@ for (i in seq_along(covariates)) {
   Z_orth <- Z_spectral - X_lin %*% Gamma_Original
   keep_cols <- colSums(Z_orth^2) > 1e-9
   Z_final <- Z_orth[, keep_cols, drop = FALSE]
-  
   train_scale <- apply(Z_final, 2, sd)
   Z_final <- scale(Z_final, center = FALSE, scale = train_scale)
-  Z.list[[i]] <- Z_final
   
+  # Store Results
+  Z.list[[i]] <- Z_final
+  group.map <- c(group.map, rep(i, ncol(Z_final)))
+  
+  # Store Transforms
   spec_decomp_list[[i]] <- list(U_pen = U_pen, Lambda_sqrt_inv = solve(sqrt(Lambda_pen)))
-  projection_coefs_list[[i]] <- Gamma_Original 
+  projection_coefs_list[[i]] <- Gamma_Original # Store the X-basis coefs
   keep_cols_list[[i]] <- keep_cols
-  scale_stats_list[[i]] <- train_scale         
+  scale_stats_list[[i]] <- train_scale         # Store the scale
   sm_spec_list[[i]] <- sm_spec
 }
 
 bs.nonlinear <- do.call(cbind, Z.list)
-bs.linear <- model.matrix(~ ., data = all_scaled)[,-1]
-
-grid.n <- 200
-newx <- seq(0, 1, length.out = grid.n)
-xholder <- do.call(cbind, lapply(1:p, function(j) {newx}))
-colnames(xholder) <- covariates
-
-# Set Peak Season for Partial Plots (e.g., day 200)
-peak_day <- 200
-raw_cos_peak <- cos(2 * pi * peak_day / period)
-raw_sin_peak <- sin(2 * pi * peak_day / period)
-# scaled_cos_peak <- (raw_cos_peak - X_min["cos.time"]) / X_minmax["cos.time"]
-# scaled_sin_peak <- (raw_sin_peak - X_min["sin.time"]) / X_minmax["sin.time"]
-
-xholder_harm <- matrix(c(rep(raw_sin_peak, grid.n), rep(raw_cos_peak, grid.n)), ncol=2)
-colnames(xholder_harm) <- c("sin.time", "cos.time")
-xholder_all <- cbind(xholder, xholder_harm)
+bs.linear <- model.matrix(~ ., data = data.frame(x.origin))[,-1]
+Z_scales <- unlist(scale_stats_list)
 
 grid_Z_list <- list()
+
 for (i in seq_along(covariates)) {
-  grid_df  <- data.frame(x_vec = xholder[,i])
+  x_vec <- xholder[,i] 
+  grid_df  <- data.frame(x_vec = x_vec)
   X_lin_grid <- model.matrix(~ x_vec, data = grid_df)
   X_raw_grid <- PredictMat(sm_spec_list[[i]], grid_df)
+  
   decomp <- spec_decomp_list[[i]]
   Z_spectral_grid <- X_raw_grid %*% decomp$U_pen %*% decomp$Lambda_sqrt_inv
   Z_orth_grid <- Z_spectral_grid - X_lin_grid %*% projection_coefs_list[[i]]
   Z_final_grid <- Z_orth_grid[, keep_cols_list[[i]], drop = FALSE]
   Z_final_grid <- scale(Z_final_grid, center = FALSE, scale = scale_stats_list[[i]])
+  
   grid_Z_list[[i]] <- Z_final_grid
 }
 
-Z_scales <- unlist(scale_stats_list)
+xholder.linear <- model.matrix(~ ., data = data.frame(xholder))[,-1]
 xholder.nonlinear <- do.call(cbind, grid_Z_list)
-xholder.linear <- model.matrix(~ ., data = data.frame(xholder_all))[,-1]
-
-# Convert scaled grid back to original scale to evaluate True Alpha Function
-# xholder_orig_scale <- sweep(sweep(xholder_fwi, 2, X_minmax[1:p], "*"), 2, X_min[1:p], "+")
-alp.new <- as.vector(exp(theta.origin[1] + xholder %*% theta.origin[-1] + 
-                          f2(xholder[,2]) + f5(xholder[,5]) +
-                          (theta.harm[1] * raw_sin_peak) + (theta.harm[2] * raw_cos_peak)))
-g.new <- c(xholder[,1] * theta.origin[2], 
-           xholder[,2] * theta.origin[3] + f2(xholder[,2]),
-           xholder[,3] * theta.origin[4],
-           xholder[,4] * theta.origin[5],
-           xholder[,5] * theta.origin[6] + f5(xholder[,5]))
-
-
 X_means <- colMeans(bs.linear)
 X_sd   <- apply(bs.linear, 2, sd)
 bs.linear <- scale(bs.linear, center = X_means, scale = X_sd)
 
-# --- STAN MODEL (Matches the applied version) ---
+f2.hidden <- make.nl(x.origin[,2], f2(x.origin[,2]))
+f5.hidden <- make.nl(x.origin[,5], f5(x.origin[,5]))
+theta.adjusted <- c(theta.origin[1] + f2.hidden$intercept + f5.hidden$intercept,
+                    theta.origin[2],
+                    theta.origin[3] + f2.hidden$slope,
+                    theta.origin[4],
+                    theta.origin[5],
+                    theta.origin[6] + f5.hidden$slope)
+g2.nl <- f2(x.grid[,2]) - (f2.hidden$intercept + f2.hidden$slope*x.grid[,2])
+g5.nl <- f5(x.grid[,5]) - (f5.hidden$intercept + f5.hidden$slope*x.grid[,5])
+g2.l <- theta.adjusted[3] * x.grid[,2]
+g5.l <- theta.adjusted[6] * x.grid[,5]
+g2 <- g2.l + g2.nl
+g5 <- g5.l + g5.nl
+# g2 <- g2 - mean(g2)
+# g5 <- g5 - mean(g5)
+g.new <- c(rep(0, grid.n), g2, rep(0, grid.n), rep(0, grid.n), g5)
+alp.new <- exp(theta.adjusted[1] + g2 + g5)
+
 model.stan <- "// Stan model for BLAST Pareto Samples
 data {
-  int <lower=1> n; 
-  int <lower=1> grid_n;
-  int <lower=1> p; 
-  int <lower=1> p_lin;
-  int <lower=1> psi; 
-  vector[n] u; 
-  matrix[n, p_lin] bsLinear; 
-  matrix[n, (psi*p)] bsNonlinear; 
-  matrix[grid_n, p_lin] xholderLinear; 
-  matrix[grid_n, (psi*p)] xholderNonlinear;    
-  vector<lower=0>[n] y; 
-  real <lower=0> atau;
-  vector[p_lin] X_means;
-  vector[p_lin] X_sd;
+    int <lower=1> n; // Sample size
+    int <lower=1> grid_n;
+    int <lower=1> p; // regression coefficient size
+    int <lower=1> psi; // splines coefficient size
+    vector[n] u; // large threshold value
+    matrix[n, p] bsLinear; // fwi dataset
+    matrix[n, (psi*p)] bsNonlinear; // thin plate splines basis
+    matrix[grid_n, p] xholderLinear; // fwi dataset
+    matrix[grid_n, (psi*p)] xholderNonlinear; // thin plate splines basis    
+    vector<lower=u>[n] y; // extreme response
+    real <lower=0> atau;
+    vector[p] X_means;
+    vector[p] X_sd;
 }
 
 parameters {
-  vector[(p_lin+1)] theta; 
-  array[p] vector[psi] gamma_raw;
-  array[p_lin] real <lower=0> lambda1; 
-  array[p] real <lower=0> lambda2; 
-  array[p] real <lower=0> tau;
+    vector[(p+1)] theta; // linear predictor
+    array[p] vector[psi] gamma_raw;
+    array[p] real <lower=0> lambda1; // 
+    array[p] real <lower=0> lambda2; //
+    array[p] real <lower=0> tau;
 }
 
 transformed parameters {
-  vector[n] alpha; 
-  array[p] vector[psi] gamma;
-  {
-    vector[n] eta = rep_vector(theta[1], n);
-    for (k in 1:p_lin) {
-       eta += col(bsLinear, k) * theta[k+1];
+    vector[n] alpha; // covariate-adjusted tail index
+    
+    array[p] vector[psi] gamma;
+    {
+      vector[n] eta = rep_vector(theta[1], n);
+      for (j in 1:p){
+        gamma[j] = gamma_raw[j] * sqrt(tau[j]);
+        eta += col(bsLinear, j) * theta[j+1] + block(bsNonlinear,1, ((j - 1) * psi + 1), n, psi) * gamma[j];
+      };
+      alpha = exp(eta);
     }
-    for (j in 1:p){
-      gamma[j] = gamma_raw[j] * sqrt(tau[j]); 
-      int nl_start = (j - 1) * psi + 1;
-      eta += block(bsNonlinear,1, nl_start, n, psi) * gamma[j];
-    };
-    alpha = exp(eta);
-  }
 }
 
 model {
+  // likelihood
   target += pareto_lpdf(y | u, alpha);
-  target += normal_lpdf(theta[1] | 0, 10); // Tightened prior
+  target += normal_lpdf(theta[1] | 0, 10);
   target += gamma_lpdf(lambda1 | 1e-1, 1e-1); 
-  target += gamma_lpdf(lambda2 | 1e-2, 1e-2);
-  for (k in 1:p_lin){
-    target += double_exponential_lpdf(theta[(k+1)] | 0, 1/(lambda1[k]));
-  }
+  target += gamma_lpdf(lambda2 | 1e-2, 1e-2);  
   for (j in 1:p){
+    target += double_exponential_lpdf(theta[(j+1)] | 0, 1/(lambda1[j]));
     target += gamma_lpdf(tau[j] | atau, square(lambda2[j])*0.5);
     target += std_normal_lpdf(gamma_raw[j]);
   }
 }
 
 generated quantities {
-  vector[grid_n] gridalpha; 
-  matrix[grid_n, p] gridgnl; 
-  matrix[grid_n, p] gridgl; 
-  matrix[grid_n, p] gridgsmooth; 
+  // Used in Posterior predictive check 
+  vector[grid_n] gridalpha; // new tail index
+  matrix[grid_n, p] gridgnl; // nonlinear component
+  matrix[grid_n, p] gridgl; // linear component
+  matrix[grid_n, p] gridgsmooth; // linear component
 
-  vector[p_lin] theta_origin = theta[2:(p_lin+1)] ./ X_sd;
+  vector[p] theta_origin = theta[2:(p+1)] ./ X_sd;
   real theta0 = theta[1] - dot_product(X_means, theta_origin);
 
   {
     vector[grid_n] grideta = rep_vector(theta0, grid_n);
-    // Add harmonic baseline to the alpha prediction
-    for (h in (p+1):p_lin){
-       grideta += col(xholderLinear, h) * theta_origin[h];
-    }
-    
     for (j in 1:p){
-        gridgnl[,j] = block(xholderNonlinear,1, ((j - 1) * psi + 1), grid_n, psi) * gamma[j];
-        gridgl[,j] = col(xholderLinear, j) * theta_origin[j];
+        int nl_start = (j - 1) * psi + 1;
+        gridgl[,j] = col(xholderLinear, j) * theta_origin[j]; 
+        gridgnl[,j] = block(xholderNonlinear,1, nl_start, grid_n, psi) * gamma[j];
         gridgsmooth[,j] = gridgl[,j] + gridgnl[,j];
         grideta += gridgsmooth[,j];
     };
@@ -268,23 +284,23 @@ generated quantities {
 }
 "
 
-data.stan <- list(y = as.vector(y.origin), u = u, p = p, p_lin = p_lin, n= n_excess, psi = psi, grid_n = grid.n,
-                  atau = ((psi+1)/2), X_means = X_means, X_sd=X_sd, 
+data.stan <- list(y = as.vector(y.origin), u = u, p = p, n= n, psi = psi, grid_n = grid.n,
+                  atau = ((psi+1)/2), X_means = X_means, X_sd=X_sd,
                   bsLinear = bs.linear, bsNonlinear = bs.nonlinear,
                   xholderLinear = xholder.linear, xholderNonlinear = xholder.nonlinear)
 
 init.alpha <- list(list(gamma_raw= array(rep(0.2, (psi*p)), dim=c(p,psi)),
-                        theta = rep(-0.1, (p_lin+1)), tau = rep(0.1, p),
-                        lambda1 = rep(0.1, p_lin), lambda2 = rep(1, p)),
+                        theta = rep(-0.1, (p+1)), tau = rep(0.1, p),
+                        lambda1 = rep(0.1,p), lambda2 = rep(1, p)),
                    list(gamma_raw = array(rep(-0.15, (psi*p)), dim=c(p,psi)),
-                        theta = rep(0.05, (p_lin+1)), tau = rep(2, p),
-                        lambda1 = rep(2, p_lin), lambda2 = rep(5, p)),
+                        theta = rep(0.05, (p+1)), tau = rep(2, p),
+                        lambda1 = rep(2,p), lambda2 = rep(5, p)),
                    list(gamma_raw = array(rep(-0.75, (psi*p)), dim=c(p,psi)),
-                        theta = rep(0.01, (p_lin+1)), tau = rep(1.5, p),
-                        lambda1 = rep(0.5, p_lin), lambda2= rep(5, p)))
+                        theta = rep(0.01, (p+1)), tau = rep(1.5, p),
+                        lambda1 = rep(0.5,p), lambda2= rep(5, p)))
 
 system.time(fit1 <- stan(
-  model_code = model.stan, 
+  model_code = model.stan,  
   data = data.stan,    
   init = init.alpha,      
   chains = 3,             
@@ -293,7 +309,19 @@ system.time(fit1 <- stan(
   refresh = 1000             
 ))
 
-posterior <- extract(fit1)
+
+drws <- posterior::as_draws_df(fit1)
+# posterior::summarise_draws(posterior::subset_draws(drws, variable = "gamma"), rhat, ess_bulk, ess_tail, .num_args = list(sigfig=5, notation = "dec"))
+
+posterior::summarise_draws(
+  posterior::subset_draws(drws, variable = "tau"), 
+  rhat, ess_bulk, ess_tail
+) %>%
+dplyr::summarise(
+  rhat_range     = paste(round(min(rhat, na.rm=T), 4), "-", round(max(rhat, na.rm=T), 4)),
+  ess_bulk_range = paste(min(ess_bulk), "-", max(ess_bulk)),
+  ess_tail_range = paste(min(ess_tail), "-", max(ess_tail))
+)
 
 posterior <- extract(fit1)
 bayesplot::color_scheme_set("mix-blue-red")
@@ -303,8 +331,9 @@ bayesplot::mcmc_trace(fit1, pars="lp__") + ylab("Scenario A") +
         strip.text = element_blank(),
         axis.text = element_text(size = 18))
 # ggsave(paste0("./simulation/results/appendix_",n,"_traceplot_scA.pdf"), width=22, height = 3)
+
 # theta.samples <- summary(fit1, par=c("theta"), probs = c(0.05,0.5, 0.95))$summary
-theta.samples <- summary(fit1, par=c("theta0","theta_origin"), probs = c(0.05,0.5, 0.95))$summary
+theta.samples <- summary(fit1, par=c("theta0", "theta_origin"), probs = c(0.05,0.5, 0.95))$summary
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
 lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
 # newgl.samples <- summary(fit1, par=c("gridgl"), probs = c(0.05, 0.5, 0.95))$summary
@@ -312,74 +341,6 @@ lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5,
 newgsmooth.samples <- summary(fit1, par=c("gridgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
 # season.samples <- summary(fit1, par=c("alphaseason"), probs = c(0.05,0.5, 0.95))$summary
 alpha.samples <- summary(fit1, par=c("gridalpha"), probs = c(0.05,0.5, 0.95))$summary
-
-# gamma.post.mean <- gamma.samples[,1]
-# gamma.q1 <- gamma.samples[,4]
-# gamma.q2 <- gamma.samples[,1]
-# gamma.q3 <- gamma.samples[,6]
-# theta.post.mean <- theta.samples[,1]
-# theta.q1 <- theta.samples[,4]
-# theta.q2 <- theta.samples[,5]
-# theta.q3 <- theta.samples[,6]
-
-# df.theta <- data.frame("seq" = seq(1, (p+1)),
-#                        "true" = theta.adjusted,
-#                        "m" = theta.q2,
-#                        "l" = theta.q1,
-#                        "u" = theta.q3)
-# df.theta$covariate <- factor(0:p)
-# df.theta$labels <- factor(0:p)
-# ggplot(df.theta, aes(x = covariate, y=m, color = covariate)) + ylab("") + xlab('') +
-#   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-#   geom_point(size = 5) + geom_point(aes(y = true), color="red", size = 4) +
-#   geom_errorbar(aes(ymin = l, ymax = u), width = 0.3, linewidth =1.2) + 
-#   scale_x_discrete(labels = c(expression(bold(theta[0])),
-#                               expression(bold(theta[1])),
-#                               expression(bold(theta[2])),
-#                               expression(bold(theta[3])),
-#                               expression(bold(theta[4])),
-#                               expression(bold(theta[5])))) + 
-#   theme_minimal(base_size = 30) +
-#   theme(plot.title = element_text(hjust = 0.5, size = 20),
-#         legend.text.align = 0,
-#         legend.title = element_blank(),
-#         legend.text = element_text(size=25),
-#         legend.margin=margin(0,0,0,-10),
-#         legend.box.margin=margin(-10,0,-10,0),
-#         plot.margin = margin(0,0,0,-20),
-#         axis.text.x = element_text(hjust=0.35),
-#         axis.text = element_text(size = 28))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_theta_sc1-wi.pdf"), width=10, height = 7.78)
-
-# df.gamma <- data.frame("seq" = seq(1, (psi*p)), 
-#                       #  "true" = as.vector(gamma.origin),
-#                        "m" = as.vector(gamma.q2),
-#                        "l" = as.vector(gamma.q1),
-#                        "u" = as.vector(gamma.q3))
-# df.gamma$covariate <- factor(rep(seq(1, 1 + nrow(df.gamma) %/% psi), each = psi, length.out = nrow(df.gamma)))
-# df.gamma$labels <- factor(1:(psi*p))
-# ggplot(df.gamma, aes(x =labels, y = m, color = covariate)) + 
-#   geom_errorbar(aes(ymin = l, ymax = u), alpha = 0.4, width = 4, linewidth = 1.2) +
-#   # geom_point(aes(y=true), size =4, color ="red")+
-#   geom_hline(yintercept = 0, linetype = 2, color = "darkgrey", linewidth = 2) + 
-#   geom_point(size = 4) + ylab("") + xlab("" ) + 
-#   scale_x_discrete(breaks=c(seq(0, (psi*p), psi)+7), 
-#                    label = c(expression(bold(gamma[1])), 
-#                              expression(bold(gamma[2])), 
-#                              expression(bold(gamma[3])), 
-#                              expression(bold(gamma[4])), 
-#                              expression(bold(gamma[5]))),
-#                    expand=c(0,3)) +
-#   theme_minimal(base_size = 30) +
-#   theme(plot.title = element_text(hjust = 0.5, size = 20),
-#         legend.title = element_blank(),
-#         legend.text = element_text(size=25),
-#         legend.margin=margin(0,0,0,-10),
-#         legend.box.margin=margin(-10,0,-10,0),
-#         plot.margin = margin(0,0,0,-20),
-#         axis.text.x = element_text(hjust=0.5),
-#         axis.text = element_text(size = 28))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_gamma_sc1-wi.pdf"), width=10, height = 7.78)
 
 # g.linear.mean <- as.vector(matrix(newgl.samples[,1], nrow = n, byrow=TRUE))
 # g.linear.q1 <- as.vector(matrix(newgl.samples[,4], nrow = n, byrow=TRUE))
@@ -395,7 +356,7 @@ g.smooth.q2 <- as.vector(matrix(newgsmooth.samples[,5], nrow = grid.n, byrow=TRU
 g.smooth.q3 <- as.vector(matrix(newgsmooth.samples[,6], nrow = grid.n, byrow=TRUE))
 
 newalpha.samples <- summary(fit1, par=c("gridalpha"), probs = c(0.05,0.5, 0.95))$summary
-data.scenario <- data.frame("x" = newx,
+data.scenario <- data.frame("x" = seq(0,1,length.out=grid.n),
                             "true" = (alp.new),
                             "q2" = (newalpha.samples[,5]),
                             "q1" = (newalpha.samples[,4]),
@@ -408,11 +369,11 @@ ggplot(data.scenario, aes(x=x)) +
   geom_line(aes(y=q2, col = "Posterior Median"), linewidth=1.5) +
   scale_color_manual(values=c("steelblue", "red")) + 
   scale_fill_manual(values=c("steelblue"), name = "") +
-  theme_minimal(base_size = 40) + 
+  theme_minimal(base_size = 40) + ylim(0, 15) +
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 30))
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_alpha_scA.pdf"), width=10, height = 7.78)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_alpha_scA_", n.origin,".pdf"), width=10, height = 7.78)
 
 # est_gridalpha_median  <- apply(posterior$gridalpha, 2, median)
 # est_gridalpha_lower <- apply(posterior$gridalpha, 2, quantile, probs = 0.05)
@@ -438,7 +399,7 @@ ggplot(data.scenario, aes(x=x)) +
 #         axis.text = element_text(size = 20))
 
 
-data.smooth <- data.frame("x"=newx,
+data.smooth <- data.frame("x"=seq(0,1,length.out=grid.n),
                           "true" = g.new,
                           "q2"        = g.smooth.q2,
                           "q1"        = g.smooth.q1,
@@ -458,7 +419,7 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
   scale_color_manual(values=c("steelblue", "red")) + 
   guides(color = guide_legend(order = 2), 
           fill = guide_legend(order = 1)) +
-  theme_minimal(base_size = 30) +
+  theme_minimal(base_size = 30) + ylim(-1.5, 1.5) +
   theme(plot.title = element_text(hjust = 0.5, size = 15),
         legend.position="none",
         plot.margin = margin(0,0,0,-20),
@@ -467,9 +428,9 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
         axis.title.x = element_text(size = 45),
         axis.text = element_text(size=30))
 
-# ggsave(paste0("./simulation/results/",Sys.Date(),"_",n,"_mcmc_smooth_scA.pdf"), width=12.5, height = 15)
+# ggsave(paste0("./simulation/results/",Sys.Date(),"_smooth_scA_",n.origin,".pdf"), width=12.5, height = 15)
 
-# data.linear <- data.frame("x"=seq(0,1, length.out = n),
+# data.linear <- data.frame("x"=seq(0,1, length.out = grid.n),
 #                           "true" = as.vector(l.new),
 #                           "post.mean" = as.vector(g.linear.mean),
 #                           "q1" = as.vector(g.linear.q1),
@@ -537,15 +498,14 @@ ggplot(data.smooth, aes(x=x, group=interaction(covariates, replicate))) +
 
 mcmc.alpha <- posterior$alpha
 len <- dim(mcmc.alpha)[1]
-r <- matrix(, nrow = n_excess, ncol = 30)
+r <- matrix(, nrow = n, ncol = 30)
 T <- 30
-for(i in 1:n_excess){
+for(i in 1:n){
   for(t in 1:T){
     r[i, t] <- qnorm(pPareto(y.origin[i], u[i], alpha = mcmc.alpha[round(runif(1,1,len)),i]))
   }
 }
-
-lgrid <- n_excess
+lgrid <- n
 grid <- qnorm(ppoints(lgrid))
 traj <- matrix(NA, nrow = T, ncol = lgrid)
 for (t in 1:T){

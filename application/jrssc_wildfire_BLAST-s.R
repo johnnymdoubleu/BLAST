@@ -184,7 +184,7 @@ fwi.cols <- colnames(fwi.pos[,s.cov])
 fwi.max <- fwi.01[which.max(y),]
 X_minmax <- sapply(fwi.01, function(x) max(x)-min(x))
 X_min <- sapply(fwi.01, function(x) min(x))
-fwi.01 <- as.data.frame(sapply(fwi.01, FUN = range01))
+# fwi.01 <- as.data.frame(sapply(fwi.01, FUN = range01))
 grid.n <- n <- nrow(fwi.01)
 p <- ncol(fwi.01)
 psi <- psi.origin - 2 # Adjusted basis dimension
@@ -242,7 +242,8 @@ xholder.linear <- matrix(rep(newx, p), ncol = p)
 grid_Z_list <- list()
 
 for (i in 1:p) {
-  grid_df <- data.frame(x_vec = newx)
+  # grid_df <- data.frame(x_vec = newx)
+  grid_df <- data.frame(x_vec = fwi.grid[,i])
   X_raw_grid <- PredictMat(sm_spec_list[[i]], grid_df)
   Z_spectral_grid <- X_raw_grid %*% spec_decomp_list[[i]]$U %*% spec_decomp_list[[i]]$L_inv
   X_lin_grid <- model.matrix(~ x_vec, data = grid_df)
@@ -256,6 +257,7 @@ grid_Z_list <- list()
 
 for (i in 1:p) {
   scaled_x_grid <- (fwi.grid[,i] - X_min[i]) / (X_minmax[i])
+  # scaled_x_grid <- as.numeric(fwi.grid[,i])
   grid_df  <- data.frame(x_vec = scaled_x_grid)
   X_raw_grid <- PredictMat(sm_spec_list[[i]], grid_df)
   Z_spectral_grid <- X_raw_grid %*% spec_decomp_list[[i]]$U %*% spec_decomp_list[[i]]$L_inv
@@ -274,8 +276,7 @@ bs.linear <- scale(bs.linear, center = X_means, scale = X_sd)
 model.stan <- "
 data {
   int n; int grid_n; int p; int psi;
-  vector[n] u; 
-  vector[n] y;
+  vector[n] u; vector[n] y;
   matrix[n, p] bsLinear; matrix[n, p*psi] bsNonlinear;
   matrix[n, p] gridL; matrix[n, p*psi] gridNL;
   matrix[grid_n, p] xholderLinear; matrix[grid_n, p*psi] xholderNonlinear;
@@ -284,8 +285,8 @@ data {
 parameters {
   vector[p+1] theta;
   array[p] vector[psi] gamma_raw;
-  real <lower=0> lambda1; // vector<lower=0>[p] lambda1 
-  real <lower=0> lambda2; // vector<lower=0>[p] lambda2
+  real <lower=0> lambda1;  
+  real <lower=0> lambda2; 
   vector<lower=0>[p] tau;
 }
 
@@ -305,7 +306,7 @@ transformed parameters {
 model {
   target += pareto_lpdf(y | u, alpha);
   target += normal_lpdf(theta[1] | 0, 10);
-  target += gamma_lpdf(lambda1 | 1e-2, 1e-2);
+  target += gamma_lpdf(lambda1 | 1e-1, 1e-1);
   target += gamma_lpdf(lambda2 | 1e-2, 1e-2);
   for (j in 1:p) {
     target += double_exponential_lpdf(theta[j+1] | 0, 1/lambda1);
@@ -330,7 +331,8 @@ generated quantities {
   {
     vector[grid_n] pred = rep_vector(theta_origin[1], grid_n);
     for (j in 1:p) {
-      gridgsmooth[,j] = col(xholderLinear, j) * theta_origin[j+1] + block(xholderNonlinear, 1, (j-1)*psi + 1, grid_n, psi) * gamma[j]; // gridgsmooth[,j] = col(gridL, j) * theta_fwi[j] + block(gridNL, 1, (j-1)*psi + 1, grid_n, psi) * gamma[j]
+      gridgsmooth[,j] = col(xholderLinear, j) * theta_origin[j+1] + block(xholderNonlinear, 1, (j-1)*psi + 1, grid_n, psi) * gamma[j]; 
+      // gridgsmooth[,j] = col(gridL, j) * theta_fwi[j] + block(gridNL, 1, (j-1)*psi + 1, grid_n, psi) * gamma[j]
       pred += col(xholderLinear, j) * theta_origin[j+1] + block(xholderNonlinear, 1, (j-1)*psi + 1, grid_n, psi) * gamma[j];
     }
     gridalpha = exp(pred);

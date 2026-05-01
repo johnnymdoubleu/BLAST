@@ -207,26 +207,26 @@ alp.new <- exp(theta.adjusted[1] + g2 + g5)
 
 model.stan <- "// Stan model for BLAST Pareto Samples
 data {
-    int <lower=1> n; // Sample size
-    int <lower=1> grid_n;
-    int <lower=1> p; // regression coefficient size
-    int <lower=1> psi; // splines coefficient size
-    vector[n] u; // large threshold value
-    matrix[n, p] bsLinear; // fwi dataset
-    matrix[n, (psi*p)] bsNonlinear; // thin plate splines basis
-    matrix[grid_n, p] xholderLinear; // fwi dataset
-    matrix[grid_n, (psi*p)] xholderNonlinear; // thin plate splines basis    
-    vector<lower=u>[n] y; // extreme response
-    real <lower=0> atau;
-    vector[p] X_means;
-    vector[p] X_sd;
+  int <lower=1> n; // Sample size
+  int <lower=1> grid_n;
+  int <lower=1> p; // regression coefficient size
+  int <lower=1> psi; // splines coefficient size
+  vector[n] u; // large threshold value
+  matrix[n, p] bsLinear; // fwi dataset
+  matrix[n, (psi*p)] bsNonlinear; // thin plate splines basis
+  matrix[grid_n, p] xholderLinear; // fwi dataset
+  matrix[grid_n, (psi*p)] xholderNonlinear; // thin plate splines basis    
+  vector<lower=u>[n] y; // extreme response
+  real <lower=0> atau;
+  vector[p] X_means;
+  vector[p] X_sd;
 }
 
 parameters {
     vector[(p+1)] theta; // linear predictor
     array[p] vector[psi] gamma_raw;
-    array[p] real <lower=0> lambda1; // 
-    array[p] real <lower=0> lambda2; //
+    real <lower=0> lambda1; // 
+    real <lower=0> lambda2; //
     array[p] real <lower=0> tau;
 }
 
