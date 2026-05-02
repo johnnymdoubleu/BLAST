@@ -34,7 +34,7 @@ missing.values <- which(!is.na(df.long$measurement))
 #Thus, each year consist of 366 data with either 1 or 0 missing value.
 Y <- df.long$measurement[!is.na(df.long$measurement)]
 psi.origin <- psi <- 10
-threshold <- 0.90
+threshold <- 0.95
 
 multiplesheets <- function(fname) {
     setwd("C:/Users/Johnny Lee/Documents/GitHub")
@@ -107,14 +107,14 @@ xreg.season <- cbind(
 
 fit.list <- list()
 arima_fitted_matrix <- matrix(nrow = length(Y), ncol = 7)
-x.detrended <- matrix(nrow = length(Y), ncol = 7)
-for (j in 1:7) {
-  y_ts <- ts(fwi.scaled[, j], frequency = 365.25) 
-  fit.list[[j]] <- auto.arima(y_ts, seasonal = FALSE, xreg = xreg.season, stepwise = TRUE, approximation = FALSE)
-  arima_fitted_matrix[, j] <- as.numeric(fitted(fit.list[[j]]))
-  x.detrended[, j] <- as.numeric(residuals(fit.list[[j]]))
-}
-fwi.index[,1:7] <- fwi.scaled[, 1:7] <- x.detrended
+# x.detrended <- matrix(nrow = length(Y), ncol = 7)
+# for (j in 1:7) {
+#   y_ts <- ts(fwi.scaled[, j], frequency = 365.25) 
+#   fit.list[[j]] <- auto.arima(y_ts, seasonal = FALSE, xreg = xreg.season, stepwise = TRUE, approximation = FALSE)
+#   arima_fitted_matrix[, j] <- as.numeric(fitted(fit.list[[j]]))
+#   x.detrended[, j] <- as.numeric(residuals(fit.list[[j]]))
+# }
+# fwi.index[,1:7] <- fwi.scaled[, 1:7] <- x.detrended
 # acf(fwi.index$BUI)
 # acf(fwi.index$ISI)
 # acf(fwi.index$FFMC)
@@ -122,34 +122,37 @@ fwi.index[,1:7] <- fwi.scaled[, 1:7] <- x.detrended
 # acf(fwi.index$DC)
 
 above.0 <- which(Y > 0)
-Y_pos <- Y[above.0]
-fwi.qr <- fwi.unscaled[above.0, ]
-fwi.pos <- fwi.unscaled[above.0, ]
+# Y_pos <- Y[above.0]
+# fwi.qr <- fwi.unscaled[above.0, ]
+# fwi.pos <- fwi.unscaled[above.0, ]
 # arima_fitted_pos <- arima_fitted_matrix[above.0, ]
 # Y[!above.0] <- 1e-5
-# Y_pos <- Y + 1
-# fwi.qr <- fwi.scaled
-# fwi.pos <- fwi.unscaled
+Y_pos <- Y
+fwi.qr <- fwi.unscaled
+fwi.pos <- fwi.unscaled
 # pca_result <- prcomp(fwi.qr[,3:7], center = TRUE, scale. = TRUE)
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 
 # qr.df <- data.frame(y = log(Y_pos), pca_result$x, cos.time = fwi.qr$cos.time, sin.time = fwi.qr$sin.time)
-qr.df <- data.frame(y = log(Y_pos), (fwi.qr[,1:7]), cos.time = fwi.qr$cos.time, sin.time = fwi.qr$sin.time, time = fwi.qr$sea)
-s.cov <- c(3:7)
+qr.df <- data.frame(y = (Y_pos), (fwi.qr[,1:7]), cos.time = fwi.qr$cos.time, sin.time = fwi.qr$sin.time, time = fwi.qr$sea)
+s.cov <- c(1:7)
 # evgam.cov <- y ~ cos.time + sin.time + s(PC1, bs='tp', k=10) + s(PC2, bs='tp', k=10) + s(PC3, bs='tp', k=10) + s(PC4, bs='tp', k=10)
-evgam.cov <- as.formula(paste0("y ~ cos.time + sin.time +", paste0("s(", colnames(fwi.qr[,s.cov]), ", k = ", 15, ", bs='" ,"bs')", collapse = " + ")))
+evgam.cov <- as.formula(paste0("y ~ cos.time + sin.time +", paste0("s(", colnames(fwi.qr[,s.cov]), ", k = ", 10, ", bs='" ,"bs')", collapse = " + ")))
 # evgam.cov <- as.formula(y ~ cos.time + sin.time)
 # evgam.cov <- as.formula(paste0("y ~ ", paste0("s(", colnames(fwi.qr[,s.cov]), ", k = ", 10, ", bs='" ,"bs')", collapse = " + ")))
 # qr.fit <- quantreg::rq(evgam.cov, data= qr.df, tau=threshold)
-qr.fit <- evgam(evgam.cov, data = qr.df, family = "ald", ald.args=list(tau = threshold))
+qr.fit <- evgam(evgam.cov, data = qr.df, family = "ald", ald.args=list(tau = threshold, C=0.05))
 
 # qr.lin <- evgam(y ~ cos.time + sin.time + BUI + ISI + FFMC + DMC + DC, data = qr.df, family = "ald", ald.args=list(tau = threshold))
 # qr.cov <- evgam(y ~ s(BUI, bs = "ts", k = 30) + s(ISI, bs = "ts", k = 30) + s(FFMC, bs = "ts", k = 30) + s(DMC, bs = "ts", k = 30) + s(DC, bs = "ts", k = 30), data = qr.df, family = "ald", ald.args=list(tau = threshold))
 # qr.time <- evgam(y ~ cos.time + sin.time, data = qr.df, family = "ald", ald.args=list(tau = threshold))
 # qr.null <- evgam(y ~ 1, data = qr.df, family = "ald", ald.args=list(tau = threshold))
-u.vec <- exp(predict(qr.fit)$location)
-# u.vec <- (predict(qr.fit))
+u.vec <- (predict(qr.fit)$location)
+u.vec <- pmax(runif(0.01, 0.1), u.vec)
 # u.vec[which(u.vec<0)] <- Y_pos[which(u.vec<0)]
+
+# u.vec <- (predict(qr.fit))
+
 # save(u.c, qr.fit, file = paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_qr-c.Rdata"))
 # load("./BLAST/application/figures/2026-03-25_pareto_qr-ct.Rdata")
 # u.vec <- u.ct
@@ -161,11 +164,11 @@ u.vec <- exp(predict(qr.fit)$location)
 # plot(fwi.scaled[above.0,"date"], log(Y_pos))
 # lines(fwi.scaled[above.0,"date"], log(u.vec), type = "l", col = "red")
 
-ggplot(data = data.frame(Year = fwi.scaled[above.0,"date"], BA = Y_pos, thres=u.vec), aes(x=Year)) +
+ggplot(data = data.frame(Year = fwi.qr$date, BA = Y_pos, thres=u.vec), aes(x=Year)) +
   geom_point(aes(y = BA), colour = "black", size = 0.7) +
   geom_line(aes(y=thres), colour = "red") + 
   # geom_line(aes(y=Mod(fft(u.vec))), colour = "steelblue") + 
-  theme_minimal(base_size = 30) + scale_y_log10() +
+  theme_minimal(base_size = 30) + scale_y_log10() + 
   theme(legend.position = "none",
         strip.text = element_blank(),
         axis.text = element_text(size = 20))
@@ -184,14 +187,12 @@ fwi.cols <- colnames(fwi.pos[,s.cov])
 fwi.max <- fwi.01[which.max(y),]
 X_minmax <- sapply(fwi.01, function(x) max(x)-min(x))
 X_min <- sapply(fwi.01, function(x) min(x))
-# fwi.01 <- as.data.frame(sapply(fwi.01, FUN = range01))
+fwi.01 <- as.data.frame(sapply(fwi.01, FUN = range01))
 grid.n <- n <- nrow(fwi.01)
 p <- ncol(fwi.01)
 psi <- psi.origin - 2 # Adjusted basis dimension
 
 fwi.grid <- data.frame(lapply(fwi.pos[excess.idx,s.cov], function(x) seq(min(x), max(x), length.out =grid.n)))
-
-
 
 Z.list <- list()
 projection_coefs_list <- list()
@@ -242,8 +243,8 @@ xholder.linear <- matrix(rep(newx, p), ncol = p)
 grid_Z_list <- list()
 
 for (i in 1:p) {
-  # grid_df <- data.frame(x_vec = newx)
-  grid_df <- data.frame(x_vec = fwi.grid[,i])
+  grid_df <- data.frame(x_vec = newx)
+  # grid_df <- data.frame(x_vec = fwi.grid[,i])
   X_raw_grid <- PredictMat(sm_spec_list[[i]], grid_df)
   Z_spectral_grid <- X_raw_grid %*% spec_decomp_list[[i]]$U %*% spec_decomp_list[[i]]$L_inv
   X_lin_grid <- model.matrix(~ x_vec, data = grid_df)
@@ -319,6 +320,7 @@ generated quantities {
   vector[n] log_lik;
   vector[grid_n] gridalpha;
   matrix[grid_n, p] gridgsmooth;
+  matrix[grid_n, p] fwismooth;
   vector[p+1] theta_origin;
   vector[p] theta_fwi;
 
@@ -332,7 +334,7 @@ generated quantities {
     vector[grid_n] pred = rep_vector(theta_origin[1], grid_n);
     for (j in 1:p) {
       gridgsmooth[,j] = col(xholderLinear, j) * theta_origin[j+1] + block(xholderNonlinear, 1, (j-1)*psi + 1, grid_n, psi) * gamma[j]; 
-      // gridgsmooth[,j] = col(gridL, j) * theta_fwi[j] + block(gridNL, 1, (j-1)*psi + 1, grid_n, psi) * gamma[j]
+      fwismooth[,j] = col(gridL, j) * theta_fwi[j] + block(gridNL, 1, (j-1)*psi + 1, grid_n, psi) * gamma[j];
       pred += col(xholderLinear, j) * theta_origin[j+1] + block(xholderNonlinear, 1, (j-1)*psi + 1, grid_n, psi) * gamma[j];
     }
     gridalpha = exp(pred);
@@ -405,7 +407,7 @@ theta.samples <- summary(fit1, par=c("theta_origin"), probs = c(0.05,0.5, 0.95))
 gamma.samples <- summary(fit1, par=c("gamma"), probs = c(0.05,0.5, 0.95))$summary
 lambda.samples <- summary(fit1, par=c("lambda1", "lambda2"), probs = c(0.05,0.5, 0.95))$summary
 gsmooth.samples <- summary(fit1, par=c("gridgsmooth"), probs = c(0.05, 0.5, 0.95))$summary
-# fwismooth.samples <- summary(fit1, par=c("fwismooth"), probs = c(0.05, 0.5, 0.95))$summary
+fwismooth.samples <- summary(fit1, par=c("fwismooth"), probs = c(0.05, 0.5, 0.95))$summary
 # gridgl.samples <- summary(fit1, par=c("gridgl"), probs = c(0.05, 0.5, 0.95))$summary
 # gridgnl.samples <- summary(fit1, par=c("gridgnl"), probs = c(0.05, 0.5, 0.95))$summary
 # origin.samples <- summary(fit1, par=c("alpha"), probs = c(0.05,0.5, 0.95))$summary
@@ -457,10 +459,10 @@ g.smooth.q3 <- as.vector(matrix(gsmooth.samples[,6], nrow = grid.n, byrow=TRUE))
 # g.nonlinear.q1 <- as.vector(matrix(gridgnl.samples[,4], nrow = grid.n, byrow=TRUE))
 # g.nonlinear.q2 <- as.vector(matrix(gridgnl.samples[,5], nrow = grid.n, byrow=TRUE))
 # g.nonlinear.q3 <- as.vector(matrix(gridgnl.samples[,6], nrow = grid.n, byrow=TRUE))
-# fwi.smooth.mean <- as.vector(matrix(fwismooth.samples[,1], nrow = n, byrow=TRUE))
-# fwi.smooth.q1 <- as.vector(matrix(fwismooth.samples[,4], nrow = n, byrow=TRUE))
-# fwi.smooth.q2 <- as.vector(matrix(fwismooth.samples[,5], nrow = n, byrow=TRUE))
-# fwi.smooth.q3 <- as.vector(matrix(fwismooth.samples[,6], nrow = n, byrow=TRUE))
+fwi.smooth.mean <- as.vector(matrix(fwismooth.samples[,1], nrow = grid.n, byrow=TRUE))
+fwi.smooth.q1 <- as.vector(matrix(fwismooth.samples[,4], nrow = grid.n, byrow=TRUE))
+fwi.smooth.q2 <- as.vector(matrix(fwismooth.samples[,5], nrow = grid.n, byrow=TRUE))
+fwi.smooth.q3 <- as.vector(matrix(fwismooth.samples[,6], nrow = grid.n, byrow=TRUE))
 # fwi.smooth.mean <- as.vector(apply(fwismooth_samples, c(2, 3), mean))
 # fwi.smooth.q2 <- as.vector(apply(fwismooth_samples, c(2, 3), median))
 # fwi.smooth.q1 <- as.vector(apply(fwismooth_samples, c(2, 3), quantile, probs = 0.05))
