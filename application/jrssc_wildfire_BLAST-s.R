@@ -122,36 +122,77 @@ arima_fitted_matrix <- matrix(nrow = length(Y), ncol = 7)
 # acf(fwi.index$DC)
 
 above.0 <- which(Y > 0)
-# Y_pos <- Y[above.0]
-# fwi.qr <- fwi.unscaled[above.0, ]
-# fwi.pos <- fwi.unscaled[above.0, ]
+Y_pos <- Y[above.0]
+fwi.qr <- fwi.unscaled[above.0, ]
+fwi.pos <- fwi.unscaled[above.0, ]
 # arima_fitted_pos <- arima_fitted_matrix[above.0, ]
 # Y[!above.0] <- 1e-5
-Y_pos <- Y
-fwi.qr <- fwi.unscaled
-fwi.pos <- fwi.unscaled
+# Y_pos <- Y
+# fwi.qr <- fwi.unscaled
+# fwi.pos <- fwi.unscaled
 # pca_result <- prcomp(fwi.qr[,3:7], center = TRUE, scale. = TRUE)
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 
 # qr.df <- data.frame(y = log(Y_pos), pca_result$x, cos.time = fwi.qr$cos.time, sin.time = fwi.qr$sin.time)
 qr.df <- data.frame(y = (Y_pos), (fwi.qr[,1:7]), cos.time = fwi.qr$cos.time, sin.time = fwi.qr$sin.time, time = fwi.qr$sea)
-s.cov <- c(1:7)
+s.cov <- c(3:7)
 # evgam.cov <- y ~ cos.time + sin.time + s(PC1, bs='tp', k=10) + s(PC2, bs='tp', k=10) + s(PC3, bs='tp', k=10) + s(PC4, bs='tp', k=10)
-evgam.cov <- as.formula(paste0("y ~ cos.time + sin.time +", paste0("s(", colnames(fwi.qr[,s.cov]), ", k = ", 10, ", bs='" ,"bs')", collapse = " + ")))
+evgam.cov <- as.formula(paste0("y ~ cos.time + sin.time +", paste0("s(", colnames(fwi.qr[,s.cov]), ", k = ", 10, ", bs='" ,"ts')", collapse = " + ")))
 # evgam.cov <- as.formula(y ~ cos.time + sin.time)
 # evgam.cov <- as.formula(paste0("y ~ ", paste0("s(", colnames(fwi.qr[,s.cov]), ", k = ", 10, ", bs='" ,"bs')", collapse = " + ")))
 # qr.fit <- quantreg::rq(evgam.cov, data= qr.df, tau=threshold)
-qr.fit <- evgam(evgam.cov, data = qr.df, family = "ald", ald.args=list(tau = threshold, C=0.05))
+# qr.fit <- evgam(evgam.cov, data = qr.df, family = "ald", ald.args=list(tau = threshold, C=1e-5))
 
 # qr.lin <- evgam(y ~ cos.time + sin.time + BUI + ISI + FFMC + DMC + DC, data = qr.df, family = "ald", ald.args=list(tau = threshold))
 # qr.cov <- evgam(y ~ s(BUI, bs = "ts", k = 30) + s(ISI, bs = "ts", k = 30) + s(FFMC, bs = "ts", k = 30) + s(DMC, bs = "ts", k = 30) + s(DC, bs = "ts", k = 30), data = qr.df, family = "ald", ald.args=list(tau = threshold))
 # qr.time <- evgam(y ~ cos.time + sin.time, data = qr.df, family = "ald", ald.args=list(tau = threshold))
 # qr.null <- evgam(y ~ 1, data = qr.df, family = "ald", ald.args=list(tau = threshold))
 u.vec <- (predict(qr.fit)$location)
-u.vec <- pmax(runif(0.01, 0.1), u.vec)
-# u.vec[which(u.vec<0)] <- Y_pos[which(u.vec<0)]
+u.vec <- pmax(0.1, u.vec)
 
-# u.vec <- (predict(qr.fit))
+setup <- gam(as.formula(evgam.cov), data = qr.df, fit = FALSE)
+ald_log_loss <- function(params, X, y, lambda) {
+  p <- ncol(X)
+  beta <- params[1:p]
+  
+  # We estimate log(sigma) so the optimizer doesn't crash if it tries a negative number
+  sigma <- exp(params[p + 1]) 
+  
+  mu <- exp(X %*% beta)
+  resid <- y - mu
+  
+  pinball <- ifelse(resid > 0, 0.95 * resid, (0.95 - 1) * resid)
+  
+  # The full, exact Negative Log-Likelihood
+  N <- length(y)
+  nll <- N * log(sigma) + (sum(pinball) / sigma)
+  
+  # Penalty (only on splines, not intercept, time, or sigma)
+  penalty <- lambda * sum(beta[-(1:3)]^2)
+  
+  return(nll + penalty)
+}
+
+# 3. Optimize!
+# Initialize betas at 0, but set the intercept close to the global log mean
+init_beta <- c(rep(0, ncol(setup$X)),0)
+init_beta[1] <- log(mean(setup$y) + 0.1) 
+lambda <- 1.0 # Tune this: Higher = smoother curves, Lower = wobbly curves
+
+opt_fit <- optim(
+  par = init_beta, 
+  fn = ald_log_loss, 
+  X = setup$X, y = setup$y, lambda = lambda, 
+  method = "BFGS",
+  control = list(maxit = 10000)
+)
+
+betas.mle <- opt_fit$par
+u.vec <- as.vector(exp(X %*% betas.mle)) # Predict and back-transform inherently
+
+# Ensure no numerical underflow near exactly 0
+# u.vec <- pmax(0.01, u.vec)
+
 
 # save(u.c, qr.fit, file = paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_qr-c.Rdata"))
 # load("./BLAST/application/figures/2026-03-25_pareto_qr-ct.Rdata")
