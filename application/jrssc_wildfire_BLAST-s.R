@@ -122,14 +122,14 @@ arima_fitted_matrix <- matrix(nrow = length(Y), ncol = 7)
 # acf(fwi.index$DC)
 
 above.0 <- which(Y > 0)
-Y_pos <- Y[above.0]
-fwi.qr <- fwi.unscaled[above.0, ]
-fwi.pos <- fwi.unscaled[above.0, ]
+# Y_pos <- Y[above.0]
+# fwi.qr <- fwi.unscaled[above.0, ]
+# fwi.pos <- fwi.unscaled[above.0, ]
 # arima_fitted_pos <- arima_fitted_matrix[above.0, ]
 # Y[!above.0] <- 1e-5
-# Y_pos <- Y
-# fwi.qr <- fwi.unscaled
-# fwi.pos <- fwi.unscaled
+Y_pos <- Y
+fwi.qr <- fwi.unscaled
+fwi.pos <- fwi.unscaled
 # pca_result <- prcomp(fwi.qr[,3:7], center = TRUE, scale. = TRUE)
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 
@@ -137,28 +137,29 @@ range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 qr.df <- data.frame(y = (Y_pos), (fwi.qr[,1:7]), cos.time = fwi.qr$cos.time, sin.time = fwi.qr$sin.time, time = fwi.qr$sea)
 s.cov <- c(3:7)
 # evgam.cov <- y ~ cos.time + sin.time + s(PC1, bs='tp', k=10) + s(PC2, bs='tp', k=10) + s(PC3, bs='tp', k=10) + s(PC4, bs='tp', k=10)
-evgam.cov <- as.formula(paste0("y ~ cos.time + sin.time +", paste0("s(", colnames(fwi.qr[,s.cov]), ", k = ", 10, ", bs='" ,"ts')", collapse = " + ")))
+evgam.cov <- as.formula(paste0("y ~ cos.time + sin.time +", paste0("s(", colnames(fwi.qr[,s.cov]), ", k = ", 7, ", bs='" ,"ts')", collapse = " + ")))
 # evgam.cov <- as.formula(y ~ cos.time + sin.time)
 # evgam.cov <- as.formula(paste0("y ~ ", paste0("s(", colnames(fwi.qr[,s.cov]), ", k = ", 10, ", bs='" ,"bs')", collapse = " + ")))
 # qr.fit <- quantreg::rq(evgam.cov, data= qr.df, tau=threshold)
-# qr.fit <- evgam(evgam.cov, data = qr.df, family = "ald", ald.args=list(tau = threshold, C=1e-5))
+# qr.fit <- evgam(evgam.cov, data = qr.df, family = "ald", ald.args=list(tau = threshold))
 
 # qr.lin <- evgam(y ~ cos.time + sin.time + BUI + ISI + FFMC + DMC + DC, data = qr.df, family = "ald", ald.args=list(tau = threshold))
 # qr.cov <- evgam(y ~ s(BUI, bs = "ts", k = 30) + s(ISI, bs = "ts", k = 30) + s(FFMC, bs = "ts", k = 30) + s(DMC, bs = "ts", k = 30) + s(DC, bs = "ts", k = 30), data = qr.df, family = "ald", ald.args=list(tau = threshold))
 # qr.time <- evgam(y ~ cos.time + sin.time, data = qr.df, family = "ald", ald.args=list(tau = threshold))
 # qr.null <- evgam(y ~ 1, data = qr.df, family = "ald", ald.args=list(tau = threshold))
-u.vec <- (predict(qr.fit)$location)
-u.vec <- pmax(0.1, u.vec)
+# u.vec <- (predict(qr.fit)$location)
+
 
 setup <- gam(as.formula(evgam.cov), data = qr.df, fit = FALSE)
-ald_log_loss <- function(params, X, y, lambda) {
+ald_log_loss <- function(params, X, y) {
   p <- ncol(X)
   beta <- params[1:p]
   
   # We estimate log(sigma) so the optimizer doesn't crash if it tries a negative number
-  sigma <- exp(params[p + 1]) 
+  sigma <- exp(params[p + 1])
+  lambda <- exp(params[p + 2]) 
   
-  mu <- exp(X %*% beta)
+  mu <- (X %*% beta)
   resid <- y - mu
   
   pinball <- ifelse(resid > 0, 0.95 * resid, (0.95 - 1) * resid)
@@ -175,21 +176,21 @@ ald_log_loss <- function(params, X, y, lambda) {
 
 # 3. Optimize!
 # Initialize betas at 0, but set the intercept close to the global log mean
-init_beta <- c(rep(0, ncol(setup$X)),0)
-init_beta[1] <- log(mean(setup$y) + 0.1) 
+init_beta <- c(rep(0, ncol(setup$X)), 1, 1)
+init_beta[1] <- (mean(setup$y)) 
 lambda <- 1.0 # Tune this: Higher = smoother curves, Lower = wobbly curves
 
 opt_fit <- optim(
   par = init_beta, 
   fn = ald_log_loss, 
-  X = setup$X, y = setup$y, lambda = lambda, 
+  X = setup$X, y = setup$y,
   method = "BFGS",
   control = list(maxit = 10000)
 )
 
-betas.mle <- opt_fit$par
-u.vec <- as.vector(exp(X %*% betas.mle)) # Predict and back-transform inherently
-
+betas.mle <- opt_fit$par[1:ncol(setup$X)]
+u.vec <- as.vector((setup$X %*% betas.mle)) # Predict and back-transform inherently
+u.vec <- pmax(1e-4, u.vec)
 # Ensure no numerical underflow near exactly 0
 # u.vec <- pmax(0.01, u.vec)
 
@@ -205,14 +206,14 @@ u.vec <- as.vector(exp(X %*% betas.mle)) # Predict and back-transform inherently
 # plot(fwi.scaled[above.0,"date"], log(Y_pos))
 # lines(fwi.scaled[above.0,"date"], log(u.vec), type = "l", col = "red")
 
-ggplot(data = data.frame(Year = fwi.qr$date, BA = Y_pos, thres=u.vec), aes(x=Year)) +
-  geom_point(aes(y = BA), colour = "black", size = 0.7) +
-  geom_line(aes(y=thres), colour = "red") + 
-  # geom_line(aes(y=Mod(fft(u.vec))), colour = "steelblue") + 
-  theme_minimal(base_size = 30) + scale_y_log10() + 
-  theme(legend.position = "none",
-        strip.text = element_blank(),
-        axis.text = element_text(size = 20))
+# ggplot(data = data.frame(Year = fwi.qr$date, BA = Y_pos, thres=u.vec), aes(x=Year)) +
+#   geom_point(aes(y = BA), colour = "black", size = 0.7) +
+#   geom_line(aes(y=thres), colour = "red") + 
+#   # geom_line(aes(y=Mod(fft(u.vec))), colour = "steelblue") + 
+#   theme_minimal(base_size = 30) + scale_y_log10() + 
+#   theme(legend.position = "none",
+#         strip.text = element_blank(),
+#         axis.text = element_text(size = 20))
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_thres-pcs.pdf"), width=10, height = 7.78)
 
 excess.idx <- which(Y_pos > u.vec)
@@ -284,8 +285,8 @@ xholder.linear <- matrix(rep(newx, p), ncol = p)
 grid_Z_list <- list()
 
 for (i in 1:p) {
-  grid_df <- data.frame(x_vec = newx)
-  # grid_df <- data.frame(x_vec = fwi.grid[,i])
+  # grid_df <- data.frame(x_vec = newx)
+  grid_df <- data.frame(x_vec = fwi.grid[,i])
   X_raw_grid <- PredictMat(sm_spec_list[[i]], grid_df)
   Z_spectral_grid <- X_raw_grid %*% spec_decomp_list[[i]]$U %*% spec_decomp_list[[i]]$L_inv
   X_lin_grid <- model.matrix(~ x_vec, data = grid_df)
