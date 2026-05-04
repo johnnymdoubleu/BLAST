@@ -121,7 +121,7 @@ arima_fitted_matrix <- matrix(nrow = length(Y), ncol = 7)
 # acf(fwi.index$DMC)
 # acf(fwi.index$DC)
 
-above.0 <- which(Y > 0)
+above.0 <- which(Y > 1e-5)
 # Y_pos <- Y[above.0]
 # fwi.qr <- fwi.unscaled[above.0, ]
 # fwi.pos <- fwi.unscaled[above.0, ]
@@ -137,7 +137,7 @@ range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 qr.df <- data.frame(y = (Y_pos), (fwi.qr[,1:7]), cos.time = fwi.qr$cos.time, sin.time = fwi.qr$sin.time, time = fwi.qr$sea)
 s.cov <- c(3:7)
 # evgam.cov <- y ~ cos.time + sin.time + s(PC1, bs='tp', k=10) + s(PC2, bs='tp', k=10) + s(PC3, bs='tp', k=10) + s(PC4, bs='tp', k=10)
-evgam.cov <- as.formula(paste0("y ~ cos.time + sin.time +", paste0("s(", colnames(fwi.qr[,s.cov]), ", k = ", 7, ", bs='" ,"ts')", collapse = " + ")))
+evgam.cov <- as.formula(paste0("y ~ cos.time + sin.time +", paste0("s(", colnames(fwi.qr[,s.cov]), ", k = ", 10, ", bs='" ,"tp')", collapse = " + ")))
 # evgam.cov <- as.formula(y ~ cos.time + sin.time)
 # evgam.cov <- as.formula(paste0("y ~ ", paste0("s(", colnames(fwi.qr[,s.cov]), ", k = ", 10, ", bs='" ,"bs')", collapse = " + ")))
 # qr.fit <- quantreg::rq(evgam.cov, data= qr.df, tau=threshold)
@@ -155,42 +155,35 @@ ald_log_loss <- function(params, X, y) {
   p <- ncol(X)
   beta <- params[1:p]
   
-  # We estimate log(sigma) so the optimizer doesn't crash if it tries a negative number
   sigma <- exp(params[p + 1])
   lambda <- exp(params[p + 2]) 
   
-  mu <- (X %*% beta)
+  mu <- exp(X %*% beta)
   resid <- y - mu
   
   pinball <- ifelse(resid > 0, 0.95 * resid, (0.95 - 1) * resid)
-  
-  # The full, exact Negative Log-Likelihood
-  N <- length(y)
-  nll <- N * log(sigma) + (sum(pinball) / sigma)
-  
-  # Penalty (only on splines, not intercept, time, or sigma)
+  nll <- length(y) * log(sigma) + (sum(pinball) / sigma)
   penalty <- lambda * sum(beta[-(1:3)]^2)
-  
+
   return(nll + penalty)
 }
 
 # 3. Optimize!
 # Initialize betas at 0, but set the intercept close to the global log mean
-init_beta <- c(rep(0, ncol(setup$X)), 1, 1)
-init_beta[1] <- (mean(setup$y)) 
-lambda <- 1.0 # Tune this: Higher = smoother curves, Lower = wobbly curves
+init_beta <- c(rep(0, ncol(setup$X)), 1.5, 1.5)
+# init_beta[1] <- log(mean(setup$y) + 0.1) 
 
-opt_fit <- optim(
+opt.fit <- optim(
   par = init_beta, 
   fn = ald_log_loss, 
   X = setup$X, y = setup$y,
-  method = "BFGS",
-  control = list(maxit = 10000)
+  method = "Nelder-Mead",
+  control = list(maxit = 75000)
 )
 
-betas.mle <- opt_fit$par[1:ncol(setup$X)]
-u.vec <- as.vector((setup$X %*% betas.mle)) # Predict and back-transform inherently
-u.vec <- pmax(1e-4, u.vec)
+betas.mle <- opt.fit$par[1:ncol(setup$X)]
+u.vec <- as.vector(exp(setup$X %*% betas.mle)) # Predict and back-transform inherently
+# u.vec <- pmax(1e-4, u.vec)
 # Ensure no numerical underflow near exactly 0
 # u.vec <- pmax(0.01, u.vec)
 
@@ -206,14 +199,14 @@ u.vec <- pmax(1e-4, u.vec)
 # plot(fwi.scaled[above.0,"date"], log(Y_pos))
 # lines(fwi.scaled[above.0,"date"], log(u.vec), type = "l", col = "red")
 
-# ggplot(data = data.frame(Year = fwi.qr$date, BA = Y_pos, thres=u.vec), aes(x=Year)) +
-#   geom_point(aes(y = BA), colour = "black", size = 0.7) +
-#   geom_line(aes(y=thres), colour = "red") + 
-#   # geom_line(aes(y=Mod(fft(u.vec))), colour = "steelblue") + 
-#   theme_minimal(base_size = 30) + scale_y_log10() + 
-#   theme(legend.position = "none",
-#         strip.text = element_blank(),
-#         axis.text = element_text(size = 20))
+ggplot(data = data.frame(Year = fwi.qr$date, BA = Y_pos, thres=u.vec), aes(x=Year)) +
+  geom_point(aes(y = BA), colour = "black", size = 0.7) +
+  geom_line(aes(y=thres), colour = "red", alpha = 0.6) + 
+  # geom_line(aes(y=Mod(fft(u.vec))), colour = "steelblue") + 
+  theme_minimal(base_size = 30) + scale_y_log10() + 
+  theme(legend.position = "none",
+        strip.text = element_blank(),
+        axis.text = element_text(size = 20))
 # ggsave(paste0("./BLAST/application/figures/",Sys.Date(),"_pareto_thres-pcs.pdf"), width=10, height = 7.78)
 
 excess.idx <- which(Y_pos > u.vec)
@@ -285,8 +278,8 @@ xholder.linear <- matrix(rep(newx, p), ncol = p)
 grid_Z_list <- list()
 
 for (i in 1:p) {
-  # grid_df <- data.frame(x_vec = newx)
-  grid_df <- data.frame(x_vec = fwi.grid[,i])
+  grid_df <- data.frame(x_vec = newx)
+  # grid_df <- data.frame(x_vec = fwi.grid[,i])
   X_raw_grid <- PredictMat(sm_spec_list[[i]], grid_df)
   Z_spectral_grid <- X_raw_grid %*% spec_decomp_list[[i]]$U %*% spec_decomp_list[[i]]$L_inv
   X_lin_grid <- model.matrix(~ x_vec, data = grid_df)
@@ -761,10 +754,10 @@ cat("Finished Running")
 
 data.smooth <- data.frame("x" = as.vector(as.matrix(fwi.grid)),
                           "true" = as.vector(as.matrix(fwi.pos[excess.idx,s.cov])),
-                          "post.mean" = as.vector(g.smooth.mean),
-                          "q1" = as.vector(g.smooth.q1),
-                          "q2" = as.vector(g.smooth.q2),
-                          "q3" = as.vector(g.smooth.q3),
+                          "post.mean" = as.vector(fwi.smooth.mean),
+                          "q1" = as.vector(fwi.smooth.q1),
+                          "q2" = as.vector(fwi.smooth.q2),
+                          "q3" = as.vector(fwi.smooth.q3),
                           "covariates" = gl(p, grid.n, (p*grid.n), labels = names(fwi.scaled)))
 
 
@@ -787,11 +780,6 @@ for(i in 1:p){
                         axis.text.y = element_text(size = 18),
                         axis.text.x = element_text(size = 12),
                         axis.title.x = element_text(size = 22))
-                  # theme_minimal(base_size = 30) +
-                  # theme(legend.position = "none",
-                  #         plot.margin = margin(0,0,0,-20),
-                  #         axis.text = element_text(size = 35),
-                  #         axis.title.x = element_text(size = 45))
   grid.plts[[i]] <- grid.plt + annotate("point", x= fwi.max[,i], y=-2.5, color = "red", size = 7)
 }
 marrangeGrob(grobs = grid.plts, nrow = 1, ncol = p, top = NULL)
